@@ -1,0 +1,408 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  name             String?
+  email            String?   @unique
+  password         String
+  emailVerified    DateTime?
+  image            String?
+  googleId         String?   @unique
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  accounts         Account[]
+  addresses        Address[]
+  cart             Cart?
+  otps             OTP[]
+  orders           Order[]
+  reviews          Review[]
+  sessions         Session[]
+  wishlist         Wishlist?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id             String         @id @default(cuid())
+  name           String
+  price          Int
+  originalPrice  Int
+  discount       Int
+  images         String[]
+  color          String
+  category       String
+  tileType       String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  length         Float?
+  breadth        Float?
+  height         Float?
+  weight         Float?
+  description    String?
+  features       String[]       @default([])
+  productDetails String[]       @default([])
+  productdesc    String?
+  sizeData       Json?
+  cartItems      CartItem[]
+  reviews        Review[]
+  wishlistItems  WishlistItem[]
+}
+
+model AvailableColors {
+  id              String @id @default(cuid())
+  category        String @unique
+  colors          Json
+  colorCategories Json
+}
+
+model PrebuiltProduct {
+  id              String         @id @default(cuid())
+  name            String
+  description     String
+  images          String[]
+  price           Int            @default(0)
+  originalPrice   Int            @default(0)
+  availableColors String[]       @default([])
+  availableSizes  String[]       @default([])
+  isCustomizable  Boolean        @default(false)
+  category        String
+  highlighted     Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  length          Float?
+  breadth         Float?
+  height          Float?
+  weight          Float?
+  features        String[]       @default([])
+  productDetails  String[]       @default([])
+  productdesc     String?
+  sizeData        Json?
+  cartItems       CartItem[]
+  colors          ProductColor[]
+  sizes           ProductSize[]
+  reviews         Review[]
+  wishlistItems   WishlistItem[]
+}
+
+model ProductSize {
+  id                String          @id @default(cuid())
+  name              String
+  price             Int
+  originalPrice     Int
+  prebuiltProductId String
+  sizeType          String          @default("standard")
+  cartItems         CartItem[]
+  prebuiltProduct   PrebuiltProduct @relation(fields: [prebuiltProductId], references: [id], onDelete: Cascade)
+
+  @@unique([prebuiltProductId, name])
+  @@index([prebuiltProductId])
+}
+
+model ProductColor {
+  id                String          @id @default(cuid())
+  name              String
+  hexCode           String
+  prebuiltProductId String
+  cartItems         CartItem[]
+  prebuiltProduct   PrebuiltProduct @relation(fields: [prebuiltProductId], references: [id], onDelete: Cascade)
+
+  @@unique([prebuiltProductId, name])
+  @@index([prebuiltProductId])
+}
+
+model Wishlist {
+  id     String         @id @default(cuid())
+  userId String         @unique
+  user   User           @relation(fields: [userId], references: [id])
+  items  WishlistItem[]
+}
+
+model WishlistItem {
+  id                String           @id @default(cuid())
+  wishlistId        String
+  productId         String?
+  prebuiltProductId String?
+  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  product           Product?         @relation(fields: [productId], references: [id])
+  wishlist          Wishlist         @relation(fields: [wishlistId], references: [id])
+
+  @@unique([wishlistId, productId, prebuiltProductId])
+}
+
+model Cart {
+  id     String     @id @default(cuid())
+  userId String     @unique
+  user   User       @relation(fields: [userId], references: [id])
+  items  CartItem[]
+}
+
+model CartItem {
+  id                String           @id @default(cuid())
+  cartId            String
+  productId         String?
+  prebuiltProductId String?
+  productSizeId     String?
+  productColorId    String?
+  quantity          Int
+  addedAt           DateTime         @default(now())
+  customization     String?
+  cart              Cart             @relation(fields: [cartId], references: [id])
+  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  productColor      ProductColor?    @relation(fields: [productColorId], references: [id])
+  product           Product?         @relation(fields: [productId], references: [id])
+  productSize       ProductSize?     @relation(fields: [productSizeId], references: [id])
+
+  @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId])
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  street    String
+  city      String
+  state     String
+  zipCode   String
+  country   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  email     String
+  fullName  String
+  landmark  String?
+  phone     String
+  pincode   String?
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String
+  action    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  attempts  Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, action])
+}
+
+model Blog {
+  id             String   @id @default(cuid())
+  title          String   @db.VarChar(255)
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  keywords       String   @db.VarChar(255)
+  description    String?  @db.VarChar(500)
+  heroImage      String?  @db.VarChar(255)
+  thumbnailImage String?  @db.VarChar(255)
+}
+
+model CarouselItem {
+  id        String   @id @default(cuid())
+  type      String
+  src       String
+  duration  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormResponse {
+  id                  String   @id @default(cuid())
+  service             String
+  requirement         String
+  fileExtension       String
+  prototype           String
+  prototypeOption     String?
+  printingTechnology  String
+  material            String?
+  materialType        String?
+  materialDescription String?
+  quantity            Int?
+  productColor        String
+  filamentColor       String?
+  resinColor          String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SmallBatchManufacturingResponse {
+  id              String   @id @default(cuid())
+  designFile      String?
+  quantity        Int
+  requirements    String?
+  technology      String
+  material        String
+  materialSubtype String?
+  productColor    String
+  filamentColor   String?
+  resinColor      String?
+  firstName       String
+  lastName        String
+  email           String
+  phone           String
+  company         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PrototypingRequest {
+  id                  String   @id @default(cuid())
+  projectType         String
+  technology          String
+  material            String
+  materialSubtype     String?
+  color               String
+  filamentColor       String?
+  resinColor          String?
+  customMaterial      String?
+  designFile          String?
+  specialRequirements String?
+  bulkQuantity        String?
+  firstName           String
+  lastName            String
+  email               String
+  phone               String
+  company             String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Onetimep {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  attempts  Int      @default(0)
+
+  @@index([email])
+}
+
+model PersonaliseFormResponse {
+  id            String   @id @default(cuid())
+  isAware       String
+  categories    String[]
+  statueDetails String
+  wantMore      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  email         String?
+  name          String?
+  phone         String?
+  userId        String?
+}
+
+model Form3DResponse {
+  id                  String   @id @default(cuid())
+  service             String
+  fileReference       String?
+  requirement         String
+  fileExtension       String
+  prototype           String
+  prototypeOption     String?
+  printingTechnology  String?
+  material            String?
+  materialType        String?
+  materialDescription String?
+  quantity            Int?
+  productColor        String?
+  filamentColor       String?
+  resinColor          String?
+  additionalFile      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Review {
+  id                String           @id @default(cuid())
+  rating            Int
+  title             String
+  content           String
+  userId            String
+  productId         String?
+  prebuiltProductId String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  product           Product?         @relation(fields: [productId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+  @@index([prebuiltProductId])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  userId          String
+  items           Json
+  totalAmount     Float
+  status          String   @default("payment_pending")
+  shippingAddress Json
+  billingAddress  Json
+  paymentMethod   String
+  transactionId   String?  @unique
+  createdAt       DateTime @default(now())
+  trackingInfo    Json?
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model PincodeLocation {
+  pincode   String  @id
+  latitude  Float
+  longitude Float
+  city      String?
+  state     String?
+}
+
+model HeroImage {
+  id        String   @id @default(uuid())
+  page      String
+  imageUrl  String
+  alt       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

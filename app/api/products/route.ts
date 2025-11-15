@@ -1,0 +1,222 @@
+import {
+    ASSET_PATHS,
+    URL_PATHS,
+    ensureAssetDirectory,
+} from "@/lib/asset-paths";
+import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { writeFile } from "fs/promises";
+import { NextResponse } from "next/server";
+import path from "path";
+import { z } from "zod";
+
+export const dynamic = "force-dynamic";
+
+// Allowed sorting fields
+const validSortFields = ["name", "price", "createdAt"] as const;
+type SortField = (typeof validSortFields)[number];
+
+const productSchema = z.object({
+    name: z.string().min(1).max(255),
+    price: z.number().int().positive(),
+    originalPrice: z.number().int().positive(),
+    images: z.array(z.string()).default([]),
+    color: z.string().min(1).max(50),
+    category: z.string().min(1).max(255),
+    tileType: z.string().min(1).max(255),
+    discount: z.number().int().positive(),
+    length: z.number().optional(),
+    breadth: z.number().optional(),
+    height: z.number().optional(),
+    weight: z.number().optional(),
+    description: z.string().optional(),
+    features: z.array(z.string()).optional(),
+    productDetails: z.array(z.string()).optional(),
+    productdesc: z.string().optional(),
+});
+
+// ✅ GET — fetch with pagination + sorting + filtering
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+
+        const category = searchParams.get("category");
+        const color = searchParams.get("color");
+        const tileType = searchParams.get("tileType");
+        const search = searchParams.get("search");
+
+        const sortBy = searchParams.get("sortBy") as SortField | null;
+        const order = searchParams.get("order") as "asc" | "desc" | null;
+
+        const page = Number(searchParams.get("page") || 1);
+        const limit = Number(searchParams.get("limit") || 10);
+        const skip = (page - 1) * limit;
+
+        const whereConditions: Prisma.ProductWhereInput = {
+            AND: [
+                category ? { category } : {},
+                color ? { color } : {},
+                tileType ? { tileType } : {},
+                search
+                    ? {
+                          OR: [
+                              {
+                                  name: {
+                                      contains: search,
+                                      mode: "insensitive",
+                                  },
+                              },
+                              {
+                                  color: {
+                                      contains: search,
+                                      mode: "insensitive",
+                                  },
+                              },
+                              {
+                                  category: {
+                                      contains: search,
+                                      mode: "insensitive",
+                                  },
+                              },
+                          ],
+                      }
+                    : {},
+            ],
+        };
+
+        const orderByClause =
+            sortBy && validSortFields.includes(sortBy)
+                ? { [sortBy]: order || "asc" }
+                : undefined;
+
+        const totalItems = await prisma.product.count({
+            where: whereConditions,
+        });
+
+        const products = await prisma.product.findMany({
+            where: whereConditions,
+            orderBy: orderByClause,
+            skip,
+            take: limit,
+            include: {
+                reviews: {
+                    include: {
+                        user: { select: { name: true } },
+                    },
+                },
+            },
+        });
+
+        return NextResponse.json({
+            products,
+            totalItems,
+            totalPages: Math.ceil(totalItems / limit),
+            currentPage: page,
+        });
+    } catch (error) {
+        console.error("Database query failed:", error);
+        return NextResponse.json(
+            { error: "Failed to fetch products" },
+            { status: 500 }
+        );
+    }
+}
+
+function safeJsonParse<T>(
+    input: string | null | undefined,
+    context: string
+): T | null {
+    try {
+        if (!input) return null;
+        return JSON.parse(input) as T;
+    } catch {
+        console.error(`Invalid JSON in ${context}`);
+        return null;
+    }
+}
+
+async function streamToBuffer(stream: any): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+}
+
+// ✅ POST — create new product (files handled)
+export async function POST(request: Request) {
+    try {
+        const formData = await request.formData();
+        const files = formData.getAll("images");
+        const productDataStr = formData.get("productData") as string | null;
+        const keepImagesStr = formData.get("keepImages") as string | null;
+
+        const keepImages = keepImagesStr
+            ? safeJsonParse<string[]>(keepImagesStr, "keepImages")
+            : [];
+
+        if (!productDataStr) {
+            return NextResponse.json(
+                { error: "No product data provided" },
+                { status: 400 }
+            );
+        }
+
+        const productData = safeJsonParse<any>(productDataStr, "productData");
+        if (!productData) {
+            return NextResponse.json(
+                { error: "Invalid product data format" },
+                { status: 400 }
+            );
+        }
+
+        let discount = Math.round(
+            (1 - productData.price / productData.originalPrice) * 100
+        );
+        if (discount < 1) discount = 1;
+
+        const imagePaths = keepImages ? [...keepImages] : [];
+        await ensureAssetDirectory(ASSET_PATHS.PRODUCT_IMAGES);
+
+        for (const file of files) {
+            if (!(file as any)?.name) continue;
+            const buffer = await streamToBuffer((file as any).stream());
+            const filename =
+                Date.now() + "-" + (file as any).name.replace(/\s/g, "-");
+
+            const filepath = path.join(ASSET_PATHS.PRODUCT_IMAGES, filename);
+            await writeFile(filepath, buffer);
+
+            imagePaths.push(URL_PATHS.PRODUCT_IMAGES + "/" + filename);
+        }
+
+        const validatedData = productSchema.parse({
+            ...productData,
+            images: imagePaths,
+            discount,
+        });
+
+        const savedProduct = await prisma.product.create({
+            data: validatedData,
+        });
+
+        return NextResponse.json(savedProduct);
+    } catch (error) {
+        console.error("Failed to create product:", error);
+
+        if (error instanceof z.ZodError) {
+            return NextResponse.json(
+                {
+                    error: "Validation failed",
+                    details: error.errors,
+                },
+                { status: 400 }
+            );
+        }
+
+        return NextResponse.json(
+            { error: "Failed to create product" },
+            { status: 500 }
+        );
+    }
+}
