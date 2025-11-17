@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
 import ProductForm from "./ProductForm";
 
 // reusable search + sort component
-import Pagination from "@/app/admin/_components/Pagination"; // ⬅️ add import here
+import Pagination from "@/app/admin/_components/Pagination";
 import SearchSortControl from "@/app/admin/_components/SearchSortControl";
 
 export default function ProductList() {
@@ -36,7 +36,7 @@ export default function ProductList() {
     // Pagination states
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const LIMIT = 10; // default page size
+    const LIMIT = 10;
 
     const { toast } = useToast();
 
@@ -58,8 +58,8 @@ export default function ProductList() {
         const response = await fetch(url.toString());
         const data = await response.json();
 
-        setProducts(data.products); // ARRAY, not whole response
-        setTotalPages(data.totalPages); // meta from API
+        setProducts(data.products);
+        setTotalPages(data.totalPages);
         setIsLoading(false);
     };
 
@@ -100,7 +100,7 @@ export default function ProductList() {
 
     return (
         <div className="relative space-y-6">
-            {/* Search + Filter + Sort UI */}
+            {/* Search + Sort UI */}
             <SearchSortControl
                 searchField={searchField}
                 setSearchField={setSearchField}
@@ -120,9 +120,14 @@ export default function ProductList() {
                     { label: "Name (Z → A)", value: "name-desc" },
                     { label: "Price (Low → High)", value: "price-asc" },
                     { label: "Price (High → Low)", value: "price-desc" },
-                    // enable also:
-                    // { label: "Newest First", value: "date-desc" }
-                    // { label: "Oldest First", value: "date-asc" }
+                    {
+                        label: "Updated (Latest First)",
+                        value: "updatedAt-desc",
+                    },
+                    {
+                        label: "Updated (Earliest First)",
+                        value: "updatedAt-asc",
+                    },
                 ]}
             />
 
@@ -137,6 +142,7 @@ export default function ProductList() {
                             <TableHead>Category</TableHead>
                             <TableHead>Color</TableHead>
                             <TableHead>Tile Type</TableHead>
+                            <TableHead>Updated At</TableHead>
                             <TableHead>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -145,7 +151,7 @@ export default function ProductList() {
                         {isLoading ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={8}
                                     className="text-center h-24"
                                 >
                                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
@@ -154,7 +160,7 @@ export default function ProductList() {
                         ) : products.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={8}
                                     className="text-center text-gray-500 h-24"
                                 >
                                     No products found.
@@ -182,15 +188,33 @@ export default function ProductList() {
                                             </div>
                                         )}
                                     </TableCell>
+
                                     <TableCell className="font-medium">
                                         {product.name}
                                     </TableCell>
+
                                     <TableCell>
                                         ₹{product.price.toLocaleString()}
                                     </TableCell>
+
                                     <TableCell>{product.category}</TableCell>
+
                                     <TableCell>{product.color}</TableCell>
+
                                     <TableCell>{product.tileType}</TableCell>
+
+                                    {/* ★ Updated At */}
+                                    <TableCell>
+                                        {new Date(
+                                            product.updatedAt
+                                        ).toLocaleString("en-IN", {
+                                            year: "numeric",
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                        })}
+                                    </TableCell>
 
                                     <TableCell>
                                         <div className="flex space-x-2">
@@ -231,7 +255,7 @@ export default function ProductList() {
                 </Table>
             </div>
 
-            {/* Pagination UI */}
+            {/* Pagination */}
             <Pagination
                 page={page}
                 totalPages={totalPages}

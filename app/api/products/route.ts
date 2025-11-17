@@ -36,6 +36,7 @@ const productSchema = z.object({
 });
 
 // ✅ GET — fetch with pagination + sorting + filtering
+// ✅ GET — fetch with pagination + sorting + filtering
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -43,74 +44,86 @@ export async function GET(request: Request) {
         const category = searchParams.get("category");
         const color = searchParams.get("color");
         const tileType = searchParams.get("tileType");
-        const search = searchParams.get("search");
 
-        const sortBy = searchParams.get("sortBy") as SortField | null;
-        const order = searchParams.get("order") as "asc" | "desc" | null;
+        const search = searchParams.get("search") || "";
+        const searchField = searchParams.get("searchField") || "name";
+
+        const sortBy = searchParams.get("sortBy");
+        const order = searchParams.get("order") === "desc" ? "desc" : "asc";
 
         const page = Number(searchParams.get("page") || 1);
         const limit = Number(searchParams.get("limit") || 10);
         const skip = (page - 1) * limit;
 
+        // ------------------------------
+        // 🔍 SEARCH LOGIC
+        // ------------------------------
+        let fieldFilter: any = {};
+
+        if (search.trim() !== "") {
+            if (searchField === "price") {
+                fieldFilter.price = Number(search);
+            } else {
+                fieldFilter[searchField] = {
+                    contains: search,
+                    mode: "insensitive",
+                };
+            }
+        }
+
+        // ------------------------------
+        // 🧩 FINAL WHERE
+        // ------------------------------
         const whereConditions: Prisma.ProductWhereInput = {
             AND: [
                 category ? { category } : {},
                 color ? { color } : {},
                 tileType ? { tileType } : {},
-                search
-                    ? {
-                          OR: [
-                              {
-                                  name: {
-                                      contains: search,
-                                      mode: "insensitive",
-                                  },
-                              },
-                              {
-                                  color: {
-                                      contains: search,
-                                      mode: "insensitive",
-                                  },
-                              },
-                              {
-                                  category: {
-                                      contains: search,
-                                      mode: "insensitive",
-                                  },
-                              },
-                          ],
-                      }
-                    : {},
+                fieldFilter,
             ],
         };
 
-        const orderByClause =
-            sortBy && validSortFields.includes(sortBy)
-                ? { [sortBy]: order || "asc" }
-                : undefined;
+        // ------------------------------
+        // ↕ STABLE SORTING
+        // ------------------------------
+        let orderByClause: any = undefined;
 
-        const totalItems = await prisma.product.count({
-            where: whereConditions,
-        });
+        if (sortBy === "price") {
+            orderByClause = [
+                { price: order },
+                { name: "asc" }, // secondary stable sort
+            ];
+        } else if (sortBy === "name") {
+            orderByClause = { name: order };
+        } else if (sortBy === "category") {
+            orderByClause = { category: order };
+        } else {
+            orderByClause = { createdAt: "desc" };
+        }
 
-        const products = await prisma.product.findMany({
-            where: whereConditions,
-            orderBy: orderByClause,
-            skip,
-            take: limit,
-            include: {
-                reviews: {
-                    include: {
-                        user: { select: { name: true } },
+        // ------------------------------
+        // 📦 QUERY
+        // ------------------------------
+        const [products, totalCount] = await Promise.all([
+            prisma.product.findMany({
+                where: whereConditions,
+                orderBy: orderByClause,
+                skip,
+                take: limit,
+                include: {
+                    reviews: {
+                        include: { user: { select: { name: true } } },
                     },
                 },
-            },
-        });
+            }),
+
+            prisma.product.count({ where: whereConditions }),
+        ]);
 
         return NextResponse.json({
             products,
-            totalItems,
-            totalPages: Math.ceil(totalItems / limit),
+            totalItems: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
             currentPage: page,
         });
     } catch (error) {

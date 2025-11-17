@@ -57,43 +57,65 @@ export async function GET(request: Request) {
         // filters
         const category = searchParams.get("category");
         const highlighted = searchParams.get("highlighted");
-        const search = searchParams.get("search");
+        const search = searchParams.get("search") || "";
         const searchField = searchParams.get("searchField") || "name";
 
         // sorting
-        const sortBy = searchParams.get("sortBy") as SortField | null;
-        const order = searchParams.get("order") as "asc" | "desc" | null;
+        const sortBy = searchParams.get("sortBy");
+        const order = searchParams.get("order") === "desc" ? "desc" : "asc";
 
-        const whereConditions: Prisma.PrebuiltProductWhereInput = {
-            ...(category && { category }),
-            ...(highlighted === "true" && { highlighted: true }),
+        // 🔍 SEARCH LOGIC
+        let fieldFilter: Prisma.PrebuiltProductWhereInput = {};
 
-            ...(search && {
-                [searchField]: {
+        if (search.trim() !== "") {
+            if (searchField === "price") {
+                fieldFilter.price = Number(search);
+            } else {
+                fieldFilter[searchField] = {
                     contains: search,
                     mode: "insensitive",
-                },
-            }),
+                };
+            }
+        }
+
+        // 🧩 WHERE COMBINATION
+        const whereConditions: Prisma.PrebuiltProductWhereInput = {
+            AND: [
+                category ? { category } : {},
+                highlighted === "true" ? { highlighted: true } : {},
+                fieldFilter,
+            ],
         };
 
-        const orderByClause =
-            sortBy && validSortFields.includes(sortBy)
-                ? { [sortBy]: order || "asc" }
-                : { createdAt: "desc" };
+        // ↕ STABLE SORTING (UPDATED)
+        let orderByClause: any = undefined;
 
-        // QUERY WITH PAGINATION
+        if (sortBy === "price") {
+            orderByClause = [{ price: order }, { name: "asc" }];
+        } else if (sortBy === "name") {
+            orderByClause = { name: order };
+        } else if (sortBy === "category") {
+            orderByClause = { category: order };
+        }
+
+        // ⭐ NEW — UPDATED AT SORT
+        else if (sortBy === "updatedAt") {
+            orderByClause = { updatedAt: order };
+        } else {
+            orderByClause = { createdAt: "desc" }; // default
+        }
+
+        // 📦 DATA FETCH
         const [products, totalCount] = await Promise.all([
             prisma.prebuiltProduct.findMany({
                 where: whereConditions,
-                orderBy: orderByClause ?? undefined,
+                orderBy: orderByClause,
                 skip,
                 take: limit,
                 include: { sizes: true },
-            } as Prisma.PrebuiltProductFindManyArgs),
-
-            prisma.prebuiltProduct.count({
-                where: whereConditions,
             }),
+
+            prisma.prebuiltProduct.count({ where: whereConditions }),
         ]);
 
         return NextResponse.json({

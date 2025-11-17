@@ -67,7 +67,7 @@ export default function PrebuiltProductList() {
                 throw new Error("Failed to fetch prebuilt products");
 
             const data = await response.json();
-            setPrebuiltProducts(data.products || data.data || []); // compatible with both versions
+            setPrebuiltProducts(data.products || data.data || []);
             setTotalPages(data.totalPages || 1);
         } catch (error) {
             console.error(error);
@@ -152,9 +152,14 @@ export default function PrebuiltProductList() {
                     { label: "Name (Z → A)", value: "name-desc" },
                     { label: "Price (Low → High)", value: "price-asc" },
                     { label: "Price (High → Low)", value: "price-desc" },
-                    // future date sorting
-                    // { label: "Newest First", value: "date-desc" },
-                    // { label: "Oldest First", value: "date-asc" },
+                    {
+                        label: "Updated (Latest First)",
+                        value: "updatedAt-desc",
+                    },
+                    {
+                        label: "Updated (Earliest First)",
+                        value: "updatedAt-asc",
+                    },
                 ]}
             />
 
@@ -177,6 +182,12 @@ export default function PrebuiltProductList() {
                             <TableHead className="w-[150px]">
                                 Dimensions
                             </TableHead>
+
+                            {/* ⭐ NEW Updated At column */}
+                            <TableHead className="w-[150px]">
+                                Updated At
+                            </TableHead>
+
                             <TableHead className="w-[150px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -184,7 +195,7 @@ export default function PrebuiltProductList() {
                         {isLoading ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={8}
                                     className="h-24 text-center"
                                 >
                                     <div className="flex items-center justify-center">
@@ -195,10 +206,10 @@ export default function PrebuiltProductList() {
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ) : prebuiltProducts.length === 0 ? (
+                        ) : !isLoading && prebuiltProducts.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={8}
                                     className="h-24 text-center text-muted-foreground"
                                 >
                                     No products found. Add your first product!
@@ -217,6 +228,7 @@ export default function PrebuiltProductList() {
                                         ₹{product.price.toLocaleString()}
                                     </TableCell>
                                     <TableCell>{product.category}</TableCell>
+
                                     <TableCell>
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -230,6 +242,7 @@ export default function PrebuiltProductList() {
                                                 : "No"}
                                         </span>
                                     </TableCell>
+
                                     <TableCell>
                                         <span
                                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -241,6 +254,7 @@ export default function PrebuiltProductList() {
                                             {product.highlighted ? "Yes" : "No"}
                                         </span>
                                     </TableCell>
+
                                     <TableCell>
                                         {product.length &&
                                         product.breadth &&
@@ -248,6 +262,20 @@ export default function PrebuiltProductList() {
                                             ? `${product.length}×${product.breadth}×${product.height} cm`
                                             : "N/A"}
                                     </TableCell>
+
+                                    {/* ⭐ NEW Updated At value */}
+                                    <TableCell>
+                                        {new Date(
+                                            product.updatedAt
+                                        ).toLocaleString("en-IN", {
+                                            year: "numeric",
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                        })}
+                                    </TableCell>
+
                                     <TableCell>
                                         <div className="flex space-x-2">
                                             <Button
@@ -279,7 +307,7 @@ export default function PrebuiltProductList() {
                 </Table>
             </div>
 
-            {/* Reusable Pagination */}
+            {/* Pagination */}
             <Pagination
                 page={page}
                 totalPages={totalPages}
