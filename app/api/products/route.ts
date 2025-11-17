@@ -55,11 +55,8 @@ export async function GET(request: Request) {
         const limit = Number(searchParams.get("limit") || 10);
         const skip = (page - 1) * limit;
 
-        // ------------------------------
-        // 🔍 SEARCH LOGIC
-        // ------------------------------
+        // SEARCH LOGIC
         let fieldFilter: any = {};
-
         if (search.trim() !== "") {
             if (searchField === "price") {
                 fieldFilter.price = Number(search);
@@ -71,9 +68,7 @@ export async function GET(request: Request) {
             }
         }
 
-        // ------------------------------
-        // 🧩 FINAL WHERE
-        // ------------------------------
+        // WHERE CLAUSE
         const whereConditions: Prisma.ProductWhereInput = {
             AND: [
                 category ? { category } : {},
@@ -83,27 +78,26 @@ export async function GET(request: Request) {
             ],
         };
 
-        // ------------------------------
-        // ↕ STABLE SORTING
-        // ------------------------------
+        // SORTING — FIXED
         let orderByClause: any = undefined;
 
         if (sortBy === "price") {
             orderByClause = [
                 { price: order },
-                { name: "asc" }, // secondary stable sort
+                { name: "asc" }, // stable fallback
             ];
         } else if (sortBy === "name") {
             orderByClause = { name: order };
         } else if (sortBy === "category") {
             orderByClause = { category: order };
+        } else if (sortBy === "updatedAt") {
+            orderByClause = { updatedAt: order };
+        } else if (sortBy === "createdAt") {
+            orderByClause = { createdAt: order };
         } else {
-            orderByClause = { createdAt: "desc" };
+            orderByClause = { createdAt: "desc" }; // default
         }
 
-        // ------------------------------
-        // 📦 QUERY
-        // ------------------------------
         const [products, totalCount] = await Promise.all([
             prisma.product.findMany({
                 where: whereConditions,
@@ -112,11 +106,12 @@ export async function GET(request: Request) {
                 take: limit,
                 include: {
                     reviews: {
-                        include: { user: { select: { name: true } } },
+                        include: {
+                            user: { select: { name: true } },
+                        },
                     },
                 },
             }),
-
             prisma.product.count({ where: whereConditions }),
         ]);
 

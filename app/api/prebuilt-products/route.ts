@@ -64,12 +64,14 @@ export async function GET(request: Request) {
         const sortBy = searchParams.get("sortBy");
         const order = searchParams.get("order") === "desc" ? "desc" : "asc";
 
+        // -------------------------
         // 🔍 SEARCH LOGIC
+        // -------------------------
         let fieldFilter: Prisma.PrebuiltProductWhereInput = {};
 
         if (search.trim() !== "") {
             if (searchField === "price") {
-                fieldFilter.price = Number(search);
+                fieldFilter.price = Number(search); // exact match for price
             } else {
                 fieldFilter[searchField] = {
                     contains: search,
@@ -78,7 +80,9 @@ export async function GET(request: Request) {
             }
         }
 
-        // 🧩 WHERE COMBINATION
+        // -------------------------
+        // 🧩 WHERE CONDITIONS
+        // -------------------------
         const whereConditions: Prisma.PrebuiltProductWhereInput = {
             AND: [
                 category ? { category } : {},
@@ -87,25 +91,31 @@ export async function GET(request: Request) {
             ],
         };
 
-        // ↕ STABLE SORTING (UPDATED)
+        // -------------------------
+        // ↕ FINAL SORTING LOGIC
+        // -------------------------
         let orderByClause: any = undefined;
 
         if (sortBy === "price") {
-            orderByClause = [{ price: order }, { name: "asc" }];
+            orderByClause = [
+                { price: order },
+                { name: "asc" }, // stable fallback
+            ];
         } else if (sortBy === "name") {
             orderByClause = { name: order };
         } else if (sortBy === "category") {
             orderByClause = { category: order };
-        }
-
-        // ⭐ NEW — UPDATED AT SORT
-        else if (sortBy === "updatedAt") {
-            orderByClause = { updatedAt: order };
+        } else if (sortBy === "updatedAt") {
+            orderByClause = { updatedAt: order }; // ⭐ FIXED
+        } else if (sortBy === "createdAt") {
+            orderByClause = { createdAt: order };
         } else {
             orderByClause = { createdAt: "desc" }; // default
         }
 
-        // 📦 DATA FETCH
+        // -------------------------
+        // 📦 FETCH DATA
+        // -------------------------
         const [products, totalCount] = await Promise.all([
             prisma.prebuiltProduct.findMany({
                 where: whereConditions,
