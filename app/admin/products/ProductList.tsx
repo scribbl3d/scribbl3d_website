@@ -116,19 +116,12 @@ export default function ProductList() {
                     { label: "Tile Type", value: "tileType" },
                 ]}
                 sortOptions={[
-                    { label: "Name (A → Z)", value: "name-asc" },
-                    { label: "Name (Z → A)", value: "name-desc" },
-                    { label: "Price (Low → High)", value: "price-asc" },
-                    { label: "Price (High → Low)", value: "price-desc" },
-                    {
-                        label: "Updated (Latest First)",
-                        value: "updatedAt-desc",
-                    },
-                    {
-                        label: "Updated (Earliest First)",
-                        value: "updatedAt-asc",
-                    },
+                    { label: "Name (A–Z)", value: "name-asc" },
+                    { label: "Name (Z–A)", value: "name-desc" },
+                    { label: "Price Low → High", value: "price-asc" },
+                    { label: "Price High → Low", value: "price-desc" },
                 ]}
+                suggestionApi="/api/products/suggestions" // 🔥 HERE
             />
 
             {/* Product Table */}
