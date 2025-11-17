@@ -120,6 +120,14 @@ export default function ProductList() {
                     { label: "Name (Z–A)", value: "name-desc" },
                     { label: "Price Low → High", value: "price-asc" },
                     { label: "Price High → Low", value: "price-desc" },
+                    {
+                        label: "Updated (Latest First)",
+                        value: "updatedAt-desc",
+                    },
+                    {
+                        label: "Updated (Earliest First)",
+                        value: "updatedAt-asc",
+                    },
                 ]}
                 suggestionApi="/api/products/suggestions" // 🔥 HERE
             />
