@@ -1,5 +1,4 @@
 "use client";
-console.log("🔥 SearchSortControl file LOADED");
 import { useDebounce } from "@/hooks/useDebounce";
 import { useEffect, useRef, useState } from "react";
 
@@ -40,6 +39,7 @@ export default function SearchSortControl({
     /* ---------------------------------------------------------------------- */
     const [suggestions, setSuggestions] = useState<any[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [priceError, setPriceError] = useState("");
 
     const [isSelecting, setIsSelecting] = useState(false);
     const [justSelected, setJustSelected] = useState(false);
@@ -86,8 +86,6 @@ export default function SearchSortControl({
     /* HANDLE SUGGESTION CLICK */
     /* ---------------------------------------------------------------------- */
     const handleSelect = (name: string) => {
-        console.log("🟢 SELECTED:", name);
-
         setIsSelecting(true);
         setJustSelected(true);
         lastSelected.current = name;
@@ -111,33 +109,48 @@ export default function SearchSortControl({
         console.log("cache keys:", Array.from(cache.current.keys()));
 
         if (isSelecting) {
-            console.log("⛔ SKIP: isSelecting true");
             return;
+        }
+        // PRICE VALIDATION
+        if (searchField === "price") {
+            // If empty → clear error and let API run normally (means reset)
+            if (debouncedSearch.trim() === "") {
+                setPriceError("");
+                setSuggestions([]);
+                setShowSuggestions(false);
+                return;
+            }
+
+            // If invalid number → show error, stop everything
+            if (isNaN(Number(debouncedSearch))) {
+                setPriceError("Please enter a valid number");
+                setSuggestions([]);
+                setShowSuggestions(false);
+                return;
+            }
+
+            // If valid number → clear error
+            setPriceError("");
         }
 
         if (searchField !== "name") {
-            console.log("⛔ SKIP: searchField != name");
             setSuggestions([]);
             setShowSuggestions(false);
             return;
         }
 
         if (!debouncedSearch.trim()) {
-            console.log("⛔ SKIP: empty search");
             setSuggestions([]);
             setShowSuggestions(false);
             return;
         }
 
         if (debouncedSearch === lastSelected.current) {
-            console.log("⛔ SKIP: debouncedSearch == lastSelected");
             return;
         }
 
         /* ----------------------- CHECK CACHE ----------------------- */
         if (cache.current.has(debouncedSearch)) {
-            console.log("🟡 CACHE HIT FOR:", debouncedSearch);
-
             const cached = cache.current.get(debouncedSearch)!;
 
             const exact =
@@ -145,23 +158,17 @@ export default function SearchSortControl({
                 cached[0].name.toLowerCase() === debouncedSearch.toLowerCase();
 
             if (exact) {
-                console.log("⛔ EXACT MATCH → hide suggestions");
                 setSuggestions([]);
                 setShowSuggestions(false);
                 return;
             }
 
-            console.log("🟡 USING CACHED RESULTS");
             setSuggestions(cached);
             if (!justSelected) setShowSuggestions(true);
             return;
         }
 
-        console.log("🔴 CACHE MISS → MUST CALL API");
-
-        /* ----------------------- ABORT PREVIOUS ----------------------- */
         if (abortRef.current) {
-            console.log("⚠️ ABORTING OLD REQUEST");
             abortRef.current.abort();
         }
 
@@ -181,7 +188,6 @@ export default function SearchSortControl({
                     { signal: controller.signal }
                 );
                 if (!res.ok) {
-                    console.log("❌ API RESPONSE NOT OK");
                     return;
                 }
 
@@ -194,7 +200,6 @@ export default function SearchSortControl({
                         debouncedSearch.toLowerCase();
 
                 if (exact) {
-                    console.log("⛔ EXACT MATCH AFTER API → hide");
                     cache.current.set(debouncedSearch, []);
                     setSuggestions([]);
                     setShowSuggestions(false);
@@ -208,10 +213,8 @@ export default function SearchSortControl({
                 if (!justSelected) setShowSuggestions(true);
             } catch (err: any) {
                 if (err.name === "AbortError") {
-                    console.log("⚠️ REQUEST ABORTED");
                     return;
                 }
-                console.error("❌ FETCH ERROR:", err);
             }
         };
 
@@ -228,9 +231,13 @@ export default function SearchSortControl({
     /* RENDER UI */
     /* ---------------------------------------------------------------------- */
     return (
-        <div className="relative flex items-center gap-4">
-            {/* Search + filter */}
-            <div className="relative flex items-center border rounded-lg overflow-hidden w-[350px] bg-white">
+        <div className="relative flex flex-col w-[350px]">
+            {/* Input container with dynamic red border */}
+            <div
+                className={`flex items-center rounded-lg overflow-hidden bg-white border 
+            ${priceError && searchField === "price" ? "border-red-500" : "border-gray-300"}
+        `}
+            >
                 <select
                     value={searchField}
                     onChange={(e) => {
@@ -251,10 +258,31 @@ export default function SearchSortControl({
                     placeholder={`Search by ${searchField}...`}
                     value={searchTerm}
                     onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        if (!e.target.value) {
-                            setShowSuggestions(false);
+                        const value = e.target.value;
+
+                        if (searchField === "price") {
+                            // Allow empty
+                            if (value.trim() === "") {
+                                setSearchTerm("");
+                                setPriceError("");
+                                return;
+                            }
+
+                            // Allow ONLY digits
+                            if (!/^\d+$/.test(value)) {
+                                setPriceError("Please enter a valid number");
+                                return; // ❌ stop here — DO NOT TRIGGER SEARCH
+                            }
+
+                            // Valid number
+                            setPriceError("");
+                            setSearchTerm(value);
+                            return;
                         }
+
+                        // Normal case (name, category, etc.)
+                        setSearchTerm(value);
+                        if (!value) setShowSuggestions(false);
                     }}
                     onFocus={() => {
                         if (
@@ -269,39 +297,12 @@ export default function SearchSortControl({
                 />
             </div>
 
-            {/* Suggestions */}
-            {showSuggestions &&
-                searchField === "name" &&
-                suggestions.length > 0 && (
-                    <div
-                        ref={dropRef}
-                        className="absolute top-12 left-0 w-[350px] bg-white border shadow-md rounded-md z-50 max-h-60 overflow-y-auto"
-                    >
-                        {suggestions.map((s: any) => (
-                            <div
-                                key={s.id}
-                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => handleSelect(s.name)}
-                            >
-                                {s.name}
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-            {/* Sort */}
-            <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="border rounded-md px-3 py-2"
-            >
-                <option value="">Sort By</option>
-                {sortOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
+            {/* Price error below */}
+            {priceError && searchField === "price" && (
+                <div className="text-red-500 text-sm mt-1 pl-40">
+                    {priceError}
+                </div>
+            )}
         </div>
     );
 }

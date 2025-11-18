@@ -59,7 +59,12 @@ export async function GET(request: Request) {
         let fieldFilter: any = {};
         if (search.trim() !== "") {
             if (searchField === "price") {
-                fieldFilter.price = Number(search);
+                const numeric = Number(search);
+                if (!isNaN(numeric)) {
+                    fieldFilter.price = numeric;
+                } else {
+                    fieldFilter.price = undefined;
+                }
             } else {
                 fieldFilter[searchField] = {
                     contains: search,
