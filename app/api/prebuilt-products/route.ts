@@ -99,23 +99,27 @@ export async function GET(request: Request) {
         // -------------------------
         // ↕ FINAL SORTING LOGIC
         // -------------------------
-        let orderByClause: any = undefined;
+        // -------------------------
+        // ↕ FINAL SORTING LOGIC
+        // -------------------------
+        let orderByClause: any;
 
         if (sortBy === "price") {
-            orderByClause = [
-                { price: order },
-                { name: "asc" }, // stable fallback
-            ];
+            // PRIMARY → price
+            // SECONDARY → name ascending
+            orderByClause = [{ price: order }, { name: "asc" }];
         } else if (sortBy === "name") {
             orderByClause = { name: order };
         } else if (sortBy === "category") {
             orderByClause = { category: order };
         } else if (sortBy === "updatedAt") {
-            orderByClause = { updatedAt: order }; // ⭐ FIXED
+            // secondary fallback ensures predictable ordering
+            orderByClause = [{ updatedAt: order }, { name: "asc" }];
         } else if (sortBy === "createdAt") {
-            orderByClause = { createdAt: order };
+            orderByClause = [{ createdAt: order }, { name: "asc" }];
         } else {
-            orderByClause = { createdAt: "desc" }; // default
+            // default → sort latest first and fallback by name
+            orderByClause = [{ createdAt: "desc" }, { name: "asc" }];
         }
 
         // -------------------------
