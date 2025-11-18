@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import "./editor.css";
 
 @layer base {
   :root {
@@ -53,6 +54,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -63,6 +65,7 @@
     0% {
       transform: translateX(0);
     }
+
     100% {
       transform: translateX(-50%);
     }
@@ -71,14 +74,17 @@
   .animate-scroll {
     animation: scroll 20s linear infinite;
   }
+
   .pause {
     animation-play-state: paused;
   }
 }
+
 @keyframes infinite-scroll {
   from {
     transform: translateX(0);
   }
+
   to {
     transform: translateX(-50%);
   }
@@ -94,6 +100,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }

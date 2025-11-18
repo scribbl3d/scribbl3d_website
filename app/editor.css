@@ -1,0 +1,44 @@
+/* Reset default Shadcn / Browser input styles */
+.editor-content {
+    all: unset;
+    display: block;
+    min-height: 250px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid #d1d5db;
+    box-sizing: border-box;
+    cursor: text;
+}
+
+/* Proper editor text styling */
+.editor-content .ProseMirror {
+    outline: none;
+    min-height: 200px;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+/* Remove focus ring */
+.editor-content:focus-within {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 1px #6366f1;
+}
+
+/* Formatting styling */
+.editor-content strong {
+    font-weight: bold;
+}
+
+.editor-content em {
+    font-style: italic;
+}
+
+.editor-content u {
+    text-decoration: underline;
+}
+
+.editor-content mark {
+    background: yellow;
+}
