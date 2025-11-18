@@ -145,6 +145,7 @@ export default function PrebuiltProductList() {
                     { label: "Name", value: "name" },
                     { label: "Price", value: "price" },
                     { label: "Category", value: "category" },
+                    { label: "Customizable", value: "isCustomizable" },
                 ]}
                 sortOptions={[
                     { label: "Name (A–Z)", value: "name-asc" },

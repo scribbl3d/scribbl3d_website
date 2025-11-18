@@ -74,9 +74,9 @@ export async function GET(request: Request) {
                 const numeric = Number(search);
                 if (!isNaN(numeric)) {
                     fieldFilter.price = numeric;
-                } else {
-                    fieldFilter.price = undefined; // ignore invalid price
                 }
+            } else if (searchField === "isCustomizable") {
+                fieldFilter.isCustomizable = search === "true";
             } else {
                 fieldFilter[searchField] = {
                     contains: search,
@@ -102,24 +102,28 @@ export async function GET(request: Request) {
         // -------------------------
         // ↕ FINAL SORTING LOGIC
         // -------------------------
-        let orderByClause: any;
+        // -------------------------
+        // ↕ FINAL SORTING LOGIC (with fallback name sort)
+        // -------------------------
+        let orderByClause: any = [];
 
+        // If user selected a sort option:
         if (sortBy === "price") {
-            // PRIMARY → price
-            // SECONDARY → name ascending
-            orderByClause = [{ price: order }, { name: "asc" }];
+            orderByClause = [
+                { price: order },
+                { name: "asc" }, // tie-breaker
+            ];
         } else if (sortBy === "name") {
-            orderByClause = { name: order };
+            orderByClause = [{ name: order }];
         } else if (sortBy === "category") {
-            orderByClause = { category: order };
+            orderByClause = [{ category: order }, { name: "asc" }];
         } else if (sortBy === "updatedAt") {
-            // secondary fallback ensures predictable ordering
             orderByClause = [{ updatedAt: order }, { name: "asc" }];
         } else if (sortBy === "createdAt") {
             orderByClause = [{ createdAt: order }, { name: "asc" }];
         } else {
-            // default → sort latest first and fallback by name
-            orderByClause = [{ createdAt: "desc" }, { name: "asc" }];
+            // ⭐ DEFAULT: alphabetical order always
+            orderByClause = [{ name: "asc" }];
         }
 
         // -------------------------

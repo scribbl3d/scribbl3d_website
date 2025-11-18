@@ -196,8 +196,25 @@ export default function SearchSortControl({
                     <select
                         value={searchField}
                         onChange={(e) => {
-                            setSearchField(e.target.value);
+                            const newField = e.target.value;
+
+                            setSearchField(newField);
+
+                            // ⭐ Reset search input
+                            setSearchTerm("");
+
+                            // ⭐ Reset price validation error
+                            setPriceError("");
+
+                            // ⭐ Hide and clear suggestions
+                            setSuggestions([]);
                             setShowSuggestions(false);
+
+                            // ⭐ Reset suggestion cache
+                            cache.current.clear();
+
+                            // ⭐ Reset last selected name (for exact match suppression)
+                            lastSelected.current = "";
                         }}
                         className="bg-gray-100 px-3 py-2 border-r outline-none text-sm h-full"
                     >
@@ -208,48 +225,65 @@ export default function SearchSortControl({
                         ))}
                     </select>
 
-                    <input
-                        type="text"
-                        placeholder={`Search by ${searchField}...`}
-                        value={searchTerm}
-                        onChange={(e) => {
-                            const value = e.target.value;
+                    {/* IF Customizable → show Yes/No dropdown */}
+                    {searchField === "isCustomizable" ? (
+                        <select
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setShowSuggestions(false);
+                            }}
+                            className="px-3 py-2 w-full outline-none bg-white"
+                        >
+                            <option value="">Select...</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                    ) : (
+                        /* ORIGINAL INPUT BOX */
+                        <input
+                            type="text"
+                            placeholder={`Search by ${searchField}...`}
+                            value={searchTerm}
+                            onChange={(e) => {
+                                const value = e.target.value;
 
-                            /* PRICE VALIDATION LIVE */
-                            if (searchField === "price") {
-                                if (value.trim() === "") {
-                                    setSearchTerm("");
+                                /* PRICE VALIDATION LIVE */
+                                if (searchField === "price") {
+                                    if (value.trim() === "") {
+                                        setSearchTerm("");
+                                        setPriceError("");
+                                        return;
+                                    }
+
+                                    if (!/^\d+$/.test(value)) {
+                                        setPriceError(
+                                            "Please enter a valid number"
+                                        );
+                                        return;
+                                    }
+
                                     setPriceError("");
+                                    setSearchTerm(value);
                                     return;
                                 }
 
-                                if (!/^\d+$/.test(value)) {
-                                    setPriceError(
-                                        "Please enter a valid number"
-                                    );
-                                    return;
-                                }
-
-                                setPriceError("");
+                                /* NORMAL INPUT */
                                 setSearchTerm(value);
-                                return;
-                            }
-
-                            /* NORMAL INPUT */
-                            setSearchTerm(value);
-                            if (!value) setShowSuggestions(false);
-                        }}
-                        onFocus={() => {
-                            if (
-                                suggestions.length > 0 &&
-                                !justSelected &&
-                                searchField === "name"
-                            ) {
-                                setShowSuggestions(true);
-                            }
-                        }}
-                        className="px-3 py-2 w-full outline-none"
-                    />
+                                if (!value) setShowSuggestions(false);
+                            }}
+                            onFocus={() => {
+                                if (
+                                    suggestions.length > 0 &&
+                                    !justSelected &&
+                                    searchField === "name"
+                                ) {
+                                    setShowSuggestions(true);
+                                }
+                            }}
+                            className="px-3 py-2 w-full outline-none"
+                        />
+                    )}
                 </div>
 
                 {/* PRICE ERROR */}
