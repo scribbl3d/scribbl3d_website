@@ -153,40 +153,49 @@ export default function BlogManager() {
                 </TableHeader>
 
                 <TableBody>
-                    {filteredBlogs.map((blog) => (
-                        <TableRow key={blog.id}>
-                            <TableCell>{blog.title}</TableCell>
-                            <TableCell className="max-w-[400px] truncate">
-                                {blog.description}
-                            </TableCell>
-                            <TableCell>
-                                {new Date(blog.createdAt).toLocaleDateString()}
-                            </TableCell>
-
-                            <TableCell>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="mr-2"
-                                    onClick={() =>
-                                        router.push(
-                                            `/admin/blogs/edit/${blog.id}`
-                                        )
-                                    }
-                                >
-                                    Edit
-                                </Button>
-
-                                <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDelete(blog.id)}
-                                >
-                                    Delete
-                                </Button>
+                    {filteredBlogs.length === 0 ? (
+                        <TableRow>
+                            <TableCell
+                                colSpan={4}
+                                className="text-center py-6 text-gray-500 "
+                            >
+                                No blog posts found. Add your first blog!
                             </TableCell>
                         </TableRow>
-                    ))}
+                    ) : (
+                        filteredBlogs.map((blog) => (
+                            <TableRow key={blog.id}>
+                                <TableCell>{blog.title}</TableCell>
+                                <TableCell>{blog.description}</TableCell>
+                                <TableCell>
+                                    {new Date(
+                                        blog.createdAt
+                                    ).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mr-2"
+                                        onClick={() =>
+                                            router.push(
+                                                `/admin/blogs/edit/${blog.id}`
+                                            )
+                                        }
+                                    >
+                                        Edit
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleDelete(blog.id)}
+                                    >
+                                        Delete
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    )}
                 </TableBody>
             </Table>
         </div>
