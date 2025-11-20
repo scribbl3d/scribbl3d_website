@@ -105,3 +105,56 @@
     @apply bg-background text-foreground;
   }
 }
+
+.editor-content h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.editor-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.editor-content h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.editor-content p {
+  margin: 8px 0;
+}
+
+/* Reduce paragraph spacing inside editor */
+.editor-content p {
+  margin: 2px 0 !important;
+  /* Very small gap */
+  line-height: 1.2 !important;
+  /* Tight line height */
+}
+
+/* Optional: reduce spacing for headings also */
+.editor-content h1,
+.editor-content h2,
+.editor-content h3 {
+  margin: 6px 0 !important;
+  line-height: 1.2 !important;
+}
+
+/* For Blog Display Page */
+
+.prose p,
+.blog-content p {
+  margin: 2px 0 !important;
+  line-height: 1.2 !important;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.blog-content h1,
+.blog-content h2,
+.blog-content h3 {
+  margin: 6px 0 !important;
+  line-height: 1.2 !important;
+}

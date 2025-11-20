@@ -1,14 +1,31 @@
 "use client";
 
 import Color from "@tiptap/extension-color";
+import Heading from "@tiptap/extension-heading";
 import Highlight from "@tiptap/extension-highlight";
+import TextStyle from "@tiptap/extension-text-style";
 import Underline from "@tiptap/extension-underline";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
 export default function RichTextEditor({ value, onChange }) {
     const editor = useEditor({
-        extensions: [StarterKit, Underline, Highlight, Color],
+        extensions: [
+            StarterKit.configure({
+                paragraph: {
+                    HTMLAttributes: {
+                        style: "margin: 4px 0 !important;", // Reduce line spacing
+                    },
+                },
+            }),
+            Underline,
+            Highlight,
+            TextStyle, // REQUIRED for Color
+            Color,
+            Heading.configure({
+                levels: [1, 2, 3],
+            }),
+        ],
         content: value,
         autofocus: true,
         editable: true,
@@ -49,6 +66,37 @@ export default function RichTextEditor({ value, onChange }) {
                     U
                 </button>
 
+                {/* Heading buttons */}
+                <button
+                    type="button"
+                    onClick={() =>
+                        editor.chain().focus().toggleHeading({ level: 1 }).run()
+                    }
+                    className="px-2 py-1 border rounded"
+                >
+                    H1
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() =>
+                        editor.chain().focus().toggleHeading({ level: 2 }).run()
+                    }
+                    className="px-2 py-1 border rounded"
+                >
+                    H2
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() =>
+                        editor.chain().focus().toggleHeading({ level: 3 }).run()
+                    }
+                    className="px-2 py-1 border rounded"
+                >
+                    H3
+                </button>
+
                 <button
                     type="button"
                     onClick={() =>
@@ -72,7 +120,10 @@ export default function RichTextEditor({ value, onChange }) {
             </div>
 
             {/* Editable area */}
-            <EditorContent editor={editor} className="editor-content" />
+            <EditorContent
+                editor={editor}
+                className="editor-content min-h-[200px] p-3 border rounded"
+            />
         </div>
     );
 }

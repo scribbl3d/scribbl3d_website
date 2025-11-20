@@ -56,14 +56,12 @@ export async function GET(request: Request) {
         const skip = (page - 1) * limit;
 
         // SEARCH LOGIC
-        let fieldFilter: any = {};
+        let fieldFilter: Prisma.PrebuiltProductWhereInput = {};
         if (search.trim() !== "") {
             if (searchField === "price") {
                 const numeric = Number(search);
                 if (!isNaN(numeric)) {
                     fieldFilter.price = numeric;
-                } else {
-                    fieldFilter.price = undefined;
                 }
             } else {
                 fieldFilter[searchField] = {
@@ -84,7 +82,7 @@ export async function GET(request: Request) {
         };
 
         // SORTING — FIXED
-        let orderByClause: any = undefined;
+        let orderByClause: any = [];
 
         if (sortBy === "price") {
             orderByClause = [
@@ -94,13 +92,14 @@ export async function GET(request: Request) {
         } else if (sortBy === "name") {
             orderByClause = { name: order };
         } else if (sortBy === "category") {
-            orderByClause = { category: order };
+            orderByClause = [{ category: order }, { name: "asc" }];
         } else if (sortBy === "updatedAt") {
-            orderByClause = { updatedAt: order };
+            orderByClause = [{ updatedAt: order }, { name: "asc" }];
         } else if (sortBy === "createdAt") {
-            orderByClause = { createdAt: order };
+            orderByClause = [{ createdAt: order }, { name: "asc" }];
         } else {
-            orderByClause = { createdAt: "desc" }; // default
+            // ⭐ DEFAULT: alphabetical order always
+            orderByClause = [{ name: "asc" }];
         }
 
         const [products, totalCount] = await Promise.all([
