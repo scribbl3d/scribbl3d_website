@@ -1,8 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import crypto from "crypto";
 import { PrismaClient } from "@prisma/client";
 import sgMail from "@sendgrid/mail";
+import axios from "axios";
+import crypto from "crypto";
+import { type NextRequest, NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
@@ -16,201 +16,293 @@ const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL!;
 sgMail.setApiKey(SENDGRID_API_KEY);
 
 export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ transactionId: string }> }
+    req: NextRequest,
+    context: { params: Promise<{ transactionId: string }> }
 ) {
-  try {
-    const { transactionId } = await context.params;
+    try {
+        const { transactionId } = await context.params;
 
-    console.log(
-      "[Payment Status Check] Starting status check for transaction:",
-      transactionId
-    );
+        console.log(
+            "[Payment Status Check] Starting status check for transaction:",
+            transactionId
+        );
 
-    if (!transactionId) {
-      console.error(
-        "[Payment Status Check] Transaction ID missing from params"
-      );
-      return NextResponse.json(
-        { success: false, message: "Transaction ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const checkStatus = async () => {
-      console.log("[PhonePe API] Preparing to call PhonePe status API");
-
-      const merchantId = MERCHANT_ID;
-      const url = `https://api${
-        ENV === "prod" ? "" : "-preprod"
-      }.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${transactionId}`;
-
-      const string = `/pg/v1/status/${merchantId}/${transactionId}${SALT_KEY}`;
-      const sha256 = crypto.createHash("sha256").update(string).digest("hex");
-      const xVerify = `${sha256}###${SALT_INDEX}`;
-
-      console.log("[PhonePe API] Request details:", {
-        url,
-        merchantId,
-        transactionId,
-        xVerifyPrefix: xVerify.substring(0, 20) + "...",
-      });
-
-      try {
-        const response = await axios.get(url, {
-          headers: {
-            "Content-Type": "application/json",
-            "X-VERIFY": xVerify,
-            "X-MERCHANT-ID": merchantId,
-          },
-        });
-
-        console.log("[PhonePe API] Response received:", {
-          status: response.status,
-          data: response.data,
-        });
-
-        return response.data;
-      } catch (error: any) {
-        console.error("[PhonePe API] Error in API call:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          headers: error.response?.headers,
-        });
-        throw error;
-      }
-    };
-
-    const result = await checkStatus();
-
-    if (result.success && result.code === "PAYMENT_SUCCESS") {
-      console.log(
-        "[Payment Status Check] Payment successful, updating order status"
-      );
-
-      try {
-        const order = await prisma.order.findFirst({
-          where: { transactionId: transactionId },
-          include: { user: true },
-        });
-
-        console.log("[Database] Order lookup result:", order);
-
-        if (order) {
-          if (order.status !== "confirmed") {
-            console.log(
-              "[Database] Updating order status to confirmed for order:",
-              order.id
+        if (!transactionId) {
+            console.error(
+                "[Payment Status Check] Transaction ID missing from params"
             );
-            const updatedOrder = await prisma.order.update({
-              where: { id: order.id },
-              data: { status: "confirmed" },
-              include: { user: true },
-            });
+            return NextResponse.json(
+                { success: false, message: "Transaction ID is required" },
+                { status: 400 }
+            );
+        }
+        //! Here we are doing fake upodating statud for confirmed order for testing purpose
 
-            console.log("[Database] Order status updated successfully:", {
-              orderId: updatedOrder.id,
-              newStatus: updatedOrder.status,
+        if (process.env.NODE_ENV !== "production") {
+            try {
+                console.warn(
+                    "[DEV MODE] Auto-confirming payment in DB for:",
+                    transactionId
+                );
+
+                const order = await prisma.order.findFirst({
+                    where: { transactionId },
+                });
+
+                if (!order) {
+                    console.warn(
+                        "[DEV MODE] Order not found for transactionId:",
+                        transactionId
+                    );
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            code: "ORDER_NOT_FOUND",
+                            message: "Order not found",
+                        },
+                        { status: 404 }
+                    );
+                }
+
+                if (order.status !== "confirmed") {
+                    const updatedOrder = await prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                            status: "confirmed", // your order status
+                        },
+                        include: { user: true },
+                    });
+
+                    console.log(
+                        "[DEV MODE] Order auto-confirmed:",
+                        updatedOrder.id
+                    );
+
+                    try {
+                        await sendOrderConfirmationEmail(updatedOrder);
+                        console.log(
+                            "[DEV MODE] Confirmation email sent for order:",
+                            updatedOrder.id
+                        );
+                    } catch (emailErr: any) {
+                        console.error(
+                            "[DEV MODE] Failed sending email:",
+                            emailErr?.message || emailErr
+                        );
+                    }
+                } else {
+                    console.log(
+                        "[DEV MODE] Order already confirmed:",
+                        order.id
+                    );
+                }
+
+                return NextResponse.json({
+                    success: true,
+                    code: "PAYMENT_SUCCESS",
+                    devMode: true,
+                    transactionId,
+                });
+            } catch (devErr) {
+                console.error("[DEV MODE] Auto-confirm failed:", devErr);
+                return NextResponse.json(
+                    {
+                        success: false,
+                        code: "DEV_CONFIRM_FAILED",
+                        message: "Dev confirm failed",
+                    },
+                    { status: 500 }
+                );
+            }
+        }
+
+        //! normal code starts here
+        const checkStatus = async () => {
+            console.log("[PhonePe API] Preparing to call PhonePe status API");
+
+            const merchantId = MERCHANT_ID;
+            const url = `https://api${
+                ENV === "prod" ? "" : "-preprod"
+            }.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${transactionId}`;
+
+            const string = `/pg/v1/status/${merchantId}/${transactionId}${SALT_KEY}`;
+            const sha256 = crypto
+                .createHash("sha256")
+                .update(string)
+                .digest("hex");
+            const xVerify = `${sha256}###${SALT_INDEX}`;
+
+            console.log("[PhonePe API] Request details:", {
+                url,
+                merchantId,
+                transactionId,
+                xVerifyPrefix: xVerify.substring(0, 20) + "...",
             });
 
             try {
-              await sendOrderConfirmationEmail(updatedOrder);
-              console.log(
-                "[Email] Confirmation email sent successfully for order:",
-                order.id
-              );
-            } catch (emailError: any) {
-              console.error("[Email] Failed to send confirmation email:", {
-                error: emailError.message,
-                orderId: order.id,
-              });
+                const response = await axios.get(url, {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-VERIFY": xVerify,
+                        "X-MERCHANT-ID": merchantId,
+                    },
+                });
+
+                console.log("[PhonePe API] Response received:", {
+                    status: response.status,
+                    data: response.data,
+                });
+
+                return response.data;
+            } catch (error: any) {
+                console.error("[PhonePe API] Error in API call:", {
+                    status: error.response?.status,
+                    data: error.response?.data,
+                    headers: error.response?.headers,
+                });
+                throw error;
             }
-          } else {
+        };
+
+        const result = await checkStatus();
+
+        if (result.success && result.code === "PAYMENT_SUCCESS") {
             console.log(
-              "[Database] Order already confirmed, skipping email:",
-              order.id
+                "[Payment Status Check] Payment successful, updating order status"
             );
-          }
-        } else {
-          console.error(
-            "[Database] No order found with transactionId:",
-            transactionId
-          );
+
+            try {
+                const order = await prisma.order.findFirst({
+                    where: { transactionId: transactionId },
+                    include: { user: true },
+                });
+
+                console.log("[Database] Order lookup result:", order);
+
+                if (order) {
+                    if (order.status !== "confirmed") {
+                        console.log(
+                            "[Database] Updating order status to confirmed for order:",
+                            order.id
+                        );
+                        const updatedOrder = await prisma.order.update({
+                            where: { id: order.id },
+                            data: { status: "confirmed" },
+                            include: { user: true },
+                        });
+
+                        console.log(
+                            "[Database] Order status updated successfully:",
+                            {
+                                orderId: updatedOrder.id,
+                                newStatus: updatedOrder.status,
+                            }
+                        );
+
+                        try {
+                            await sendOrderConfirmationEmail(updatedOrder);
+                            console.log(
+                                "[Email] Confirmation email sent successfully for order:",
+                                order.id
+                            );
+                        } catch (emailError: any) {
+                            console.error(
+                                "[Email] Failed to send confirmation email:",
+                                {
+                                    error: emailError.message,
+                                    orderId: order.id,
+                                }
+                            );
+                        }
+                    } else {
+                        console.log(
+                            "[Database] Order already confirmed, skipping email:",
+                            order.id
+                        );
+                    }
+                } else {
+                    console.error(
+                        "[Database] No order found with transactionId:",
+                        transactionId
+                    );
+                }
+            } catch (dbError) {
+                console.error(
+                    "[Database] Error updating order status:",
+                    dbError
+                );
+                throw dbError;
+            }
+
+            return NextResponse.json({
+                success: true,
+                code: "PAYMENT_SUCCESS",
+                data: result,
+            });
         }
-      } catch (dbError) {
-        console.error("[Database] Error updating order status:", dbError);
-        throw dbError;
-      }
 
-      return NextResponse.json({
-        success: true,
-        code: "PAYMENT_SUCCESS",
-        data: result,
-      });
+        if (result.code === "PAYMENT_PENDING") {
+            console.log("[Payment Status Check] Payment is still pending");
+            return NextResponse.json({
+                success: false,
+                code: "PAYMENT_PENDING",
+                message: "Payment is still being processed",
+            });
+        }
+
+        console.log(
+            "[Payment Status Check] Payment failed or unknown status:",
+            result.code
+        );
+        return NextResponse.json({
+            success: false,
+            code: result.code || "PAYMENT_FAILED",
+            message: result.message || "Payment failed or status unknown",
+        });
+    } catch (error) {
+        console.error("[Payment Status Check] Unhandled error:", error);
+        return NextResponse.json(
+            {
+                success: false,
+                code: "ERROR",
+                message: "Failed to check payment status",
+            },
+            { status: 500 }
+        );
     }
-
-    if (result.code === "PAYMENT_PENDING") {
-      console.log("[Payment Status Check] Payment is still pending");
-      return NextResponse.json({
-        success: false,
-        code: "PAYMENT_PENDING",
-        message: "Payment is still being processed",
-      });
-    }
-
-    console.log(
-      "[Payment Status Check] Payment failed or unknown status:",
-      result.code
-    );
-    return NextResponse.json({
-      success: false,
-      code: result.code || "PAYMENT_FAILED",
-      message: result.message || "Payment failed or status unknown",
-    });
-  } catch (error) {
-    console.error("[Payment Status Check] Unhandled error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        code: "ERROR",
-        message: "Failed to check payment status",
-      },
-      { status: 500 }
-    );
-  }
 }
 
 async function sendOrderConfirmationEmail(order: any) {
-  const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
+    const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
 
-  let items;
-  try {
-    items =
-      typeof order.items === "string" && order.items.trim() !== ""
-        ? JSON.parse(order.items)
-        : order.items;
-  } catch (error) {
-    console.error("[Email] Error parsing order items:", error);
-    items = [];
-  }
+    let items;
+    try {
+        items =
+            typeof order.items === "string" && order.items.trim() !== ""
+                ? JSON.parse(order.items)
+                : order.items;
+    } catch (error) {
+        console.error("[Email] Error parsing order items:", error);
+        items = [];
+    }
 
-  if (!Array.isArray(items)) {
-    console.warn("[Email] Order items is not an array:", items);
-    items = [];
-  }
+    if (!Array.isArray(items)) {
+        console.warn("[Email] Order items is not an array:", items);
+        items = [];
+    }
 
-  const userEmail = order.user?.email || "customer@example.com";
-  // const userName = order.user?.name || "Valued Customer";
+    const userEmail = order.user?.email || "customer@example.com";
+    // const userName = order.user?.name || "Valued Customer";
 
-  if (!userEmail || userEmail === "customer@example.com") {
-    throw new Error(`Invalid email address for order ${order.id}`);
-  }
+    if (!userEmail || userEmail === "customer@example.com") {
+        throw new Error(`Invalid email address for order ${order.id}`);
+    }
 
-  const msg = {
-    to: userEmail,
-    from: SENDGRID_FROM_EMAIL,
-    subject: "Your Order is Confirmed! - Scribbl3D",
-    html: `
+    const msg = {
+        to: userEmail,
+        from: SENDGRID_FROM_EMAIL,
+        subject: "Your Order is Confirmed! - Scribbl3D",
+        html: `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -257,12 +349,12 @@ async function sendOrderConfirmationEmail(order: any) {
             <tr>
               <td class="label">Order Date:</td>
               <td class="value">${
-                order.createdAt
-                  ? new Date(order.createdAt).toLocaleString("en-IN", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })
-                  : "-"
+                  order.createdAt
+                      ? new Date(order.createdAt).toLocaleString("en-IN", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                        })
+                      : "-"
               }</td>
             </tr>
             <tr>
@@ -278,29 +370,29 @@ async function sendOrderConfirmationEmail(order: any) {
         <div class="items">
           <h2 style="color:#fc5c7d;">Items Ordered</h2>
           ${
-            Array.isArray(items) && items.length > 0
-              ? items
-                  .map(
-                    (item) => `
+              Array.isArray(items) && items.length > 0
+                  ? items
+                        .map(
+                            (item) => `
             <div class="item-card">
               <img src="${
-                item.image || "https://placehold.co/56x56"
+                  item.image || "https://placehold.co/56x56"
               }" class="item-img" alt="${item.name}" />
               <div class="item-details">
                 <div class="item-name">${item.name}</div>
                 <div class="item-meta">
                   Quantity: ${item.quantity} &nbsp;|&nbsp; Price: ${formatPrice(
                       item.price
-                    )}
+                  )}
                   ${item.size ? `&nbsp;|&nbsp; Size: ${item.size}` : ""}
                   ${item.color ? `&nbsp;|&nbsp; Color: ${item.color}` : ""}
                 </div>
               </div>
             </div>
           `
-                  )
-                  .join("")
-              : `<div style="color:#888;">No items found.</div>`
+                        )
+                        .join("")
+                  : `<div style="color:#888;">No items found.</div>`
           }
         </div>
         <a href="https://scribbl3d.com/profile" class="cta">Track Your Order</a>
@@ -313,25 +405,28 @@ async function sendOrderConfirmationEmail(order: any) {
     </body>
     </html>
     `,
-  };
+    };
 
-  try {
-    console.log("[Email] Attempting to send confirmation email to:", userEmail);
-    const response = await sgMail.send(msg);
-    console.log("[Email] SendGrid API Response:", {
-      statusCode: response[0]?.statusCode,
-      headers: response[0]?.headers,
-      orderId: order.id,
-    });
-    return true;
-  } catch (error: any) {
-    console.error("[Email] Failed to send confirmation email:", {
-      error: error.message,
-      code: error.code,
-      response: error.response?.body,
-      orderId: order.id,
-      userEmail,
-    });
-    throw error;
-  }
+    try {
+        console.log(
+            "[Email] Attempting to send confirmation email to:",
+            userEmail
+        );
+        const response = await sgMail.send(msg);
+        console.log("[Email] SendGrid API Response:", {
+            statusCode: response[0]?.statusCode,
+            headers: response[0]?.headers,
+            orderId: order.id,
+        });
+        return true;
+    } catch (error: any) {
+        console.error("[Email] Failed to send confirmation email:", {
+            error: error.message,
+            code: error.code,
+            response: error.response?.body,
+            orderId: order.id,
+            userEmail,
+        });
+        throw error;
+    }
 }
