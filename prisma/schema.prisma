@@ -387,7 +387,23 @@ model Order {
   trackingInfo    Json?
   user            User     @relation(fields: [userId], references: [id])
 
+  shipment Shipment? // ✅ REQUIRED FIX
+
   @@index([userId])
+}
+
+model Shipment {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  provider    String   @default("DEHIVERY_TEST")
+  waybill     String // fake in dev, real in prod later
+  status      String // created | shipped | out_for_delivery | delivered
+  trackingUrl String?
+  rawResponse Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
 }
 
 model PincodeLocation {

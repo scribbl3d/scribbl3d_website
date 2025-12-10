@@ -1,9 +1,9 @@
+import { createFakeDelhiveryShipment } from "@/lib/delhivery-test";
 import { PrismaClient } from "@prisma/client";
 import sgMail from "@sendgrid/mail";
 import axios from "axios";
 import crypto from "crypto";
 import { type NextRequest, NextResponse } from "next/server";
-
 const prisma = new PrismaClient();
 
 const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID!;
@@ -68,28 +68,14 @@ export async function GET(
                     const updatedOrder = await prisma.order.update({
                         where: { id: order.id },
                         data: {
-                            status: "confirmed", // your order status
+                            status: "confirmed",
                         },
-                        include: { user: true },
                     });
 
-                    console.log(
-                        "[DEV MODE] Order auto-confirmed:",
-                        updatedOrder.id
-                    );
+                    console.log("✅ Order confirmed:", updatedOrder.id);
 
-                    try {
-                        await sendOrderConfirmationEmail(updatedOrder);
-                        console.log(
-                            "[DEV MODE] Confirmation email sent for order:",
-                            updatedOrder.id
-                        );
-                    } catch (emailErr: any) {
-                        console.error(
-                            "[DEV MODE] Failed sending email:",
-                            emailErr?.message || emailErr
-                        );
-                    }
+                    // ✅ PHASE 1 TEST MODE: CREATE FAKE SHIPMENT
+                    await createFakeDelhiveryShipment(updatedOrder.id);
                 } else {
                     console.log(
                         "[DEV MODE] Order already confirmed:",
