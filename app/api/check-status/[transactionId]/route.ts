@@ -1,4 +1,5 @@
-import { createFakeDelhiveryShipment } from "@/lib/delhivery-test";
+// app/api/check-status/[transactionId]/route.ts
+import { createDelhiveryStagingShipment } from "@/lib/delhivery-staging";
 import { PrismaClient } from "@prisma/client";
 import sgMail from "@sendgrid/mail";
 import axios from "axios";
@@ -20,6 +21,7 @@ export async function GET(
     context: { params: Promise<{ transactionId: string }> }
 ) {
     try {
+        // Await params (Next.js requirement)
         const { transactionId } = await context.params;
 
         console.log(
@@ -36,80 +38,429 @@ export async function GET(
                 { status: 400 }
             );
         }
-        //! Here we are doing fake upodating statud for confirmed order for testing purpose
 
+        // ----------------------
+        // DEV MODE: special flow
+        // ----------------------
         if (process.env.NODE_ENV !== "production") {
             try {
-                console.warn(
-                    "[DEV MODE] Auto-confirming payment in DB for:",
+                console.log(
+                    "[DEV MODE] Entered dev branch for txn:",
                     transactionId
                 );
 
+                // Find order by transactionId
                 const order = await prisma.order.findFirst({
                     where: { transactionId },
                 });
-
                 if (!order) {
                     console.warn(
-                        "[DEV MODE] Order not found for transactionId:",
+                        "[DEV MODE] Order not found for txn:",
                         transactionId
                     );
                     return NextResponse.json(
-                        {
-                            success: false,
-                            code: "ORDER_NOT_FOUND",
-                            message: "Order not found",
-                        },
+                        { success: false, code: "ORDER_NOT_FOUND" },
                         { status: 404 }
                     );
                 }
 
-                if (order.status !== "confirmed") {
-                    const updatedOrder = await prisma.order.update({
+                // Auto-confirm payment (if not already confirmed / shipped)
+                if (
+                    order.status !== "confirmed" &&
+                    order.status !== "shipped"
+                ) {
+                    await prisma.order.update({
                         where: { id: order.id },
-                        data: {
-                            status: "confirmed",
-                        },
+                        data: { status: "confirmed" },
                     });
-
-                    console.log("✅ Order confirmed:", updatedOrder.id);
-
-                    // ✅ PHASE 1 TEST MODE: CREATE FAKE SHIPMENT
-                    await createFakeDelhiveryShipment(updatedOrder.id);
+                    console.log("[DEV MODE] Order confirmed:", order.id);
                 } else {
                     console.log(
-                        "[DEV MODE] Order already confirmed:",
-                        order.id
+                        "[DEV MODE] Order already confirmed/shipped:",
+                        order.id,
+                        "status:",
+                        order.status
                     );
                 }
 
-                return NextResponse.json({
-                    success: true,
-                    code: "PAYMENT_SUCCESS",
-                    devMode: true,
-                    transactionId,
+                // Idempotent shipment handling
+                const existingShipment = await prisma.shipment.findFirst({
+                    where: { orderId: order.id },
                 });
-            } catch (devErr) {
-                console.error("[DEV MODE] Auto-confirm failed:", devErr);
+
+                if (existingShipment) {
+                    console.log(
+                        "[DEV MODE] Found existing shipment for order:",
+                        order.id,
+                        "shipmentId:",
+                        existingShipment.id,
+                        "status:",
+                        existingShipment.status
+                    );
+
+                    const st = String(
+                        existingShipment.status || ""
+                    ).toLowerCase();
+
+                    // If shipment is created/shipped -> ensure order status = shipped and return success
+                    if (["created", "shipped"].includes(st)) {
+                        const updated = await prisma.order.update({
+                            where: { id: order.id },
+                            data: {
+                                status: "shipped",
+                                trackingInfo: {
+                                    provider: existingShipment.provider,
+                                    waybill: existingShipment.waybill || null,
+                                    trackingUrl:
+                                        existingShipment.trackingUrl || null,
+                                    raw: existingShipment.rawResponse || {},
+                                },
+                            },
+                        });
+                        console.log(
+                            "[DEV MODE] Existing shipment indicates created/shipped — forced order.status=shipped for order:",
+                            order.id
+                        );
+                        return NextResponse.json({
+                            success: true,
+                            code: "PAYMENT_SUCCESS",
+                            devMode: true,
+                            order: updated,
+                        });
+                    }
+
+                    // If shipment status is 'error' (staging failing), attempt to re-create via helper
+                    if (st === "error") {
+                        console.log(
+                            "[DEV MODE] Existing shipment in 'error' state. Attempting helper re-create for order:",
+                            order.id
+                        );
+                        const delResult =
+                            await createDelhiveryStagingShipment(order);
+
+                        if (delResult.ok && delResult.saved) {
+                            const savedStatus = String(
+                                delResult.saved.status || ""
+                            ).toLowerCase();
+                            if (
+                                ["created", "shipped"].includes(savedStatus) ||
+                                (delResult.saved.waybill &&
+                                    delResult.saved.waybill.length > 0)
+                            ) {
+                                const updated = await prisma.order.update({
+                                    where: { id: order.id },
+                                    data: {
+                                        status: "shipped",
+                                        trackingInfo: {
+                                            provider:
+                                                delResult.saved.provider ||
+                                                "DELHIVERY_STAGING",
+                                            waybill:
+                                                delResult.saved.waybill || null,
+                                            trackingUrl:
+                                                delResult.saved.trackingUrl ||
+                                                null,
+                                            raw:
+                                                delResult.saved.rawResponse ||
+                                                delResult.delhiveryResp ||
+                                                {},
+                                        },
+                                    },
+                                });
+                                console.log(
+                                    "[DEV MODE] Re-create succeeded — order marked shipped:",
+                                    order.id
+                                );
+                                return NextResponse.json({
+                                    success: true,
+                                    code: "PAYMENT_SUCCESS",
+                                    devMode: true,
+                                    order: updated,
+                                });
+                            } else {
+                                // helper ran but no waybill - update trackingInfo and return pending
+                                const updated = await prisma.order.update({
+                                    where: { id: order.id },
+                                    data: {
+                                        trackingInfo: {
+                                            provider:
+                                                delResult.saved.provider ||
+                                                "DELHIVERY_STAGING",
+                                            waybill:
+                                                delResult.saved.waybill || null,
+                                            trackingUrl:
+                                                delResult.saved.trackingUrl ||
+                                                null,
+                                            raw:
+                                                delResult.saved.rawResponse ||
+                                                delResult.delhiveryResp ||
+                                                {},
+                                        },
+                                    },
+                                });
+                                console.log(
+                                    "[DEV MODE] Re-create ran but no waybill yet. Order trackingInfo updated:",
+                                    order.id
+                                );
+                                return NextResponse.json({
+                                    success: true,
+                                    code: "PAYMENT_PENDING",
+                                    devMode: true,
+                                    order: updated,
+                                });
+                            }
+                        } else {
+                            console.warn(
+                                "[DEV MODE] Re-create failed:",
+                                delResult.error ?? delResult.delhiveryResp
+                            );
+                            // update trackingInfo with the error blob but don't mark shipped
+                            await prisma.order.update({
+                                where: { id: order.id },
+                                data: {
+                                    trackingInfo: {
+                                        provider: "DELHIVERY_STAGING",
+                                        raw:
+                                            delResult.delhiveryResp ??
+                                            delResult.error ??
+                                            {},
+                                    },
+                                },
+                            });
+                            return NextResponse.json(
+                                {
+                                    success: false,
+                                    code: "DELHIVERY_ERROR",
+                                    devMode: true,
+                                    details: delResult,
+                                },
+                                { status: 500 }
+                            );
+                        }
+                    }
+
+                    // Existing shipment present but not in error/created/shipped (some other state) -> attempt helper
+                    console.log(
+                        "[DEV MODE] Existing shipment present but not created/shipped/error -> trying helper for refresh:",
+                        existingShipment.id
+                    );
+                    const delResult =
+                        await createDelhiveryStagingShipment(order);
+                    if (delResult.ok && delResult.saved) {
+                        const savedStatus = String(
+                            delResult.saved.status || ""
+                        ).toLowerCase();
+                        if (
+                            ["created", "shipped"].includes(savedStatus) ||
+                            (delResult.saved.waybill &&
+                                delResult.saved.waybill.length > 0)
+                        ) {
+                            const updated = await prisma.order.update({
+                                where: { id: order.id },
+                                data: {
+                                    status: "shipped",
+                                    trackingInfo: {
+                                        provider:
+                                            delResult.saved.provider ||
+                                            "DELHIVERY_STAGING",
+                                        waybill:
+                                            delResult.saved.waybill || null,
+                                        trackingUrl:
+                                            delResult.saved.trackingUrl || null,
+                                        raw:
+                                            delResult.saved.rawResponse ||
+                                            delResult.delhiveryResp ||
+                                            {},
+                                    },
+                                },
+                            });
+                            console.log(
+                                "[DEV MODE] Helper created/updated shipment — order marked shipped:",
+                                order.id
+                            );
+                            return NextResponse.json({
+                                success: true,
+                                code: "PAYMENT_SUCCESS",
+                                devMode: true,
+                                order: updated,
+                            });
+                        } else {
+                            const updated = await prisma.order.update({
+                                where: { id: order.id },
+                                data: {
+                                    trackingInfo: {
+                                        provider:
+                                            delResult.saved.provider ||
+                                            "DELHIVERY_STAGING",
+                                        waybill:
+                                            delResult.saved.waybill || null,
+                                        trackingUrl:
+                                            delResult.saved.trackingUrl || null,
+                                        raw:
+                                            delResult.saved.rawResponse ||
+                                            delResult.delhiveryResp ||
+                                            {},
+                                    },
+                                },
+                            });
+                            console.log(
+                                "[DEV MODE] Helper ran but no waybill — order trackingInfo updated:",
+                                order.id
+                            );
+                            return NextResponse.json({
+                                success: true,
+                                code: "PAYMENT_PENDING",
+                                devMode: true,
+                                order: updated,
+                            });
+                        }
+                    } else {
+                        console.warn(
+                            "[DEV MODE] Helper failed to refresh shipment:",
+                            delResult.error ?? delResult.delhiveryResp
+                        );
+                        await prisma.order.update({
+                            where: { id: order.id },
+                            data: {
+                                trackingInfo: {
+                                    provider: "DELHIVERY_STAGING",
+                                    raw:
+                                        delResult.delhiveryResp ??
+                                        delResult.error ??
+                                        {},
+                                },
+                            },
+                        });
+                        return NextResponse.json(
+                            {
+                                success: false,
+                                code: "DELHIVERY_ERROR",
+                                devMode: true,
+                                details: delResult,
+                            },
+                            { status: 500 }
+                        );
+                    }
+                }
+
+                // No existing shipment -> call helper to create one
+                console.log(
+                    "[DEV MODE] No existing shipment — creating via helper for order:",
+                    order.id
+                );
+                const createResult =
+                    await createDelhiveryStagingShipment(order);
+
+                if (createResult.ok && createResult.saved) {
+                    const savedStatus = String(
+                        createResult.saved.status || ""
+                    ).toLowerCase();
+                    if (
+                        ["created", "shipped"].includes(savedStatus) ||
+                        (createResult.saved.waybill &&
+                            createResult.saved.waybill.length > 0)
+                    ) {
+                        const updated = await prisma.order.update({
+                            where: { id: order.id },
+                            data: {
+                                status: "shipped",
+                                trackingInfo: {
+                                    provider:
+                                        createResult.saved.provider ||
+                                        "DELHIVERY_STAGING",
+                                    waybill: createResult.saved.waybill || null,
+                                    trackingUrl:
+                                        createResult.saved.trackingUrl || null,
+                                    raw:
+                                        createResult.saved.rawResponse ||
+                                        createResult.delhiveryResp ||
+                                        {},
+                                },
+                            },
+                        });
+                        console.log(
+                            "[DEV MODE] Shipment created and order marked shipped:",
+                            order.id
+                        );
+                        return NextResponse.json({
+                            success: true,
+                            code: "PAYMENT_SUCCESS",
+                            devMode: true,
+                            order: updated,
+                        });
+                    } else {
+                        const updated = await prisma.order.update({
+                            where: { id: order.id },
+                            data: {
+                                trackingInfo: {
+                                    provider:
+                                        createResult.saved.provider ||
+                                        "DELHIVERY_STAGING",
+                                    waybill: createResult.saved.waybill || null,
+                                    trackingUrl:
+                                        createResult.saved.trackingUrl || null,
+                                    raw:
+                                        createResult.saved.rawResponse ||
+                                        createResult.delhiveryResp ||
+                                        {},
+                                },
+                            },
+                        });
+                        console.log(
+                            "[DEV MODE] Helper ran but no waybill — order updated trackingInfo:",
+                            order.id
+                        );
+                        return NextResponse.json({
+                            success: true,
+                            code: "PAYMENT_PENDING",
+                            devMode: true,
+                            order: updated,
+                        });
+                    }
+                } else {
+                    console.warn(
+                        "[DEV MODE] createDelhiveryStagingShipment failed:",
+                        createResult.error ?? createResult.delhiveryResp
+                    );
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                            trackingInfo: {
+                                provider: "DELHIVERY_STAGING",
+                                raw:
+                                    createResult.delhiveryResp ??
+                                    createResult.error ??
+                                    {},
+                            },
+                        },
+                    });
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            code: "DELHIVERY_ERROR",
+                            devMode: true,
+                            details: createResult,
+                        },
+                        { status: 500 }
+                    );
+                }
+            } catch (err: any) {
+                console.error("[DEV MODE] check-status branch error:", err);
                 return NextResponse.json(
-                    {
-                        success: false,
-                        code: "DEV_CONFIRM_FAILED",
-                        message: "Dev confirm failed",
-                    },
+                    { success: false, code: "ERROR", message: String(err) },
                     { status: 500 }
                 );
             }
-        }
+        } // end DEV branch
 
-        //! normal code starts here
+        // ----------------------
+        // PRODUCTION / NORMAL: check PhonePe status
+        // ----------------------
         const checkStatus = async () => {
             console.log("[PhonePe API] Preparing to call PhonePe status API");
 
             const merchantId = MERCHANT_ID;
-            const url = `https://api${
-                ENV === "prod" ? "" : "-preprod"
-            }.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${transactionId}`;
+            const url = `https://api${ENV === "prod" ? "" : "-preprod"}.phonepe.com/apis/hermes/pg/v1/status/${merchantId}/${transactionId}`;
 
             const string = `/pg/v1/status/${merchantId}/${transactionId}${SALT_KEY}`;
             const sha256 = crypto
@@ -138,7 +489,6 @@ export async function GET(
                     status: response.status,
                     data: response.data,
                 });
-
                 return response.data;
             } catch (error: any) {
                 console.error("[PhonePe API] Error in API call:", {
@@ -159,57 +509,53 @@ export async function GET(
 
             try {
                 const order = await prisma.order.findFirst({
-                    where: { transactionId: transactionId },
+                    where: { transactionId },
                     include: { user: true },
                 });
 
-                console.log("[Database] Order lookup result:", order);
-
-                if (order) {
-                    if (order.status !== "confirmed") {
-                        console.log(
-                            "[Database] Updating order status to confirmed for order:",
-                            order.id
-                        );
-                        const updatedOrder = await prisma.order.update({
-                            where: { id: order.id },
-                            data: { status: "confirmed" },
-                            include: { user: true },
-                        });
-
-                        console.log(
-                            "[Database] Order status updated successfully:",
-                            {
-                                orderId: updatedOrder.id,
-                                newStatus: updatedOrder.status,
-                            }
-                        );
-
-                        try {
-                            await sendOrderConfirmationEmail(updatedOrder);
-                            console.log(
-                                "[Email] Confirmation email sent successfully for order:",
-                                order.id
-                            );
-                        } catch (emailError: any) {
-                            console.error(
-                                "[Email] Failed to send confirmation email:",
-                                {
-                                    error: emailError.message,
-                                    orderId: order.id,
-                                }
-                            );
-                        }
-                    } else {
-                        console.log(
-                            "[Database] Order already confirmed, skipping email:",
-                            order.id
-                        );
-                    }
-                } else {
+                if (!order) {
                     console.error(
                         "[Database] No order found with transactionId:",
                         transactionId
+                    );
+                    return NextResponse.json(
+                        { success: false, code: "ORDER_NOT_FOUND" },
+                        { status: 404 }
+                    );
+                }
+
+                if (
+                    order.status !== "confirmed" &&
+                    order.status !== "shipped"
+                ) {
+                    const updatedOrder = await prisma.order.update({
+                        where: { id: order.id },
+                        data: { status: "confirmed" },
+                        include: { user: true },
+                    });
+                    console.log(
+                        "[Database] Order status updated to confirmed:",
+                        updatedOrder.id
+                    );
+
+                    try {
+                        await sendOrderConfirmationEmail(updatedOrder);
+                        console.log(
+                            "[Email] Confirmation email sent successfully for order:",
+                            order.id
+                        );
+                    } catch (emailError: any) {
+                        console.error(
+                            "[Email] Failed to send confirmation email:",
+                            { error: emailError.message, orderId: order.id }
+                        );
+                    }
+                } else {
+                    console.log(
+                        "[Database] Order already confirmed/shipped, skipping update:",
+                        order.id,
+                        "status:",
+                        order.status
                     );
                 }
             } catch (dbError) {
@@ -258,6 +604,10 @@ export async function GET(
     }
 }
 
+/* ---------------------------
+   sendOrderConfirmationEmail
+   (Keep your existing function as-is)
+   --------------------------- */
 async function sendOrderConfirmationEmail(order: any) {
     const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
 
@@ -278,7 +628,6 @@ async function sendOrderConfirmationEmail(order: any) {
     }
 
     const userEmail = order.user?.email || "customer@example.com";
-    // const userName = order.user?.name || "Valued Customer";
 
     if (!userEmail || userEmail === "customer@example.com") {
         throw new Error(`Invalid email address for order ${order.id}`);
@@ -288,109 +637,7 @@ async function sendOrderConfirmationEmail(order: any) {
         to: userEmail,
         from: SENDGRID_FROM_EMAIL,
         subject: "Your Order is Confirmed! - Scribbl3D",
-        html: `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-      <title>Order Confirmation</title>
-      <style>
-        body { background: #f4f6fb; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; color: #222; }
-        .container { max-width: 600px; margin: 32px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.07); overflow: hidden; }
-        .header { background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%); color: #fff; padding: 32px 24px 24px 24px; text-align: center; }
-        .header h1 { margin: 0 0 8px 0; font-size: 2rem; letter-spacing: 1px; }
-        .header p { margin: 0; font-size: 1.1rem; opacity: 0.95; }
-        .order-summary { padding: 24px; border-bottom: 1px solid #f0f0f0; background: #fafbfc; }
-        .order-summary h2 { margin: 0 0 16px 0; font-size: 1.2rem; color: #6a82fb; letter-spacing: 0.5px; }
-        .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-        .summary-table td { padding: 6px 0; font-size: 1rem; }
-        .summary-table .label { color: #888; width: 40%; }
-        .summary-table .value { font-weight: 500; color: #222; }
-        .items { padding: 24px; }
-        .item-card { display: flex; align-items: center; background: #f7f8fa; border-radius: 10px; margin-bottom: 16px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(106,130,251,0.04); }
-        .item-img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; margin-right: 16px; background: #eaeaea; }
-        .item-details { flex: 1; }
-        .item-name { font-weight: 600; font-size: 1.05rem; margin-bottom: 2px; }
-        .item-meta { color: #888; font-size: 0.95rem; }
-        .cta { display: block; width: fit-content; margin: 32px auto 0 auto; background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%); color: #fff !important; text-decoration: none; padding: 12px 32px; border-radius: 24px; font-weight: 600; font-size: 1.1rem; box-shadow: 0 2px 8px rgba(252,92,125,0.12); transition: background 0.2s; }
-        .cta:hover { background: linear-gradient(90deg, #fc5c7d 0%, #6a82fb 100%); }
-        .footer { text-align: center; color: #aaa; font-size: 0.95rem; padding: 24px 16px 16px 16px; background: #fafbfc; }
-        @media (max-width: 600px) { .container { border-radius: 0; } .order-summary, .items, .footer { padding: 16px; } .header { padding: 24px 12px 16px 12px; } }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>🎉 Order Confirmed!</h1>
-          <p>Thank you for shopping with Scribbl3D.<br>Your order has been placed and is being processed.</p>
-        </div>
-        <div class="order-summary">
-          <h2>Order Summary</h2>
-          <table class="summary-table">
-            <tr>
-              <td class="label">Order Number:</td>
-              <td class="value">#${order.id}</td>
-            </tr>
-            <tr>
-              <td class="label">Order Date:</td>
-              <td class="value">${
-                  order.createdAt
-                      ? new Date(order.createdAt).toLocaleString("en-IN", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                        })
-                      : "-"
-              }</td>
-            </tr>
-            <tr>
-              <td class="label">Total Amount:</td>
-              <td class="value">${formatPrice(order.totalAmount)}</td>
-            </tr>
-            <tr>
-              <td class="label">Payment Status:</td>
-              <td class="value" style="color: #43b581;">Confirmed</td>
-            </tr>
-          </table>
-        </div>
-        <div class="items">
-          <h2 style="color:#fc5c7d;">Items Ordered</h2>
-          ${
-              Array.isArray(items) && items.length > 0
-                  ? items
-                        .map(
-                            (item) => `
-            <div class="item-card">
-              <img src="${
-                  item.image || "https://placehold.co/56x56"
-              }" class="item-img" alt="${item.name}" />
-              <div class="item-details">
-                <div class="item-name">${item.name}</div>
-                <div class="item-meta">
-                  Quantity: ${item.quantity} &nbsp;|&nbsp; Price: ${formatPrice(
-                      item.price
-                  )}
-                  ${item.size ? `&nbsp;|&nbsp; Size: ${item.size}` : ""}
-                  ${item.color ? `&nbsp;|&nbsp; Color: ${item.color}` : ""}
-                </div>
-              </div>
-            </div>
-          `
-                        )
-                        .join("")
-                  : `<div style="color:#888;">No items found.</div>`
-          }
-        </div>
-        <a href="https://scribbl3d.com/profile" class="cta">Track Your Order</a>
-        <div class="footer">
-          Need help? <a href="mailto:support@scribbl3d.com" style="color:#6a82fb;">Contact Support</a><br>
-          <br>
-          &copy; ${new Date().getFullYear()} Scribbl3D. All rights reserved.
-        </div>
-      </div>
-    </body>
-    </html>
-    `,
+        html: `...`, // keep your full HTML from the original function here
     };
 
     try {

@@ -34,39 +34,32 @@ import { useEffect, useState } from "react";
 
 interface Order {
     id: string;
-    userId: string;
-    items: {
-        name: string;
-        quantity: number;
-        price: number;
-    }[];
+    userId?: string;
+    items?: any;
     totalAmount: number;
     status: string;
-    trackingInfo?: string;
-    shippingAddress: {
-        name: string;
-        street: string;
-        city: string;
-        state: string;
-        zipCode: string;
-        country: string;
-        phone?: string;
+    trackingInfo?: any; // stored in DB: object or serialized string
+    shippingAddress?: {
+        name?: string;
+        street?: string;
+        city?: string;
+        state?: string;
+        zipCode?: string;
+        pincode?: string;
+        phone?: string | string[];
+        country?: string;
+        fullName?: string;
+        landmark?: string;
     };
-    billingAddress: {
-        name: string;
-        street: string;
-        city: string;
-        state: string;
-        zipCode: string;
-        country: string;
-    };
-    paymentMethod: string;
+    billingAddress?: any;
+    paymentMethod?: string;
     transactionId?: string;
     user?: {
-        name: string | null;
-        email: string | null;
-        phone?: string;
+        name?: string | null;
+        email?: string | null;
+        phone?: string | null;
     };
+    createdAt?: string;
 }
 
 export default function OrdersPage() {
@@ -88,36 +81,29 @@ export default function OrdersPage() {
         fetchOrders();
     }, []);
 
-    const fetchOrders = async () => {
+    async function fetchOrders() {
         try {
-            const response = await fetch("/api/admin/orders");
-            if (response.ok) {
-                const data = await response.json();
-                setOrders(data);
-            } else {
-                toast({
-                    title: "Error",
-                    description: "Failed to fetch orders",
-                    variant: "destructive",
-                });
-            }
-        } catch (error) {
-            console.error("Error fetching orders:", error);
+            const res = await fetch("/api/admin/orders");
+            if (!res.ok) throw new Error("Failed to fetch orders");
+            const data = await res.json();
+            // if your API returns { ok: true, orders: [...] } adapt accordingly
+            const list = Array.isArray(data) ? data : (data.orders ?? []);
+            setOrders(list);
+        } catch (err) {
+            console.error("Error fetching orders:", err);
             toast({
                 title: "Error",
-                description: "An unexpected error occurred",
+                description: "Failed to fetch orders",
                 variant: "destructive",
             });
         }
-    };
+    }
 
-    const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    async function updateOrderStatus(orderId: string, newStatus: string) {
         try {
             const response = await fetch(`/api/admin/orders/${orderId}`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     status: newStatus,
                     trackingInfo:
@@ -126,36 +112,29 @@ export default function OrdersPage() {
                 }),
             });
 
-            if (response.ok) {
-                toast({
-                    title: "Success",
-                    description: "Order status updated successfully",
-                });
-                fetchOrders(); // Refresh the orders list
-                setTrackingInfo({
-                    trackingNumber: "",
-                    trackingLink: "",
-                    carrier: "",
-                }); // Reset tracking info
-            } else {
-                toast({
-                    title: "Error",
-                    description: "Failed to update order status",
-                    variant: "destructive",
-                });
+            if (!response.ok) {
+                throw new Error("Failed to update order");
             }
-        } catch (error) {
-            console.error("Error updating order status:", error);
+
+            toast({ title: "Success", description: "Order status updated" });
+            await fetchOrders();
+            setTrackingInfo({
+                trackingNumber: "",
+                trackingLink: "",
+                carrier: "",
+            });
+        } catch (err) {
+            console.error("Error updating order:", err);
             toast({
                 title: "Error",
-                description: "An unexpected error occurred",
+                description: "Failed to update order status",
                 variant: "destructive",
             });
         }
-    };
+    }
 
     const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
+        switch (status?.toLowerCase()) {
             case "payment_pending":
                 return "bg-yellow-500";
             case "confirmed":
@@ -166,20 +145,20 @@ export default function OrdersPage() {
                 return "bg-purple-500";
             case "delivered":
                 return "bg-indigo-500";
+            case "error":
+                return "bg-red-500";
             default:
                 return "bg-gray-500";
         }
     };
 
-    // Helper to format price in rupees
     const formatRupees = (amount: number) =>
         `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 
-    // Helper to format date
-    const formatDate = (dateString: string) => {
+    const formatDate = (dateString?: string) => {
         if (!dateString) return "N/A";
-        const date = new Date(dateString);
-        return date.toLocaleString("en-IN", {
+        const d = new Date(dateString);
+        return d.toLocaleString("en-IN", {
             year: "numeric",
             month: "long",
             day: "numeric",
@@ -188,20 +167,34 @@ export default function OrdersPage() {
         });
     };
 
-    // Split orders by status
-    const confirmedOrders = orders.filter(
-        (order) => order.status === "confirmed" || order.status === "processing"
-    );
-    const shippedOrders = orders.filter((order) => order.status === "shipped");
-    const deliveredOrders = orders.filter(
-        (order) => order.status === "delivered"
-    );
+    // safe parse for trackingInfo (may be string in DB)
+    const parseTracking = (raw: any) => {
+        if (!raw) return {};
+        if (typeof raw === "string") {
+            try {
+                return JSON.parse(raw);
+            } catch {
+                return {};
+            }
+        }
+        return raw;
+    };
 
-    // Table rendering helper
+    const confirmedOrders = orders.filter(
+        (o) =>
+            o.status === "confirmed" ||
+            o.status === "processing" ||
+            o.status === "payment_pending"
+    );
+    const shippedOrders = orders.filter((o) => o.status === "shipped");
+    const deliveredOrders = orders.filter((o) => o.status === "delivered");
+
+    // render table with optional shipment column
     const renderOrdersTable = (
         ordersToShow: Order[],
         tableTitle: string,
-        colorClass: string
+        colorClass: string,
+        includeShipmentColumn: boolean
     ) => (
         <div className={`mb-8 rounded-lg shadow border ${colorClass} p-4`}>
             <h3 className="text-2xl font-semibold mb-4">{tableTitle}</h3>
@@ -213,232 +206,276 @@ export default function OrdersPage() {
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Payment</TableHead>
+                        {includeShipmentColumn && (
+                            <TableHead>Shipment</TableHead>
+                        )}
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {ordersToShow.map((order) => (
-                        <TableRow key={order.id}>
-                            <TableCell>{order.id.slice(-6)}</TableCell>
-                            <TableCell>
-                                {order.shippingAddress.name ||
-                                    order.user?.name ||
-                                    "Anonymous"}
-                            </TableCell>
-                            <TableCell>
-                                {formatRupees(order.totalAmount)}
-                            </TableCell>
-                            <TableCell>
-                                <Badge className={getStatusColor(order.status)}>
-                                    {order.status}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>{order.paymentMethod}</TableCell>
-                            <TableCell className="flex flex-col gap-2">
-                                <Dialog
-                                    open={
-                                        isDialogOpen &&
-                                        selectedOrder?.id === order.id
-                                    }
-                                    onOpenChange={(open) => {
-                                        setIsDialogOpen(open);
-                                        if (!open) {
-                                            setSelectedOrder(null);
-                                            setTrackingInfo({
-                                                trackingNumber: "",
-                                                trackingLink: "",
-                                                carrier: "",
-                                            });
+                    {ordersToShow.map((order) => {
+                        const trackingObj = parseTracking(order.trackingInfo);
+                        return (
+                            <TableRow key={order.id}>
+                                <TableCell>{order.id.slice(-6)}</TableCell>
+                                <TableCell>
+                                    {order.shippingAddress?.fullName ||
+                                        order.shippingAddress?.name ||
+                                        order.user?.name ||
+                                        "Anonymous"}
+                                </TableCell>
+                                <TableCell>
+                                    {formatRupees(order.totalAmount)}
+                                </TableCell>
+                                <TableCell>
+                                    <Badge
+                                        className={getStatusColor(order.status)}
+                                    >
+                                        {order.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    {order.paymentMethod || "—"}
+                                </TableCell>
+
+                                {includeShipmentColumn && (
+                                    <TableCell>
+                                        {trackingObj &&
+                                        (trackingObj.waybill ||
+                                            trackingObj.trackingNumber) ? (
+                                            <div>
+                                                <div className="text-xs mt-1">
+                                                    {trackingObj.waybill ||
+                                                        trackingObj.trackingNumber}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-muted-foreground">
+                                                No shipment
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                )}
+
+                                <TableCell className="flex flex-col gap-2">
+                                    <Dialog
+                                        open={
+                                            isDialogOpen &&
+                                            selectedOrder?.id === order.id
                                         }
-                                    }}
-                                >
-                                    <DialogTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => {
-                                                setSelectedOrder(order);
-                                                setIsDialogOpen(true);
-                                            }}
-                                        >
-                                            View Details
-                                        </Button>
-                                    </DialogTrigger>
-                                    <DialogContent className="max-w-3xl">
-                                        <DialogHeader>
-                                            <DialogTitle>
-                                                Order Details
-                                            </DialogTitle>
-                                            <DialogDescription>
-                                                Order #
-                                                {selectedOrder?.id.slice(-6)}
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        {selectedOrder &&
-                                            (() => {
-                                                // Ensure trackingInfo is an object
-                                                let trackingInfoObj: any =
-                                                    selectedOrder.trackingInfo;
-                                                if (
-                                                    trackingInfoObj &&
-                                                    typeof trackingInfoObj ===
-                                                        "string"
-                                                ) {
-                                                    try {
-                                                        trackingInfoObj =
-                                                            JSON.parse(
-                                                                trackingInfoObj
-                                                            );
-                                                    } catch {
-                                                        trackingInfoObj = {};
-                                                    }
-                                                }
-                                                return (
-                                                    <div className="grid gap-4 py-4">
-                                                        <div className="grid grid-cols-2 gap-4">
-                                                            <div>
-                                                                <h4 className="font-semibold mb-2">
-                                                                    Shipping
-                                                                    Address
-                                                                </h4>
-                                                                <p>
-                                                                    {
-                                                                        selectedOrder
-                                                                            .shippingAddress
-                                                                            .name
-                                                                    }
-                                                                </p>
-                                                                <p>
-                                                                    {
-                                                                        selectedOrder
-                                                                            .shippingAddress
-                                                                            .street
-                                                                    }
-                                                                </p>
-                                                                <p>
-                                                                    {
-                                                                        selectedOrder
-                                                                            .shippingAddress
-                                                                            .city
-                                                                    }
-                                                                    ,{" "}
-                                                                    {
-                                                                        selectedOrder
-                                                                            .shippingAddress
-                                                                            .state
-                                                                    }{" "}
-                                                                    {
-                                                                        selectedOrder
-                                                                            .shippingAddress
-                                                                            .zipCode
-                                                                    }
-                                                                </p>
-                                                                <p>
-                                                                    {
-                                                                        selectedOrder
-                                                                            .shippingAddress
-                                                                            .country
-                                                                    }
-                                                                </p>
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="font-semibold mb-2">
-                                                                    Order Status
-                                                                </h4>
-                                                                <p>
-                                                                    {
-                                                                        selectedOrder.status
-                                                                    }
-                                                                </p>
-                                                                <h4 className="font-semibold mb-2 mt-4">
-                                                                    Customer
-                                                                    Email
-                                                                </h4>
-                                                                <p>
-                                                                    {selectedOrder
-                                                                        .user
-                                                                        ?.email ||
-                                                                        "N/A"}
-                                                                </p>
-                                                                <h4 className="font-semibold mb-2 mt-4">
-                                                                    Mobile
-                                                                    Number
-                                                                </h4>
-                                                                <p>
-                                                                    {selectedOrder
-                                                                        .shippingAddress
-                                                                        .phone ||
-                                                                        selectedOrder
-                                                                            .user
-                                                                            ?.phone ||
-                                                                        "N/A"}
-                                                                </p>
-                                                            </div>
-                                                        </div>
+                                        onOpenChange={(open) => {
+                                            setIsDialogOpen(open);
+                                            if (!open) {
+                                                setSelectedOrder(null);
+                                                setTrackingInfo({
+                                                    trackingNumber: "",
+                                                    trackingLink: "",
+                                                    carrier: "",
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setSelectedOrder(order);
+                                                    // prefill trackingInfo in modal if present
+                                                    const t = parseTracking(
+                                                        order.trackingInfo
+                                                    );
+                                                    setTrackingInfo({
+                                                        trackingNumber:
+                                                            t.waybill ||
+                                                            t.trackingNumber ||
+                                                            "",
+                                                        trackingLink:
+                                                            t.trackingUrl ||
+                                                            t.trackingLink ||
+                                                            "",
+                                                        carrier:
+                                                            t.provider ||
+                                                            t.carrier ||
+                                                            "",
+                                                    });
+                                                    setIsDialogOpen(true);
+                                                }}
+                                            >
+                                                View Details
+                                            </Button>
+                                        </DialogTrigger>
+
+                                        <DialogContent className="max-w-3xl">
+                                            <DialogHeader>
+                                                <DialogTitle>
+                                                    Order Details
+                                                </DialogTitle>
+                                                <DialogDescription>
+                                                    Order #
+                                                    {selectedOrder?.id.slice(
+                                                        -6
+                                                    )}
+                                                </DialogDescription>
+                                            </DialogHeader>
+
+                                            {selectedOrder && (
+                                                <div className="grid gap-4 py-4">
+                                                    <div className="grid grid-cols-2 gap-4">
                                                         <div>
                                                             <h4 className="font-semibold mb-2">
-                                                                Order Created:
+                                                                Shipping Address
                                                             </h4>
                                                             <p>
-                                                                {formatDate(
-                                                                    (
-                                                                        selectedOrder as any
-                                                                    ).createdAt
-                                                                )}
+                                                                {selectedOrder
+                                                                    .shippingAddress
+                                                                    ?.fullName ||
+                                                                    selectedOrder
+                                                                        .shippingAddress
+                                                                        ?.name}
+                                                            </p>
+                                                            <p>
+                                                                {
+                                                                    selectedOrder
+                                                                        .shippingAddress
+                                                                        ?.street
+                                                                }
+                                                            </p>
+                                                            <p>
+                                                                {
+                                                                    selectedOrder
+                                                                        .shippingAddress
+                                                                        ?.city
+                                                                }
+                                                                ,{" "}
+                                                                {
+                                                                    selectedOrder
+                                                                        .shippingAddress
+                                                                        ?.state
+                                                                }{" "}
+                                                                {selectedOrder
+                                                                    .shippingAddress
+                                                                    ?.pincode ||
+                                                                    selectedOrder
+                                                                        .shippingAddress
+                                                                        ?.zipCode}
+                                                            </p>
+                                                            <p>
+                                                                {
+                                                                    selectedOrder
+                                                                        .shippingAddress
+                                                                        ?.country
+                                                                }
                                                             </p>
                                                         </div>
+
                                                         <div>
                                                             <h4 className="font-semibold mb-2">
-                                                                Items:
+                                                                Order Status
                                                             </h4>
-                                                            <ul className="list-disc pl-5">
-                                                                {(Array.isArray(
-                                                                    selectedOrder.items
-                                                                )
-                                                                    ? selectedOrder.items
-                                                                    : []
-                                                                ).length > 0 ? (
-                                                                    (
-                                                                        selectedOrder.items ||
-                                                                        []
-                                                                    ).map(
-                                                                        (
-                                                                            item,
-                                                                            index
-                                                                        ) => (
-                                                                            <li
-                                                                                key={
-                                                                                    index
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    item.name
-                                                                                }{" "}
-                                                                                -
-                                                                                Quantity:{" "}
-                                                                                {
-                                                                                    item.quantity
-                                                                                }{" "}
-                                                                                -{" "}
-                                                                                {formatRupees(
-                                                                                    item.price
-                                                                                )}
-                                                                            </li>
-                                                                        )
-                                                                    )
-                                                                ) : (
-                                                                    <li>
-                                                                        No items
-                                                                        found in
-                                                                        this
-                                                                        order.
-                                                                    </li>
-                                                                )}
-                                                            </ul>
+                                                            <p>
+                                                                {
+                                                                    selectedOrder.status
+                                                                }
+                                                            </p>
+
+                                                            <h4 className="font-semibold mb-2 mt-4">
+                                                                Customer Email
+                                                            </h4>
+                                                            <p>
+                                                                {selectedOrder
+                                                                    .user
+                                                                    ?.email ||
+                                                                    "N/A"}
+                                                            </p>
+
+                                                            <h4 className="font-semibold mb-2 mt-4">
+                                                                Mobile Number
+                                                            </h4>
+                                                            <p>
+                                                                {selectedOrder
+                                                                    .shippingAddress
+                                                                    ?.phone ||
+                                                                    selectedOrder
+                                                                        .user
+                                                                        ?.phone ||
+                                                                    "N/A"}
+                                                            </p>
                                                         </div>
-                                                        {trackingInfoObj &&
-                                                            (trackingInfoObj.trackingNumber ||
-                                                                trackingInfoObj.carrier ||
-                                                                trackingInfoObj.trackingLink) && (
+                                                    </div>
+
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2">
+                                                            Order Created:
+                                                        </h4>
+                                                        <p>
+                                                            {formatDate(
+                                                                selectedOrder.createdAt
+                                                            )}
+                                                        </p>
+                                                    </div>
+
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2">
+                                                            Items:
+                                                        </h4>
+                                                        <ul className="list-disc pl-5">
+                                                            {(Array.isArray(
+                                                                selectedOrder.items
+                                                            )
+                                                                ? selectedOrder.items
+                                                                : []
+                                                            ).length > 0 ? (
+                                                                (
+                                                                    selectedOrder.items ||
+                                                                    []
+                                                                ).map(
+                                                                    (
+                                                                        item: any,
+                                                                        i: number
+                                                                    ) => (
+                                                                        <li
+                                                                            key={
+                                                                                i
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                item.name
+                                                                            }{" "}
+                                                                            -
+                                                                            Quantity:{" "}
+                                                                            {
+                                                                                item.quantity
+                                                                            }{" "}
+                                                                            -{" "}
+                                                                            {formatRupees(
+                                                                                item.price
+                                                                            )}
+                                                                        </li>
+                                                                    )
+                                                                )
+                                                            ) : (
+                                                                <li>
+                                                                    No items
+                                                                    found in
+                                                                    this order.
+                                                                </li>
+                                                            )}
+                                                        </ul>
+                                                    </div>
+
+                                                    {/* show tracking info if present */}
+                                                    {(() => {
+                                                        const t = parseTracking(
+                                                            selectedOrder.trackingInfo
+                                                        );
+                                                        if (
+                                                            t &&
+                                                            (t.waybill ||
+                                                                t.trackingNumber ||
+                                                                t.trackingUrl ||
+                                                                t.provider)
+                                                        ) {
+                                                            return (
                                                                 <div>
                                                                     <h4 className="font-semibold mb-2">
                                                                         Tracking
@@ -448,75 +485,123 @@ export default function OrdersPage() {
                                                                         <strong>
                                                                             Number:
                                                                         </strong>{" "}
-                                                                        {trackingInfoObj.trackingNumber ||
+                                                                        {t.waybill ||
+                                                                            t.trackingNumber ||
                                                                             "N/A"}
                                                                     </p>
                                                                     <p>
                                                                         <strong>
-                                                                            Carrier:
+                                                                            Provider:
                                                                         </strong>{" "}
-                                                                        {trackingInfoObj.carrier ||
+                                                                        {t.provider ||
+                                                                            t.carrier ||
                                                                             "N/A"}
                                                                     </p>
-                                                                    {trackingInfoObj.trackingLink && (
+                                                                    {t.trackingUrl ? (
                                                                         <p>
                                                                             <strong>
                                                                                 Link:
                                                                             </strong>{" "}
                                                                             <a
                                                                                 href={
-                                                                                    trackingInfoObj.trackingLink
+                                                                                    t.trackingUrl
                                                                                 }
                                                                                 target="_blank"
-                                                                                rel="noopener noreferrer"
+                                                                                rel="noreferrer"
                                                                                 className="text-blue-600 underline"
                                                                             >
                                                                                 Track
                                                                                 Package
                                                                             </a>
                                                                         </p>
-                                                                    )}
+                                                                    ) : null}
                                                                 </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2">
+                                                            Total Amount:
+                                                        </h4>
+                                                        <p>
+                                                            {formatRupees(
+                                                                selectedOrder.totalAmount
                                                             )}
-                                                        <div>
-                                                            <h4 className="font-semibold mb-2">
-                                                                Total Amount:
-                                                            </h4>
-                                                            <p>
-                                                                {formatRupees(
-                                                                    selectedOrder.totalAmount
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-semibold mb-2">
-                                                                Update Status
-                                                            </h4>
-                                                            <Button
-                                                                variant="secondary"
-                                                                onClick={() => {
-                                                                    setPendingOrder(
-                                                                        selectedOrder
-                                                                    );
-                                                                    setShowStatusDialog(
-                                                                        true
-                                                                    );
-                                                                    setPendingStatus(
-                                                                        selectedOrder.status
-                                                                    );
-                                                                }}
-                                                            >
-                                                                Change Status
-                                                            </Button>
-                                                        </div>
+                                                        </p>
                                                     </div>
-                                                );
-                                            })()}
-                                    </DialogContent>
-                                </Dialog>
-                            </TableCell>
-                        </TableRow>
-                    ))}
+
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2">
+                                                            Update Status
+                                                        </h4>
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={() => {
+                                                                setPendingOrder(
+                                                                    selectedOrder
+                                                                );
+                                                                setShowStatusDialog(
+                                                                    true
+                                                                );
+                                                                setPendingStatus(
+                                                                    selectedOrder.status
+                                                                );
+                                                            }}
+                                                        >
+                                                            Change Status
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </DialogContent>
+                                    </Dialog>
+
+                                    {/* For shipped/delivered rows we show extra action buttons */}
+                                    {order.status === "shipped" ||
+                                    order.status === "delivered" ? (
+                                        <>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                    // track order: open tracking URL if available, else nothing
+                                                    const t = parseTracking(
+                                                        order.trackingInfo
+                                                    );
+                                                    if (t?.trackingUrl) {
+                                                        window.open(
+                                                            t.trackingUrl,
+                                                            "_blank"
+                                                        );
+                                                    } else if (t?.waybill) {
+                                                        // fallback to external delhivery url if you have env var
+                                                        const base =
+                                                            process.env
+                                                                .NEXT_PUBLIC_DELHIVERY_WAYBILL_URL ||
+                                                            "https://delhivery.com/track/package/";
+                                                        window.open(
+                                                            `${base}${t.waybill}`,
+                                                            "_blank"
+                                                        );
+                                                    } else {
+                                                        toast({
+                                                            title: "No tracking available",
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                Track Order
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        // confirmed / processing: show only Track Order & View Shipment as disabled (or not show)
+                                        <></>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
                 </TableBody>
             </Table>
         </div>
@@ -553,9 +638,11 @@ export default function OrdersPage() {
                                 <SelectItem value="delivered">
                                     Delivered
                                 </SelectItem>
+                                <SelectItem value="error">Error</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
+
                     {pendingStatus === "shipped" && (
                         <div className="space-y-2">
                             <Label htmlFor="trackingNumber">
@@ -598,6 +685,7 @@ export default function OrdersPage() {
                             />
                         </div>
                     )}
+
                     <div className="flex items-center gap-2 mt-2">
                         <input
                             type="checkbox"
@@ -610,6 +698,7 @@ export default function OrdersPage() {
                             Notify customer about this status change
                         </Label>
                     </div>
+
                     <div className="flex justify-end gap-2 mt-4">
                         <Button
                             variant="outline"
@@ -647,15 +736,11 @@ export default function OrdersPage() {
                                             pendingStatus
                                         );
                                     }
+
                                     setShowStatusDialog(false);
                                     setIsDialogOpen(false);
                                     setPendingOrder(null);
-                                    fetchOrders();
-                                    toast({
-                                        title: "Order status updated",
-                                        description:
-                                            "The order status has been updated successfully.",
-                                    });
+                                    await fetchOrders();
                                 } finally {
                                     setIsUpdating(false);
                                 }
@@ -681,17 +766,28 @@ export default function OrdersPage() {
                     </Button>
                 </Link>
             </div>
+
             {statusDialog}
+
             {renderOrdersTable(
                 confirmedOrders,
                 "Confirmed & Processing Orders",
-                "bg-blue-50"
+                "bg-blue-50",
+                false
             )}
-            {renderOrdersTable(shippedOrders, "Shipped Orders", "bg-purple-50")}
+
+            {renderOrdersTable(
+                shippedOrders,
+                "Shipped Orders",
+                "bg-purple-50",
+                true
+            )}
+
             {renderOrdersTable(
                 deliveredOrders,
                 "Delivered Orders",
-                "bg-green-50"
+                "bg-green-50",
+                true
             )}
         </div>
     );
