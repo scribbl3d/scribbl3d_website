@@ -120,8 +120,8 @@ model ProductSize {
   name              String
   price             Int
   originalPrice     Int
-  prebuiltProductId String
   sizeType          String          @default("standard")
+  prebuiltProductId String
   cartItems         CartItem[]
   prebuiltProduct   PrebuiltProduct @relation(fields: [prebuiltProductId], references: [id], onDelete: Cascade)
 
@@ -189,18 +189,18 @@ model CartItem {
 model Address {
   id        String   @id @default(cuid())
   userId    String
+  fullName  String
+  email     String
+  phone     String
   street    String
+  landmark  String?
   city      String
   state     String
   zipCode   String
+  pincode   String?
   country   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  email     String
-  fullName  String
-  landmark  String?
-  phone     String
-  pincode   String?
   user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
@@ -227,8 +227,8 @@ model Blog {
   updatedAt      DateTime @updatedAt
   keywords       String   @db.VarChar(255)
   description    String?  @db.VarChar(500)
-  heroImage      String?  @db.VarChar(255)
   thumbnailImage String?  @db.VarChar(255)
+  heroImage      String?  @db.VarChar(255)
 }
 
 model CarouselItem {
@@ -318,12 +318,12 @@ model PersonaliseFormResponse {
   categories    String[]
   statueDetails String
   wantMore      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  email         String?
   name          String?
+  email         String?
   phone         String?
   userId        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Form3DResponse {
@@ -374,20 +374,19 @@ model Announcement {
 }
 
 model Order {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   userId          String
   items           Json
   totalAmount     Float
-  status          String   @default("payment_pending")
+  status          String    @default("payment_pending")
   shippingAddress Json
   billingAddress  Json
   paymentMethod   String
-  transactionId   String?  @unique
-  createdAt       DateTime @default(now())
+  transactionId   String?   @unique
   trackingInfo    Json?
-  user            User     @relation(fields: [userId], references: [id])
-
-  shipment Shipment? // ✅ REQUIRED FIX
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+  shipment        Shipment?
 
   @@index([userId])
 }
@@ -396,15 +395,21 @@ model Shipment {
   id          String   @id @default(cuid())
   orderId     String   @unique
   provider    String   @default("DEHIVERY_TEST")
-  waybill     String // fake in dev, real in prod later
-  status      String // created | shipped | out_for_delivery | delivered
+  waybill     String?        // make optional if not available yet
+  status      String
   trackingUrl String?
   rawResponse Json?
+   labelGenerated Boolean  @default(false)
+  labelGeneratedAt DateTime?
+
+  lastError   String?
+  attempts    Int      @default(0)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  order Order @relation(fields: [orderId], references: [id])
+  order       Order    @relation(fields: [orderId], references: [id])
 }
+
 
 model PincodeLocation {
   pincode   String  @id

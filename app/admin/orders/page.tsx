@@ -98,6 +98,34 @@ export default function OrdersPage() {
             });
         }
     }
+    async function generateLabel(waybill: string) {
+        console.log("Sending waybill 👉", waybill);
+
+        const res = await fetch(
+            `/api/internal/generate-label?waybill=${encodeURIComponent(
+                waybill
+            )}`,
+            {
+                method: "GET",
+            }
+        );
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Failed to generate label");
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `label-${waybill}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+    }
 
     async function updateOrderStatus(orderId: string, newStatus: string) {
         try {
@@ -593,6 +621,35 @@ export default function OrdersPage() {
                                             >
                                                 Track Order
                                             </Button>
+                                            {order.status === "shipped" ||
+                                            order.status === "delivered" ? (
+                                                <>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            const t =
+                                                                parseTracking(
+                                                                    order.trackingInfo
+                                                                );
+                                                            if (!t?.waybill) {
+                                                                toast({
+                                                                    title: "Waybill not found",
+                                                                    description:
+                                                                        "Waybill ID missing for this order",
+                                                                    variant:
+                                                                        "destructive",
+                                                                });
+                                                                return;
+                                                            }
+                                                            generateLabel(
+                                                                t.waybill
+                                                            );
+                                                        }}
+                                                    >
+                                                        Generate Label
+                                                    </Button>
+                                                </>
+                                            ) : null}
                                         </>
                                     ) : (
                                         // confirmed / processing: show only Track Order & View Shipment as disabled (or not show)

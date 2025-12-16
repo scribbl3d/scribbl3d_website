@@ -3,7 +3,14 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-    console.log("🔥 Middleware HIT:", request.nextUrl.pathname);
+    const pathname = request.nextUrl.pathname;
+
+    // 🚨 BYPASS middleware for PDF label generation
+    if (pathname.startsWith("/api/internal/generate-label")) {
+        return NextResponse.next();
+    }
+
+    console.log("🔥 Middleware HIT:", pathname);
 
     const origin = request.headers.get("origin") || "";
     const response = NextResponse.next();
@@ -43,8 +50,6 @@ export async function middleware(request: NextRequest) {
         req: request,
         secret: process.env.NEXTAUTH_SECRET,
     });
-
-    const pathname = request.nextUrl.pathname;
 
     const isAuthPage =
         pathname.startsWith("/login") || pathname.startsWith("/register");
@@ -86,7 +91,7 @@ export async function middleware(request: NextRequest) {
 // ----------------------------
 export const config = {
     matcher: [
-        "/api/:path*", // ensures CORS runs for API (critical)
+        "/api/:path*",
         "/profile/:path*",
         "/dashboard/:path*",
         "/login",
