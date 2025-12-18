@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@100;300;400;500;600;700;800;900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,7 +47,7 @@
     --chart-4: 43 74% 66%;
 
     --chart-5: 27 87% 67%;
-
+    --font-big-shoulders: "Big Shoulders Display", sans-serif;
     --font-gilroy: "__gilroy_variable";
   }
 }
