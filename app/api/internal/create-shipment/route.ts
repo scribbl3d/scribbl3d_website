@@ -16,6 +16,16 @@ export async function POST(req: Request) {
     const order = await prisma.order.findUnique({
         where: { id: orderId },
     });
+    const existingShipment = await prisma.shipment.findUnique({
+        where: { orderId },
+    });
+
+    if (existingShipment && existingShipment.status !== "failed") {
+        return NextResponse.json(
+            { error: "Shipment already exists" },
+            { status: 409 }
+        );
+    }
 
     if (!order || order.status !== "confirmed") {
         return NextResponse.json(

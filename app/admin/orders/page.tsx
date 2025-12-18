@@ -1,5 +1,6 @@
 "use client";
 
+import Pagination from "@/app/admin/_components/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface Order {
@@ -51,6 +53,11 @@ interface Order {
         fullName?: string;
         landmark?: string;
     };
+    shipment?: {
+        status?: string;
+        waybill?: string;
+        provider?: string;
+    };
     billingAddress?: any;
     paymentMethod?: string;
     transactionId?: string;
@@ -59,6 +66,7 @@ interface Order {
         email?: string | null;
         phone?: string | null;
     };
+
     createdAt?: string;
 }
 
@@ -76,9 +84,27 @@ export default function OrdersPage() {
     const [pendingOrder, setPendingOrder] = useState<Order | null>(null);
     const [notifyCustomer, setNotifyCustomer] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
+    // Pagination states (per table)
+    const ITEMS_PER_PAGE = 8;
+
+    const [paymentPendingPage, setPaymentPendingPage] = useState(1);
+    const [confirmedProcessingPage, setConfirmedProcessingPage] = useState(1);
+    const [inTransitPage, setInTransitPage] = useState(1);
+    const [deliveredPage, setDeliveredPage] = useState(1);
+    const router = useRouter();
 
     useEffect(() => {
-        fetchOrders();
+        async function init() {
+            // 1. Trigger backend sync (fire-and-forget)
+            fetch("/api/internal/sync-shipments", {
+                method: "POST",
+            }).catch(() => {});
+
+            // 2. Fetch updated orders
+            await fetchOrders();
+        }
+
+        init();
     }, []);
 
     async function fetchOrders() {
@@ -179,6 +205,21 @@ export default function OrdersPage() {
                 return "bg-gray-500";
         }
     };
+    const getShipmentStatusColor = (status?: string) => {
+        switch (status) {
+            case "manifested":
+                return "bg-yellow-500";
+            case "picked_up":
+            case "in_transit":
+                return "bg-blue-500";
+            case "out_for_delivery":
+                return "bg-purple-500";
+            case "delivered":
+                return "bg-green-500";
+            default:
+                return "bg-gray-500";
+        }
+    };
 
     const formatRupees = (amount: number) =>
         `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -214,15 +255,65 @@ export default function OrdersPage() {
             o.status === "processing" ||
             o.status === "payment_pending"
     );
+
     const shippedOrders = orders.filter((o) => o.status === "shipped");
     const deliveredOrders = orders.filter((o) => o.status === "delivered");
+    // 🔹 NEW BUCKETS (do not remove old ones yet)
+
+    const paymentPendingOrders = orders.filter(
+        (o) => o.status === "payment_pending"
+    );
+
+    const confirmedProcessingOrders = orders.filter(
+        (o) =>
+            (o.status === "confirmed" || o.status === "processing") &&
+            !o.shipment?.waybill
+    );
+
+    const inTransitOrders = orders.filter(
+        (o) =>
+            o.status === "shipped" &&
+            [
+                "manifested",
+                "picked_up",
+                "in_transit",
+                "out_for_delivery",
+            ].includes(o.shipment?.status ?? "")
+    );
+
+    const deliveredOrdersV2 = orders.filter(
+        (o) => o.status === "delivered" || o.shipment?.status === "delivered"
+    );
+    // 🔹 Pagination helpers
+    const paginate = <T,>(data: T[], page: number) => {
+        const start = (page - 1) * ITEMS_PER_PAGE;
+        return data.slice(start, start + ITEMS_PER_PAGE);
+    };
+
+    // 🔹 Paginated datasets
+    const paymentPendingOrdersPageData = paginate(
+        paymentPendingOrders,
+        paymentPendingPage
+    );
+
+    const confirmedProcessingOrdersPageData = paginate(
+        confirmedProcessingOrders,
+        confirmedProcessingPage
+    );
+
+    const inTransitOrdersPageData = paginate(inTransitOrders, inTransitPage);
+
+    const deliveredOrdersPageData = paginate(deliveredOrdersV2, deliveredPage);
 
     // render table with optional shipment column
     const renderOrdersTable = (
         ordersToShow: Order[],
         tableTitle: string,
         colorClass: string,
-        includeShipmentColumn: boolean
+
+        includeShipmentColumn: boolean,
+        isConfirmedProcessing?: boolean,
+        paginationNode?: React.ReactNode
     ) => (
         <div className={`mb-8 rounded-lg shadow border ${colorClass} p-4`}>
             <h3 className="text-2xl font-semibold mb-4">{tableTitle}</h3>
@@ -256,12 +347,27 @@ export default function OrdersPage() {
                                     {formatRupees(order.totalAmount)}
                                 </TableCell>
                                 <TableCell>
-                                    <Badge
-                                        className={getStatusColor(order.status)}
-                                    >
-                                        {order.status}
-                                    </Badge>
+                                    {includeShipmentColumn ? (
+                                        // SHIPPED TABLE → show shipment.status from DB
+                                        <Badge
+                                            className={getShipmentStatusColor(
+                                                order.shipment?.status
+                                            )}
+                                        >
+                                            {order.shipment?.status ?? "—"}
+                                        </Badge>
+                                    ) : (
+                                        // CONFIRMED / DELIVERED TABLE → show order.status
+                                        <Badge
+                                            className={getStatusColor(
+                                                order.status
+                                            )}
+                                        >
+                                            {order.status}
+                                        </Badge>
+                                    )}
                                 </TableCell>
+
                                 <TableCell>
                                     {order.paymentMethod || "—"}
                                 </TableCell>
@@ -585,6 +691,72 @@ export default function OrdersPage() {
                                             )}
                                         </DialogContent>
                                     </Dialog>
+                                    {/* Create Shipment — ONLY for Confirmed & Processing */}
+                                    {isConfirmedProcessing &&
+                                        !order.shipment && (
+                                            <Button
+                                                variant="outline"
+                                                onClick={async () => {
+                                                    try {
+                                                        const res = await fetch(
+                                                            "/api/internal/create-shipment",
+                                                            {
+                                                                method: "POST",
+                                                                headers: {
+                                                                    "Content-Type":
+                                                                        "application/json",
+                                                                },
+                                                                body: JSON.stringify(
+                                                                    {
+                                                                        orderId:
+                                                                            order.id,
+                                                                    }
+                                                                ),
+                                                            }
+                                                        );
+
+                                                        const data =
+                                                            await res.json();
+
+                                                        if (!res.ok) {
+                                                            throw new Error(
+                                                                data?.error ||
+                                                                    "Failed to create shipment"
+                                                            );
+                                                        }
+
+                                                        toast({
+                                                            title: "Shipment created",
+                                                            description:
+                                                                "Updating shipment status…",
+                                                        });
+
+                                                        // 1️⃣ First sync shipment (wait for status)
+                                                        await fetch(
+                                                            "/api/internal/sync-shipments",
+                                                            {
+                                                                method: "POST",
+                                                            }
+                                                        );
+
+                                                        // 2️⃣ THEN refetch orders
+                                                        await fetchOrders().catch(
+                                                            () => {}
+                                                        );
+                                                    } catch (err: any) {
+                                                        toast({
+                                                            title: "Shipment creation failed",
+                                                            description:
+                                                                err.message,
+                                                            variant:
+                                                                "destructive",
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                Create Shipment
+                                            </Button>
+                                        )}
 
                                     {/* For shipped/delivered rows we show extra action buttons */}
                                     {order.status === "shipped" ||
@@ -661,6 +833,11 @@ export default function OrdersPage() {
                     })}
                 </TableBody>
             </Table>
+            {paginationNode && (
+                <div className="w-full flex justify-center mt-4">
+                    {paginationNode}
+                </div>
+            )}
         </div>
     );
 
@@ -826,7 +1003,7 @@ export default function OrdersPage() {
 
             {statusDialog}
 
-            {renderOrdersTable(
+            {/* {renderOrdersTable(
                 confirmedOrders,
                 "Confirmed & Processing Orders",
                 "bg-blue-50",
@@ -845,6 +1022,67 @@ export default function OrdersPage() {
                 "Delivered Orders",
                 "bg-green-50",
                 true
+            )} */}
+            {/* 🔹 NEW TABLES (V2) — added for redesign */}
+
+            {renderOrdersTable(
+                paymentPendingOrdersPageData,
+                "Payment Pending",
+                "bg-yellow-50",
+                false,
+                false,
+                <Pagination
+                    page={paymentPendingPage}
+                    totalPages={Math.ceil(
+                        paymentPendingOrders.length / ITEMS_PER_PAGE
+                    )}
+                    onPageChange={setPaymentPendingPage}
+                />
+            )}
+
+            {renderOrdersTable(
+                confirmedProcessingOrdersPageData,
+                "Confirmed & Processing",
+                "bg-blue-50",
+                false,
+                true,
+                <Pagination
+                    page={confirmedProcessingPage}
+                    totalPages={Math.ceil(
+                        confirmedProcessingOrders.length / ITEMS_PER_PAGE
+                    )}
+                    onPageChange={setConfirmedProcessingPage}
+                />
+            )}
+
+            {renderOrdersTable(
+                inTransitOrdersPageData,
+                "In Transit",
+                "bg-purple-50",
+                true,
+                false,
+                <Pagination
+                    page={inTransitPage}
+                    totalPages={Math.ceil(
+                        inTransitOrders.length / ITEMS_PER_PAGE
+                    )}
+                    onPageChange={setInTransitPage}
+                />
+            )}
+
+            {renderOrdersTable(
+                deliveredOrdersPageData,
+                "Delivered",
+                "bg-green-50",
+                false,
+                false,
+                <Pagination
+                    page={deliveredPage}
+                    totalPages={Math.ceil(
+                        deliveredOrdersV2.length / ITEMS_PER_PAGE
+                    )}
+                    onPageChange={setDeliveredPage}
+                />
             )}
         </div>
     );
