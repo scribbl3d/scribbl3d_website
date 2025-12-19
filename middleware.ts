@@ -18,7 +18,11 @@ export async function middleware(request: NextRequest) {
     // ----------------------------
     // 🔥 GLOBAL CORS CONFIGURATION
     // ----------------------------
-    const allowedOrigins = ["http://localhost:3000", "https://scribbl3d.com"];
+    const allowedOrigins = [
+        "http://localhost:3000",
+        "https://scribbl3d.com",
+        "https://scribbl3d-website.vercel.app",
+    ];
 
     if (allowedOrigins.includes(origin)) {
         response.headers.set("Access-Control-Allow-Origin", origin);
