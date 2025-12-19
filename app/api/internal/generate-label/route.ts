@@ -1,3 +1,4 @@
+//app/api/internal/generate-label/route.ts
 export const runtime = "nodejs";
 
 import { prisma } from "@/lib/prisma";
@@ -40,8 +41,26 @@ export async function GET(req: Request) {
         }
 
         // ✅ BEST CASE: redirect to S3 PDF
+        // ✅ If Delhivery gives S3 link, FETCH IT SERVER-SIDE
         if (pkg.pdf_download_link) {
-            return NextResponse.redirect(pkg.pdf_download_link);
+            const pdfRes = await axios.get(pkg.pdf_download_link, {
+                responseType: "arraybuffer",
+            });
+
+            await prisma.shipment.updateMany({
+                where: { waybill },
+                data: {
+                    labelGenerated: true,
+                    labelGeneratedAt: new Date(),
+                },
+            });
+
+            return new Response(pdfRes.data, {
+                headers: {
+                    "Content-Type": "application/pdf",
+                    "Content-Disposition": `inline; filename="label-${waybill}.pdf"`,
+                },
+            });
         }
 
         // 🔁 FALLBACK: base64 encoded PDF

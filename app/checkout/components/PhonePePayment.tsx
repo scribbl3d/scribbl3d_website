@@ -102,13 +102,9 @@ export default function PhonePePayment({
                 orderId,
             };
 
-            const response = await axios.post("/api/order", data);
-
-            if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
-                window.location.href =
-                    response.data.data.instrumentResponse.redirectInfo.url;
-            } else {
-                throw new Error("Invalid payment response structure");
+            if (process.env.NODE_ENV === "production") {
+                // TODO: enable after deployment with real callback URL
+                throw new Error("PhonePe live payment not enabled yet");
             }
         } catch (error: any) {
             console.error("Payment error:", error);
