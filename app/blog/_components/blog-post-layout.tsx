@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -12,9 +11,9 @@ interface BlogPost {
     author: string;
     createdAt: string;
     tags: string;
+    heroImage?: string;
     coverImage?: string;
     thumbnailImage?: string;
-    heroImage?: string;
 }
 
 interface BlogPostLayoutProps {
@@ -43,23 +42,21 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
     }, [blogId]);
 
     const fetchBlog = async () => {
-        const response = await fetch(`/api/blogs/${blogId}`);
-        if (response.ok) {
-            setBlog(await response.json());
-        } else {
-            console.error("Failed to fetch blog");
+        const res = await fetch(`/api/blogs/${blogId}`);
+        if (res.ok) {
+            setBlog(await res.json());
         }
     };
 
     const fetchAllBlogs = async () => {
-        const response = await fetch("/api/blogs");
-        if (response.ok) {
-            setAllBlogs(await response.json());
+        const res = await fetch("/api/blogs");
+        if (res.ok) {
+            setAllBlogs(await res.json());
         }
     };
 
     if (!blog) {
-        return <div className="pt-[100px]">Loading...</div>;
+        return <div className="pt-[100px]">Loading…</div>;
     }
 
     const currentIndex = allBlogs.findIndex((b) => b.id === blog.id);
@@ -67,26 +64,26 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
     const nextBlog =
         currentIndex < allBlogs.length - 1 ? allBlogs[currentIndex + 1] : null;
 
-    /* ✅ FINAL IMAGE RESOLUTION LOGIC */
-    const heroSrc =
+    /* ✅ FINAL, BULLETPROOF IMAGE NORMALIZATION */
+    const rawImage =
         blog.heroImage?.trim() ||
         blog.coverImage?.trim() ||
         blog.thumbnailImage?.trim() ||
         null;
 
-    const finalHeroSrc =
-        heroSrc && heroSrc.startsWith("/")
-            ? heroSrc
-            : heroSrc
-              ? `/${heroSrc}`
-              : null;
+    const finalImageSrc = rawImage
+        ? "/" +
+          rawImage
+              .replace(/^\/+/, "") // remove leading slashes
+              .replace(/\/+$/, "") // remove trailing slashes
+        : null;
 
     return (
         <div className="flex flex-col min-h-screen bg-background pt-[100px]">
             {/* Scroll Progress */}
             <div className="fixed top-[72px] left-0 right-0 h-1 bg-muted z-50">
                 <div
-                    className="h-full bg-primary transition-all duration-300 ease-out"
+                    className="h-full bg-primary transition-all duration-300"
                     style={{ width: `${scrollProgress}%` }}
                 />
             </div>
@@ -103,7 +100,7 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
                                 <Link
                                     key={b.id}
                                     href={`/blog/${b.id}`}
-                                    className={`block py-2 px-4 rounded-md transition-colors ${
+                                    className={`block py-2 px-4 rounded-md ${
                                         b.id === blog.id
                                             ? "bg-primary text-primary-foreground"
                                             : "hover:bg-muted"
@@ -136,15 +133,12 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
                                 {new Date(blog.createdAt).toLocaleDateString()}
                             </div>
 
-                            {/* ✅ HERO IMAGE (SAFE) */}
-                            {finalHeroSrc && (
-                                <Image
-                                    src={finalHeroSrc}
+                            {/* ✅ HERO IMAGE */}
+                            {finalImageSrc && (
+                                <img
+                                    src={finalImageSrc}
                                     alt="Blog post hero image"
-                                    width={800}
-                                    height={400}
-                                    className="rounded-lg object-cover mb-6"
-                                    unoptimized
+                                    className="w-full rounded-lg object-cover mb-6"
                                 />
                             )}
 
