@@ -12,9 +12,9 @@ interface BlogPost {
     author: string;
     createdAt: string;
     tags: string;
-    coverImage: string;
-    thumbnailImage?: string; // New
-    heroImage?: string; // New
+    coverImage?: string;
+    thumbnailImage?: string;
+    heroImage?: string;
 }
 
 interface BlogPostLayoutProps {
@@ -35,8 +35,7 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
             const docHeight =
                 document.documentElement.scrollHeight -
                 document.documentElement.clientHeight;
-            const scrollPercent = scrollTop / docHeight;
-            setScrollProgress(scrollPercent * 100);
+            setScrollProgress((scrollTop / docHeight) * 100);
         };
 
         window.addEventListener("scroll", handleScroll);
@@ -46,8 +45,7 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
     const fetchBlog = async () => {
         const response = await fetch(`/api/blogs/${blogId}`);
         if (response.ok) {
-            const data = await response.json();
-            setBlog(data);
+            setBlog(await response.json());
         } else {
             console.error("Failed to fetch blog");
         }
@@ -56,10 +54,7 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
     const fetchAllBlogs = async () => {
         const response = await fetch("/api/blogs");
         if (response.ok) {
-            const data = await response.json();
-            setAllBlogs(data);
-        } else {
-            console.error("Failed to fetch all blogs");
+            setAllBlogs(await response.json());
         }
     };
 
@@ -72,8 +67,23 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
     const nextBlog =
         currentIndex < allBlogs.length - 1 ? allBlogs[currentIndex + 1] : null;
 
+    /* ✅ FINAL IMAGE RESOLUTION LOGIC */
+    const heroSrc =
+        blog.heroImage?.trim() ||
+        blog.coverImage?.trim() ||
+        blog.thumbnailImage?.trim() ||
+        null;
+
+    const finalHeroSrc =
+        heroSrc && heroSrc.startsWith("/")
+            ? heroSrc
+            : heroSrc
+              ? `/${heroSrc}`
+              : null;
+
     return (
         <div className="flex flex-col min-h-screen bg-background pt-[100px]">
+            {/* Scroll Progress */}
             <div className="fixed top-[72px] left-0 right-0 h-1 bg-muted z-50">
                 <div
                     className="h-full bg-primary transition-all duration-300 ease-out"
@@ -82,7 +92,8 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
             </div>
 
             <div className="flex flex-1">
-                <aside className="w-64 border-r bg-muted/30 sticky top-[172px] self-start h-[calc(100vh-172px)] overflow-y-auto hidden lg:block">
+                {/* Sidebar */}
+                <aside className="w-64 border-r bg-muted/30 sticky top-[172px] h-[calc(100vh-172px)] overflow-y-auto hidden lg:block">
                     <div className="p-4">
                         <h2 className="text-lg font-semibold mb-4">
                             All Posts
@@ -105,27 +116,14 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
                     </div>
                 </aside>
 
-                <main className="flex-1 min-h-[calc(100vh-172px)] overflow-y-auto">
+                {/* Main */}
+                <main className="flex-1 overflow-y-auto">
                     <div className="max-w-4xl mx-auto px-4 py-8">
                         <Link
                             href="/blog"
                             className="inline-flex items-center text-sm text-muted-foreground hover:text-primary mb-8"
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="mr-2 h-4 w-4"
-                            >
-                                <polyline points="15 18 9 12 15 6" />
-                            </svg>
-                            Back to all posts
+                            ← Back to all posts
                         </Link>
 
                         <article className="prose prose-lg dark:prose-invert max-w-none">
@@ -133,35 +131,22 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
                                 {blog.title}
                             </h1>
 
-                            <div className="flex items-center space-x-4 mb-6 text-muted-foreground">
-                                <div>
-                                    <p className="text-sm font-medium">
-                                        {blog.author}
-                                    </p>
-                                    <div className="flex items-center text-xs">
-                                        <time dateTime={blog.createdAt}>
-                                            {new Date(
-                                                blog.createdAt
-                                            ).toLocaleDateString()}
-                                        </time>
-                                    </div>
-                                </div>
+                            <div className="mb-6 text-muted-foreground text-sm">
+                                {blog.author} ·{" "}
+                                {new Date(blog.createdAt).toLocaleDateString()}
                             </div>
 
-                            <Image
-                                src={
-                                    (
-                                        blog.heroImage || blog.coverImage
-                                    )?.startsWith("/")
-                                        ? blog.heroImage || blog.coverImage
-                                        : `/${blog.heroImage || blog.coverImage}`
-                                }
-                                alt="Blog post hero image"
-                                width={800}
-                                height={400}
-                                className="rounded-lg object-cover mb-6"
-                                unoptimized={true} // Key prop
-                            />
+                            {/* ✅ HERO IMAGE (SAFE) */}
+                            {finalHeroSrc && (
+                                <Image
+                                    src={finalHeroSrc}
+                                    alt="Blog post hero image"
+                                    width={800}
+                                    height={400}
+                                    className="rounded-lg object-cover mb-6"
+                                    unoptimized
+                                />
+                            )}
 
                             <div
                                 dangerouslySetInnerHTML={{
@@ -169,7 +154,8 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
                                 }}
                             />
 
-                            <div className="mt-8 flex justify-between items-center">
+                            {/* Navigation */}
+                            <div className="mt-10 flex justify-between">
                                 {prevBlog ? (
                                     <Link href={`/blog/${prevBlog.id}`}>
                                         <Button variant="outline">
@@ -177,14 +163,15 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
                                         </Button>
                                     </Link>
                                 ) : (
-                                    <div></div>
+                                    <div />
                                 )}
+
                                 {nextBlog ? (
                                     <Link href={`/blog/${nextBlog.id}`}>
                                         <Button>Next →</Button>
                                     </Link>
                                 ) : (
-                                    <div></div>
+                                    <div />
                                 )}
                             </div>
                         </article>
