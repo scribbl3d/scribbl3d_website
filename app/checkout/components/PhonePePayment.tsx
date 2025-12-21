@@ -25,7 +25,6 @@ export default function PhonePePayment({
     const [paymentStatus, setPaymentStatus] = useState<
         "idle" | "processing" | "success" | "error"
     >("idle");
-
     const router = useRouter();
     const { resetCheckout, state } = useCheckout();
     const { cart, clearCart } = useCart();
@@ -40,25 +39,30 @@ export default function PhonePePayment({
                 throw new Error("Invalid amount");
             }
 
-            // ✅ Generate transaction ID
+            // Generate transaction ID first
             const transactionId = `T${Date.now()}${Math.random()
                 .toString(36)
                 .slice(2)}`;
-
             console.log(
                 "[Payment Flow] Generated transaction ID:",
                 transactionId
             );
 
-            // ✅ Create order in DB
+            // Create order
+            console.log("[Payment Flow] Creating order in database");
             const orderResponse = await axios.post("/api/create-order", {
                 items: cart,
                 totalAmount: amount,
                 shippingAddress: state.shippingDetails,
                 billingAddress: state.shippingDetails,
                 paymentMethod: "PhonePe",
-                transactionId,
+                transactionId, // Include the transaction ID when creating the order
             });
+
+            console.log(
+                "[Payment Flow] Order creation response:",
+                orderResponse.data
+            );
 
             if (!orderResponse.data.orderId) {
                 throw new Error("Failed to create order");
@@ -66,50 +70,34 @@ export default function PhonePePayment({
 
             const orderId = orderResponse.data.orderId;
 
-            // ✅ Store for status check
-            sessionStorage.setItem("phonepe_transaction_id", transactionId);
-            sessionStorage.setItem("phonepe_amount", amount.toString());
-            sessionStorage.setItem("phonepe_order_id", orderId);
-
-            // ✅ ✅ ✅ DEV MODE PAYMENT BYPASS (CRITICAL FIX)
-            // inside handlePayment, dev bypass branch
-            if (process.env.NODE_ENV !== "production") {
-                console.warn("✅ DEV MODE: Skipping real PhonePe Checkout");
-
-                // include amount and a paymentSuccess flag so success page doesn't redirect away
-                const url = `/payment/success?txnId=${encodeURIComponent(
-                    transactionId
-                )}&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(
-                    amount.toString()
-                )}&paymentSuccess=true&dev=true`;
-
-                setTimeout(() => {
-                    router.push(url);
-                }, 1000);
-
-                return;
-            }
-
-            // -----------------------------
-            // ✅ REAL PRODUCTION PHONEPE FLOW ONLY
-            // -----------------------------
+            // Proceed with PhonePe payment
             const data = {
                 name,
                 amount,
                 mobile,
                 MUID: `MUID${Date.now()}${Math.random().toString(36).slice(2)}`,
                 transactionId,
-                orderId,
+                orderId, // Include the order ID in the payment request
             };
 
-            if (process.env.NODE_ENV === "production") {
-                // TODO: enable after deployment with real callback URL
-                throw new Error("PhonePe live payment not enabled yet");
+            console.log("Sending order request with data:", data);
+            const response = await axios.post("/api/order", data);
+            console.log("Order API response:", response.data);
+
+            if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
+                console.log("Storing transaction details in sessionStorage");
+                sessionStorage.setItem("phonepe_transaction_id", transactionId);
+                sessionStorage.setItem("phonepe_amount", amount.toString());
+                sessionStorage.setItem("phonepe_order_id", orderId);
+                console.log("Redirecting to PhonePe payment page");
+                window.location.href =
+                    response.data.data.instrumentResponse.redirectInfo.url;
+            } else {
+                throw new Error("Invalid payment response structure");
             }
         } catch (error: any) {
             console.error("Payment error:", error);
             setPaymentStatus("error");
-
             toast({
                 title: "Payment Error",
                 description:
@@ -130,19 +118,22 @@ export default function PhonePePayment({
                     "[Payment Status] Checking payment status for transaction:",
                     transactionId
                 );
-
                 setPaymentStatus("processing");
-
                 const response = await axios.get(
                     `/api/check-status/${transactionId}`
                 );
-
-                console.log("[Payment Status] Response:", response.data);
+                console.log(
+                    "[Payment Status] Payment status response:",
+                    response.data
+                );
 
                 if (
                     response.data.success &&
                     response.data.code === "PAYMENT_SUCCESS"
                 ) {
+                    console.log(
+                        "[Payment Status] Payment successful, clearing cart and resetting checkout"
+                    );
                     setPaymentStatus("success");
                     await clearCart();
                     resetCheckout();
@@ -152,53 +143,54 @@ export default function PhonePePayment({
                         description:
                             "Your payment has been processed successfully.",
                     });
-
                     const storedAmount =
                         sessionStorage.getItem("phonepe_amount");
-
+                    console.log("[Payment Status] Redirecting to success page");
                     router.push(
                         `/payment/success?txnId=${transactionId}&amount=${
                             storedAmount || amount
                         }&orderId=${orderId}`
                     );
                 } else if (response.data.code === "PAYMENT_PENDING") {
+                    console.log(
+                        "[Payment Status] Payment pending, retrying in 5 seconds"
+                    );
                     toast({
                         title: "Payment Pending",
-                        description: "Your payment is still being processed.",
+                        description:
+                            "Your payment is still being processed. Please wait.",
                     });
-
                     setTimeout(
                         () => checkPaymentStatus(transactionId, orderId),
                         5000
                     );
                 } else {
+                    console.log("[Payment Status] Payment failed");
                     setPaymentStatus("error");
-
                     toast({
                         title: "Payment Failed",
                         description:
                             response.data.message ||
-                            "Your payment could not be processed.",
+                            "Your payment could not be processed. Please try again.",
                         variant: "destructive",
                     });
-
                     router.push(
                         `/payment/failure?txnId=${transactionId}&orderId=${orderId}`
                     );
                 }
             } catch (error) {
-                console.error("[Payment Status] Error:", error);
-
+                console.error(
+                    "[Payment Status] Error checking payment status:",
+                    error
+                );
                 setPaymentStatus("error");
-
                 toast({
                     title: "Error",
                     description:
                         "An error occurred while checking your payment status.",
                     variant: "destructive",
                 });
-
-                router.push("/payment/failure");
+                router.push(`/payment/failure`);
             }
         },
         [router, amount, clearCart, resetCheckout]
@@ -207,22 +199,13 @@ export default function PhonePePayment({
     useEffect(() => {
         const storedTxnId = sessionStorage.getItem("phonepe_transaction_id");
         const storedOrderId = sessionStorage.getItem("phonepe_order_id");
-
         if (storedTxnId && storedOrderId) {
             console.log("[Init] Found stored transaction ID:", storedTxnId);
-            // 🚨 Prevent React Strict Mode double-run
-            // Clear *before* calling checkPaymentStatus
-            sessionStorage.removeItem("phonepe_transaction_id");
-            sessionStorage.removeItem("phonepe_order_id");
-
-            console.log(
-                "[Init] Running payment status check for:",
-                storedTxnId
-            );
             checkPaymentStatus(storedTxnId, storedOrderId);
-
             sessionStorage.removeItem("phonepe_transaction_id");
             sessionStorage.removeItem("phonepe_order_id");
+        } else {
+            console.log("[Init] No stored transaction ID found");
         }
     }, [checkPaymentStatus]);
 
@@ -244,20 +227,17 @@ export default function PhonePePayment({
                     )}
                 </Button>
             )}
-
             {paymentStatus === "processing" && (
                 <Button disabled className="w-full bg-purple-600 text-white">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Verifying Payment...
                 </Button>
             )}
-
             {paymentStatus === "success" && (
                 <Button disabled className="w-full bg-green-600 text-white">
                     Payment Successful - Redirecting...
                 </Button>
             )}
-
             {paymentStatus === "error" && (
                 <Button
                     onClick={handlePayment}
