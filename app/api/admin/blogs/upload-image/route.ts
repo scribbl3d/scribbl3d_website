@@ -4,6 +4,8 @@ import { join } from "path";
 
 export async function POST(request: NextRequest) {
     try {
+        console.log("🔥 ADMIN BLOG IMAGE UPLOAD HIT");
+
         const formData = await request.formData();
         const file = formData.get("file") as File;
         const type = formData.get("type") as string;
@@ -16,42 +18,41 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // ✅ CORRECT SLUGIFY
+        // ✅ SLUGIFY (MUST MATCH DB)
         const folderName = blogTitle
             .toLowerCase()
             .trim()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/^-+|-+$/g, "");
 
+        // ✅ ABSOLUTE PATH (CRITICAL FOR PROD)
         const uploadDir = join(
-            process.cwd(),
+            "/var/www/website_with_payment",
             "public",
             "blog-images",
             folderName
         );
 
-        // ✅ ENSURE FOLDER EXISTS
         await mkdir(uploadDir, { recursive: true });
 
         const files = await readdir(uploadDir);
         const sameTypeFiles = files.filter((f) => f.startsWith(type));
         const nextNumber = sameTypeFiles.length + 1;
 
-        const fileExt = file.name.split(".").pop();
-        const newFileName = `${type}-${nextNumber}.${fileExt}`;
-        const filePath = join(uploadDir, newFileName);
+        const ext = file.name.split(".").pop();
+        const fileName = `${type}-${nextNumber}.${ext}`;
+        const filePath = join(uploadDir, fileName);
 
         const buffer = Buffer.from(await file.arrayBuffer());
         await writeFile(filePath, buffer);
 
-        const imageUrl = `/blog-images/${folderName}/${newFileName}`;
+        const imageUrl = `/blog-images/${folderName}/${fileName}`;
+
+        console.log("✅ IMAGE SAVED AT:", filePath);
 
         return NextResponse.json({ imageUrl });
-    } catch (error) {
-        console.error("Error uploading image:", error);
-        return NextResponse.json(
-            { error: "Failed to upload image" },
-            { status: 500 }
-        );
+    } catch (err) {
+        console.error("❌ Upload failed:", err);
+        return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 }
