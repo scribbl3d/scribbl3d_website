@@ -30,11 +30,6 @@ export default function AdminPage() {
                         Orders
                     </Button>
                 </Link>{" "}
-                <Link href="/admin/shipments" className="block">
-                    <Button variant="outline" className="w-full h-24 text-lg">
-                        Shipments
-                    </Button>
-                </Link>
                 <Link href="/admin/products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Filaments
@@ -43,6 +38,11 @@ export default function AdminPage() {
                 <Link href="/admin/prebuilt-products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Prebuilt Products
+                    </Button>
+                </Link>
+                <Link href="/admin/printers" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Printers
                     </Button>
                 </Link>
                 <Link href="/admin/blogs" className="block">

@@ -22,8 +22,8 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
+import type { CartItem } from "@/providers/CartProvider";
 import { useCart } from "@/providers/CartProvider";
-import type { CartItem } from "@/types/cart";
 import { ChevronLeft, Minus, Pencil, Plus, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -46,7 +46,8 @@ export default function ShoppingCart() {
         applyDiscount,
         updateCustomization,
     } = useCart();
-    const [localCart, setLocalCart] = useState<CartItem[]>(cart);
+    const [localCart, setLocalCart] = useState<CartItem[]>([]);
+
     const [discountCode, setDiscountCode] = useState("");
     const [appliedDiscount, setAppliedDiscount] = useState(0);
     const [shippingOptions] = useState<ShippingOption[]>([]);
@@ -59,11 +60,9 @@ export default function ShoppingCart() {
     useEffect(() => {
         fetchCart();
     }, [fetchCart]);
-
     useEffect(() => {
-        setLocalCart(cart);
+        setLocalCart(cart ?? []);
     }, [cart]);
-
     const subtotal = localCart.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0

@@ -152,12 +152,15 @@ model WishlistItem {
   id                String           @id @default(cuid())
   wishlistId        String
   productId         String?
+  printerId        String?
+  printer          Printer?         @relation(fields: [printerId], references: [id])
+
   prebuiltProductId String?
   prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id])
   wishlist          Wishlist         @relation(fields: [wishlistId], references: [id])
 
-  @@unique([wishlistId, productId, prebuiltProductId])
+  @@unique([wishlistId, productId, prebuiltProductId, printerId])
 }
 
 model Cart {
@@ -168,22 +171,26 @@ model Cart {
 }
 
 model CartItem {
-  id                String           @id @default(cuid())
+  id                String   @id @default(cuid())
   cartId            String
   productId         String?
   prebuiltProductId String?
   productSizeId     String?
   productColorId    String?
   quantity          Int
-  addedAt           DateTime         @default(now())
-  customization     String?
-  cart              Cart             @relation(fields: [cartId], references: [id])
-  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  productColor      ProductColor?    @relation(fields: [productColorId], references: [id])
-  product           Product?         @relation(fields: [productId], references: [id])
-  productSize       ProductSize?     @relation(fields: [productSizeId], references: [id])
+  printerId         String?
+  printer           Printer? @relation(fields: [printerId], references: [id])
 
-  @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId])
+  addedAt         DateTime         @default(now())
+  customization   String?
+  cart            Cart             @relation(fields: [cartId], references: [id])
+  prebuiltProduct PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+
+  productColor ProductColor? @relation(fields: [productColorId], references: [id])
+  product      Product?      @relation(fields: [productId], references: [id])
+  productSize  ProductSize?  @relation(fields: [productSizeId], references: [id])
+
+  @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId, printerId])
 }
 
 model Address {
@@ -392,24 +399,23 @@ model Order {
 }
 
 model Shipment {
-  id          String   @id @default(cuid())
-  orderId     String   @unique
-  provider    String   @default("DEHIVERY_TEST")
-  waybill     String?        // make optional if not available yet
-  status      String
-  trackingUrl String?
-  rawResponse Json?
-   labelGenerated Boolean  @default(false)
+  id               String    @id @default(cuid())
+  orderId          String    @unique
+  provider         String    @default("DEHIVERY_TEST")
+  waybill          String? // make optional if not available yet
+  status           String
+  trackingUrl      String?
+  rawResponse      Json?
+  labelGenerated   Boolean   @default(false)
   labelGeneratedAt DateTime?
 
-  lastError   String?
-  attempts    Int      @default(0)
+  lastError String?
+  attempts  Int     @default(0)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  order       Order    @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
 }
-
 
 model PincodeLocation {
   pincode   String  @id
@@ -426,4 +432,162 @@ model HeroImage {
   alt       String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+
+
+
+
+
+
+
+model Printer {
+  id    String @id @default(cuid())
+  name  String
+  slug  String @unique
+  brand String
+
+  // Pricing
+  price         Int // Current price in paise
+  originalPrice Int? // Original price (for discount calculation)
+  discount      Int? // Discount percentage
+
+  // Basic Info
+  technology       String
+  experience       String
+  description      String?
+  shortDescription String? // For card view
+
+  // Build Volume
+  volumeLength Int
+  volumeWidth  Int
+  volumeHeight Int
+  volumeMax    Int
+
+  // Images
+  images PrinterImage[]
+
+  // Related Data
+  attributes     PrinterAttribute[]
+  specifications PrinterSpecification[]
+  features       PrinterFeature[]
+  applications   PrinterApplication[]
+  downloads      PrinterDownload[]
+
+  // SEO & Metadata
+  metaTitle       String?
+  metaDescription String?
+ wishlistItems   WishlistItem[]
+  // Warranty & Support
+  warrantyYears    Int     @default(1)
+  freeInstallation Boolean @default(true)
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cartItems CartItem[]
+
+  @@index([technology])
+  @@index([brand])
+  @@index([volumeMax])
+  @@index([price])
+}
+
+// Image Gallery
+model PrinterImage {
+  id        String  @id @default(cuid())
+  printerId String
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isMain    Boolean @default(false)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+// Filterable Attributes (for filters)
+model PrinterAttribute {
+  id             String @id @default(cuid())
+  printerId      String
+  attributeKey   String
+  attributeValue String
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId])
+  @@index([attributeKey, attributeValue])
+}
+
+// Detailed Specifications (for Specifications tab)
+model PrinterSpecification {
+  id        String @id @default(cuid())
+  printerId String
+  category  String // "Build Specifications", "Print Specifications", etc.
+  label     String // "Build Volume", "Nozzle Diameter", etc.
+  value     String // "300 × 300 × 300 mm", "0.4 mm", etc.
+  sortOrder Int    @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, category, sortOrder])
+}
+
+// Key Features (for Features & Applications tab)
+model PrinterFeature {
+  id          String  @id @default(cuid())
+  printerId   String
+  title       String
+  description String?
+  sortOrder   Int     @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+// Ideal Applications (for Features & Applications tab)
+model PrinterApplication {
+  id        String @id @default(cuid())
+  printerId String
+  name      String // "Rapid Prototyping", "Functional Parts", etc.
+  sortOrder Int    @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+// Downloads (for Downloads tab)
+model PrinterDownload {
+  id          String   @id @default(cuid())
+  printerId   String
+  title       String   // "Product Datasheet", "User Manual", etc.
+  description String?  // Optional description
+  downloadUrl String?   // Direct link to PDF (external URL or internal path)
+  sortOrder   Int      @default(0)
+  
+  printer     Printer  @relation(fields: [printerId], references: [id], onDelete: Cascade)
+  
+  @@index([printerId, sortOrder])
+}
+// Support & Warranty Content
+model SupportContent {
+  id        String @id @default(cuid())
+  printerId String
+  section   String // "Warranty Information", "After-Sales Support", etc.
+  content   String @db.Text
+  sortOrder Int    @default(0)
+
+  @@index([printerId, sortOrder])
+}
+
+// Filter Metadata (optional)
+model FilterMetadata {
+  key         String @id
+  displayName String
+  sortOrder   Int
+  filterType  String
+
+  @@index([sortOrder])
 }
