@@ -8,8 +8,8 @@ import {
     Image as ImageIcon,
     Plus,
     Save,
-    Search,
     Settings,
+    Trash2,
     Upload,
     X,
 } from "lucide-react";
@@ -19,23 +19,71 @@ import { useEffect, useState } from "react";
 
 /* ===================== CONSTANTS ===================== */
 
-// Filter Keys extracted from your screenshots
-const FILTER_KEYS = [
-    "Material",
-    "Recycling Ratio",
-    "Atmosphere Control",
-    "Connectivity",
-    "Build Chamber Temperature",
-    "Laser Power",
-    "Laser System",
-    "Cooling Time",
-    "System Type",
-    "Sieving System",
-    "Depowdering System",
-];
-
 const TECH_OPTIONS = ["FDM / FFF", "SLA / DLP", "SLS"];
 const EXP_OPTIONS = ["Beginner", "Intermediate", "Expert", "Industrial"];
+
+const SPEC_CATEGORIES = [
+    "Build Specifications",
+    "Print Specifications",
+    "Material Compatibility",
+    "Connectivity & Software",
+    "Physical Specifications",
+];
+
+// Pre-filled Standard Specifications
+const DEFAULT_SPECS = [
+    // Build Specifications
+    {
+        category: "Build Specifications",
+        label: "Build Volume",
+        value: "",
+        sortOrder: 0,
+    },
+    {
+        category: "Build Specifications",
+        label: "Chamber Type",
+        value: "",
+        sortOrder: 1,
+    },
+
+    // Print Specifications
+    {
+        category: "Print Specifications",
+        label: "Extruder Type",
+        value: "",
+        sortOrder: 0,
+    },
+    {
+        category: "Print Specifications",
+        label: "Print Speed",
+        value: "",
+        sortOrder: 1,
+    },
+
+    // Material Compatibility
+    {
+        category: "Material Compatibility",
+        label: "Supported Materials",
+        value: "",
+        sortOrder: 0,
+    },
+
+    // Connectivity
+    {
+        category: "Connectivity & Software",
+        label: "Connectivity",
+        value: "",
+        sortOrder: 0,
+    },
+
+    // Physical
+    {
+        category: "Physical Specifications",
+        label: "Machine Dimensions",
+        value: "",
+        sortOrder: 0,
+    },
+];
 
 /* ===================== TYPES ===================== */
 
@@ -56,12 +104,6 @@ type Specification = {
     sortOrder: number;
 };
 
-type FilterAttribute = {
-    id?: string;
-    attributeKey: string;
-    attributeValue: string;
-};
-
 type Feature = { id?: string; title: string; sortOrder: number };
 type Application = { id?: string; name: string; sortOrder: number };
 
@@ -75,9 +117,10 @@ type Download = {
 
 type PrinterFormData = {
     name: string;
+    slug: string; // Added Slug to type
     brand: string;
 
-    // Pricing (Input in Rupees string, convert to Int Paise on submit)
+    // Pricing
     price: string;
     originalPrice: string;
 
@@ -97,7 +140,6 @@ type PrinterFormData = {
 
     // Relations
     images: ImageItem[];
-    attributes: FilterAttribute[];
     specifications: Specification[];
     features: Feature[];
     applications: Application[];
@@ -110,16 +152,16 @@ export default function PrinterFormPage() {
     const router = useRouter();
     const params = useParams();
 
-    // LOGIC: Check if ID exists and is not 'new' to determine Edit Mode
     const printerId = params?.id as string | undefined;
     const isEdit = !!printerId && printerId !== "new";
 
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
 
-    // Initial Empty State
+    // Initial State
     const [formData, setFormData] = useState<PrinterFormData>({
         name: "",
+        slug: "",
         brand: "",
         price: "",
         originalPrice: "",
@@ -133,14 +175,14 @@ export default function PrinterFormPage() {
         warrantyYears: "1",
         freeInstallation: true,
         images: [],
-        attributes: [],
-        specifications: [],
+        // If it's a NEW printer, pre-fill the specifications with standard labels
+        specifications: isEdit ? [] : DEFAULT_SPECS,
         features: [],
         applications: [],
         downloads: [],
     });
 
-    // Helper: Auto-generate slug (backend will ensure uniqueness, this is for internal logic if needed)
+    // Helper: Auto-generate slug
     const generateSlug = (name: string) => {
         return name
             .toLowerCase()
@@ -152,7 +194,6 @@ export default function PrinterFormPage() {
 
     // FETCH DATA EFFECT
     useEffect(() => {
-        // Only fetch if we are in Edit mode
         if (isEdit) {
             setFetching(true);
             fetch(`/api/admin/printers/${printerId}`)
@@ -161,17 +202,15 @@ export default function PrinterFormPage() {
                     return res.json();
                 })
                 .then((data) => {
-                    // Map Backend Data (Prisma) to Form State
                     setFormData({
                         ...data,
-                        // Convert Paise (DB) to Rupees (UI)
+                        // Ensure slug is populated
+                        slug: data.slug || "",
                         price: data.price ? (data.price / 100).toString() : "",
                         originalPrice: data.originalPrice
                             ? (data.originalPrice / 100).toString()
                             : "",
-                        // Ensure arrays exist even if empty
                         images: data.images || [],
-                        attributes: data.attributes || [],
                         specifications: data.specifications || [],
                         features: data.features || [],
                         applications: data.applications || [],
@@ -214,36 +253,89 @@ export default function PrinterFormPage() {
                 Number(formData.volumeHeight) || 0
             );
 
-            // 2. Prepare Payload
-            const payload = {
-                ...formData,
-                slug: generateSlug(formData.name), // Generate fresh slug on save
-                price: priceInPaise,
-                originalPrice: originalPriceInPaise,
-                discount: discount,
-                volumeLength: Number(formData.volumeLength),
-                volumeWidth: Number(formData.volumeWidth),
-                volumeHeight: Number(formData.volumeHeight),
-                volumeMax: volMax,
-                warrantyYears: Number(formData.warrantyYears),
-            };
+            // 2. Prepare FormData (Required for File Uploads)
+            const data = new FormData();
 
+            // Handle Slug: Use existing if edit, generate new if create/empty
+            const finalSlug =
+                formData.slug || generateSlug(formData.name) || "printer";
+
+            // --- Append Basic Fields ---
+            data.append("name", formData.name);
+            data.append("slug", finalSlug); // Ensure slug is sent
+            data.append("brand", formData.brand);
+            data.append("price", priceInPaise.toString());
+            if (originalPriceInPaise)
+                data.append("originalPrice", originalPriceInPaise.toString());
+            data.append("discount", discount.toString());
+            data.append("technology", formData.technology);
+            data.append("experience", formData.experience);
+            data.append("description", formData.description);
+            data.append("shortDescription", formData.shortDescription);
+            data.append("volumeLength", formData.volumeLength);
+            data.append("volumeWidth", formData.volumeWidth);
+            data.append("volumeHeight", formData.volumeHeight);
+            data.append("volumeMax", volMax.toString());
+            data.append("warrantyYears", formData.warrantyYears);
+            data.append("freeInstallation", String(formData.freeInstallation));
+
+            // --- Append Complex Arrays as JSON Strings ---
+            data.append(
+                "specifications",
+                JSON.stringify(formData.specifications)
+            );
+            data.append("features", JSON.stringify(formData.features));
+            data.append("applications", JSON.stringify(formData.applications));
+            data.append("downloads", JSON.stringify(formData.downloads));
+
+            // --- Append Images (Critical Part) ---
+            // Separating "Existing URLs" from "New Files"
+            const existingImages = formData.images
+                .filter((img) => !img.file) // No file object = existing
+                .map((img) => ({
+                    url: img.url,
+                    isMain: img.isMain,
+                    sortOrder: img.sortOrder,
+                }));
+
+            data.append("existingImages", JSON.stringify(existingImages));
+
+            // Append New Files
+            formData.images.forEach((img, index) => {
+                if (img.file) {
+                    // Append the actual file
+                    data.append("newImages", img.file);
+                    // Append metadata for this specific new file
+                    const meta = {
+                        isMain: img.isMain,
+                        sortOrder: img.sortOrder,
+                    };
+                    data.append("newImagesMeta", JSON.stringify(meta));
+                }
+            });
+
+            // 3. Send Request
             const url = isEdit
                 ? `/api/admin/printers/${printerId}`
                 : `/api/admin/printers`;
             const method = isEdit ? "PUT" : "POST";
 
+            // CRITICAL: Do NOT set "Content-Type" header.
+            // The browser sets it automatically to "multipart/form-data" with boundary.
             const response = await fetch(url, {
                 method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
+                body: data,
             });
 
-            if (!response.ok) throw new Error("Failed to save");
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || "Failed to save");
+            }
+
             router.push("/admin/printers");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error saving printer:", error);
-            alert("Error saving printer. Please check console.");
+            alert(`Error: ${error.message}`);
         } finally {
             setLoading(false);
         }
@@ -300,14 +392,6 @@ export default function PrinterFormPage() {
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         </div>
     );
-
-    const specCategories = [
-        "Build Specifications",
-        "Print Specifications",
-        "Material Compatibility",
-        "Connectivity & Software",
-        "Physical Specifications",
-    ];
 
     if (fetching) {
         return (
@@ -475,13 +559,14 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 2. Technical Specs */}
+                            {/* 2. Technical Specs (Standardized) */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Detailed Specifications",
                                     <Cpu className="w-5 h-5" />
                                 )}
-                                {specCategories.map((cat) => (
+
+                                {SPEC_CATEGORIES.map((cat) => (
                                     <div
                                         key={cat}
                                         className="mb-6 last:mb-0 bg-gray-50 p-4 rounded-lg"
@@ -539,7 +624,7 @@ export default function PrinterFormPage() {
                                                                             .value
                                                                     )
                                                                 }
-                                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md"
+                                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700"
                                                             />
                                                             <input
                                                                 type="text"
@@ -568,11 +653,19 @@ export default function PrinterFormPage() {
                                                                 }
                                                                 className="p-2 text-gray-400 hover:text-red-500"
                                                             >
-                                                                <X className="w-4 h-4" />
+                                                                <Trash2 className="w-4 h-4" />
                                                             </button>
                                                         </div>
                                                     )
                                                 )}
+                                            {/* Show message if empty category */}
+                                            {formData.specifications.filter(
+                                                (s) => s.category === cat
+                                            ).length === 0 && (
+                                                <p className="text-xs text-gray-400 italic">
+                                                    No specifications added.
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -698,7 +791,7 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 4. Downloads (UPDATED UI) */}
+                            {/* 4. Downloads */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 <div className="flex justify-between items-center mb-4">
                                     <div className="flex items-center gap-2">
@@ -862,86 +955,7 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 2. Filter Attributes (DROPDOWN KEYS) */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                {renderSectionHeader(
-                                    "Filter Attributes",
-                                    <Search className="w-4 h-4" />
-                                )}
-                                <p className="text-xs text-gray-500 mb-3">
-                                    Add attributes to power the sidebar filters.
-                                </p>
-
-                                <div className="space-y-3">
-                                    {formData.attributes.map((attr, i) => (
-                                        <div key={i} className="flex gap-2">
-                                            {/* Dropdown for Attribute Key */}
-                                            <select
-                                                value={attr.attributeKey}
-                                                onChange={(e) =>
-                                                    updateArrayItem(
-                                                        "attributes",
-                                                        i,
-                                                        "attributeKey",
-                                                        e.target.value
-                                                    )
-                                                }
-                                                className="w-[140px] px-2 py-1.5 text-xs border border-gray-300 rounded bg-white text-gray-700"
-                                            >
-                                                <option value="">
-                                                    Select Key...
-                                                </option>
-                                                {FILTER_KEYS.map((k) => (
-                                                    <option key={k} value={k}>
-                                                        {k}
-                                                    </option>
-                                                ))}
-                                            </select>
-
-                                            {/* Input for Value */}
-                                            <input
-                                                placeholder="Value (e.g. Standard)"
-                                                value={attr.attributeValue}
-                                                onChange={(e) =>
-                                                    updateArrayItem(
-                                                        "attributes",
-                                                        i,
-                                                        "attributeValue",
-                                                        e.target.value
-                                                    )
-                                                }
-                                                className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    removeArrayItem(
-                                                        "attributes",
-                                                        i
-                                                    )
-                                                }
-                                                className="text-gray-400 hover:text-red-500"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            addItem("attributes", {
-                                                attributeKey: "",
-                                                attributeValue: "",
-                                            })
-                                        }
-                                        className="w-full py-2 border border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500"
-                                    >
-                                        + Add Filter Attribute
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* 3. Build Volume */}
+                            {/* 2. Build Volume */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Build Volume (mm)",
@@ -1004,7 +1018,7 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 4. Images */}
+                            {/* 3. Images */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Images",
@@ -1088,7 +1102,7 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 5. Descriptions */}
+                            {/* 4. Descriptions */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader("Descriptions")}
                                 <div className="space-y-4">

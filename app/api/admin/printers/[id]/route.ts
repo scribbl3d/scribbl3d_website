@@ -1,195 +1,172 @@
-// app/api/admin/printers/[id]/route.ts
-import { PrismaClient } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { saveFileLocally } from "@/lib/file-upload";
 
-const prisma = new PrismaClient();
-
-// GET - Get single printer for editing
+// GET: Fetch single printer data
 export async function GET(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  props: { params: Promise<{ id: string }> } // 1. Change type to Promise
 ) {
-    try {
-        const { id } = await params;
+  const params = await props.params; // 2. Await params before using
 
-        const printer = await prisma.printer.findUnique({
-            where: { id },
-            include: {
-                images: { orderBy: { sortOrder: "asc" } },
-                specifications: {
-                    orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-                },
-                features: { orderBy: { sortOrder: "asc" } },
-                applications: { orderBy: { sortOrder: "asc" } },
-                downloads: { orderBy: { sortOrder: "asc" } },
-            },
-        });
+  try {
+    const printer = await prisma.printer.findUnique({
+      where: { id: params.id },
+      include: {
+        images: { orderBy: { sortOrder: "asc" } },
+        specifications: { orderBy: { sortOrder: "asc" } },
+        features: { orderBy: { sortOrder: "asc" } },
+        applications: { orderBy: { sortOrder: "asc" } },
+        downloads: { orderBy: { sortOrder: "asc" } },
+      },
+    });
 
-        if (!printer) {
-            return NextResponse.json(
-                { error: "Printer not found" },
-                { status: 404 }
-            );
-        }
-
-        // Convert price from paise to rupees for editing
-        const formattedPrinter = {
-            ...printer,
-            price: (printer.price / 100).toString(),
-            originalPrice: printer.originalPrice
-                ? (printer.originalPrice / 100).toString()
-                : "",
-            discount: printer.discount ? printer.discount.toString() : "",
-            volumeLength: printer.volumeLength.toString(),
-            volumeWidth: printer.volumeWidth.toString(),
-            volumeHeight: printer.volumeHeight.toString(),
-            warrantyYears: printer.warrantyYears.toString(),
-        };
-
-        return NextResponse.json(formattedPrinter);
-    } catch (error) {
-        console.error("Error fetching printer:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch printer" },
-            { status: 500 }
-        );
+    if (!printer) {
+      return NextResponse.json({ error: "Printer not found" }, { status: 404 });
     }
+
+    return NextResponse.json(printer);
+  } catch (error) {
+    console.error("[PRINTER_GET]", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }
 
-// PUT - Update printer
+// PUT: Update existing printer
 export async function PUT(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  props: { params: Promise<{ id: string }> } // 1. Change type to Promise
 ) {
-    try {
-        const { id } = await params;
-        const data = await request.json();
+  const params = await props.params; // 2. Await params before using
 
-        // Calculate volumeMax
-        const volumeMax = Math.max(
-            parseInt(data.volumeLength),
-            parseInt(data.volumeWidth),
-            parseInt(data.volumeHeight)
-        );
+  try {
+    const formData = await req.formData();
 
-        // Update slug if name changed
-        const slug = data.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "");
+    // 1. Extract Basic Fields
+    // (We allow updating slug, but usually it's safer to keep the existing one if not provided)
+    const existingPrinter = await prisma.printer.findUnique({ 
+        where: { id: params.id },
+        select: { slug: true }
+    });
+    
+    // Use new slug from form, or fallback to existing slug
+    const slug = (formData.get("slug") as string) || existingPrinter?.slug || "";
 
-        // Delete existing relations
-        await Promise.all([
-            prisma.printerImage.deleteMany({ where: { printerId: id } }),
-            prisma.printerSpecification.deleteMany({
-                where: { printerId: id },
-            }),
-            prisma.printerFeature.deleteMany({ where: { printerId: id } }),
-            prisma.printerApplication.deleteMany({ where: { printerId: id } }),
-            prisma.printerDownload.deleteMany({ where: { printerId: id } }),
-        ]);
+    // 2. Parse JSON Arrays
+    const specifications = JSON.parse(formData.get("specifications") as string || "[]");
+    const features = JSON.parse(formData.get("features") as string || "[]");
+    const applications = JSON.parse(formData.get("applications") as string || "[]");
+    const downloads = JSON.parse(formData.get("downloads") as string || "[]");
 
-        // Update printer with new relations
-        const printer = await prisma.printer.update({
-            where: { id },
-            data: {
-                name: data.name,
-                slug,
-                brand: data.brand,
-                technology: data.technology,
-                experience: data.experience,
-                price: parseInt(data.price) * 100,
-                originalPrice: data.originalPrice
-                    ? parseInt(data.originalPrice) * 100
-                    : null,
-                discount: data.discount ? parseInt(data.discount) : null,
-                volumeLength: parseInt(data.volumeLength),
-                volumeWidth: parseInt(data.volumeWidth),
-                volumeHeight: parseInt(data.volumeHeight),
-                volumeMax,
-                description: data.description || "",
-                shortDescription: data.shortDescription || "",
-                warrantyYears: parseInt(data.warrantyYears) || 1,
-                freeInstallation: data.freeInstallation || false,
-                images: {
-                    create: (data.images || []).map((img, index) => ({
-                        url: img.url,
-                        altText: img.altText || data.name,
-                        sortOrder: index,
-                        isMain: img.isMain || index === 0,
-                    })),
-                },
-                specifications: {
-                    create: (data.specifications || []).map((spec, index) => ({
-                        category: spec.category,
-                        label: spec.label,
-                        value: spec.value,
-                        sortOrder: index,
-                    })),
-                },
-                features: {
-                    create: (data.features || []).map((feature, index) => ({
-                        title: feature.title,
-                        sortOrder: index,
-                    })),
-                },
-                applications: {
-                    create: (data.applications || []).map((app, index) => ({
-                        name: app.name,
-                        sortOrder: index,
-                    })),
-                },
-                downloads: {
-                    create: (data.downloads || []).map((download, index) => ({
-                        title: download.title,
-                        description: download.description || "",
-                        downloadUrl: download.downloadUrl,
-                        sortOrder: index,
-                    })),
-                },
-            },
-            include: {
-                images: true,
-                specifications: true,
-                features: true,
-                applications: true,
-                downloads: true,
-            },
-        });
+    // 3. Handle Images (Merge Strategy)
+    const existingImages = JSON.parse(formData.get("existingImages") as string || "[]");
+    
+    const newFiles = formData.getAll("newImages") as File[];
+    const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
-        return NextResponse.json(printer);
-    } catch (error) {
-        console.error("Error updating printer:", error);
+    const finalImageRecords = [...existingImages];
 
-        return NextResponse.json(
-            {
-                error: "Failed to update printer",
-                details:
-                    error instanceof Error ? error.message : "Unknown error",
-            },
-            { status: 500 }
-        );
+    // Process new uploads
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const meta = JSON.parse(newMetaStrings[i] || "{}");
+      
+      // Save locally (This handles creating the folder if it doesn't exist)
+      const publicUrl = await saveFileLocally(file, slug);
+
+      finalImageRecords.push({
+        url: publicUrl,
+        isMain: meta.isMain || false,
+        sortOrder: meta.sortOrder || 0
+      });
     }
-}
 
-// DELETE - Delete printer
-export async function DELETE(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const { id } = await params;
+    // 4. Transaction Update
+    const updatedPrinter = await prisma.$transaction([
+      // Update basic fields
+      prisma.printer.update({
+        where: { id: params.id },
+        data: {
+          name: formData.get("name") as string,
+          slug,
+          brand: formData.get("brand") as string,
+          price: parseInt(formData.get("price") as string),
+          originalPrice: formData.get("originalPrice") ? parseInt(formData.get("originalPrice") as string) : null,
+          discount: parseInt(formData.get("discount") as string),
+          technology: formData.get("technology") as string,
+          experience: formData.get("experience") as string,
+          description: formData.get("description") as string,
+          shortDescription: formData.get("shortDescription") as string,
+          volumeLength: parseInt(formData.get("volumeLength") as string),
+          volumeWidth: parseInt(formData.get("volumeWidth") as string),
+          volumeHeight: parseInt(formData.get("volumeHeight") as string),
+          volumeMax: parseInt(formData.get("volumeMax") as string),
+          warrantyYears: parseInt(formData.get("warrantyYears") as string),
+          freeInstallation: formData.get("freeInstallation") === "true",
+        },
+      }),
 
-        await prisma.printer.delete({
-            where: { id },
-        });
+      // --- Sync Relations (Delete All + Re-create) ---
+      
+      // Images
+      prisma.printerImage.deleteMany({ where: { printerId: params.id } }),
+      prisma.printerImage.createMany({
+        data: finalImageRecords.map((img: any) => ({
+          printerId: params.id,
+          url: img.url,
+          isMain: img.isMain,
+          sortOrder: img.sortOrder
+        })),
+      }),
 
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error("Error deleting printer:", error);
-        return NextResponse.json(
-            { error: "Failed to delete printer" },
-            { status: 500 }
-        );
-    }
+      // Specifications
+      prisma.printerSpecification.deleteMany({ where: { printerId: params.id } }),
+      prisma.printerSpecification.createMany({
+        data: specifications.map((spec: any, index: number) => ({
+          printerId: params.id,
+          category: spec.category,
+          label: spec.label,
+          value: spec.value,
+          sortOrder: index,
+        })),
+      }),
+
+      // Features
+      prisma.printerFeature.deleteMany({ where: { printerId: params.id } }),
+      prisma.printerFeature.createMany({
+        data: features.map((feat: any, index: number) => ({
+          printerId: params.id,
+          title: feat.title,
+          sortOrder: index,
+        })),
+      }),
+
+      // Applications
+      prisma.printerApplication.deleteMany({ where: { printerId: params.id } }),
+      prisma.printerApplication.createMany({
+        data: applications.map((app: any, index: number) => ({
+          printerId: params.id,
+          name: app.name,
+          sortOrder: index,
+        })),
+      }),
+
+      // Downloads
+      prisma.printerDownload.deleteMany({ where: { printerId: params.id } }),
+      prisma.printerDownload.createMany({
+        data: downloads.map((doc: any, index: number) => ({
+          printerId: params.id,
+          title: doc.title,
+          description: doc.description,
+          downloadUrl: doc.downloadUrl,
+          sortOrder: index,
+        })),
+      }),
+    ]);
+
+    return NextResponse.json(updatedPrinter[0]);
+  } catch (error) {
+    console.error("[PRINTER_PUT]", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

@@ -4,6 +4,8 @@
 import FilterPanel from "@/components/printers/FilterPanel";
 import PrinterGrid from "@/components/printers/PrinterGrid";
 import PrinterHero from "@/components/printers/PrinterHero";
+import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
+
 import { useEffect, useState } from "react";
 export default function PrintersPage() {
     const [printers, setPrinters] = useState([]);
@@ -112,6 +114,25 @@ export default function PrintersPage() {
             connectivity: [],
         });
     };
+    const removeFilter = (filterKey, value?: string) => {
+        setSelectedFilters((prev) => {
+            const current = prev[filterKey];
+
+            // If array filter → remove single value
+            if (Array.isArray(current)) {
+                return {
+                    ...prev,
+                    [filterKey]: current.filter((v) => v !== value),
+                };
+            }
+
+            // Single value filter → reset to null
+            return {
+                ...prev,
+                [filterKey]: null,
+            };
+        });
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -133,6 +154,11 @@ export default function PrintersPage() {
 
                     {/* Printers Grid */}
                     <div className="lg:w-3/4">
+                        <SelectedFiltersBar
+                            selectedFilters={selectedFilters}
+                            onRemove={removeFilter}
+                        />
+
                         <div className="mb-6 flex justify-between items-center">
                             <p className="text-gray-600">
                                 Showing{" "}

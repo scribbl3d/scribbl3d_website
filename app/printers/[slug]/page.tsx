@@ -136,7 +136,7 @@ export default function PrinterDetailPage() {
                     <div>
                         {/* Main Image */}
                         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-                            <div className="relative w-full h-[400px] bg-gray-50 rounded-lg overflow-hidden">
+                            <div className="relative w-full aspect-square sm:aspect-[4/3] lg:h-[400px] bg-gray-50 rounded-lg overflow-hidden">
                                 {printer.images && printer.images.length > 0 ? (
                                     <Image
                                         src={
@@ -161,7 +161,7 @@ export default function PrinterDetailPage() {
                         </div>
 
                         {/* Thumbnail Images */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                             {printer.images &&
                                 printer.images.map((image, index) => (
                                     <button
@@ -292,7 +292,8 @@ export default function PrinterDetailPage() {
                                 <button
                                     className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                                     onClick={() => {
-                                        const message = `Hi, I'm interested in ${printer.name} and would like more details`;
+                                        const message = `Hi, I’d like more information about the printer ${printer.name}. Please let me know the details.`;
+
                                         const url = `https://wa.me/919599523434?text=${encodeURIComponent(message)}`;
                                         window.open(url, "_blank");
                                     }}
@@ -327,7 +328,7 @@ export default function PrinterDetailPage() {
                                     Quick Specifications
                                 </h3>
                                 <div className="space-y-3">
-                                    <div className="flex justify-between text-sm">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                         <span className="text-gray-600">
                                             Technology
                                         </span>
@@ -335,7 +336,7 @@ export default function PrinterDetailPage() {
                                             {printer.technology}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between text-sm">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                         <span className="text-gray-600">
                                             Build Volume
                                         </span>
@@ -348,7 +349,7 @@ export default function PrinterDetailPage() {
                                     {printer.specifications.find(
                                         (s) => s.label === "Supported Materials"
                                     ) && (
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
                                                 Materials
                                             </span>
@@ -366,7 +367,7 @@ export default function PrinterDetailPage() {
                                     {printer.specifications.find(
                                         (s) => s.label === "Print Speed"
                                     ) && (
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
                                                 Print Speed
                                             </span>
@@ -384,7 +385,7 @@ export default function PrinterDetailPage() {
                                     {printer.specifications.find(
                                         (s) => s.label === "Extruder Type"
                                     ) && (
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
                                                 Extruder Type
                                             </span>
@@ -402,7 +403,7 @@ export default function PrinterDetailPage() {
                                     {printer.specifications.find(
                                         (s) => s.label === "Connectivity"
                                     ) && (
-                                        <div className="flex justify-between text-sm">
+                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
                                                 Connectivity
                                             </span>
@@ -427,7 +428,7 @@ export default function PrinterDetailPage() {
                 <div className="bg-white rounded-lg border border-gray-200">
                     {/* Tab Navigation */}
                     <div className="border-b border-gray-200">
-                        <nav className="flex px-6">
+                        <nav className="flex overflow-x-auto border-b px-4">
                             {[
                                 "specifications",
                                 "features",

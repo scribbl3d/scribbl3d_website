@@ -1,10 +1,9 @@
-// app/api/admin/printers/route.ts
-import { PrismaClient } from "@prisma/client";
+import { saveFileLocally } from "@/lib/file-upload";
+import { prisma } from "@/lib/prisma"; // Use your singleton instance
 import { NextRequest, NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
-
 // GET - List all printers with pagination and search
+// (Kept your original logic exactly as is)
 export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
@@ -38,16 +37,13 @@ export async function GET(request: NextRequest) {
                 orderBy,
                 skip,
                 take: limit,
-                select: {
-                    id: true,
-                    name: true,
-                    brand: true,
-                    technology: true,
-                    price: true,
-                    originalPrice: true,
-                    discount: true,
-                    freeInstallation: true,
-                    updatedAt: true,
+                // Include images so you can show thumbnails in the admin table
+                include: {
+                    images: {
+                        where: { isMain: true },
+                        take: 1,
+                        select: { url: true },
+                    },
                 },
             }),
             prisma.printer.count({ where }),
@@ -68,55 +64,102 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST - Create new printer
+// POST - Create new printer with File Uploads
+// (Updated to handle FormData instead of JSON)
 export async function POST(request: NextRequest) {
     try {
-        const data = await request.json();
+        const formData = await request.formData();
 
-        // Calculate volumeMax
-        const volumeMax = Math.max(
-            parseInt(data.volumeLength),
-            parseInt(data.volumeWidth),
-            parseInt(data.volumeHeight)
+        // 1. Extract Fields
+        const name = formData.get("name") as string;
+        // Generate slug if not provided, else clean existing one
+        let slug = formData.get("slug") as string;
+        if (!slug) {
+            slug = name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-|-$/g, "");
+        }
+
+        // Numeric conversions (Frontend sends prices in Paise)
+        const price = parseInt(formData.get("price") as string);
+        const originalPrice = formData.get("originalPrice")
+            ? parseInt(formData.get("originalPrice") as string)
+            : null;
+        const discount = parseInt((formData.get("discount") as string) || "0");
+
+        // Dimensions
+        const vL = parseInt(formData.get("volumeLength") as string);
+        const vW = parseInt(formData.get("volumeWidth") as string);
+        const vH = parseInt(formData.get("volumeHeight") as string);
+        const volumeMax = Math.max(vL, vW, vH); // Recalculate for safety
+
+        // 2. Parse JSON Arrays
+        const specifications = JSON.parse(
+            (formData.get("specifications") as string) || "[]"
+        );
+        const features = JSON.parse(
+            (formData.get("features") as string) || "[]"
+        );
+        const applications = JSON.parse(
+            (formData.get("applications") as string) || "[]"
+        );
+        const downloads = JSON.parse(
+            (formData.get("downloads") as string) || "[]"
         );
 
-        // Generate slug
-        const slug = data.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "");
+        // 3. Handle Images
+        const newFiles = formData.getAll("newImages") as File[];
+        const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
-        // Create printer with all relations
-        const printer = await prisma.printer.create({
+        const imageRecords: { url: string; isMain: boolean; sortOrder: number }[] = [];
+
+        for (let i = 0; i < newFiles.length; i++) {
+            const file = newFiles[i];
+            const meta = JSON.parse(newMetaStrings[i] || "{}");
+
+            // Save file to /public/printer_images/[slug]/...
+            const publicUrl = await saveFileLocally(file, slug);
+
+            imageRecords.push({
+                url: publicUrl,
+                isMain: meta.isMain || false,
+                sortOrder: meta.sortOrder || i,
+            });
+        }
+
+        // 4. Create Database Record
+        const newPrinter = await prisma.printer.create({
             data: {
-                name: data.name,
+                name,
                 slug,
-                brand: data.brand,
-                technology: data.technology,
-                experience: data.experience,
-                price: parseInt(data.price) * 100, // Convert to paise
-                originalPrice: data.originalPrice
-                    ? parseInt(data.originalPrice) * 100
-                    : null,
-                discount: data.discount ? parseInt(data.discount) : null,
-                volumeLength: parseInt(data.volumeLength),
-                volumeWidth: parseInt(data.volumeWidth),
-                volumeHeight: parseInt(data.volumeHeight),
+                brand: formData.get("brand") as string,
+                technology: formData.get("technology") as string,
+                experience: formData.get("experience") as string,
+
+                // Pricing
+                price,
+                originalPrice,
+                discount,
+
+                // Dimensions
+                volumeLength: vL,
+                volumeWidth: vW,
+                volumeHeight: vH,
                 volumeMax,
-                description: data.description || "",
-                shortDescription: data.shortDescription || "",
-                warrantyYears: parseInt(data.warrantyYears) || 1,
-                freeInstallation: data.freeInstallation || false,
-                images: {
-                    create: (data.images || []).map((img, index) => ({
-                        url: img.url,
-                        altText: img.altText || data.name,
-                        sortOrder: index,
-                        isMain: img.isMain || index === 0,
-                    })),
-                },
+
+                description: formData.get("description") as string,
+                shortDescription: formData.get("shortDescription") as string,
+
+                warrantyYears: parseInt(
+                    (formData.get("warrantyYears") as string) || "1"
+                ),
+                freeInstallation: formData.get("freeInstallation") === "true",
+
+                // Relations
+                images: { create: imageRecords },
                 specifications: {
-                    create: (data.specifications || []).map((spec, index) => ({
+                    create: specifications.map((spec: any, index: number) => ({
                         category: spec.category,
                         label: spec.label,
                         value: spec.value,
@@ -124,22 +167,22 @@ export async function POST(request: NextRequest) {
                     })),
                 },
                 features: {
-                    create: (data.features || []).map((feature, index) => ({
-                        title: feature.title,
+                    create: features.map((feat: any, index: number) => ({
+                        title: feat.title,
                         sortOrder: index,
                     })),
                 },
                 applications: {
-                    create: (data.applications || []).map((app, index) => ({
+                    create: applications.map((app: any, index: number) => ({
                         name: app.name,
                         sortOrder: index,
                     })),
                 },
                 downloads: {
-                    create: (data.downloads || []).map((download, index) => ({
-                        title: download.title,
-                        description: download.description || "",
-                        downloadUrl: download.downloadUrl,
+                    create: downloads.map((doc: any, index: number) => ({
+                        title: doc.title,
+                        description: doc.description || "",
+                        downloadUrl: doc.downloadUrl,
                         sortOrder: index,
                     })),
                 },
@@ -147,21 +190,14 @@ export async function POST(request: NextRequest) {
             include: {
                 images: true,
                 specifications: true,
-                features: true,
-                applications: true,
-                downloads: true,
             },
         });
 
-        return NextResponse.json(printer, { status: 201 });
+        return NextResponse.json(newPrinter, { status: 201 });
     } catch (error) {
-        const err = error as Error;
-
+        console.error("Error creating printer:", error);
         return NextResponse.json(
-            {
-                error: "Failed to create printer",
-                details: err.message,
-            },
+            { error: "Failed to create printer" },
             { status: 500 }
         );
     }
