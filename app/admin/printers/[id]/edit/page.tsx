@@ -30,22 +30,18 @@ const SPEC_CATEGORIES = [
     "Physical Specifications",
 ];
 
-// Pre-filled Standard Specifications
+// Defined to track what is mandatory inside the dynamic specs list
+const MANDATORY_SPECS = ["Supported Materials", "Chamber Type"];
+
 const DEFAULT_SPECS = [
     // Build Specifications
+
     {
-        category: "Build Specifications",
-        label: "Build Volume",
+        category: "Build Specifications", // MANDATORY
+        label: "Chamber Type",
         value: "",
         sortOrder: 0,
     },
-    {
-        category: "Build Specifications",
-        label: "Chamber Type",
-        value: "",
-        sortOrder: 1,
-    },
-
     // Print Specifications
     {
         category: "Print Specifications",
@@ -59,15 +55,13 @@ const DEFAULT_SPECS = [
         value: "",
         sortOrder: 1,
     },
-
     // Material Compatibility
     {
-        category: "Material Compatibility",
+        category: "Material Compatibility", // MANDATORY
         label: "Supported Materials",
         value: "",
         sortOrder: 0,
     },
-
     // Connectivity
     {
         category: "Connectivity & Software",
@@ -75,7 +69,6 @@ const DEFAULT_SPECS = [
         value: "",
         sortOrder: 0,
     },
-
     // Physical
     {
         category: "Physical Specifications",
@@ -117,28 +110,19 @@ type Download = {
 
 type PrinterFormData = {
     name: string;
-    slug: string; // Added Slug to type
+    slug: string;
     brand: string;
-
-    // Pricing
     price: string;
     originalPrice: string;
-
     technology: string;
     experience: string;
-
-    // Dimensions
     volumeLength: string;
     volumeWidth: string;
     volumeHeight: string;
-
     description: string;
     shortDescription: string;
-
     warrantyYears: string;
     freeInstallation: boolean;
-
-    // Relations
     images: ImageItem[];
     specifications: Specification[];
     features: Feature[];
@@ -175,14 +159,12 @@ export default function PrinterFormPage() {
         warrantyYears: "1",
         freeInstallation: true,
         images: [],
-        // If it's a NEW printer, pre-fill the specifications with standard labels
         specifications: isEdit ? [] : DEFAULT_SPECS,
         features: [],
         applications: [],
         downloads: [],
     });
 
-    // Helper: Auto-generate slug
     const generateSlug = (name: string) => {
         return name
             .toLowerCase()
@@ -192,7 +174,7 @@ export default function PrinterFormPage() {
             .replace(/^-+|-+$/g, "");
     };
 
-    // FETCH DATA EFFECT
+    // FETCH DATA
     useEffect(() => {
         if (isEdit) {
             setFetching(true);
@@ -204,7 +186,6 @@ export default function PrinterFormPage() {
                 .then((data) => {
                     setFormData({
                         ...data,
-                        // Ensure slug is populated
                         slug: data.slug || "",
                         price: data.price ? (data.price / 100).toString() : "",
                         originalPrice: data.originalPrice
@@ -229,10 +210,27 @@ export default function PrinterFormPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // --- Custom Validation for Mandatory Specs ---
+        const missingSpecs = MANDATORY_SPECS.filter((mandatoryLabel) => {
+            const spec = formData.specifications.find(
+                (s) => s.label.toLowerCase() === mandatoryLabel.toLowerCase()
+            );
+            return !spec || !spec.value.trim();
+        });
+
+        if (missingSpecs.length > 0) {
+            alert(
+                `The following specifications are mandatory:\n- ${missingSpecs.join(
+                    "\n- "
+                )}`
+            );
+            return;
+        }
+
         setLoading(true);
 
         try {
-            // 1. Calculations
             const priceInPaise = Math.round(parseFloat(formData.price) * 100);
             const originalPriceInPaise = formData.originalPrice
                 ? Math.round(parseFloat(formData.originalPrice) * 100)
@@ -253,16 +251,12 @@ export default function PrinterFormPage() {
                 Number(formData.volumeHeight) || 0
             );
 
-            // 2. Prepare FormData (Required for File Uploads)
             const data = new FormData();
-
-            // Handle Slug: Use existing if edit, generate new if create/empty
             const finalSlug =
                 formData.slug || generateSlug(formData.name) || "printer";
 
-            // --- Append Basic Fields ---
             data.append("name", formData.name);
-            data.append("slug", finalSlug); // Ensure slug is sent
+            data.append("slug", finalSlug);
             data.append("brand", formData.brand);
             data.append("price", priceInPaise.toString());
             if (originalPriceInPaise)
@@ -279,7 +273,6 @@ export default function PrinterFormPage() {
             data.append("warrantyYears", formData.warrantyYears);
             data.append("freeInstallation", String(formData.freeInstallation));
 
-            // --- Append Complex Arrays as JSON Strings ---
             data.append(
                 "specifications",
                 JSON.stringify(formData.specifications)
@@ -288,24 +281,20 @@ export default function PrinterFormPage() {
             data.append("applications", JSON.stringify(formData.applications));
             data.append("downloads", JSON.stringify(formData.downloads));
 
-            // --- Append Images (Critical Part) ---
-            // Separating "Existing URLs" from "New Files"
+            // Existing Images
             const existingImages = formData.images
-                .filter((img) => !img.file) // No file object = existing
+                .filter((img) => !img.file)
                 .map((img) => ({
                     url: img.url,
                     isMain: img.isMain,
                     sortOrder: img.sortOrder,
                 }));
-
             data.append("existingImages", JSON.stringify(existingImages));
 
-            // Append New Files
-            formData.images.forEach((img, index) => {
+            // New Images
+            formData.images.forEach((img) => {
                 if (img.file) {
-                    // Append the actual file
                     data.append("newImages", img.file);
-                    // Append metadata for this specific new file
                     const meta = {
                         isMain: img.isMain,
                         sortOrder: img.sortOrder,
@@ -314,17 +303,14 @@ export default function PrinterFormPage() {
                 }
             });
 
-            // 3. Send Request
             const url = isEdit
                 ? `/api/admin/printers/${printerId}`
                 : `/api/admin/printers`;
             const method = isEdit ? "PUT" : "POST";
 
-            // CRITICAL: Do NOT set "Content-Type" header.
-            // The browser sets it automatically to "multipart/form-data" with boundary.
             const response = await fetch(url, {
                 method,
-                body: data,
+                body: data, // Browser sets Content-Type: multipart/form-data
             });
 
             if (!response.ok) {
@@ -355,7 +341,6 @@ export default function PrinterFormPage() {
         }));
     };
 
-    // Generic Array Manipulators
     const updateArrayItem = (
         field: keyof PrinterFormData,
         index: number,
@@ -457,7 +442,7 @@ export default function PrinterFormPage() {
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* LEFT COLUMN (2/3) */}
+                        {/* LEFT COLUMN */}
                         <div className="lg:col-span-2 space-y-6">
                             {/* 1. Basic Info */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -504,9 +489,10 @@ export default function PrinterFormPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Experience Level
+                                                Experience Level *
                                             </label>
                                             <select
+                                                required
                                                 value={formData.experience}
                                                 onChange={(e) =>
                                                     setFormData({
@@ -559,7 +545,7 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 2. Technical Specs (Standardized) */}
+                            {/* 2. Technical Specs */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Detailed Specifications",
@@ -604,68 +590,89 @@ export default function PrinterFormPage() {
                                                     ({
                                                         spec,
                                                         originalIndex,
-                                                    }) => (
-                                                        <div
-                                                            key={originalIndex}
-                                                            className="flex gap-2"
-                                                        >
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Label"
-                                                                value={
-                                                                    spec.label
+                                                    }) => {
+                                                        const isMandatory =
+                                                            MANDATORY_SPECS.includes(
+                                                                spec.label
+                                                            );
+                                                        return (
+                                                            <div
+                                                                key={
+                                                                    originalIndex
                                                                 }
-                                                                onChange={(e) =>
-                                                                    updateArrayItem(
-                                                                        "specifications",
-                                                                        originalIndex,
-                                                                        "label",
-                                                                        e.target
-                                                                            .value
-                                                                    )
-                                                                }
-                                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Value"
-                                                                value={
-                                                                    spec.value
-                                                                }
-                                                                onChange={(e) =>
-                                                                    updateArrayItem(
-                                                                        "specifications",
-                                                                        originalIndex,
-                                                                        "value",
-                                                                        e.target
-                                                                            .value
-                                                                    )
-                                                                }
-                                                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    removeArrayItem(
-                                                                        "specifications",
-                                                                        originalIndex
-                                                                    )
-                                                                }
-                                                                className="p-2 text-gray-400 hover:text-red-500"
+                                                                className="flex gap-2"
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    )
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Label"
+                                                                    value={
+                                                                        spec.label
+                                                                    }
+                                                                    readOnly={
+                                                                        isMandatory
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        !isMandatory &&
+                                                                        updateArrayItem(
+                                                                            "specifications",
+                                                                            originalIndex,
+                                                                            "label",
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        )
+                                                                    }
+                                                                    className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700 ${isMandatory ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                                                                />
+                                                                <div className="flex-1 relative">
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder={
+                                                                            isMandatory
+                                                                                ? "Mandatory Value *"
+                                                                                : "Value"
+                                                                        }
+                                                                        value={
+                                                                            spec.value
+                                                                        }
+                                                                        required={
+                                                                            isMandatory
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
+                                                                            updateArrayItem(
+                                                                                "specifications",
+                                                                                originalIndex,
+                                                                                "value",
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
+                                                                        className={`w-full px-3 py-2 text-sm border rounded-md ${isMandatory && !spec.value ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-black"}`}
+                                                                    />
+                                                                </div>
+                                                                {!isMandatory && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() =>
+                                                                            removeArrayItem(
+                                                                                "specifications",
+                                                                                originalIndex
+                                                                            )
+                                                                        }
+                                                                        className="p-2 text-gray-400 hover:text-red-500"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
                                                 )}
-                                            {/* Show message if empty category */}
-                                            {formData.specifications.filter(
-                                                (s) => s.category === cat
-                                            ).length === 0 && (
-                                                <p className="text-xs text-gray-400 italic">
-                                                    No specifications added.
-                                                </p>
-                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -675,7 +682,6 @@ export default function PrinterFormPage() {
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader("Features & Applications")}
                                 <div className="grid md:grid-cols-2 gap-8">
-                                    {/* Features */}
                                     <div>
                                         <div className="flex justify-between items-center mb-3">
                                             <label className="text-sm font-medium text-gray-700">
@@ -732,7 +738,6 @@ export default function PrinterFormPage() {
                                         </div>
                                     </div>
 
-                                    {/* Applications */}
                                     <div>
                                         <div className="flex justify-between items-center mb-3">
                                             <label className="text-sm font-medium text-gray-700">
@@ -858,7 +863,7 @@ export default function PrinterFormPage() {
                                                                 e.target.value
                                                             )
                                                         }
-                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white"
                                                     />
                                                     <input
                                                         placeholder="Description (optional)"
@@ -874,7 +879,7 @@ export default function PrinterFormPage() {
                                                                 e.target.value
                                                             )
                                                         }
-                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white"
                                                     />
                                                     <input
                                                         placeholder="PDF URL (https://...)"
@@ -890,7 +895,7 @@ export default function PrinterFormPage() {
                                                                 e.target.value
                                                             )
                                                         }
-                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white font-mono text-gray-600 focus:ring-2 focus:ring-blue-100 outline-none"
+                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white font-mono text-gray-600"
                                                     />
                                                 </div>
                                             </div>
@@ -900,7 +905,7 @@ export default function PrinterFormPage() {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN (1/3) */}
+                        {/* RIGHT COLUMN */}
                         <div className="space-y-6">
                             {/* 1. Pricing */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -958,7 +963,7 @@ export default function PrinterFormPage() {
                             {/* 2. Build Volume */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
-                                    "Build Volume (mm)",
+                                    "Build Volume (mm) *",
                                     <Settings className="w-4 h-4" />
                                 )}
                                 <div className="grid grid-cols-3 gap-3">
@@ -1042,7 +1047,6 @@ export default function PrinterFormPage() {
                                                     Main
                                                 </span>
                                             )}
-
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                                                 {!img.isMain && (
                                                     <button

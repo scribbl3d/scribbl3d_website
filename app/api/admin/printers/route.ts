@@ -1,9 +1,10 @@
-import { saveFileLocally } from "@/lib/file-upload";
-import { prisma } from "@/lib/prisma"; // Use your singleton instance
+import { prisma } from "@/lib/prisma";
+import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
-// GET - List all printers with pagination and search
-// (Kept your original logic exactly as is)
+/* =========================
+   GET – List printers (Grid)
+   ========================= */
 export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
@@ -14,7 +15,6 @@ export async function GET(request: NextRequest) {
 
         const skip = (page - 1) * limit;
 
-        // Build where clause
         const where: any = {};
         if (search) {
             where.OR = [
@@ -23,21 +23,18 @@ export async function GET(request: NextRequest) {
             ];
         }
 
-        // Build orderBy
         const orderBy: any = {};
         if (sortBy === "name") orderBy.name = "asc";
         else if (sortBy === "price") orderBy.price = "asc";
         else if (sortBy === "technology") orderBy.technology = "asc";
         else if (sortBy === "updatedAt") orderBy.updatedAt = "desc";
 
-        // Fetch printers
         const [printers, total] = await Promise.all([
             prisma.printer.findMany({
                 where,
                 orderBy,
                 skip,
                 take: limit,
-                // Include images so you can show thumbnails in the admin table
                 include: {
                     images: {
                         where: { isMain: true },
@@ -49,14 +46,20 @@ export async function GET(request: NextRequest) {
             prisma.printer.count({ where }),
         ]);
 
+        // 🔑 IMPORTANT: add imageUrl for PrinterGrid
+        const formattedPrinters = printers.map((p) => ({
+            ...p,
+            imageUrl: p.images[0]?.url || null,
+        }));
+
         return NextResponse.json({
-            printers,
+            printers: formattedPrinters,
             total,
             page,
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
-        console.error("Error fetching printers:", error);
+        console.error("[PRINTER_LIST]", error);
         return NextResponse.json(
             { error: "Failed to fetch printers" },
             { status: 500 }
@@ -64,16 +67,16 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST - Create new printer with File Uploads
-// (Updated to handle FormData instead of JSON)
+/* =========================
+   POST – Create new printer
+   ========================= */
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
 
-        // 1. Extract Fields
+        // 1️⃣ Basic fields
         const name = formData.get("name") as string;
-        // Generate slug if not provided, else clean existing one
-        let slug = formData.get("slug") as string;
+        let slug = (formData.get("slug") as string) || "";
         if (!slug) {
             slug = name
                 .toLowerCase()
@@ -81,20 +84,18 @@ export async function POST(request: NextRequest) {
                 .replace(/^-|-$/g, "");
         }
 
-        // Numeric conversions (Frontend sends prices in Paise)
         const price = parseInt(formData.get("price") as string);
         const originalPrice = formData.get("originalPrice")
             ? parseInt(formData.get("originalPrice") as string)
             : null;
         const discount = parseInt((formData.get("discount") as string) || "0");
 
-        // Dimensions
         const vL = parseInt(formData.get("volumeLength") as string);
         const vW = parseInt(formData.get("volumeWidth") as string);
         const vH = parseInt(formData.get("volumeHeight") as string);
-        const volumeMax = Math.max(vL, vW, vH); // Recalculate for safety
+        const volumeMax = Math.max(vL, vW, vH);
 
-        // 2. Parse JSON Arrays
+        // 2️⃣ Parse JSON arrays
         const specifications = JSON.parse(
             (formData.get("specifications") as string) || "[]"
         );
@@ -108,27 +109,45 @@ export async function POST(request: NextRequest) {
             (formData.get("downloads") as string) || "[]"
         );
 
-        // 3. Handle Images
+        // 3️⃣ Upload images → Cloudinary
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
-        const imageRecords: { url: string; isMain: boolean; sortOrder: number }[] = [];
+        const imageRecords: {
+            url: string;
+            isMain: boolean;
+            sortOrder: number;
+        }[] = [];
 
         for (let i = 0; i < newFiles.length; i++) {
             const file = newFiles[i];
             const meta = JSON.parse(newMetaStrings[i] || "{}");
 
-            // Save file to /public/printer_images/[slug]/...
-            const publicUrl = await saveFileLocally(file, slug);
+            const buffer = Buffer.from(await file.arrayBuffer());
+
+            const uploadResult: any = await new Promise((resolve, reject) => {
+                cloudinary.uploader
+                    .upload_stream(
+                        {
+                            folder: `printers/${slug}`,
+                            resource_type: "image",
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    )
+                    .end(buffer);
+            });
 
             imageRecords.push({
-                url: publicUrl,
+                url: uploadResult.secure_url,
                 isMain: meta.isMain || false,
-                sortOrder: meta.sortOrder || i,
+                sortOrder: meta.sortOrder ?? i,
             });
         }
 
-        // 4. Create Database Record
+        // 4️⃣ Create printer
         const newPrinter = await prisma.printer.create({
             data: {
                 name,
@@ -136,28 +155,22 @@ export async function POST(request: NextRequest) {
                 brand: formData.get("brand") as string,
                 technology: formData.get("technology") as string,
                 experience: formData.get("experience") as string,
-
-                // Pricing
                 price,
                 originalPrice,
                 discount,
-
-                // Dimensions
                 volumeLength: vL,
                 volumeWidth: vW,
                 volumeHeight: vH,
                 volumeMax,
-
                 description: formData.get("description") as string,
                 shortDescription: formData.get("shortDescription") as string,
-
                 warrantyYears: parseInt(
                     (formData.get("warrantyYears") as string) || "1"
                 ),
                 freeInstallation: formData.get("freeInstallation") === "true",
 
-                // Relations
                 images: { create: imageRecords },
+
                 specifications: {
                     create: specifications.map((spec: any, index: number) => ({
                         category: spec.category,
@@ -189,13 +202,12 @@ export async function POST(request: NextRequest) {
             },
             include: {
                 images: true,
-                specifications: true,
             },
         });
 
         return NextResponse.json(newPrinter, { status: 201 });
     } catch (error) {
-        console.error("Error creating printer:", error);
+        console.error("[PRINTER_POST]", error);
         return NextResponse.json(
             { error: "Failed to create printer" },
             { status: 500 }

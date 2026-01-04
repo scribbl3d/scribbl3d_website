@@ -25,7 +25,7 @@ export function Wishlist({ initialWishlist }: Props) {
     const { addToCart } = useCart();
     const { data: session } = useSession();
 
-    // 🔄 refresh wishlist once mounted
+    // 🔄 Refresh wishlist on mount
     useEffect(() => {
         async function refresh() {
             const res = await fetch("/api/wishlist");
@@ -43,7 +43,7 @@ export function Wishlist({ initialWishlist }: Props) {
         const entity = item.product || item.prebuiltProduct || item.printer;
         if (!entity || loadingId === item.id) return;
 
-        // 🔐 Auth check (same as printer page)
+        // 🔐 Auth check
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -65,19 +65,12 @@ export function Wishlist({ initialWishlist }: Props) {
 
         try {
             await addToCart({
+                ...(item.product && { productId: item.product.id }),
+                ...(item.prebuiltProduct && {
+                    prebuiltProductId: item.prebuiltProduct.id,
+                }),
+                ...(item.printer && { printerId: item.printer.id }),
                 quantity: 1,
-
-                // IDs
-                productId: item.product?.id || "",
-                printerId: item.printer?.id,
-
-                // common fields
-                name: entity.name,
-                price: entity.price,
-                images: entity.images?.map((img: any) => img.url || img) ?? [],
-
-                // flags
-                isPrebuilt: Boolean(item.prebuiltProduct),
             });
 
             toast({
@@ -100,9 +93,9 @@ export function Wishlist({ initialWishlist }: Props) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                productId: item.product?.id || item.prebuiltProduct?.id,
+                productId: item.product?.id,
+                prebuiltProductId: item.prebuiltProduct?.id,
                 printerId: item.printer?.id,
-                isPrebuilt: Boolean(item.prebuiltProduct),
             }),
         });
 
@@ -137,7 +130,7 @@ export function Wishlist({ initialWishlist }: Props) {
                         <h3 className="font-semibold">{entity.name}</h3>
                         <p className="font-bold">₹{entity.price}</p>
 
-                        <div className="flex justify-between ">
+                        <div className="flex justify-between">
                             <Button
                                 onClick={() => handleAddToCart(item)}
                                 disabled={loadingId === item.id}
