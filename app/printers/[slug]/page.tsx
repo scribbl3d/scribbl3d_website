@@ -211,10 +211,11 @@ export default function PrinterDetailPage() {
                                     {printer.technology}
                                 </span>
                                 <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full">
-                                    {printer.volumeLength} ×{" "}
-                                    {printer.volumeWidth} ×{" "}
+                                    {printer.volumeLength} mm{" × "}
+                                    {printer.volumeWidth} mm{" × "}
                                     {printer.volumeHeight} mm
                                 </span>
+
                                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
                                     High-Speed Printing
                                 </span>
@@ -337,11 +338,11 @@ export default function PrinterDetailPage() {
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                         <span className="text-gray-600">
-                                            Build Volume
+                                            Build Voluming RIya
                                         </span>
                                         <span className="font-medium text-gray-900">
-                                            {printer.volumeLength} ×{" "}
-                                            {printer.volumeWidth} ×{" "}
+                                            {printer.volumeLength} mm{" × "}
+                                            {printer.volumeWidth} mm{" × "}
                                             {printer.volumeHeight} mm
                                         </span>
                                     </div>

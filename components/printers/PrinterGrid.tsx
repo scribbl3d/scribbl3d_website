@@ -213,8 +213,12 @@ function PrinterCard({ printer }: { printer: any }) {
                     <div className="text-xs mb-4 space-y-1">
                         <div>
                             <strong>Build Volume:</strong>{" "}
-                            {printer.volumeDisplay} mm
+                            {printer.volumeDisplay
+                                ?.split("×")
+                                .map((v) => `${v.trim()} mm`)
+                                .join(" × ")}
                         </div>
+
                         <div>
                             <strong>Materials:</strong>{" "}
                             {materials?.length ? materials.join(", ") : "N/A"}

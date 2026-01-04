@@ -1,90 +1,95 @@
-// app/printers/page.tsx
 "use client";
 
 import FilterPanel from "@/components/printers/FilterPanel";
 import PrinterGrid from "@/components/printers/PrinterGrid";
 import PrinterHero from "@/components/printers/PrinterHero";
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
-
 import { useEffect, useState } from "react";
+
 export default function PrintersPage() {
     const [printers, setPrinters] = useState([]);
-    const [filters, setFilters] = useState({});
-    const [selectedFilters, setSelectedFilters] = useState({
-        technology: null,
-        brand: null,
-        volumeCategory: null,
+
+    // SAFE INITIALIZATION: Initialize with empty arrays to prevent UI errors
+    const [filters, setFilters] = useState({
+        technology: [],
+        brand: [],
+        volumeCategory: [],
         material: [],
-        recyclingRatio: null,
-        atmosphereControl: null,
+        recyclingRatio: [],
+        atmosphereControl: [],
+        priceRange: null,
+        application: [],
+        experience: [],
+        connectivity: [],
+    });
+
+    // STATE: Track selected filters (Arrays for multi-select)
+    const [selectedFilters, setSelectedFilters] = useState({
+        technology: [],
+        brand: [],
+        volumeCategory: [],
+        material: [],
+        recyclingRatio: [],
+        atmosphereControl: [],
         minPrice: null,
         maxPrice: null,
         application: [],
-        experience: null,
+        experience: [],
         connectivity: [],
     });
+
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
 
     useEffect(() => {
         fetchPrinters();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedFilters]);
 
     const fetchPrinters = async () => {
         setLoading(true);
         try {
-            // Build query params
             const params = new URLSearchParams();
 
-            if (selectedFilters.technology) {
-                params.append("technology", selectedFilters.technology);
-            }
-            if (selectedFilters.brand) {
-                params.append("brand", selectedFilters.brand);
-            }
-            if (selectedFilters.volumeCategory) {
-                params.append("volumeCategory", selectedFilters.volumeCategory);
-            }
-            if (selectedFilters.material.length > 0) {
-                selectedFilters.material.forEach((m) =>
-                    params.append("material", m)
-                );
-            }
-            if (selectedFilters.recyclingRatio) {
-                params.append("recyclingRatio", selectedFilters.recyclingRatio);
-            }
-            if (selectedFilters.atmosphereControl) {
-                params.append(
-                    "atmosphereControl",
-                    selectedFilters.atmosphereControl
-                );
-            }
-            if (selectedFilters.minPrice) {
+            // APPEND ARRAYS: Loop through all array-based filters
+            const arrayFilters = [
+                "technology",
+                "brand",
+                "volumeCategory",
+                "material",
+                "recyclingRatio",
+                "atmosphereControl",
+                "application",
+                "experience",
+                "connectivity",
+            ];
+
+            arrayFilters.forEach((key) => {
+                // @ts-ignore - Accessing state dynamically
+                if (selectedFilters[key]?.length > 0) {
+                    // @ts-ignore
+                    selectedFilters[key].forEach((val) =>
+                        params.append(key, val)
+                    );
+                }
+            });
+
+            // APPEND SINGLE VALUES: Price
+            if (selectedFilters.minPrice)
                 params.append("minPrice", selectedFilters.minPrice);
-            }
-            if (selectedFilters.maxPrice) {
+            if (selectedFilters.maxPrice)
                 params.append("maxPrice", selectedFilters.maxPrice);
-            }
-            if (selectedFilters.application.length > 0) {
-                selectedFilters.application.forEach((a) =>
-                    params.append("application", a)
-                );
-            }
-            if (selectedFilters.experience) {
-                params.append("experience", selectedFilters.experience);
-            }
-            if (selectedFilters.connectivity.length > 0) {
-                selectedFilters.connectivity.forEach((c) =>
-                    params.append("connectivity", c)
-                );
-            }
 
             const response = await fetch(`/api/printers?${params.toString()}`);
             const data = await response.json();
 
-            setPrinters(data.printers);
-            setFilters(data.filters);
-            setTotal(data.total);
+            setPrinters(data.printers || []);
+            setTotal(data.total || 0);
+
+            // UPDATE FILTERS: Only if data exists
+            if (data.filters) {
+                setFilters(data.filters);
+            }
         } catch (error) {
             console.error("Error fetching printers:", error);
         } finally {
@@ -92,7 +97,7 @@ export default function PrintersPage() {
         }
     };
 
-    const handleFilterChange = (filterKey, value) => {
+    const handleFilterChange = (filterKey: string, value: any) => {
         setSelectedFilters((prev) => ({
             ...prev,
             [filterKey]: value,
@@ -101,32 +106,30 @@ export default function PrintersPage() {
 
     const resetFilters = () => {
         setSelectedFilters({
-            technology: null,
-            brand: null,
-            volumeCategory: null,
+            technology: [],
+            brand: [],
+            volumeCategory: [],
             material: [],
-            recyclingRatio: null,
-            atmosphereControl: null,
+            recyclingRatio: [],
+            atmosphereControl: [],
             minPrice: null,
             maxPrice: null,
             application: [],
-            experience: null,
+            experience: [],
             connectivity: [],
         });
     };
-    const removeFilter = (filterKey, value?: string) => {
-        setSelectedFilters((prev) => {
-            const current = prev[filterKey];
 
-            // If array filter → remove single value
+    const removeFilter = (filterKey: string, value?: string) => {
+        setSelectedFilters((prev) => {
+            // @ts-ignore
+            const current = prev[filterKey];
             if (Array.isArray(current)) {
                 return {
                     ...prev,
                     [filterKey]: current.filter((v) => v !== value),
                 };
             }
-
-            // Single value filter → reset to null
             return {
                 ...prev,
                 [filterKey]: null,
@@ -136,13 +139,10 @@ export default function PrintersPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
             <PrinterHero />
-
-            {/* Main Content */}
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Filter Sidebar */}
+                    {/* Sidebar */}
                     <div className="lg:w-1/4">
                         <FilterPanel
                             filters={filters}
@@ -151,14 +151,12 @@ export default function PrintersPage() {
                             onReset={resetFilters}
                         />
                     </div>
-
-                    {/* Printers Grid */}
+                    {/* Grid */}
                     <div className="lg:w-3/4">
                         <SelectedFiltersBar
                             selectedFilters={selectedFilters}
                             onRemove={removeFilter}
                         />
-
                         <div className="mb-6 flex justify-between items-center">
                             <p className="text-gray-600">
                                 Showing{" "}
@@ -169,10 +167,8 @@ export default function PrintersPage() {
                                 <option>Sort by: Popularity</option>
                                 <option>Price: Low to High</option>
                                 <option>Price: High to Low</option>
-                                <option>Name: A to Z</option>
                             </select>
                         </div>
-
                         {loading ? (
                             <div className="text-center py-20">
                                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>

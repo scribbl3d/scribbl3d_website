@@ -1,21 +1,47 @@
 "use client";
 
+interface FilterPanelProps {
+    filters: any;
+    selectedFilters: any;
+    onFilterChange: (key: string, value: any) => void;
+    onReset: () => void;
+}
+
 export default function FilterPanel({
-    filters,
+    filters = {},
     selectedFilters,
     onFilterChange,
     onReset,
-}) {
+}: FilterPanelProps) {
     const hasAnyFilters = Object.values(selectedFilters).some((v) =>
         Array.isArray(v) ? v.length > 0 : v !== null
     );
 
-    // Helper to render technology buttons
+    const handleArrayToggle = (key: string, value: string) => {
+        const current = selectedFilters[key] || [];
+        const updated = current.includes(value)
+            ? current.filter((item: string) => item !== value)
+            : [...current, value];
+        onFilterChange(key, updated);
+    };
+
+    const isStepUnlocked = (key: string) =>
+        selectedFilters[key] && selectedFilters[key].length > 0;
+    const isPriceSet = () =>
+        (selectedFilters.minPrice && selectedFilters.minPrice !== "") ||
+        (selectedFilters.maxPrice && selectedFilters.maxPrice !== "");
+
     const renderTechnologyButtons = () => {
-        const technologies = filters?.technology ?? [];
-        if (!filters) {
-            return <div>Loading filters...</div>;
-        }
+        const technologies = filters?.technology || [];
+        // Show loading state if empty, or generic text
+        if (technologies.length === 0)
+            return (
+                <div className="text-sm text-gray-400 mb-8">
+                    Loading technologies...
+                </div>
+            );
+
+        const selectedTechs = selectedFilters.technology || [];
 
         return (
             <div className="mb-8">
@@ -23,50 +49,44 @@ export default function FilterPanel({
                     Technology
                 </h3>
                 <div className="space-y-2">
-                    {technologies.map((tech) => (
+                    {technologies.map((tech: string) => (
                         <button
                             key={tech}
-                            onClick={() => onFilterChange("technology", tech)}
-                            className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-all ${
-                                selectedFilters.technology === tech
-                                    ? "bg-[#2563EB] text-white shadow-sm"
-                                    : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                            onClick={() =>
+                                handleArrayToggle("technology", tech)
+                            }
+                            className={`w-full px-4 py-3 rounded-lg text-left text-sm font-medium transition-all border ${
+                                selectedTechs.includes(tech)
+                                    ? "bg-[#2563EB] text-white border-[#2563EB] shadow-md"
+                                    : "bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50"
                             }`}
                         >
                             {tech}
                         </button>
                     ))}
                 </div>
-
-                {!selectedFilters.technology && (
-                    <p className="mt-6 text-sm text-gray-500 text-center leading-relaxed">
-                        Select a printing technology to view compatible filters.
-                    </p>
-                )}
             </div>
         );
     };
 
-    // Helper to render checkbox filters
+    // Robust Checkbox Renderer
     const renderCheckboxFilter = (
-        key,
-        displayName,
-        options,
-        disabled = false
+        key: string,
+        displayName: string,
+        options: string[],
+        disabled: boolean = false,
+        previousName: string = ""
     ) => {
+        // If options haven't loaded yet from API, don't render anything
         if (!options || options.length === 0) return null;
 
         return (
-            <div className="mb-8">
+            <div className={`mb-8 ${disabled ? "opacity-50" : ""}`}>
                 <h3 className="text-base font-semibold text-gray-900 mb-3">
                     {displayName}
                     {disabled && (
                         <span className="text-xs text-gray-400 font-normal ml-2">
-                            (Select{" "}
-                            {key === "volumeCategory"
-                                ? "brand"
-                                : getPreviousFilter(key)}{" "}
-                            first)
+                            (Select {previousName} first)
                         </span>
                     )}
                 </h3>
@@ -74,7 +94,7 @@ export default function FilterPanel({
                     {options.map((option) => (
                         <label
                             key={option}
-                            className={`flex items-center cursor-pointer group ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                            className={`flex items-center cursor-pointer group ${disabled ? "cursor-not-allowed" : ""}`}
                         >
                             <input
                                 type="checkbox"
@@ -83,15 +103,10 @@ export default function FilterPanel({
                                     selectedFilters[key]?.includes(option) ||
                                     false
                                 }
-                                onChange={(e) => {
-                                    if (disabled) return;
-                                    const current = selectedFilters[key] || [];
-                                    const updated = e.target.checked
-                                        ? [...current, option]
-                                        : current.filter((v) => v !== option);
-                                    onFilterChange(key, updated);
-                                }}
-                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed"
+                                onChange={() =>
+                                    !disabled && handleArrayToggle(key, option)
+                                }
+                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                             />
                             <span
                                 className={`ml-3 text-sm text-gray-700 ${!disabled && "group-hover:text-blue-600"}`}
@@ -103,67 +118,10 @@ export default function FilterPanel({
                 </div>
             </div>
         );
-    };
-
-    // Helper to render radio filters
-    const renderRadioFilter = (key, displayName, options, disabled = false) => {
-        if (!options || options.length === 0) return null;
-
-        return (
-            <div className="mb-8">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">
-                    {displayName}
-                    {disabled && (
-                        <span className="text-xs text-gray-400 font-normal ml-2">
-                            (Select {getPreviousFilter(key)} first)
-                        </span>
-                    )}
-                </h3>
-                <div className="space-y-3">
-                    {options.map((option) => (
-                        <label
-                            key={option}
-                            className={`flex items-center cursor-pointer group ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
-                        >
-                            <input
-                                type="radio"
-                                disabled={disabled}
-                                checked={selectedFilters[key] === option}
-                                onChange={() => {
-                                    if (!disabled) onFilterChange(key, option);
-                                }}
-                                className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed"
-                            />
-                            <span
-                                className={`ml-3 text-sm text-gray-700 ${!disabled && "group-hover:text-blue-600"}`}
-                            >
-                                {option}
-                            </span>
-                        </label>
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
-    const getPreviousFilter = (key) => {
-        const order = {
-            brand: "technology",
-            volumeCategory: "brand",
-            material: "volume",
-            recyclingRatio: "material",
-            atmosphereControl: "recycling ratio",
-            price: "atmosphere control",
-            application: "price",
-            experience: "application",
-            connectivity: "experience",
-        };
-        return order[key] || "previous filter";
     };
 
     return (
         <div className="bg-white rounded-xl shadow-sm p-6 sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
-            {/* Header */}
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-900">Filters</h2>
                 {hasAnyFilters && (
@@ -176,102 +134,36 @@ export default function FilterPanel({
                 )}
             </div>
 
-            {/* Progressive reveal message */}
-            {selectedFilters.technology && (
-                <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-xs text-blue-800 leading-relaxed">
-                        Filters unlock progressively to ensure only compatible{" "}
-                        {selectedFilters.technology} printers are shown.
-                    </p>
-                </div>
-            )}
-
             <div className="space-y-1">
-                {/* Step 1: Technology (Always visible) */}
                 {renderTechnologyButtons()}
 
-                {/* Step 2: Brand (Visible after technology selected) */}
-                {selectedFilters.technology &&
+                {isStepUnlocked("technology") &&
                     renderCheckboxFilter("brand", "Brand", filters.brand)}
 
-                {/* Step 3: Volume Category (Visible after brand selected) */}
-                {selectedFilters.brand &&
-                    renderRadioFilter(
-                        "volumeCategory",
-                        "Build Volume",
-                        filters.volumeCategory
-                    )}
+                {isStepUnlocked("brand")
+                    ? renderCheckboxFilter(
+                          "volumeCategory",
+                          "Build Volume",
+                          filters.volumeCategory
+                      )
+                    : isStepUnlocked("technology") &&
+                      renderCheckboxFilter(
+                          "volumeCategory",
+                          "Build Volume",
+                          ["Less than 300 mm", "300 – 500 mm", "Above 500 mm"],
+                          true,
+                          "Brand"
+                      )}
 
-                {/* Disabled state for Build Volume */}
-                {!selectedFilters.brand && selectedFilters.technology && (
-                    <div className="mb-8 opacity-40">
-                        <h3 className="text-base font-semibold text-gray-900 mb-3">
-                            Build Volume{" "}
-                            <span className="text-xs text-gray-400 font-normal">
-                                (Select brand first)
-                            </span>
-                        </h3>
-                        <div className="space-y-3">
-                            <label className="flex items-center cursor-not-allowed">
-                                <input
-                                    type="radio"
-                                    disabled
-                                    className="w-5 h-5 border-gray-300"
-                                />
-                                <span className="ml-3 text-sm text-gray-700">
-                                    Less than 300 mm
-                                </span>
-                            </label>
-                            <label className="flex items-center cursor-not-allowed">
-                                <input
-                                    type="radio"
-                                    disabled
-                                    className="w-5 h-5 border-gray-300"
-                                />
-                                <span className="ml-3 text-sm text-gray-700">
-                                    300 – 500 mm
-                                </span>
-                            </label>
-                            <label className="flex items-center cursor-not-allowed">
-                                <input
-                                    type="radio"
-                                    disabled
-                                    className="w-5 h-5 border-gray-300"
-                                />
-                                <span className="ml-3 text-sm text-gray-700">
-                                    Above 500 mm
-                                </span>
-                            </label>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 4: Material (Visible after volume selected) */}
-                {selectedFilters.volumeCategory &&
+                {isStepUnlocked("volumeCategory") &&
                     renderCheckboxFilter(
                         "material",
                         "Material",
                         filters.material
                     )}
 
-                {/* Step 5: Recycling Ratio (Visible after material selected) */}
-                {selectedFilters.material?.length > 0 &&
-                    renderRadioFilter(
-                        "recyclingRatio",
-                        "Recycling Ratio",
-                        filters.recyclingRatio
-                    )}
-
-                {/* Step 6: Atmosphere Control (Visible after recycling selected) */}
-                {selectedFilters.recyclingRatio &&
-                    renderRadioFilter(
-                        "atmosphereControl",
-                        "Atmosphere Control",
-                        filters.atmosphereControl
-                    )}
-
-                {/* Step 7: Price Range (Visible after atmosphere selected) */}
-                {selectedFilters.atmosphereControl && filters.priceRange && (
+                {/* Price Range: Shows after Material */}
+                {isStepUnlocked("material") && filters.priceRange && (
                     <div className="mb-8">
                         <h3 className="text-base font-semibold text-gray-900 mb-3">
                             Price Range
@@ -279,12 +171,9 @@ export default function FilterPanel({
                         <div className="space-y-3">
                             <div className="flex gap-3">
                                 <div className="flex-1">
-                                    <label className="block text-xs text-gray-600 mb-1">
-                                        Min Price
-                                    </label>
                                     <input
                                         type="number"
-                                        placeholder="₹0"
+                                        placeholder="Min"
                                         value={selectedFilters.minPrice || ""}
                                         onChange={(e) =>
                                             onFilterChange(
@@ -292,16 +181,13 @@ export default function FilterPanel({
                                                 e.target.value
                                             )
                                         }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
                                     />
                                 </div>
                                 <div className="flex-1">
-                                    <label className="block text-xs text-gray-600 mb-1">
-                                        Max Price
-                                    </label>
                                     <input
                                         type="number"
-                                        placeholder="₹50,000"
+                                        placeholder="Max"
                                         value={selectedFilters.maxPrice || ""}
                                         onChange={(e) =>
                                             onFilterChange(
@@ -309,47 +195,50 @@ export default function FilterPanel({
                                                 e.target.value
                                             )
                                         }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
                                     />
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-500">
-                                Range: ₹
-                                {(filters.priceRange.min / 100).toLocaleString(
-                                    "en-IN"
-                                )}{" "}
-                                - ₹
-                                {(filters.priceRange.max / 100).toLocaleString(
-                                    "en-IN"
-                                )}
-                            </p>
                         </div>
                     </div>
                 )}
 
-                {/* Step 8: Application (Visible after price selected) */}
-                {(selectedFilters.minPrice || selectedFilters.maxPrice) &&
+                {/* Chamber Type: Shows if Price is typed OR Material is selected */}
+                {(isPriceSet() || isStepUnlocked("material")) &&
                     renderCheckboxFilter(
-                        "application",
-                        "Application",
-                        filters.application
+                        "atmosphereControl",
+                        "Chamber Type",
+                        filters.atmosphereControl
                     )}
 
-                {/* Step 9: Experience (Visible after application selected) */}
-                {selectedFilters.application?.length > 0 &&
-                    renderRadioFilter(
-                        "experience",
-                        "Experience Level",
-                        filters.experience
-                    )}
-
-                {/* Step 10: Connectivity (Visible after experience selected) */}
-                {selectedFilters.experience &&
+                {/* Connectivity: Shows after Chamber Type */}
+                {isStepUnlocked("atmosphereControl") &&
                     renderCheckboxFilter(
                         "connectivity",
                         "Connectivity",
                         filters.connectivity
                     )}
+
+                {/* Others: Show at the end */}
+                {isStepUnlocked("connectivity") && (
+                    <>
+                        {renderCheckboxFilter(
+                            "application",
+                            "Application",
+                            filters.application
+                        )}
+                        {renderCheckboxFilter(
+                            "recyclingRatio",
+                            "Recycling Ratio",
+                            filters.recyclingRatio
+                        )}
+                        {renderCheckboxFilter(
+                            "experience",
+                            "Experience Level",
+                            filters.experience
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );

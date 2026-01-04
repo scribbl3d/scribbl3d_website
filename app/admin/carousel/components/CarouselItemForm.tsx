@@ -1,102 +1,102 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
+import { useEffect, useState } from "react";
 
 interface CarouselItem {
-  id: string;
-  type: string;
-  src: string;
-  duration: number;
+    id: string;
+    type: "image" | "video";
+    duration: number;
 }
 
 interface CarouselItemFormProps {
-  item: CarouselItem;
-  onSave: (item: CarouselItem) => void;
-  onCancel: () => void;
+    item: CarouselItem;
+    onSave: (formData: FormData, id?: string) => void;
+    onCancel: () => void;
 }
 
 export function CarouselItemForm({
-  item,
-  onSave,
-  onCancel,
+    item,
+    onSave,
+    onCancel,
 }: CarouselItemFormProps) {
-  const [formData, setFormData] = useState<CarouselItem>(item);
+    const [type, setType] = useState<"image" | "video">(item.type || "image");
+    const [duration, setDuration] = useState(item.duration || 5);
+    const [file, setFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    setFormData(item);
-  }, [item]);
+    useEffect(() => {
+        setType(item.type || "image");
+        setDuration(item.duration || 5);
+        setFile(null);
+    }, [item]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "duration" ? parseInt(value) : value,
-    }));
-  };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
 
-  const handleTypeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, type: value }));
-  };
+        if (!file && !item.id) {
+            alert("Please select a file");
+            return;
+        }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
+        const formData = new FormData();
+        if (file) formData.append("file", file);
+        formData.append("type", type);
+        formData.append("duration", String(duration));
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="type">Type</Label>
-        <Select onValueChange={handleTypeChange} value={formData.type}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="image">Image</SelectItem>
-            <SelectItem value="video">Video</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="src">Source URL</Label>
-        <Input
-          id="src"
-          name="src"
-          value={formData.src}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="duration">Duration (seconds)</Label>
-        <Input
-          id="duration"
-          name="duration"
-          type="number"
-          value={formData.duration}
-          onChange={handleChange}
-          required
-          min={1}
-        />
-      </div>
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          {item.id ? "Update" : "Add"} Carousel Item
-        </Button>
-      </div>
-    </form>
-  );
+        onSave(formData, item.id || undefined);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <Label>Type</Label>
+                <Select value={type} onValueChange={(v) => setType(v as any)}>
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="image">Image</SelectItem>
+                        <SelectItem value="video">Video</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div>
+                <Label>Upload File</Label>
+                <Input
+                    type="file"
+                    accept={type === "image" ? "image/*" : "video/*"}
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+            </div>
+
+            <div>
+                <Label>Duration (seconds)</Label>
+                <Input
+                    type="number"
+                    min={1}
+                    value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value))}
+                />
+            </div>
+
+            <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={onCancel}>
+                    Cancel
+                </Button>
+                <Button type="submit">
+                    {item.id ? "Update" : "Add"} Carousel Item
+                </Button>
+            </div>
+        </form>
+    );
 }

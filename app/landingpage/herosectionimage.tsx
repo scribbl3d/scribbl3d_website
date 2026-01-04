@@ -1,64 +1,55 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 interface HeroImage {
-  id: string;
-  page: string;
-  imageUrl: string;
-  alt: string;
+    id: string;
+    page: string;
+    imageUrl: string;
+    alt: string;
 }
 
 export default function MakeItYourOwn() {
-  const [heroImage, setHeroImage] = useState<HeroImage | null>(null);
+    const [heroImage, setHeroImage] = useState<HeroImage | null>(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchHeroImage = async () => {
-      try {
-        const response = await fetch("/api/admin/hero-images");
-        if (response.ok) {
-          const images: HeroImage[] = await response.json();
-          const landingImage = images.find((img) => img.page === "landing");
-          if (landingImage) {
-            setHeroImage(landingImage);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching hero image:", error);
-      }
-    };
+    useEffect(() => {
+        const fetchHeroImage = async () => {
+            try {
+                const res = await fetch("/api/hero-image?page=landing");
+                if (!res.ok) return;
 
-    fetchHeroImage();
-  }, []);
+                const data = await res.json();
+                setHeroImage(data);
+            } catch (error) {
+                console.error("Failed to load hero image", error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  if (!heroImage) {
+        fetchHeroImage();
+    }, []);
+
+    // Optional: skeleton / placeholder (NO IMAGE FALLBACK)
+    if (loading) {
+        return <div className="w-full h-[60vh] bg-gray-100 animate-pulse" />;
+    }
+
+    if (!heroImage) {
+        return null; // or a design placeholder
+    }
+
     return (
-      <div className="w-full">
-        <Image
-          src="/3d_printer.png"
-          alt="3D Printer"
-          width={1920}
-          height={1080}
-          priority
-          className="w-full h-auto"
-          unoptimized={true} // Key prop
-        />
-      </div>
+        <div className="relative w-full h-[60vh]">
+            <Image
+                src={heroImage.imageUrl}
+                alt={heroImage.alt}
+                fill
+                priority
+                className="object-cover"
+            />
+        </div>
     );
-  }
-
-  return (
-    <div className="w-full">
-      <Image
-        src={heroImage.imageUrl}
-        alt={heroImage.alt}
-        width={1920}
-        height={1080}
-        priority
-        className="w-full h-auto"
-        unoptimized={true} // Key prop
-      />
-    </div>
-  );
 }

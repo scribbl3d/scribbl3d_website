@@ -1,70 +1,78 @@
-import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import { join } from "path";
-import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
+import { v2 as cloudinary } from "cloudinary";
+import { NextResponse } from "next/server";
 
-// GET /api/admin/hero-images
+/* =========================
+   GET – Fetch hero images
+   ========================= */
 export async function GET() {
-  try {
-    const heroImages = await prisma.heroImage.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    return NextResponse.json(heroImages);
-  } catch (error) {
-    console.error("Error fetching hero images:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch hero images" },
-      { status: 500 }
-    );
-  }
+    try {
+        const heroImages = await prisma.heroImage.findMany({
+            orderBy: { createdAt: "desc" },
+        });
+
+        return NextResponse.json(heroImages);
+    } catch (error) {
+        console.error("[HERO_IMAGES_GET]", error);
+        return NextResponse.json(
+            { error: "Failed to fetch hero images" },
+            { status: 500 }
+        );
+    }
 }
 
-// POST /api/admin/hero-images
+/* =========================
+   POST – Upload hero image
+   ========================= */
 export async function POST(request: Request) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const page = formData.get("page") as string;
-    const alt = formData.get("alt") as string;
+    try {
+        const formData = await request.formData();
 
-    if (!file || !page || !alt) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+        const file = formData.get("file") as File | null;
+        const page = formData.get("page") as string | null;
+        const alt = formData.get("alt") as string | null;
+
+        if (!file || !page || !alt) {
+            return NextResponse.json(
+                { error: "Missing required fields" },
+                { status: 400 }
+            );
+        }
+
+        // Convert file to buffer
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Upload to Cloudinary (keep hierarchy same as before)
+        const uploadResult: any = await new Promise((resolve, reject) => {
+            cloudinary.uploader
+                .upload_stream(
+                    {
+                        folder: "hero-images",
+                        resource_type: "image",
+                    },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                )
+                .end(buffer);
+        });
+
+        // Save Cloudinary URL in DB
+        const heroImage = await prisma.heroImage.create({
+            data: {
+                page,
+                imageUrl: uploadResult.secure_url,
+                alt,
+            },
+        });
+
+        return NextResponse.json(heroImage, { status: 201 });
+    } catch (error) {
+        console.error("[HERO_IMAGES_POST]", error);
+        return NextResponse.json(
+            { error: "Failed to upload hero image" },
+            { status: 500 }
+        );
     }
-
-    // Generate unique filename
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const uniqueId = uuidv4();
-    const fileExtension = file.name.split(".").pop();
-    const fileName = `${uniqueId}.${fileExtension}`;
-
-    // Save file to public directory
-    const publicDir = join(process.cwd(), "public", "hero-images");
-    const filePath = join(publicDir, fileName);
-    await writeFile(filePath, buffer);
-
-    // Save to database
-    const heroImage = await prisma.heroImage.create({
-      data: {
-        id: uniqueId,
-        page,
-        imageUrl: `/hero-images/${fileName}`,
-        alt,
-      },
-    });
-
-    return NextResponse.json(heroImage);
-  } catch (error) {
-    console.error("Error uploading hero image:", error);
-    return NextResponse.json(
-      { error: "Failed to upload hero image" },
-      { status: 500 }
-    );
-  }
 }
