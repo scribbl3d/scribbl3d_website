@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
             where,
             include: {
                 attributes: true,
+                images: true, // 👈 IMPORTANT
             },
             orderBy: {
                 name: "asc",
@@ -137,12 +138,20 @@ export async function GET(request: NextRequest) {
         });
 
         return NextResponse.json({
-            printers: printers.map((p) => ({
-                ...p,
-                volumeDisplay: `${p.volumeLength} × ${p.volumeWidth} × ${p.volumeHeight}`,
-                volumeCategory: getVolumeCategory(p.volumeMax),
-                priceDisplay: `₹${(p.price / 100).toLocaleString("en-IN")}`,
-            })),
+            printers: printers.map((p) => {
+                const mainImage =
+                    p.images.find((img) => img.isMain)?.url ||
+                    p.images[0]?.url ||
+                    null;
+
+                return {
+                    ...p,
+                    imageUrl: mainImage,
+                    volumeDisplay: `${p.volumeLength} × ${p.volumeWidth} × ${p.volumeHeight}`,
+                    volumeCategory: getVolumeCategory(p.volumeMax),
+                    priceDisplay: `₹${(p.price / 100).toLocaleString("en-IN")}`,
+                };
+            }),
             filters: availableFilters,
             total: printers.length,
         });

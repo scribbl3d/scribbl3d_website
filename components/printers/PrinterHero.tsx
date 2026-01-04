@@ -108,7 +108,7 @@ const PrinterHero = () => {
                         }}
                     />
                 }
-                url="/printer-images/printerVideo.mp4"
+                url="https://res.cloudinary.com/dlbrgchrh/video/upload/v1767461878/printer-images/doef4s0pr9mzikpb6hzu.mp4"
                 type="video"
                 wrapperClass="xl:h-[830px] 2xl:h-screen"
             />

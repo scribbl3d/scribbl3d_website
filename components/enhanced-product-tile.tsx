@@ -197,7 +197,11 @@ export default function EnhancedProductTile({
                 <div className="pt-8 px-4">
                     <div className="relative w-[250px] h-[250px] mx-auto rounded-lg overflow-hidden">
                         <Image
-                            src={images[0] || "/placeholder.svg"}
+                            src={
+                                images?.[0]?.startsWith("http")
+                                    ? images[0]
+                                    : "/placeholder.svg"
+                            }
                             alt={name}
                             fill
                             className={`object-cover transition-opacity ${
@@ -205,8 +209,15 @@ export default function EnhancedProductTile({
                             }`}
                             unoptimized
                         />
+
                         <Image
-                            src={images[1] || images[0] || "/placeholder.svg"}
+                            src={
+                                images?.[1]?.startsWith("http")
+                                    ? images[1]
+                                    : images?.[0]?.startsWith("http")
+                                      ? images[0]
+                                      : "/placeholder.svg"
+                            }
                             alt={name}
                             fill
                             className={`object-cover transition-opacity ${

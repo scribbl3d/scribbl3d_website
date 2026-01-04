@@ -136,10 +136,11 @@ export default function ProductForm({
                 Array.isArray(product.images)
                     ? product.images.filter(
                           (img) =>
-                              typeof img === "string" && img.startsWith("/")
+                              typeof img === "string" && img.startsWith("http")
                       )
                     : []
             );
+
             setImages([]); // Clear local images after save
         } else {
             setFormData({

@@ -1,14 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 // import formidable from "formidable";
-import {
-    ASSET_PATHS,
-    URL_PATHS,
-    ensureAssetDirectory,
-    urlToAssetPath,
-} from "@/lib/asset-paths";
-import { writeFile } from "fs/promises";
-import path from "path";
+import { URL_PATHS, urlToAssetPath } from "@/lib/asset-paths";
+import cloudinary from "@/lib/cloudinary";
 import { z } from "zod";
 
 // CORS helper
@@ -126,15 +120,16 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const id = (await params).id;
+
     try {
         const formData = await request.formData();
         const files = formData.getAll("images");
         const productDataStr = formData.get("productData") as string | null;
         const keepImagesStr = formData.get("keepImages") as string | null;
-        // keepImages is a JSON array of image URLs to keep (from the frontend)
+
         const keepImages = keepImagesStr
-            ? safeJsonParse<string[]>(keepImagesStr, "keepImages")
-            : null;
+            ? (safeJsonParse<string[]>(keepImagesStr, "keepImages") ?? [])
+            : [];
 
         if (!productDataStr) {
             return setCORSHeaders(
@@ -155,18 +150,20 @@ export async function PUT(
             );
         }
 
-        // Calculate discount
+        /* ---------------- Discount ---------------- */
+
         let discount = Math.round(
             (1 - productData.price / productData.originalPrice) * 100
         );
         if (discount < 1) discount = 1;
 
-        // Save new images
-        const imagePaths = keepImages ? [...keepImages] : [];
-        await ensureAssetDirectory(ASSET_PATHS.PRODUCT_IMAGES);
+        /* ---------------- Images ---------------- */
+
+        const imageUrls: string[] = [...keepImages];
 
         for (const file of files) {
-            // File type and size validation
+            const f = file as any;
+
             const allowedTypes = [
                 "image/jpeg",
                 "image/png",
@@ -174,42 +171,40 @@ export async function PUT(
                 "image/webp",
                 "image/jpg",
             ];
-            const maxSize = 5 * 1024 * 1024; // 5MB
-            if (
-                !allowedTypes.includes((file as any).type) ||
-                (file as any).size > maxSize
-            ) {
-                console.warn(
-                    `Skipped file: invalid type or too large (${(file as any).name})`
-                );
+            const maxSize = 5 * 1024 * 1024;
+
+            if (!allowedTypes.includes(f.type) || f.size > maxSize) {
+                console.warn(`Skipped invalid image: ${f?.name}`);
                 continue;
             }
-            let buffer: Buffer;
-            if (typeof (file as any).stream === "function") {
-                buffer = await streamToBuffer((file as any).stream());
-            } else if (typeof (file as any).arrayBuffer === "function") {
-                buffer = Buffer.from(await (file as any).arrayBuffer());
-            } else {
-                continue;
-            }
-            const filename =
-                Date.now() + "-" + (file as any).name.replace(/\s/g, "-");
-            const filepath = path.join(ASSET_PATHS.PRODUCT_IMAGES, filename);
-            await writeFile(filepath, buffer);
-            imagePaths.push(URL_PATHS.PRODUCT_IMAGES + "/" + filename);
+
+            const buffer = Buffer.from(await f.arrayBuffer());
+
+            const uploadResult = await cloudinary.uploader.upload(
+                `data:${f.type};base64,${buffer.toString("base64")}`,
+                {
+                    folder: "product-images",
+                    resource_type: "image",
+                }
+            );
+
+            imageUrls.push(uploadResult.secure_url);
         }
 
-        // Validate and prepare data
+        /* ---------------- Validation ---------------- */
+
         const validatedData = productSchema.parse({
             ...productData,
-            images: imagePaths,
+            images: imageUrls,
             discount,
         });
 
-        // Prepare the data for Prisma, including all optional fields
+        /* ---------------- Prisma Data ---------------- */
+
         const prismaData: any = {
             ...validatedData,
         };
+
         if (productData.length !== undefined)
             prismaData.length = Number(productData.length);
         if (productData.breadth !== undefined)
@@ -225,7 +220,10 @@ export async function PUT(
             prismaData.productDetails = productData.productDetails;
         if (productData.productdesc)
             prismaData.productdesc = productData.productdesc;
-        prismaData.images = imagePaths;
+
+        prismaData.images = imageUrls;
+
+        /* ---------------- Update ---------------- */
 
         const product = await prisma.product.update({
             where: { id },
@@ -235,6 +233,7 @@ export async function PUT(
         return setCORSHeaders(NextResponse.json(product));
     } catch (error) {
         console.error("Failed to update product:", error);
+
         if (error instanceof z.ZodError) {
             return setCORSHeaders(
                 NextResponse.json(
@@ -249,6 +248,7 @@ export async function PUT(
                 )
             );
         }
+
         return setCORSHeaders(
             NextResponse.json(
                 { error: "Failed to update product" },

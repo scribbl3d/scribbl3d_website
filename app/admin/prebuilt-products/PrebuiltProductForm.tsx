@@ -277,52 +277,44 @@ export default function PrebuiltProductForm({
     const handleImageUpload = async (
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
-        toast({
-            title: "Upload disabled",
-            description:
-                "Image upload is temporarily disabled. Please use existing images.",
-            variant: "destructive",
-        });
-        return;
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", file);
+        uploadFormData.append(
+            "productName",
+            formData.name || "prebuilt-product"
+        );
+
+        try {
+            const response = await fetch(
+                "/api/prebuilt-products/upload-image",
+                {
+                    method: "POST",
+                    body: uploadFormData,
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error("Failed to upload image");
+            }
+
+            const data = await response.json();
+
+            setFormData((prev) => ({
+                ...prev,
+                images: [...prev.images, data.imageUrl],
+            }));
+        } catch {
+            toast({
+                title: "Error",
+                description: "Failed to upload image. Please try again.",
+                variant: "destructive",
+            });
+        }
     };
-
-    // const handleImageUpload = async (
-    //     e: React.ChangeEvent<HTMLInputElement>
-    // ) => {
-    //     const files = e.target.files;
-    //     if (!files || files.length === 0) return;
-
-    //     const file = files[0];
-    //     const uploadFormData = new FormData();
-    //     uploadFormData.append("file", file);
-    //     uploadFormData.append("productName", formData.name);
-
-    //     try {
-    //         const response = await fetch(
-    //             "/api/prebuilt-products/upload-image",
-    //             {
-    //                 method: "POST",
-    //                 body: uploadFormData,
-    //             }
-    //         );
-
-    //         if (!response.ok) {
-    //             throw new Error("Failed to upload image");
-    //         }
-
-    //         const data = await response.json();
-    //         setFormData((prev) => ({
-    //             ...prev,
-    //             images: [...prev.images, data.imageUrl],
-    //         }));
-    //     } catch {
-    //         toast({
-    //             title: "Error",
-    //             description: "Failed to upload image. Please try again.",
-    //             variant: "destructive",
-    //         });
-    //     }
-    // };
 
     const handleImageDelete = (index: number) => {
         setFormData((prev) => ({
@@ -353,27 +345,17 @@ export default function PrebuiltProductForm({
                                     <Label htmlFor="name" className="text-base">
                                         Product Name
                                     </Label>
-                                    <Input
-                                        type="file"
-                                        id="images"
-                                        disabled
-                                        accept="image/*"
-                                        className="cursor-not-allowed opacity-60"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                        Image upload is temporarily disabled.
-                                    </p>
 
-                                    {/* <Input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter product name"
-                    className="mt-1.5"
-                  /> */}
+                                    <Input
+                                        type="text"
+                                        id="name"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        required
+                                        placeholder="Enter product name"
+                                        className="mt-1.5"
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>

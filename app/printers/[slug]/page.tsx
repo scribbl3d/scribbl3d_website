@@ -5,12 +5,11 @@ import SimilarPrintersCarousel from "@/components/printers/SimilarPrintersCarous
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
 import { ArrowLeft, Check, Download } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-
-import { signIn, useSession } from "next-auth/react";
 
 export default function PrinterDetailPage() {
     const { slug } = useParams<{ slug: string }>() ?? {};

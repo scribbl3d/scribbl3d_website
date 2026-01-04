@@ -1,6 +1,5 @@
-import { mkdir, readdir, writeFile } from "fs/promises";
+import cloudinary from "@/lib/cloudinary";
 import { NextRequest, NextResponse } from "next/server";
-import { join } from "path";
 
 export async function POST(request: NextRequest) {
     try {
@@ -8,7 +7,7 @@ export async function POST(request: NextRequest) {
 
         const formData = await request.formData();
         const file = formData.get("file") as File;
-        const type = formData.get("type") as string;
+        const type = formData.get("type") as string; // "thumbnail" | "hero"
         const blogTitle = formData.get("blogTitle") as string;
 
         if (!file || !type || !blogTitle) {
@@ -18,41 +17,36 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // ✅ SLUGIFY (MUST MATCH DB)
+        // ✅ SLUGIFY BLOG TITLE
         const folderName = blogTitle
             .toLowerCase()
             .trim()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/^-+|-+$/g, "");
 
-        // ✅ ABSOLUTE PATH (CRITICAL FOR PROD)
-        const uploadDir = join(
-            "/var/www/website_with_payment",
-            "public",
-            "blog-images",
-            folderName
+        // Convert File → Buffer
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(
+            `data:${file.type};base64,${buffer.toString("base64")}`,
+            {
+                folder: `blog-images/${folderName}`,
+                resource_type: "image",
+            }
         );
 
-        await mkdir(uploadDir, { recursive: true });
+        console.log("✅ Uploaded to Cloudinary:", uploadResult.secure_url);
 
-        const files = await readdir(uploadDir);
-        const sameTypeFiles = files.filter((f) => f.startsWith(type));
-        const nextNumber = sameTypeFiles.length + 1;
-
-        const ext = file.name.split(".").pop();
-        const fileName = `${type}-${nextNumber}.${ext}`;
-        const filePath = join(uploadDir, fileName);
-
-        const buffer = Buffer.from(await file.arrayBuffer());
-        await writeFile(filePath, buffer);
-
-        const imageUrl = `/blog-images/${folderName}/${fileName}`;
-
-        console.log("✅ IMAGE SAVED AT:", filePath);
-
-        return NextResponse.json({ imageUrl });
-    } catch (err) {
-        console.error("❌ Upload failed:", err);
-        return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+        // ✅ RETURN CLOUDINARY URL (ONLY THIS)
+        return NextResponse.json({
+            imageUrl: uploadResult.secure_url,
+        });
+    } catch (error) {
+        console.error("❌ Blog image upload failed:", error);
+        return NextResponse.json(
+            { error: "Image upload failed" },
+            { status: 500 }
+        );
     }
 }

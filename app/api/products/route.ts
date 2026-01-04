@@ -1,13 +1,8 @@
-import {
-    ASSET_PATHS,
-    URL_PATHS,
-    ensureAssetDirectory,
-} from "@/lib/asset-paths";
+import cloudinary from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { writeFile } from "fs/promises";
 import { NextResponse } from "next/server";
-import path from "path";
+
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -187,24 +182,27 @@ export async function POST(request: Request) {
         );
         if (discount < 1) discount = 1;
 
-        const imagePaths = keepImages ? [...keepImages] : [];
-        await ensureAssetDirectory(ASSET_PATHS.PRODUCT_IMAGES);
+        const imageUrls: string[] = keepImages ? [...keepImages] : [];
 
         for (const file of files) {
-            if (!(file as any)?.name) continue;
-            const buffer = await streamToBuffer((file as any).stream());
-            const filename =
-                Date.now() + "-" + (file as any).name.replace(/\s/g, "-");
+            if (!(file as any)?.arrayBuffer) continue;
 
-            const filepath = path.join(ASSET_PATHS.PRODUCT_IMAGES, filename);
-            await writeFile(filepath, buffer);
+            const buffer = Buffer.from(await (file as any).arrayBuffer());
 
-            imagePaths.push(URL_PATHS.PRODUCT_IMAGES + "/" + filename);
+            const uploadResult = await cloudinary.uploader.upload(
+                `data:${(file as any).type};base64,${buffer.toString("base64")}`,
+                {
+                    folder: "product-images",
+                    resource_type: "image",
+                }
+            );
+
+            imageUrls.push(uploadResult.secure_url);
         }
 
         const validatedData = productSchema.parse({
             ...productData,
-            images: imagePaths,
+            images: imageUrls,
             discount,
         });
 
