@@ -94,7 +94,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
                     if (response.ok) {
                         const data: WishlistItem[] = await response.json();
                         setWishlistItems(
-                            new Set(data.map((item) => item.productId))
+                            new Set(data?.map((item) => item.productId))
                         );
                     }
                 } catch (error) {

@@ -309,26 +309,27 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
                 </div>
             </Link>
 
-            {/* BUTTONS – ALWAYS VISIBLE */}
-            <div className="mt-auto flex flex-col gap-3 px-4 pb-4">
+            <div className="px-4 pb-4 relative h-[53px]">
                 <button
+                    className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white shadow rounded-[4px] flex items-center justify-center touch-manipulation"
+                    style={{
+                        color: "#5D32F5",
+                        fontFamily: "Inter, sans-serif",
+                        fontSize: "18px",
+                        fontStyle: "normal",
+                        fontWeight: 700,
+                        lineHeight: "21.6px",
+                        width: "253px",
+                        height: "37px",
+                    }}
                     onClick={handleAddToCart}
-                    disabled={isLoading}
-                    className="bg-gradient-to-r from-[#6359F3] to-[#5D32F5] text-white rounded-md h-[40px] font-medium text-[16px] hover:opacity-90"
+                    disabled={isWishlistLoading || isCartLoading}
                 >
-                    {isLoading ? (
-                        <div className="mx-auto h-5 w-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                    {isCartLoading ? (
+                        <div className="h-5 w-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
                     ) : (
                         "Add to Cart"
                     )}
-                </button>
-
-                <button
-                    onClick={handleBuyNow}
-                    disabled={isLoading}
-                    className="bg-gradient-to-r from-[#6359F3] to-[#5D32F5] text-white rounded-md h-[40px] font-medium text-[16px] hover:opacity-90"
-                >
-                    Buy Now
                 </button>
             </div>
         </div>
@@ -522,26 +523,17 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
                     </div>
                 </Link>
 
-                {/* ACTION BUTTONS (OUTSIDE LINK) */}
-                <div className="flex flex-col gap-3 px-4 pb-4">
+                <div className="px-4 pb-4 relative h-[53px]">
                     <button
                         onClick={handleAddToCart}
                         disabled={isLoading}
-                        className="bg-gradient-to-r from-[#6359F3] to-[#5D32F5] text-white rounded-[4px] h-[37px] font-medium text-[18px]"
+                        className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-[#6359F3] to-[#5D32F5] text-white rounded-[4px] flex items-center justify-center touch-manipulation w-[253px] h-[37px] font-medium text-[18px]"
                     >
                         {isLoading ? (
-                            <div className="mx-auto h-5 w-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                            <div className="h-5 w-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
                         ) : (
                             "Add to Cart"
                         )}
-                    </button>
-
-                    <button
-                        onClick={handleBuyNow}
-                        disabled={isLoading}
-                        className="bg-gradient-to-r from-[#6359F3] to-[#5D32F5] text-white rounded-[4px] h-[37px] font-medium text-[18px]"
-                    >
-                        Buy Now
                     </button>
                 </div>
             </div>

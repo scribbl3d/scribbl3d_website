@@ -12,7 +12,10 @@ export default function FilterPanel({
 
     // Helper to render technology buttons
     const renderTechnologyButtons = () => {
-        const technologies = filters.technology || [];
+        const technologies = filters?.technology ?? [];
+        if (!filters) {
+            return <div>Loading filters...</div>;
+        }
 
         return (
             <div className="mb-8">

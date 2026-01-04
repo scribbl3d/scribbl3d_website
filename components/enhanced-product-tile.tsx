@@ -87,17 +87,8 @@ export default function EnhancedProductTile({
 
     // 🔥 IMPORTANT: ONLY navigate when clicking the card itself
     const handleProductClick = (e: React.MouseEvent) => {
-        if (e.target !== e.currentTarget) return; // ⛔ child click → ignore
-
         setIsNavigating(true);
         router.push(`/product/${id}`);
-    };
-
-    const handleBuyNow = (e: React.MouseEvent) => {
-        e.stopPropagation(); // extra safety
-        router.push(
-            `/checkout?mode=buynow&type=prebuiltproduct&productId=${id}`
-        );
     };
 
     const handleAddToCart = async (e: React.MouseEvent) => {
@@ -168,116 +159,173 @@ export default function EnhancedProductTile({
             onMouseLeave={() => setIsHovered(false)}
             onClick={handleProductClick}
         >
-            {/* Navigation overlay */}
             {isNavigating && (
-                <div className="absolute inset-0 bg-white/70 z-50 flex items-center justify-center">
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
             )}
+            <div
+                className={`absolute top-0 left-0 w-full bg-white transition-all duration-300 ease-in-out ${
+                    isHovered ? "h-[530px]" : "h-[430px]"
+                } overflow-hidden`}
+            >
+                <div
+                    className={`absolute top-0 left-0 w-full transition-all duration-300 ease-in-out ${
+                        isHovered ? "h-[340px]" : "h-[300px]"
+                    } bg-gray-100`}
+                ></div>
 
-            <div className="absolute inset-0 bg-white overflow-hidden">
-                {/* Wishlist */}
+                {isCustomizable && (
+                    <div className="absolute top-[8px] right-[8px] bg-white rounded-full w-[110px] h-[25px] flex items-center justify-center text-xs font-bold z-10 shadow-md">
+                        <span className="font-inter text-[13px] text-[var(--www-scribbl-3-d-com-silver-chalice,#9E9E9E)] font-medium">
+                            *Customisable
+                        </span>
+                    </div>
+                )}
+
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-3 right-3 z-20 bg-white/80 rounded-full"
+                    className="absolute top-[250px] right-2 z-20 bg-white/80 hover:bg-white rounded-full w-10 h-10 p-0 flex items-center justify-center"
                     onClick={handleWishlistToggle}
                     disabled={isWishlistLoading}
+                    aria-label={
+                        isInWishlist
+                            ? "Remove from Wishlist"
+                            : "Add to Wishlist"
+                    }
                 >
-                    <Heart
-                        className={`h-5 w-5 ${
-                            isInWishlist
-                                ? "fill-red-500 text-red-500"
-                                : "text-gray-500"
-                        }`}
-                    />
+                    {isWishlistLoading ? (
+                        <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                        <Heart
+                            className={`h-5 w-5 ${
+                                isInWishlist
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-500"
+                            }`}
+                        />
+                    )}
                 </Button>
 
-                {/* Images */}
-                <div className="pt-8 px-4">
-                    <div className="relative w-[250px] h-[250px] mx-auto rounded-lg overflow-hidden">
+                <div className="pt-[36px] px-4 relative z-10">
+                    <div className="relative w-[250px] h-[250px] mx-auto overflow-hidden rounded-lg">
                         <Image
-                            src={
-                                images?.[0]?.startsWith("http")
-                                    ? images[0]
-                                    : "/placeholder.svg"
-                            }
+                            src={images[0] || "/placeholder.svg"}
                             alt={name}
                             fill
-                            className={`object-cover transition-opacity ${
+                            sizes="(max-width: 768px) 100vw, 250px"
+                            className={`object-cover transition-opacity duration-300 ease-in-out ${
                                 isHovered ? "opacity-0" : "opacity-100"
                             }`}
-                            unoptimized
+                            unoptimized={true} // Key prop
                         />
-
                         <Image
-                            src={
-                                images?.[1]?.startsWith("http")
-                                    ? images[1]
-                                    : images?.[0]?.startsWith("http")
-                                      ? images[0]
-                                      : "/placeholder.svg"
-                            }
+                            src={images[1] || "/placeholder.svg"}
                             alt={name}
                             fill
-                            className={`object-cover transition-opacity ${
+                            sizes="(max-width: 768px) 100vw, 250px"
+                            className={`object-cover transition-opacity duration-300 ease-in-out ${
                                 isHovered ? "opacity-100" : "opacity-0"
                             }`}
-                            unoptimized
+                            unoptimized={true} // Key prop
                         />
                     </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div
-                    className={`absolute left-1/2 -translate-x-1/2 transition-all ${
-                        isHovered
-                            ? "opacity-100 bottom-36"
-                            : "opacity-0 bottom-40"
-                    }`}
-                    onClick={(e) => e.stopPropagation()} // 🛡 final safety net
-                >
-                    <div className="flex gap-3 w-[260px]">
+                    <div
+                        className={`absolute left-1/2 transform -translate-x-1/2 transition-all duration-300 ease-in-out ${
+                            isHovered
+                                ? "opacity-100 bottom-[-39px]"
+                                : "opacity-0 bottom-[-30px]"
+                        }`}
+                    >
                         <Button
-                            className="flex-1 h-9 bg-blue-300 hover:bg-blue-400 rounded-full"
+                            className="w-[150px] h-[30px] bg-blue-300 hover:bg-blue-400 rounded-full p-0"
                             onClick={handleAddToCart}
                             disabled={isCartLoading}
                         >
-                            <ShoppingCart className="h-4 w-4 mr-2" />
-                            Add to Cart
-                        </Button>
-
-                        <Button
-                            className="flex-1 h-9 bg-blue-300 hover:bg-blue-400 rounded-full"
-                            onClick={handleBuyNow}
-                            disabled={isCartLoading}
-                        >
-                            Buy Now
+                            {isCartLoading ? (
+                                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <>
+                                    <ShoppingCart className="h-4 w-4 mr-2 text-black" />
+                                    <span className="text-black font-inter text-base font-medium leading-normal">
+                                        Add to Cart
+                                    </span>
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>
 
-                {/* Content */}
-                <div className="px-5 pt-5">
-                    <h2 className="text-lg font-semibold line-clamp-2">
+                <div
+                    className={`pt-[20px] px-[20px] width-[250px] transition-all duration-300 ease-in-out ${
+                        isHovered ? "mt-[40px]" : "mt-0"
+                    }`}
+                >
+                    <h2 className="font-lato text-xl text-[#3A3A3A] line-clamp-2 leading-[24px]">
                         {name}
                     </h2>
 
-                    <div className="flex justify-between items-center mt-1">
-                        <div>
-                            <span className="font-bold">₹{price}</span>
-                            <span className="ml-2 text-sm line-through text-gray-500">
+                    <div className="flex items-center justify-between mt-0.5">
+                        <div className="flex items-center">
+                            <span className="text-[17px] font-bold font-lato leading-5">
+                                ₹ {price}
+                            </span>
+                            <span className="ml-2 text-[13px] line-through text-gray-500 font-bold font-lato leading-5">
                                 ₹{originalPrice}
                             </span>
                         </div>
-                        <span className="text-xs text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                            {discountPercentage}% OFF
-                        </span>
+
+                        <div
+                            className={`
+                bg-[#E8F5E9] text-[#4CAF50] text-[12px] font-[500] leading-3 text-lato
+                px-3 py-3 rounded-full 
+                transition-all duration-300 ease-in-out 
+                overflow-hidden whitespace-nowrap
+                ${isHovered ? "w-[160px]" : "w-[70px]"}
+              `}
+                        >
+                            <div className="flex items-center justify-center h-full">
+                                <span
+                                    className={`
+                    transition-opacity duration-300 ease-in-out absolute
+                    ${isHovered ? "opacity-0" : "opacity-100"}
+                  `}
+                                >
+                                    {discountPercentage}% OFF
+                                </span>
+                                <span
+                                    className={`
+                    transition-opacity duration-300 ease-in-out absolute
+                    ${isHovered ? "opacity-100" : "opacity-0"}
+                  `}
+                                >
+                                    AVAILABLE SIZES : {availableSizes.join(",")}
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    <p className="mt-2 text-sm text-gray-500 line-clamp-2">
-                        {description}
-                    </p>
+                    <div className="mt-0.5 relative pt-[6px]">
+                        <p
+                            className={`font-lato text-[13px] font-bold leading-[16px] text-[#A6A6AA] ${
+                                isHovered ? "overflow-visible" : "line-clamp-2"
+                            }`}
+                            style={{
+                                ...(isHovered && {
+                                    maxHeight: "none",
+                                    zIndex: 9,
+                                    position: "relative",
+                                }),
+                            }}
+                        >
+                            {description}
+                        </p>
+                        {!isHovered && (
+                            <div className="absolute bottom-0 right-0 bg-white pl-1"></div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

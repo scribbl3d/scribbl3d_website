@@ -240,15 +240,6 @@ function PrinterCard({ printer }: { printer: any }) {
                     )}
                 </button>
             </div>
-            <div className="px-5 pb-5">
-                <button
-                    className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                    onClick={handleBuyNow}
-                    disabled={isCartLoading}
-                >
-                    Buy Now
-                </button>
-            </div>
         </div>
     );
 }
