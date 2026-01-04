@@ -52,7 +52,7 @@ export async function PUT(
     try {
         const formData = await req.formData();
 
-        // 1️⃣ Fetch existing printer (for slug fallback)
+        // 1️⃣ Existing printer (slug fallback)
         const existingPrinter = await prisma.printer.findUnique({
             where: { id: params.id },
             select: { slug: true },
@@ -75,7 +75,37 @@ export async function PUT(
             (formData.get("downloads") as string) || "[]"
         );
 
-        // 3️⃣ Images: merge existing + new uploads
+        // 3️⃣ Extract materials (from Specifications)
+        const materialAttributes: {
+            attributeKey: string;
+            attributeValue: string;
+        }[] = [];
+
+        specifications.forEach((spec: any) => {
+            const isMaterialSpec =
+                spec.label?.toLowerCase().includes("material") ||
+                spec.category?.toLowerCase().includes("material");
+
+            if (!isMaterialSpec || !spec.value) return;
+
+            const uniqueMaterials = Array.from(
+                new Set(
+                    spec.value
+                        .split(",")
+                        .map((v: string) => v.trim().toUpperCase())
+                        .filter(Boolean)
+                )
+            );
+
+            uniqueMaterials.forEach((material) => {
+                materialAttributes.push({
+                    attributeKey: "material",
+                    attributeValue: material as string,
+                });
+            });
+        });
+
+        // 4️⃣ Images (merge existing + new)
         const existingImages = JSON.parse(
             (formData.get("existingImages") as string) || "[]"
         );
@@ -89,7 +119,6 @@ export async function PUT(
             sortOrder: number;
         }[] = [...existingImages];
 
-        // Upload new images to Cloudinary
         for (let i = 0; i < newFiles.length; i++) {
             const file = newFiles[i];
             const meta = JSON.parse(newMetaStrings[i] || "{}");
@@ -118,8 +147,9 @@ export async function PUT(
             });
         }
 
-        // 4️⃣ Transaction: update printer + relations
+        // 5️⃣ TRANSACTION (full rebuild)
         const [updatedPrinter] = await prisma.$transaction([
+            // Printer core update
             prisma.printer.update({
                 where: { id: params.id },
                 data: {
@@ -134,9 +164,7 @@ export async function PUT(
                         : null,
                     discount: parseInt(formData.get("discount") as string),
                     description: formData.get("description") as string,
-                    shortDescription: formData.get(
-                        "shortDescription"
-                    ) as string,
+                    shortDescription: formData.get("shortDescription") as string,
                     volumeLength: parseInt(
                         formData.get("volumeLength") as string
                     ),
@@ -179,6 +207,21 @@ export async function PUT(
                     label: spec.label,
                     value: spec.value,
                     sortOrder: index,
+                })),
+            }),
+
+            // 🔥 Material Compatibility (SYNC)
+            prisma.printerAttribute.deleteMany({
+                where: {
+                    printerId: params.id,
+                    attributeKey: "material",
+                },
+            }),
+            prisma.printerAttribute.createMany({
+                data: materialAttributes.map((attr) => ({
+                    printerId: params.id,
+                    attributeKey: attr.attributeKey,
+                    attributeValue: attr.attributeValue,
                 })),
             }),
 

@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowLeft, Plus, Search } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 /* ===================== TYPES ===================== */
 
 type Printer = {
@@ -230,25 +229,56 @@ export default function AdminPrintersPage() {
                                                 })}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex gap-2">
+                                                <div className="flex items-center gap-3">
                                                     <Link
                                                         href={`/admin/printers/${printer.id}/edit`}
-                                                        className="text-blue-600 hover:text-blue-800"
+                                                        className="inline-flex items-center text-back hover:text-blue-800"
                                                     >
-                                                        Edit
+                                                        <Edit className="h-5 w-6" />
                                                     </Link>
+
                                                     <button
                                                         onClick={() =>
                                                             handleDelete(
                                                                 printer.id
                                                             )
                                                         }
-                                                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                                        className="inline-flex items-center rounded bg-red-600 p-2 text-white hover:bg-red-700"
                                                     >
-                                                        Delete
+                                                        <Trash2 className="h-5 w-6 text-white" />
                                                     </button>
                                                 </div>
                                             </td>
+                                            {/* <div className="flex space-x-2">
+                                            <Button
+                                                onClick={() =>
+                                                    handleEdit(product)
+                                                }
+                                                variant="outline"
+                                                size="sm"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+
+                                            <Button
+                                                onClick={() =>
+                                                    handleDelete(product.id)
+                                                }
+                                                variant="destructive"
+                                                size="sm"
+                                                disabled={
+                                                    isDeleting &&
+                                                    deleteId === product.id
+                                                }
+                                            >
+                                                {isDeleting &&
+                                                deleteId === product.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </div> */}
                                         </tr>
                                     ))
                                 )}

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import type { PrebuiltProduct, ProductSize } from "@prisma/client";
-import { Loader2 } from "lucide-react";
+import { Edit, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import PrebuiltProductForm from "./PrebuiltProductForm";
 
@@ -126,7 +126,7 @@ export default function PrebuiltProductList() {
         <div className="space-y-6 p-4">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-semibold">
-                    Prebuilt Product List
+                    Prebuilt Products List
                 </h2>
                 <Button onClick={handleAddNew} size="lg">
                     Add New Product
@@ -286,7 +286,7 @@ export default function PrebuiltProductList() {
                                                 variant="outline"
                                                 size="sm"
                                             >
-                                                Edit
+                                                <Edit className="h-5 w-6" />
                                             </Button>
                                             <Button
                                                 onClick={() =>
@@ -297,7 +297,7 @@ export default function PrebuiltProductList() {
                                                 variant="destructive"
                                                 size="sm"
                                             >
-                                                Delete
+                                                <Trash2 className="h-5 w-6 text-white" />
                                             </Button>
                                         </div>
                                     </TableCell>

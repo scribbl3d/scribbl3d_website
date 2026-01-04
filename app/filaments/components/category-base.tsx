@@ -92,9 +92,11 @@ const CategoryBase: React.FC<CategoryProps> = ({
                 try {
                     const response = await fetch("/api/wishlist");
                     if (response.ok) {
-                        const data: WishlistItem[] = await response.json();
+                        const json = await response.json();
+                        const items: WishlistItem[] = json.items ?? [];
+
                         setWishlistItems(
-                            new Set(data?.map((item) => item.productId))
+                            new Set(items.map((item) => item.productId))
                         );
                     }
                 } catch (error) {

@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
 
         // 1️⃣ Basic fields
         const name = formData.get("name") as string;
+
         let slug = (formData.get("slug") as string) || "";
         if (!slug) {
             slug = name
@@ -109,7 +110,37 @@ export async function POST(request: NextRequest) {
             (formData.get("downloads") as string) || "[]"
         );
 
-        // 3️⃣ Upload images → Cloudinary
+        // 3️⃣ Extract materials → PrinterAttribute
+        const materialAttributes: {
+            attributeKey: string;
+            attributeValue: string;
+        }[] = [];
+
+        specifications.forEach((spec: any) => {
+            const isMaterialSpec =
+                spec.label?.toLowerCase().includes("material") ||
+                spec.category?.toLowerCase().includes("material");
+
+            if (!isMaterialSpec || !spec.value) return;
+
+            const uniqueMaterials = Array.from(
+                new Set(
+                    spec.value
+                        .split(",")
+                        .map((v: string) => v.trim().toUpperCase())
+                        .filter(Boolean)
+                )
+            );
+
+            uniqueMaterials.forEach((material) => {
+                materialAttributes.push({
+                    attributeKey: "material",
+                    attributeValue: material as string,
+                });
+            });
+        });
+
+        // 4️⃣ Upload images → Cloudinary
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
@@ -147,7 +178,7 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // 4️⃣ Create printer
+        // 5️⃣ Create printer (🔥 MATERIALS STORED HERE)
         const newPrinter = await prisma.printer.create({
             data: {
                 name,
@@ -171,6 +202,11 @@ export async function POST(request: NextRequest) {
 
                 images: { create: imageRecords },
 
+                // ✅ Material Compatibility
+                attributes: {
+                    create: materialAttributes,
+                },
+
                 specifications: {
                     create: specifications.map((spec: any, index: number) => ({
                         category: spec.category,
@@ -179,18 +215,21 @@ export async function POST(request: NextRequest) {
                         sortOrder: index,
                     })),
                 },
+
                 features: {
                     create: features.map((feat: any, index: number) => ({
                         title: feat.title,
                         sortOrder: index,
                     })),
                 },
+
                 applications: {
                     create: applications.map((app: any, index: number) => ({
                         name: app.name,
                         sortOrder: index,
                     })),
                 },
+
                 downloads: {
                     create: downloads.map((doc: any, index: number) => ({
                         title: doc.title,
@@ -202,6 +241,7 @@ export async function POST(request: NextRequest) {
             },
             include: {
                 images: true,
+                attributes: true,
             },
         });
 

@@ -15,7 +15,7 @@ interface ProductGridProps {
     error: string | null;
     className?: string;
     titleClassName?: string;
-    totalCount?: number | null;
+    totalCount?: number | null; // optional, not trusted blindly
 }
 
 function ProductGrid({
@@ -26,29 +26,41 @@ function ProductGrid({
     error,
     className = "",
     titleClassName = "",
-    totalCount = null,
 }: ProductGridProps) {
-    /** 🟢 Normalize products to array */
+    /* ----------------------------
+       1️⃣ Normalize backend response
+    ----------------------------- */
     const safeProducts = Array.isArray(products)
         ? products
         : Array.isArray(products?.products)
           ? products.products
-          : [];
+          : Array.isArray(products?.data)
+            ? products.data
+            : Array.isArray(products?.items)
+              ? products.items
+              : [];
 
-    const safeTotal = totalCount ?? safeProducts.length;
+    /* ----------------------------
+       2️⃣ Hide entire section if empty
+       (best UX)
+    ----------------------------- */
+    if (!isLoading && safeProducts.length === 0) {
+        return null;
+    }
+
+    const safeTotal = safeProducts.length;
 
     const { ref } = useInView({
         threshold: 0.1,
         triggerOnce: true,
     });
-    console.log("🧨 EnhancedProductTile id:", products.id);
 
     return (
         <section
             className={`w-full h-full pt-4 sm:pt-8 pb-8 sm:pb-16 max-w-[100vw] overflow-x-hidden ${className}`}
         >
             <div className="container mx-auto px-4 sm:px-6 h-full max-w-full">
-                {/* Header */}
+                {/* ---------------- Header ---------------- */}
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
                     {typeof title === "string" ? (
                         <div className="flex items-center gap-2">
@@ -57,6 +69,7 @@ function ProductGrid({
                             >
                                 {title}
                             </h2>
+
                             <span className="text-xs sm:text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
                                 {safeTotal}{" "}
                                 {safeTotal === 1 ? "Product" : "Products"}
@@ -74,7 +87,7 @@ function ProductGrid({
                     </Link>
                 </div>
 
-                {/* Grid */}
+                {/* ---------------- Grid ---------------- */}
                 <div className="h-full -mx-4 px-4 overflow-y-auto overscroll-y-contain">
                     <ErrorBoundary fallback={<div>Something went wrong</div>}>
                         <div
@@ -114,7 +127,7 @@ function ProductGrid({
                                         className="w-full max-w-[300px] flex justify-center transition-transform active:scale-[0.98]"
                                     >
                                         <EnhancedProductTile
-                                            id={product.id} // ✅ Prisma cuid
+                                            id={product.id}
                                             name={product.name}
                                             price={product.price}
                                             originalPrice={

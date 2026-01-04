@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 interface HeroImage {
   id: string;
@@ -86,8 +88,16 @@ export default function HeroImagesPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Manage Hero Images</h1>
-
+     
+       <div className="flex items-center mb-6">
+        <Link href="/admin" passHref>
+          <Button variant="ghost" className="mr-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </Link>
+        <h2 className="text-2xl font-bold">Manage Hero Images</h2>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Upload New Hero Image</CardTitle>
