@@ -164,7 +164,9 @@ export async function PUT(
                         : null,
                     discount: parseInt(formData.get("discount") as string),
                     description: formData.get("description") as string,
-                    shortDescription: formData.get("shortDescription") as string,
+                    shortDescription: formData.get(
+                        "shortDescription"
+                    ) as string,
                     volumeLength: parseInt(
                         formData.get("volumeLength") as string
                     ),
@@ -269,6 +271,61 @@ export async function PUT(
         console.error("[PRINTER_PUT]", error);
         return NextResponse.json(
             { error: "Internal Server Error" },
+            { status: 500 }
+        );
+    }
+}
+
+// =======================
+// DELETE: Delete printer
+// =======================
+export async function DELETE(
+    req: Request,
+    props: { params: Promise<{ id: string }> }
+) {
+    const params = await props.params;
+
+    try {
+        // 1️⃣ Fetch printer with images (for Cloudinary cleanup)
+        const printer = await prisma.printer.findUnique({
+            where: { id: params.id },
+            include: {
+                images: true,
+            },
+        });
+
+        if (!printer) {
+            return NextResponse.json(
+                { error: "Printer not found" },
+                { status: 404 }
+            );
+        }
+
+        // 2️⃣ Delete Cloudinary images
+        for (const img of printer.images) {
+            try {
+                const publicId = img.url
+                    .split("/")
+                    .slice(-2)
+                    .join("/")
+                    .replace(/\.[^/.]+$/, "");
+
+                await cloudinary.uploader.destroy(publicId);
+            } catch (err) {
+                console.warn("Cloudinary delete failed:", img.url);
+            }
+        }
+
+        // 3️⃣ Delete printer (CASCADE handles related tables)
+        await prisma.printer.delete({
+            where: { id: params.id },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("[PRINTER_DELETE]", error);
+        return NextResponse.json(
+            { error: "Failed to delete printer" },
             { status: 500 }
         );
     }

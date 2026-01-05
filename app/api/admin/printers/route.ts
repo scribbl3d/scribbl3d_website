@@ -1,35 +1,82 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 
-/* =========================
-   GET – List printers (Grid)
-   ========================= */
+export const dynamic = "force-dynamic";
+
+/* ============================================================================
+   GET – List printers (Search + Sort + Pagination)
+   ============================================================================ */
 export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
-        const search = searchParams.get("search") || "";
-        const sortBy = searchParams.get("sortBy") || "name";
+
+        /* -------------------- PAGINATION -------------------- */
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
-
         const skip = (page - 1) * limit;
 
-        const where: any = {};
-        if (search) {
-            where.OR = [
-                { name: { contains: search, mode: "insensitive" } },
-                { brand: { contains: search, mode: "insensitive" } },
-            ];
+        /* -------------------- SEARCH -------------------- */
+        const searchField = searchParams.get("searchField") || "name";
+        const searchTerm = searchParams.get("searchTerm") || "";
+
+        /* -------------------- SORT -------------------- */
+        const sort = searchParams.get("sort") || ""; // eg: price-asc
+
+        /* -------------------- SEARCH LOGIC -------------------- */
+        let fieldFilter: Prisma.PrinterWhereInput = {};
+
+        if (searchTerm.trim() !== "") {
+            if (searchField === "price") {
+                const price = Number(searchTerm);
+                if (!isNaN(price)) {
+                    fieldFilter.price = price;
+                }
+            } else {
+                fieldFilter[searchField as keyof Prisma.PrinterWhereInput] = {
+                    contains: searchTerm,
+                    mode: "insensitive",
+                } as any;
+            }
         }
 
-        const orderBy: any = {};
-        if (sortBy === "name") orderBy.name = "asc";
-        else if (sortBy === "price") orderBy.price = "asc";
-        else if (sortBy === "technology") orderBy.technology = "asc";
-        else if (sortBy === "updatedAt") orderBy.updatedAt = "desc";
+        const where: Prisma.PrinterWhereInput = {
+            AND: [fieldFilter],
+        };
 
-        const [printers, total] = await Promise.all([
+        /* -------------------- SORT LOGIC -------------------- */
+        let orderBy: Prisma.PrinterOrderByWithRelationInput[] = [];
+
+        if (sort) {
+            const [field, direction] = sort.split("-");
+
+            const order = direction === "desc" ? "desc" : "asc";
+
+            if (
+                field === "name" ||
+                field === "price" ||
+                field === "technology" ||
+                field === "brand" ||
+                field === "updatedAt" ||
+                field === "createdAt"
+            ) {
+                orderBy.push({ [field]: order } as any);
+
+                // tie-breaker for stable sorting
+                if (field !== "name") {
+                    orderBy.push({ name: "asc" });
+                }
+            }
+        }
+
+        // ⭐ DEFAULT SORT (always predictable)
+        if (orderBy.length === 0) {
+            orderBy = [{ name: "asc" }];
+        }
+
+        /* -------------------- FETCH DATA -------------------- */
+        const [printers, totalCount] = await Promise.all([
             prisma.printer.findMany({
                 where,
                 orderBy,
@@ -46,7 +93,7 @@ export async function GET(request: NextRequest) {
             prisma.printer.count({ where }),
         ]);
 
-        // 🔑 IMPORTANT: add imageUrl for PrinterGrid
+        /* -------------------- FORMAT RESPONSE -------------------- */
         const formattedPrinters = printers.map((p) => ({
             ...p,
             imageUrl: p.images[0]?.url || null,
@@ -54,12 +101,12 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             printers: formattedPrinters,
-            total,
             page,
-            totalPages: Math.ceil(total / limit),
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
         });
     } catch (error) {
-        console.error("[PRINTER_LIST]", error);
+        console.error("[ADMIN_PRINTERS_GET]", error);
         return NextResponse.json(
             { error: "Failed to fetch printers" },
             { status: 500 }
@@ -67,9 +114,9 @@ export async function GET(request: NextRequest) {
     }
 }
 
-/* =========================
-   POST – Create new printer
-   ========================= */
+/* ============================================================================
+   POST – Create new printer (UNCHANGED)
+   ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
@@ -178,7 +225,6 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // 5️⃣ Create printer (🔥 MATERIALS STORED HERE)
         const newPrinter = await prisma.printer.create({
             data: {
                 name,
@@ -202,7 +248,6 @@ export async function POST(request: NextRequest) {
 
                 images: { create: imageRecords },
 
-                // ✅ Material Compatibility
                 attributes: {
                     create: materialAttributes,
                 },

@@ -42,10 +42,9 @@ function PrinterCard({ printer }: { printer: any }) {
     const materials = printer.attributes
         .filter((attr: any) => attr.attributeKey === "material")
         .map((attr: any) => attr.attributeValue);
+    const price = printer.price || 0;
+    const originalPrice = printer.originalPrice || null;
 
-    /* =========================
-     ADD TO CART HANDLER
-  ========================= */
     const handleAddToCart = async () => {
         if (!printer || isCartLoading) return;
 
@@ -89,13 +88,7 @@ function PrinterCard({ printer }: { printer: any }) {
             setIsCartLoading(false);
         }
     };
-    const handleBuyNow = async () => {
-        // Implement buy now functionality
-        // need to call /checkout api with printerId and quantity
-        router.push(
-            `/checkout?mode=buynow&type=printer&productId=${printer.id}`
-        );
-    };
+
     useEffect(() => {
         const checkWishlist = async () => {
             try {
@@ -115,79 +108,34 @@ function PrinterCard({ printer }: { printer: any }) {
     }, [printer.id]);
 
     return (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-300">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
             {/* CARD LINK */}
-            <Link href={`/printers/${printer.slug}`} className="block">
+            <Link
+                href={`/printers/${printer.slug}`}
+                className=" flex flex-col h-full"
+            >
                 {/* IMAGE */}
-                <div className="relative w-full h-[200px] bg-gray-100">
-                    {printer.imageUrl && (
+                <div className="relative h-[260px] w-full bg-gray-100 overflow-hidden">
+                    {printer.images?.[0]?.url && (
                         <Image
-                            src={printer.imageUrl}
+                            src={printer.images[0].url}
                             alt={printer.name}
                             fill
+                            priority
                             className="object-cover"
                         />
                     )}
 
                     {/* WISHLIST */}
                     <button
-                        onClick={async (e) => {
+                        onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-
-                            if (isWishLoading) return;
-
-                            try {
-                                setIsWishLoading(true);
-
-                                const res = await fetch("/api/wishlist", {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                        printerId: printer.id,
-                                    }),
-                                });
-
-                                if (res.status === 401) {
-                                    toast({
-                                        title: "Login required",
-                                        description:
-                                            "Please login to use wishlist",
-                                        variant: "destructive",
-                                    });
-                                    return;
-                                }
-
-                                if (!res.ok) {
-                                    const data = await res.json();
-                                    throw new Error(data.error || "Failed");
-                                }
-
-                                const data = await res.json();
-                                setIsFavorite(data.added);
-
-                                toast({
-                                    title: data.added
-                                        ? "Added to Wishlist"
-                                        : "Removed from Wishlist",
-                                    description: printer.name,
-                                });
-                            } catch (err: any) {
-                                toast({
-                                    title: "Error",
-                                    description: err.message,
-                                    variant: "destructive",
-                                });
-                            } finally {
-                                setIsWishLoading(false);
-                            }
                         }}
-                        className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full shadow flex items-center justify-center border"
+                        className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
                     >
                         <Heart
-                            className={`w-4 h-4 ${
+                            className={`w-5 h-5 ${
                                 isFavorite
                                     ? "fill-red-500 text-red-500"
                                     : "text-gray-400"
@@ -197,20 +145,24 @@ function PrinterCard({ printer }: { printer: any }) {
                 </div>
 
                 {/* CONTENT */}
-                <div className="p-5">
-                    <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full mb-3">
+                <div className="p-5 flex-1">
+                    {/* TECHNOLOGY */}
+                    <span className="inline-block mb-3 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
                         {printer.technology}
                     </span>
 
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    {/* NAME */}
+                    <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
                         {printer.name}
                     </h3>
 
-                    <p className="text-xs text-gray-600 mb-4">
+                    {/* DESCRIPTION */}
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                         {printer.shortDescription || printer.description}
                     </p>
 
-                    <div className="text-xs mb-4 space-y-1">
+                    {/* SPECS */}
+                    <div className="text-sm text-gray-700 space-y-1">
                         <div>
                             <strong>Build Volume:</strong>{" "}
                             {printer.volumeDisplay
@@ -219,26 +171,86 @@ function PrinterCard({ printer }: { printer: any }) {
                                 .join(" × ")}
                         </div>
 
-                        <div>
-                            <strong>Materials:</strong>{" "}
+                        <div className="line-clamp-2">
+                            <span className="font-semibold">Materials:</span>{" "}
                             {materials?.length ? materials.join(", ") : "N/A"}
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                            Item Price: ₹{printer.price}
-                        </h3>
                     </div>
                 </div>
             </Link>
 
-            {/* ADD TO CART */}
-            <div className="px-5 pb-5">
+            {/* FOOTER (LOCKED POSITION) */}
+            <div className="mt-auto px-5 pb-5">
+                <hr className="mb-4" />
+
+                {/* PRICE ROW */}
+                {/* PRICE ROW */}
+                <div className="flex items-center mt-1">
+                    {/* FINAL PRICE */}
+                    <span
+                        className="
+      text-[16px]
+      leading-[24px]
+      font-semibold
+      text-[#101828]
+    "
+                    >
+                        ₹{price.toLocaleString("en-IN")}
+                    </span>
+
+                    {/* ORIGINAL PRICE */}
+                    {originalPrice && (
+                        <span
+                            className="
+        ml-5
+
+        text-[14px]
+        leading-[20px]
+        font-normal
+        line-through
+        text-[#99A1AF]
+      "
+                        >
+                            ₹{originalPrice.toLocaleString("en-IN")}
+                        </span>
+                    )}
+
+                    {/* DISCOUNT */}
+                    {printer.discount && (
+                        <span
+                            className="
+        ml-6
+        h-[22px]
+        px-2
+        inline-flex
+        items-center
+        rounded-full
+        text-[12px]
+        leading-[16px]
+        font-medium
+        text-[#008236]
+        bg-[#F0FDF4]
+        border
+        border-[#B9F8CF]
+      "
+                        >
+                            {printer.discount}% OFF
+                        </span>
+                    )}
+                </div>
+
+                <p className="text-[14px] leading-[20px] text-[#667085] mt-1 mb-3">
+                    (incl. GST)
+                </p>
+
+                {/* ADD TO CART */}
                 <button
-                    className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                     onClick={handleAddToCart}
                     disabled={isCartLoading}
+                    className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition flex items-center justify-center"
                 >
                     {isCartLoading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                         "Add to Cart"
                     )}

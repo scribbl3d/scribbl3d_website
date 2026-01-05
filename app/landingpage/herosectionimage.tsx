@@ -10,7 +10,11 @@ interface HeroImage {
     alt: string;
 }
 
-export default function MakeItYourOwn() {
+type Props = {
+    onHeroVisible?: (visible: boolean) => void;
+};
+
+export default function MakeItYourOwn({ onHeroVisible }: Props) {
     const [heroImage, setHeroImage] = useState<HeroImage | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -18,36 +22,47 @@ export default function MakeItYourOwn() {
         const fetchHeroImage = async () => {
             try {
                 const res = await fetch("/api/hero-image?page=landing");
-                if (!res.ok) return;
+                if (!res.ok) {
+                    onHeroVisible?.(false);
+                    return;
+                }
 
                 const data = await res.json();
-                setHeroImage(data);
+
+                if (data?.imageUrl) {
+                    setHeroImage(data);
+                    onHeroVisible?.(true);
+                } else {
+                    onHeroVisible?.(false);
+                }
             } catch (error) {
                 console.error("Failed to load hero image", error);
+                onHeroVisible?.(false);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchHeroImage();
-    }, []);
+    }, [onHeroVisible]);
 
-    // Optional: skeleton / placeholder (NO IMAGE FALLBACK)
+    // ✅ Skeleton matches final size → no jump
     if (loading) {
-        return <div className="w-full h-[60vh] bg-gray-100 animate-pulse" />;
+        return (
+            <div className="w-full aspect-[16/9] bg-gray-100 animate-pulse" />
+        );
     }
 
-    if (!heroImage) {
-        return null; // or a design placeholder
-    }
+    if (!heroImage) return null;
 
     return (
-        <div className="relative w-full h-[60vh]">
+        <div className="relative w-full aspect-[16/9] overflow-hidden">
             <Image
                 src={heroImage.imageUrl}
                 alt={heroImage.alt}
                 fill
                 priority
+                sizes="100vw"
                 className="object-cover"
             />
         </div>

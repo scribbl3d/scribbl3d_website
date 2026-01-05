@@ -27,9 +27,6 @@ function ProductGrid({
     className = "",
     titleClassName = "",
 }: ProductGridProps) {
-    /* ----------------------------
-       1️⃣ Normalize backend response
-    ----------------------------- */
     const safeProducts = Array.isArray(products)
         ? products
         : Array.isArray(products?.products)
@@ -40,10 +37,6 @@ function ProductGrid({
               ? products.items
               : [];
 
-    /* ----------------------------
-       2️⃣ Hide entire section if empty
-       (best UX)
-    ----------------------------- */
     if (!isLoading && safeProducts.length === 0) {
         return null;
     }

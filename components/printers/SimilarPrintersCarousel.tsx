@@ -1,11 +1,13 @@
 // components/printers/SimilarPrintersCarousel.tsx
 "use client";
 
+import { toast } from "@/components/ui/use-toast";
+import { useCart } from "@/providers/CartProvider";
 import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 interface SimilarPrintersCarouselProps {
     currentPrinterId: string;
     technology: string;
@@ -153,122 +155,204 @@ export default function SimilarPrintersCarousel({
 
 function SimilarPrinterCard({ printer }) {
     const [isFavorite, setIsFavorite] = useState(false);
-
+    const [isCartLoading, setIsCartLoading] = useState(false);
+    const { data: session } = useSession();
+    const { addToCart } = useCart();
     const materials =
         printer.attributes
             ?.filter((attr) => attr.attributeKey === "material")
             .map((attr) => attr.attributeValue) || [];
+    const handleAddToCart = async () => {
+        if (!printer || isCartLoading) return;
+
+        // Same auth logic as other product pages
+        if (!session) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to add items to your cart.",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        setIsCartLoading(true);
+
+        try {
+            await addToCart({
+                printerId: printer.id,
+                quantity: 1,
+            });
+
+            toast({
+                title: "Added to Cart",
+                description: `${printer.name} has been added to your cart.`,
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to add printer to cart.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsCartLoading(false);
+        }
+    };
 
     return (
-        <Link href={`/printers/${printer.slug}`} className="block group">
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300">
-                {/* Image Section */}
-                <div className="relative w-full h-48 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
-                    {printer.imageUrl ||
-                    (printer.images && printer.images[0]) ? (
+        <Link href={`/printers/${printer.slug}`} className="block h-full">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+                {/* IMAGE */}
+                <div className="relative h-[220px] w-full bg-gray-100 overflow-hidden">
+                    {(printer.imageUrl || printer.images?.[0]?.url) && (
                         <Image
                             src={printer.imageUrl || printer.images[0].url}
                             alt={printer.name}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-cover"
                         />
-                    ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center">
-                                <svg
-                                    className="w-16 h-16 text-gray-300 mx-auto mb-2"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={1.5}
-                                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                                    />
-                                </svg>
-                            </div>
-                        </div>
                     )}
 
-                    {/* Favorite Button */}
+                    {/* WISHLIST */}
                     <button
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             setIsFavorite(!isFavorite);
                         }}
-                        className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors border border-gray-200 z-10"
+                        className="absolute top-4 right-4 w-9 h-9 bg-white rounded-full shadow flex items-center justify-center"
                     >
                         <Heart
-                            className={`w-4 h-4 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                            className={`w-4 h-4 ${
+                                isFavorite
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-400"
+                            }`}
                         />
                     </button>
                 </div>
 
-                {/* Content Section */}
-                <div className="p-4">
-                    {/* Technology Badge */}
-                    <div className="mb-2">
-                        <span className="inline-block px-2.5 py-1 bg-[#BFDBFE] text-[#1E40AF] text-xs font-semibold rounded-full">
-                            {printer.technology}
-                        </span>
-                    </div>
+                {/* CONTENT */}
+                <div className="p-4 flex-1">
+                    {/* TECHNOLOGY */}
+                    <span className="inline-block mb-2 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
+                        {printer.technology}
+                    </span>
 
-                    {/* Title */}
-                    <h3 className="text-base font-bold text-gray-900 mb-2 leading-tight group-hover:text-blue-600">
+                    {/* NAME */}
+                    <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-2">
                         {printer.name}
                     </h3>
 
-                    {/* Description */}
+                    {/* DESCRIPTION */}
                     <p className="text-xs text-gray-600 mb-3 line-clamp-2">
                         {printer.shortDescription || printer.description}
                     </p>
 
-                    {/* Quick Info */}
-                    <div className="space-y-1.5 mb-3">
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-600">Build Volume:</span>
-                            <span className="text-gray-900 font-semibold">
-                                {printer.volumeLength} × {printer.volumeWidth} ×{" "}
-                                {printer.volumeHeight} mm
-                            </span>
+                    {/* SPECS */}
+                    <div className="text-xs text-gray-700 space-y-1">
+                        <div>
+                            <span className="font-semibold">Build Volume:</span>{" "}
+                            {printer.volumeLength} mm × {printer.volumeWidth} mm
+                            ×{printer.volumeHeight} mm
                         </div>
+
                         {materials.length > 0 && (
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-gray-600">
+                            <div className="line-clamp-2">
+                                <span className="font-semibold">
                                     Materials:
-                                </span>
-                                <span className="text-gray-900 font-semibold text-right">
-                                    {materials.slice(0, 2).join(", ")}
-                                    {materials.length > 2 ? "..." : ""}
-                                </span>
+                                </span>{" "}
+                                {materials.join(", ")}
                             </div>
                         )}
                     </div>
+                </div>
 
-                    {/* Price */}
-                    <div className="pt-3 border-t border-gray-100">
-                        <div className="flex items-baseline gap-2">
-                            {printer.originalPrice && (
-                                <span className="text-xs text-gray-400 line-through">
-                                    ₹
-                                    {(
-                                        printer.originalPrice / 100
-                                    ).toLocaleString("en-IN")}
-                                </span>
-                            )}
-                            <span className="text-lg font-bold text-gray-900">
-                                ₹{(printer.price / 100).toLocaleString("en-IN")}
+                {/* FOOTER (LOCKED) */}
+
+                {/* PRICE */}
+                <div className="mt-auto px-5 pb-5">
+                    <hr className="mb-4" />
+
+                    {/* PRICE ROW */}
+                    {/* PRICE ROW */}
+                    <div className="flex items-center mt-1">
+                        {/* FINAL PRICE */}
+                        <span
+                            className="
+      text-[16px]
+      leading-[24px]
+      font-semibold
+      text-[#101828]
+    "
+                        >
+                            ₹{printer.price.toLocaleString("en-IN")}
+                        </span>
+
+                        {/* ORIGINAL PRICE */}
+                        {printer.originalPrice && (
+                            <span
+                                className="
+        ml-5
+
+        text-[14px]
+        leading-[20px]
+        font-normal
+        line-through
+        text-[#99A1AF]
+      "
+                            >
+                                ₹{printer.originalPrice.toLocaleString("en-IN")}
                             </span>
-                            {printer.discount && (
-                                <span className="text-xs font-semibold text-green-600 bg-green-100 px-1.5 py-0.5 rounded">
-                                    {printer.discount}% off
-                                </span>
-                            )}
-                        </div>
+                        )}
+
+                        {/* DISCOUNT */}
+                        {printer.discount && (
+                            <span
+                                className="
+        ml-6
+        h-[22px]
+        px-2
+        inline-flex
+        items-center
+        rounded-full
+        text-[12px]
+        leading-[16px]
+        font-medium
+        text-[#008236]
+        bg-[#F0FDF4]
+        border
+        border-[#B9F8CF]
+      "
+                            >
+                                {printer.discount}% OFF
+                            </span>
+                        )}
                     </div>
+
+                    <p className="text-[14px] leading-[20px] text-[#667085] mt-1 mb-3">
+                        (incl. GST)
+                    </p>
+
+                    {/* ADD TO CART */}
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={isCartLoading}
+                        className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition flex items-center justify-center"
+                    >
+                        {isCartLoading ? (
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            "Add to Cart"
+                        )}
+                    </button>
                 </div>
             </div>
         </Link>

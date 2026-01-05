@@ -1,8 +1,10 @@
 "use client";
 
-import { ArrowLeft, Edit, Plus, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import SearchSortControl from "../_components/SearchSortControl";
 /* ===================== TYPES ===================== */
 
 type Printer = {
@@ -22,141 +24,143 @@ type PrintersResponse = {
     totalPages: number;
 };
 
-/* ===================== COMPONENT ===================== */
+/* ===================== PAGE ===================== */
 
 export default function AdminPrintersPage() {
     const [printers, setPrinters] = useState<Printer[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [searchTerm, setSearchTerm] = useState<string>("");
-    const [sortBy, setSortBy] = useState<string>("name");
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [totalPages, setTotalPages] = useState<number>(1);
+    const [loading, setLoading] = useState(true);
+
+    /* 🔍 Search & Sort state (USED BY SearchSortControl) */
+    const [searchField, setSearchField] = useState("name");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortOption, setSortOption] = useState("");
+
+    /* 📄 Pagination */
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
+    /* ===================== DATA FETCH ===================== */
 
     useEffect(() => {
         fetchPrinters();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchTerm, sortBy, currentPage]);
+    }, [searchField, searchTerm, sortOption, currentPage]);
 
     const fetchPrinters = async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
-                search: searchTerm,
-                sortBy,
+                searchField,
+                searchTerm,
+                sort: sortOption,
                 page: currentPage.toString(),
                 limit: "10",
             });
 
-            const response = await fetch(`/api/admin/printers?${params}`);
-            const data: PrintersResponse = await response.json();
+            const res = await fetch(`/api/admin/printers?${params}`);
+            const data: PrintersResponse = await res.json();
 
             setPrinters(data.printers || []);
             setTotalPages(data.totalPages || 1);
-        } catch (error) {
-            console.error("Error fetching printers:", error);
+        } catch (err) {
+            console.error("Error fetching printers:", err);
         } finally {
             setLoading(false);
         }
     };
 
+    /* ===================== DELETE ===================== */
+
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this printer?")) return;
 
         try {
-            const response = await fetch(`/api/admin/printers/${id}`, {
+            const res = await fetch(`/api/admin/printers/${id}`, {
                 method: "DELETE",
             });
 
-            if (response.ok) {
-                fetchPrinters();
-            }
-        } catch (error) {
-            console.error("Error deleting printer:", error);
+            if (res.ok) fetchPrinters();
+        } catch (err) {
+            console.error("Delete failed:", err);
         }
     };
 
-    /* ===================== JSX ===================== */
+    /* ===================== UI ===================== */
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/admin"
-                            className="text-gray-600 hover:text-gray-900"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </Link>
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            Printers
-                        </h1>
-                    </div>
+            {/* ===================== HEADER ===================== */}
+            <div className="bg-white border-b">
+                <div className="max-w-7xl mx-auto px-6 py-6 flex items-center gap-4">
+                    <Link
+                        href="/admin"
+                        className="text-gray-600 hover:text-black"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
+                    <h1 className="text-3xl font-bold">Printers</h1>
                 </div>
             </div>
 
-            {/* Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Title & Add */}
+            {/* ===================== CONTENT ===================== */}
+            <div className="max-w-7xl mx-auto px-6 py-8">
+                {/* TITLE + ADD */}
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                        Printers List
-                    </h2>
+                    <h2 className="text-2xl font-bold">Printers List</h2>
                     <Link
                         href="/admin/printers/new"
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" />
-                        Add New Product
+                        Add New Printer
                     </Link>
                 </div>
 
-                {/* Search & Sort */}
-                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-                    <div className="flex gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input
-                                type="text"
-                                placeholder="Search by name..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="name">Sort By: Name</option>
-                            <option value="price">Sort By: Price</option>
-                            <option value="technology">
-                                Sort By: Technology
-                            </option>
-                            <option value="updatedAt">
-                                Sort By: Updated Date
-                            </option>
-                        </select>
-                    </div>
+                {/* 🔍 SEARCH + SORT */}
+                <div className="bg-white border rounded-lg p-4 mb-6">
+                    <SearchSortControl
+                        searchField={searchField}
+                        setSearchField={setSearchField}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        sortOption={sortOption}
+                        setSortOption={setSortOption}
+                        searchOptions={[
+                            { label: "Name", value: "name" },
+                            { label: "Price", value: "price" },
+                            { label: "Technology", value: "technology" },
+                            { label: "Brand", value: "brand" },
+                        ]}
+                        sortOptions={[
+                            { label: "Name (A–Z)", value: "name-asc" },
+                            { label: "Name (Z–A)", value: "name-desc" },
+                            { label: "Price Low → High", value: "price-asc" },
+                            { label: "Price High → Low", value: "price-desc" },
+                            {
+                                label: "Updated (Latest First)",
+                                value: "updatedAt-desc",
+                            },
+                            {
+                                label: "Updated (Earliest First)",
+                                value: "updatedAt-asc",
+                            },
+                        ]}
+                        suggestionApi="/api/admin/printers/suggestions"
+                    />
                 </div>
 
-                {/* Table */}
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {/* ===================== TABLE ===================== */}
+                <div className="bg-white border rounded-lg overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                            <thead className="bg-gray-50 border-b">
                                 <tr>
                                     {[
                                         "Name",
-
-                                        "Displayed Price",
+                                        "Price",
                                         "Original Price",
                                         "Technology",
                                         "Brand",
-
                                         "Updated At",
                                         "Actions",
                                     ].map((h) => (
@@ -170,56 +174,55 @@ export default function AdminPrintersPage() {
                                 </tr>
                             </thead>
 
-                            <tbody className="divide-y divide-gray-200">
+                            <tbody className="divide-y">
                                 {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
-                                            className="px-6 py-12 text-center"
+                                            colSpan={7}
+                                            className="py-12 text-center"
                                         >
-                                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+                                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-black border-t-transparent" />
                                         </td>
                                     </tr>
                                 ) : printers.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
-                                            className="px-6 py-12 text-center text-gray-500"
+                                            colSpan={7}
+                                            className="py-12 text-center text-gray-500"
                                         >
                                             No printers found
                                         </td>
                                     </tr>
                                 ) : (
-                                    printers.map((printer) => (
+                                    printers.map((p) => (
                                         <tr
-                                            key={printer.id}
+                                            key={p.id}
                                             className="hover:bg-gray-50"
                                         >
                                             <td className="px-6 py-4 font-medium">
-                                                {printer.name}
+                                                {p.name}
                                             </td>
                                             <td className="px-6 py-4">
                                                 ₹
-                                                {printer.price.toLocaleString(
+                                                {p.price.toLocaleString(
                                                     "en-IN"
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 ₹
-                                                {printer.originalPrice.toLocaleString(
+                                                {p.originalPrice.toLocaleString(
                                                     "en-IN"
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                {printer.technology}
+                                                {p.technology}
                                             </td>
                                             <td className="px-6 py-4">
-                                                {printer.brand}
+                                                {p.brand}
                                             </td>
-
                                             <td className="px-6 py-4 text-sm text-gray-500">
                                                 {new Date(
-                                                    printer.updatedAt
+                                                    p.updatedAt
                                                 ).toLocaleDateString("en-IN", {
                                                     day: "numeric",
                                                     month: "short",
@@ -229,56 +232,23 @@ export default function AdminPrintersPage() {
                                                 })}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
+                                                <div className="flex gap-3">
                                                     <Link
-                                                        href={`/admin/printers/${printer.id}/edit`}
-                                                        className="inline-flex items-center text-back hover:text-blue-800"
+                                                        href={`/admin/printers/${p.id}/edit`}
+                                                        className="text-black hover:text-blue-700"
                                                     >
-                                                        <Edit className="h-5 w-6" />
+                                                        <Edit className="w-5 h-10" />
                                                     </Link>
-
                                                     <button
                                                         onClick={() =>
-                                                            handleDelete(
-                                                                printer.id
-                                                            )
+                                                            handleDelete(p.id)
                                                         }
-                                                        className="inline-flex items-center rounded bg-red-600 p-2 text-white hover:bg-red-700"
+                                                        className="bg-red-600 hover:bg-red-700 p-2 rounded"
                                                     >
-                                                        <Trash2 className="h-5 w-6 text-white" />
+                                                        <Trash2 className="w-5 h-5 text-white" />
                                                     </button>
                                                 </div>
                                             </td>
-                                            {/* <div className="flex space-x-2">
-                                            <Button
-                                                onClick={() =>
-                                                    handleEdit(product)
-                                                }
-                                                variant="outline"
-                                                size="sm"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-
-                                            <Button
-                                                onClick={() =>
-                                                    handleDelete(product.id)
-                                                }
-                                                variant="destructive"
-                                                size="sm"
-                                                disabled={
-                                                    isDeleting &&
-                                                    deleteId === product.id
-                                                }
-                                            >
-                                                {isDeleting &&
-                                                deleteId === product.id ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <Trash2 className="h-4 w-4" />
-                                                )}
-                                            </Button>
-                                        </div> */}
                                         </tr>
                                     ))
                                 )}
@@ -286,14 +256,14 @@ export default function AdminPrintersPage() {
                         </table>
                     </div>
 
-                    {/* Pagination */}
+                    {/* ===================== PAGINATION ===================== */}
                     {totalPages > 1 && (
-                        <div className="px-4 py-3 border-t flex justify-center gap-2">
+                        <div className="border-t px-4 py-3 flex justify-center gap-2">
                             <button
-                                onClick={() =>
-                                    setCurrentPage(Math.max(1, currentPage - 1))
-                                }
                                 disabled={currentPage === 1}
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.max(1, p - 1))
+                                }
                                 className="px-3 py-1 border rounded disabled:opacity-50"
                             >
                                 Prev
@@ -317,12 +287,12 @@ export default function AdminPrintersPage() {
                             ))}
 
                             <button
+                                disabled={currentPage === totalPages}
                                 onClick={() =>
-                                    setCurrentPage(
-                                        Math.min(totalPages, currentPage + 1)
+                                    setCurrentPage((p) =>
+                                        Math.min(totalPages, p + 1)
                                     )
                                 }
-                                disabled={currentPage === totalPages}
                                 className="px-3 py-1 border rounded disabled:opacity-50"
                             >
                                 Next
