@@ -338,7 +338,7 @@ export default function PrinterDetailPage() {
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                         <span className="text-gray-600">
-                                            Build Voluming RIya
+                                            Build Volume
                                         </span>
                                         <span className="font-medium text-gray-900">
                                             {printer.volumeLength} mm{" × "}

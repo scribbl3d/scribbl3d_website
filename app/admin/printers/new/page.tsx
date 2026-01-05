@@ -272,9 +272,9 @@ export default function PrinterFormPage() {
         setLoading(true);
 
         try {
-            const priceInPaise = Math.round(parseFloat(formData.price) * 100);
+            const priceInPaise = Math.round(parseFloat(formData.price) );
             const originalPriceInPaise = formData.originalPrice
-                ? Math.round(parseFloat(formData.originalPrice) * 100)
+                ? Math.round(parseFloat(formData.originalPrice) )
                 : null;
             let discount = 0;
             if (originalPriceInPaise && originalPriceInPaise > priceInPaise) {
