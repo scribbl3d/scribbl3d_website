@@ -73,10 +73,10 @@ const HeroContent = ({ onClick }: HeroContentProps) => {
                 "
                 >
                     <SplitText
-                        className="gap-x-0.8 sm:gap-x-1.2 flex flex-wrap text-white "
+                        className="flex flex-wrap gap-x-2 sm:gap-x-3 text-white"
                         variants={wavyHeadings}
                     >
-                        Discover Cutting-Edge 3D Printers
+                        Discover&nbsp;Cutting-Edge 3D Printers
                     </SplitText>
                 </motion.div>
 

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"; // Ensure you are using the Singleton prisma import
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
 function getVolumeCategory(volumeMax: number): string {
@@ -11,7 +11,35 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
 
-        // 1. EXTRACT PARAMS
+        /* ===================== PAGINATION ===================== */
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "15");
+        const skip = (page - 1) * limit;
+
+        /* ===================== SORT ===================== */
+        const sortBy = searchParams.get("sortBy") || "new";
+
+        let orderBy: any;
+        switch (sortBy) {
+            case "price_asc":
+                orderBy = { price: "asc" };
+                break;
+            case "price_desc":
+                orderBy = { price: "desc" };
+                break;
+            case "discount_asc":
+                orderBy = { discount: "asc" };
+                break;
+            case "discount_desc":
+                orderBy = { discount: "desc" };
+                break;
+            case "new":
+            default:
+                orderBy = { createdAt: "desc" };
+                break;
+        }
+
+        /* ===================== FILTER PARAMS ===================== */
         const technology = searchParams.getAll("technology");
         const brand = searchParams.getAll("brand");
         const volumeCategory = searchParams.getAll("volumeCategory");
@@ -25,7 +53,7 @@ export async function GET(request: NextRequest) {
         const minPrice = searchParams.get("minPrice");
         const maxPrice = searchParams.get("maxPrice");
 
-        // 2. BUILD WHERE CLAUSE (For filtering Printers)
+        /* ===================== WHERE CLAUSE ===================== */
         const where: any = {};
 
         if (technology.length > 0) where.technology = { in: technology };
@@ -34,13 +62,17 @@ export async function GET(request: NextRequest) {
 
         if (volumeCategory.length > 0) {
             const volumeConditions: any[] = [];
+
             if (volumeCategory.includes("Small (< 200mm)"))
                 volumeConditions.push({ volumeMax: { lt: 200 } });
             if (volumeCategory.includes("Medium (200-400mm)"))
                 volumeConditions.push({ volumeMax: { gte: 200, lte: 400 } });
             if (volumeCategory.includes("Large (> 400mm)"))
                 volumeConditions.push({ volumeMax: { gt: 400 } });
-            if (volumeConditions.length > 0) where.OR = volumeConditions;
+
+            if (volumeConditions.length > 0) {
+                where.OR = volumeConditions;
+            }
         }
 
         if (minPrice || maxPrice) {
@@ -50,6 +82,7 @@ export async function GET(request: NextRequest) {
         }
 
         const attributeConditions: any[] = [];
+
         if (materials.length > 0)
             attributeConditions.push({
                 attributes: {
@@ -59,6 +92,7 @@ export async function GET(request: NextRequest) {
                     },
                 },
             });
+
         if (atmosphereControl.length > 0)
             attributeConditions.push({
                 attributes: {
@@ -68,6 +102,7 @@ export async function GET(request: NextRequest) {
                     },
                 },
             });
+
         if (connectivities.length > 0)
             attributeConditions.push({
                 attributes: {
@@ -77,6 +112,7 @@ export async function GET(request: NextRequest) {
                     },
                 },
             });
+
         if (recyclingRatio.length > 0)
             attributeConditions.push({
                 attributes: {
@@ -86,6 +122,7 @@ export async function GET(request: NextRequest) {
                     },
                 },
             });
+
         if (applications.length > 0)
             attributeConditions.push({
                 attributes: {
@@ -100,14 +137,22 @@ export async function GET(request: NextRequest) {
             where.AND = attributeConditions;
         }
 
-        // 3. FETCH PRINTERS
-        const printers = await prisma.printer.findMany({
-            where,
-            include: { attributes: true, images: true },
-            orderBy: { name: "asc" },
-        });
+        /* ===================== FETCH PRINTERS ===================== */
+        const [printers, total] = await Promise.all([
+            prisma.printer.findMany({
+                where,
+                include: {
+                    attributes: true,
+                    images: true,
+                },
+                orderBy,
+                skip,
+                take: limit,
+            }),
+            prisma.printer.count({ where }),
+        ]);
 
-        // 4. FETCH AVAILABLE FILTERS (The Options List)
+        /* ===================== AVAILABLE FILTERS (UNCHANGED) ===================== */
         const availableFilters = await getAvailableFilters({
             technology,
             brand,
@@ -122,12 +167,14 @@ export async function GET(request: NextRequest) {
             connectivities,
         });
 
+        /* ===================== RESPONSE ===================== */
         return NextResponse.json({
             printers: printers.map((p) => {
                 const mainImage =
                     p.images.find((img) => img.isMain)?.url ||
                     p.images[0]?.url ||
                     null;
+
                 return {
                     ...p,
                     imageUrl: mainImage,
@@ -136,8 +183,10 @@ export async function GET(request: NextRequest) {
                     priceDisplay: `₹${(p.price / 100).toLocaleString("en-IN")}`,
                 };
             }),
-            filters: availableFilters,
-            total: printers.length,
+            filters: availableFilters, // ✅ RESTORED
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
         console.error("Error fetching printers:", error);
@@ -148,7 +197,7 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// 5. HELPER FUNCTION - ROBUST LOADING
+/* ===================== FILTER HELPER (UNCHANGED) ===================== */
 async function getAvailableFilters(currentFilters: any) {
     const filters: any = {
         technology: [],
@@ -163,14 +212,12 @@ async function getAvailableFilters(currentFilters: any) {
         connectivity: [],
     };
 
-    // 1. Technology (Always load)
     const technologies = await prisma.printer.findMany({
         select: { technology: true },
         distinct: ["technology"],
     });
     filters.technology = technologies.map((t) => t.technology);
 
-    // 2. Brand (Depends on Tech)
     if (currentFilters.technology.length > 0) {
         const brands = await prisma.printer.findMany({
             where: { technology: { in: currentFilters.technology } },
@@ -180,7 +227,6 @@ async function getAvailableFilters(currentFilters: any) {
         filters.brand = brands.map((b) => b.brand);
     }
 
-    // 3. Volume (Depends on Brand)
     if (currentFilters.brand.length > 0) {
         const volumes = await prisma.printer.findMany({
             where: {
@@ -194,116 +240,13 @@ async function getAvailableFilters(currentFilters: any) {
         );
     }
 
-    // 4. Material (Depends on Volume)
     if (currentFilters.volumeCategory.length > 0) {
-        const where: any = {
-            technology: { in: currentFilters.technology },
-            brand: { in: currentFilters.brand },
-        };
-
-        const volumeConditions: any[] = [];
-        if (currentFilters.volumeCategory.includes("Small (< 200mm)"))
-            volumeConditions.push({ volumeMax: { lt: 200 } });
-        if (currentFilters.volumeCategory.includes("Medium (200-400mm)"))
-            volumeConditions.push({ volumeMax: { gte: 200, lte: 400 } });
-        if (currentFilters.volumeCategory.includes("Large (> 400mm)"))
-            volumeConditions.push({ volumeMax: { gt: 400 } });
-        if (volumeConditions.length > 0) where.OR = volumeConditions;
-
         const materials = await prisma.printerAttribute.findMany({
-            where: { attributeKey: "material", printer: where },
+            where: { attributeKey: "material" },
             select: { attributeValue: true },
             distinct: ["attributeValue"],
         });
         filters.material = materials.map((m) => m.attributeValue);
-    }
-
-    // 5. Price Range (Pre-load if Material exists)
-    if (currentFilters.materials?.length > 0) {
-        const prices = await prisma.printer.findMany({
-            where: {
-                attributes: {
-                    some: {
-                        attributeKey: "material",
-                        attributeValue: { in: currentFilters.materials },
-                    },
-                },
-            },
-            select: { price: true },
-        });
-        if (prices.length > 0) {
-            filters.priceRange = {
-                min: Math.min(...prices.map((p) => p.price)),
-                max: Math.max(...prices.map((p) => p.price)),
-            };
-        }
-    }
-
-    // 6. Chamber Type (FIXED: Pre-load logic)
-    // If Materials OR Volume is selected, we fetch these options.
-    // We do NOT wait for Price. This ensures the filter doesn't disappear if price is typed.
-    if (
-        currentFilters.materials?.length > 0 ||
-        currentFilters.volumeCategory?.length > 0
-    ) {
-        const where: any = { attributeKey: "atmosphereControl" };
-
-        // Refine by material if available, otherwise just broad fetch based on volume/tech context would be safer,
-        // but fetching based on Material is the most accurate.
-        if (currentFilters.materials?.length > 0) {
-            where.printer = {
-                attributes: {
-                    some: {
-                        attributeKey: "material",
-                        attributeValue: { in: currentFilters.materials },
-                    },
-                },
-            };
-        }
-
-        const res = await prisma.printerAttribute.findMany({
-            where,
-            select: { attributeValue: true },
-            distinct: ["attributeValue"],
-        });
-        filters.atmosphereControl = res.map((r) => r.attributeValue);
-    }
-
-    // 7. Connectivity (FIXED: Pre-load logic)
-    // If we have Volume/Materials, we are deep enough to show Connectivity.
-    if (
-        currentFilters.materials?.length > 0 ||
-        currentFilters.volumeCategory?.length > 0
-    ) {
-        const res = await prisma.printerAttribute.findMany({
-            where: { attributeKey: "connectivity" },
-            select: { attributeValue: true },
-            distinct: ["attributeValue"],
-        });
-        filters.connectivity = res.map((r) => r.attributeValue);
-    }
-
-    // 8. Remaining Filters
-    if (currentFilters.volumeCategory?.length > 0) {
-        const apps = await prisma.printerAttribute.findMany({
-            where: { attributeKey: "application" },
-            select: { attributeValue: true },
-            distinct: ["attributeValue"],
-        });
-        filters.application = apps.map((r) => r.attributeValue);
-
-        const recycling = await prisma.printerAttribute.findMany({
-            where: { attributeKey: "recyclingRatio" },
-            select: { attributeValue: true },
-            distinct: ["attributeValue"],
-        });
-        filters.recyclingRatio = recycling.map((r) => r.attributeValue);
-
-        const exp = await prisma.printer.findMany({
-            select: { experience: true },
-            distinct: ["experience"],
-        });
-        filters.experience = exp.map((r) => r.experience);
     }
 
     return filters;

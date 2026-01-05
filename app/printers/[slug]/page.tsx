@@ -147,7 +147,7 @@ export default function PrinterDetailPage() {
                                                 ?.altText || printer.name
                                         }
                                         fill
-                                        className="object-contain"
+                                        className="object-cover"
                                     />
                                 ) : (
                                     <div className="flex items-center justify-center h-full">

@@ -8,7 +8,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-export default function PrinterGrid({ printers }: { printers: any[] }) {
+
+/* ================= TYPES ================= */
+interface PrinterGridProps {
+    printers: any[];
+    page: number;
+    total: number;
+    limit: number;
+    onPageChange: (page: number) => void;
+}
+
+/* ================= GRID ================= */
+export default function PrinterGrid({
+    printers,
+    page,
+    total,
+    limit,
+    onPageChange,
+}: PrinterGridProps) {
+    const totalPages = Math.ceil(total / limit);
+
     if (printers.length === 0) {
         return (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
@@ -23,32 +42,72 @@ export default function PrinterGrid({ printers }: { printers: any[] }) {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {printers.map((printer) => (
-                <PrinterCard key={printer.id} printer={printer} />
-            ))}
+        <div className="space-y-8">
+            {/* GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {printers.map((printer) => (
+                    <PrinterCard key={printer.id} printer={printer} />
+                ))}
+            </div>
+
+            {/* PAGINATION */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2">
+                    <button
+                        disabled={page === 1}
+                        onClick={() => onPageChange(page - 1)}
+                        className="px-3 py-1 border rounded disabled:opacity-40"
+                    >
+                        Prev
+                    </button>
+
+                    {Array.from({ length: totalPages }).map((_, i) => {
+                        const p = i + 1;
+                        return (
+                            <button
+                                key={p}
+                                onClick={() => onPageChange(p)}
+                                className={`px-3 py-1 border rounded ${
+                                    p === page ? "bg-black text-white" : ""
+                                }`}
+                            >
+                                {p}
+                            </button>
+                        );
+                    })}
+
+                    <button
+                        disabled={page === totalPages}
+                        onClick={() => onPageChange(page + 1)}
+                        className="px-3 py-1 border rounded disabled:opacity-40"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
 
+/* ================= CARD (UNCHANGED) ================= */
 function PrinterCard({ printer }: { printer: any }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishLoading, setIsWishLoading] = useState(false);
-    const [isAdding, setIsAdding] = useState(false);
     const { data: session } = useSession();
     const { addToCart } = useCart();
     const [isCartLoading, setIsCartLoading] = useState(false);
     const router = useRouter();
+
     const materials = printer.attributes
         .filter((attr: any) => attr.attributeKey === "material")
         .map((attr: any) => attr.attributeValue);
+
     const price = printer.price || 0;
     const originalPrice = printer.originalPrice || null;
 
     const handleAddToCart = async () => {
         if (!printer || isCartLoading) return;
 
-        // Same auth logic as other product pages
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -78,7 +137,7 @@ function PrinterCard({ printer }: { printer: any }) {
                 title: "Added to Cart",
                 description: `${printer.name} has been added to your cart.`,
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to add printer to cart.",
