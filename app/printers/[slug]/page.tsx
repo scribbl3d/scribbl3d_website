@@ -227,7 +227,7 @@ export default function PrinterDetailPage() {
                                     Price
                                 </p>
                                 <div className="flex items-baseline gap-3">
-                                    {printer.originalPrice && (
+                                    {printer.originalPrice * 100 && (
                                         <>
                                             <span className="text-lg text-gray-400 line-through">
                                                 ₹
