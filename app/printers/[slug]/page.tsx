@@ -21,6 +21,7 @@ export default function PrinterDetailPage() {
     const { addToCart } = useCart();
     const { data: session } = useSession();
     const [isCartLoading, setIsCartLoading] = useState(false);
+    const [quantity, setQuantity] = useState(1);
 
     useEffect(() => {
         if (!slug) return;
@@ -52,7 +53,7 @@ export default function PrinterDetailPage() {
         try {
             await addToCart({
                 printerId: printer.id,
-                quantity: 1,
+                quantity: quantity,
             });
 
             toast({
@@ -201,7 +202,7 @@ export default function PrinterDetailPage() {
                             </h1>
 
                             {/* Description */}
-                            <p className="text-gray-700 mb-4">
+                            <p className="text-gray-700 mb-4 break-words">
                                 {printer.description}
                             </p>
 
@@ -209,11 +210,6 @@ export default function PrinterDetailPage() {
                             <div className="flex flex-wrap gap-2 mb-6">
                                 <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
                                     {printer.technology}
-                                </span>
-                                <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full">
-                                    {printer.volumeLength} mm{" × "}
-                                    {printer.volumeWidth} mm{" × "}
-                                    {printer.volumeHeight} mm
                                 </span>
 
                                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
@@ -223,17 +219,14 @@ export default function PrinterDetailPage() {
 
                             {/* Price */}
                             <div className="mb-6">
-                                <p className="text-sm text-gray-600 mb-1">
-                                    Price
-                                </p>
                                 <div className="flex items-baseline gap-3">
-                                    {printer.originalPrice * 100 && (
+                                    {printer.originalPrice && (
                                         <>
                                             <span className="text-lg text-gray-400 line-through">
                                                 ₹
-                                                {(
-                                                    printer.originalPrice / 100
-                                                ).toLocaleString("en-IN")}
+                                                {printer.originalPrice.toLocaleString(
+                                                    "en-IN"
+                                                )}
                                             </span>
                                             <span className="text-sm font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded">
                                                 {printer.discount}% off
@@ -242,18 +235,14 @@ export default function PrinterDetailPage() {
                                     )}
                                 </div>
                                 <p className="text-4xl font-bold text-gray-900 mt-1">
-                                    ₹
-                                    {(printer.price / 100).toLocaleString(
-                                        "en-IN"
-                                    )}
+                                    ₹{printer.price.toLocaleString("en-IN")}
                                 </p>
                                 {printer.originalPrice && (
                                     <p className="text-sm text-green-600 font-medium mt-1">
                                         Save ₹
                                         {(
-                                            (printer.originalPrice -
-                                                printer.price) /
-                                            100
+                                            printer.originalPrice -
+                                            printer.price
                                         ).toLocaleString("en-IN")}
                                     </p>
                                 )}
@@ -261,6 +250,78 @@ export default function PrinterDetailPage() {
                                     MRP inclusive of all taxes. Shipping
                                     calculated at checkout.
                                 </p>
+                            </div>
+                            {/* Quantity */}
+                            <div className="mb-6">
+                                <p className="text-sm font-medium text-gray-700 mb-2">
+                                    Quantity
+                                </p>
+
+                                <div className="flex items-center gap-3">
+                                    {/* Minus */}
+                                    <button
+                                        className="
+        w-10 h-10
+        flex items-center justify-center
+        rounded-[10px]
+        border-2 border-[#D1D5DC]
+        text-xl text-gray-700
+        hover:bg-gray-100
+        disabled:opacity-50
+      "
+                                        onClick={() =>
+                                            setQuantity((q) =>
+                                                Math.max(1, q - 1)
+                                            )
+                                        }
+                                        disabled={quantity === 1}
+                                    >
+                                        −
+                                    </button>
+
+                                    {/* Number input */}
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={quantity}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(
+                                                /\D/g,
+                                                ""
+                                            );
+                                            setQuantity(
+                                                Math.max(1, Number(val || 1))
+                                            );
+                                        }}
+                                        className="
+    w-[80px] h-[40px]
+    border-2 border-[#D1D5DC]
+    rounded-[10px]
+    flex items-center justify-center
+    text-center
+    text-base font-medium text-gray-900
+    focus:outline-none
+  "
+                                    />
+
+                                    {/* Plus */}
+                                    <button
+                                        className="
+        w-10 h-10
+        flex items-center justify-center
+        rounded-[10px]
+        border-2 border-[#D1D5DC]
+        text-xl text-gray-700
+        hover:bg-gray-100
+      "
+                                        onClick={() =>
+                                            setQuantity((q) => q + 1)
+                                        }
+                                    >
+                                        +
+                                    </button>
+                                </div>
                             </div>
 
                             {/* CTA Buttons */}
@@ -292,7 +353,7 @@ export default function PrinterDetailPage() {
                                 <button
                                     className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                                     onClick={() => {
-                                        const message = `Hi, I’d like more information about the printer ${printer.name}. Please let me know the details.`;
+                                        const message = `Hi, I’d like to request a custom quote for ${printer.name} based on my requirements.`;
 
                                         const url = `https://wa.me/919599523434?text=${encodeURIComponent(message)}`;
                                         window.open(url, "_blank");
@@ -301,11 +362,6 @@ export default function PrinterDetailPage() {
                                     Contact Sales
                                 </button>
                             </div>
-
-                            <p className="text-xs text-gray-500 text-center mb-4">
-                                Need bulk pricing or customization? Contact
-                                sales
-                            </p>
 
                             {/* Benefits */}
                             <div className="flex items-center gap-4 text-sm text-gray-700 mb-6">

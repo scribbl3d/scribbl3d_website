@@ -30,9 +30,6 @@ const MATERIAL_OPTIONS = [
     "TPU (Flexible)",
     "Nylon (PA)",
     "Polycarbonate (PC)",
-    "Carbon Fiber PLA",
-    "Carbon Fiber Nylon",
-    "Glass Fiber Nylon",
     "Standard Resin",
     "ABS-Like Resin",
     "Tough Resin",
@@ -43,8 +40,8 @@ const MATERIAL_OPTIONS = [
     "Castable Resin",
     "Nylon PA12",
     "Nylon PA11",
-    "Glass-Filled Nylon",
     "TPU Powder",
+    "Reinforced Fiber",
 ];
 
 const CONNECTIVITY_OPTIONS = [
@@ -274,7 +271,7 @@ export default function PrinterFormPage() {
         try {
             const priceInPaise = Math.round(parseFloat(formData.price));
             const originalPriceInPaise = formData.originalPrice
-                ? Math.round(parseFloat(formData.originalPrice) )
+                ? Math.round(parseFloat(formData.originalPrice))
                 : null;
             let discount = 0;
             if (originalPriceInPaise && originalPriceInPaise > priceInPaise) {
