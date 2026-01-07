@@ -1,18 +1,18 @@
-// components/printers/SimilarPrintersCarousel.tsx
 "use client";
 
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-
 import { useEffect, useRef, useState } from "react";
+
 interface SimilarPrintersCarouselProps {
     currentPrinterId: string;
     technology: string;
 }
+
 type Printer = {
     id: string;
     slug: string;
@@ -39,10 +39,35 @@ export default function SimilarPrintersCarousel({
     technology,
 }: SimilarPrintersCarouselProps) {
     const [printers, setPrinters] = useState<Printer[]>([]);
-
     const [loading, setLoading] = useState(true);
+
     const scrollRef = useRef<HTMLDivElement>(null);
-    const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
+    useEffect(() => {
+        if (!scrollRef.current || printers.length <= 1) return;
+
+        const container = scrollRef.current;
+        const cardWidth = container.firstElementChild?.clientWidth || 0;
+
+        // Start from first set
+        container.scrollLeft = 0;
+
+        const interval = setInterval(() => {
+            container.scrollBy({
+                left: cardWidth,
+                behavior: "smooth",
+            });
+
+            // When we reach the middle (end of first list)
+            if (container.scrollLeft >= container.scrollWidth / 2) {
+                container.scrollTo({
+                    left: 0,
+                    behavior: "auto", // invisible reset
+                });
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [printers]);
 
     useEffect(() => {
         fetchSimilarPrinters();
@@ -50,94 +75,115 @@ export default function SimilarPrintersCarousel({
 
     const fetchSimilarPrinters = async () => {
         try {
-            const response = await fetch(
+            const res = await fetch(
                 `/api/printers/similar?technology=${technology}&exclude=${currentPrinterId}`
             );
-            const data = await response.json();
+            const data = await res.json();
             setPrinters(data.printers || []);
-        } catch (error) {
-            console.error("Error fetching similar printers:", error);
+        } catch (err) {
+            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading) {
-        return (
-            <div className="py-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                    Similar Printers
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {[1, 2, 3].map((i) => (
-                        <div
-                            key={i}
-                            className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse"
-                        >
-                            <div className="w-full h-40 bg-gray-200 rounded-lg mb-4"></div>
-                            <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
+    /* ⬅️➡️ MANUAL SCROLL */
+    const scrollLeft = () => {
+        const container = scrollRef.current;
+        if (!container) return;
 
-    if (printers.length === 0) {
-        return null;
-    }
+        const cardWidth = container.firstElementChild?.clientWidth || 0;
+        container.scrollBy({ left: -cardWidth, behavior: "smooth" });
+    };
 
-    // Determine how many cards to show based on screen size
+    const scrollRight = () => {
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const cardWidth = container.firstElementChild?.clientWidth || 0;
+        container.scrollBy({ left: cardWidth, behavior: "smooth" });
+    };
+
+    if (loading || printers.length === 0) return null;
 
     return (
         <div className="py-8">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                    Similar Printers
-                </h2>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Similar Printers
+            </h2>
 
-            <div
-                ref={scrollRef}
-                className="
-        flex gap-5 overflow-x-auto scroll-smooth
-        snap-x snap-mandatory
-        scrollbar-hide pb-4
-    "
-            >
-                {printers.map((printer) => (
-                    <div
-                        key={printer.id}
-                        className="
-                snap-start flex-shrink-0
-                w-[85%]
-                sm:w-[48%]
-                lg:w-[32%]
-                xl:w-[24%]
-            "
-                    >
-                        <SimilarPrinterCard printer={printer} />
-                    </div>
-                ))}
+            {/* WRAPPER FOR ARROWS */}
+            <div className="relative">
+                {/* LEFT ARROW */}
+                <button
+                    onClick={scrollLeft}
+                    className="
+                        absolute left-[-18px] top-1/2 -translate-y-1/2 z-10
+                        w-10 h-10 rounded-full bg-white shadow
+                        flex items-center justify-center
+                        hover:bg-gray-100
+                    "
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {/* RIGHT ARROW */}
+                <button
+                    onClick={scrollRight}
+                    className="
+                        absolute right-[-18px] top-1/2 -translate-y-1/2 z-10
+                        w-10 h-10 rounded-full bg-white shadow
+                        flex items-center justify-center
+                        hover:bg-gray-100
+                    "
+                >
+                    <ChevronRight className="w-5 h-5" />
+                </button>
+
+                {/* CAROUSEL */}
+                <div
+                    ref={scrollRef}
+                    className="
+                        flex gap-5 overflow-x-auto scroll-smooth
+                        snap-x snap-mandatory
+                        scrollbar-hide pb-4
+                    "
+                >
+                    {[...printers, ...printers].map((printer, index) => (
+                        <div
+                            key={`${printer.id}-${index}`}
+                            className="
+            snap-start flex-shrink-0
+            w-[85%]
+            sm:w-[48%]
+            lg:w-[32%]
+            xl:w-[24%]
+        "
+                        >
+                            <SimilarPrinterCard printer={printer} />
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
 }
 
-function SimilarPrinterCard({ printer }) {
+/* ---------------- CARD ---------------- */
+
+function SimilarPrinterCard({ printer }: { printer: Printer }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isCartLoading, setIsCartLoading] = useState(false);
+
     const { data: session } = useSession();
     const { addToCart } = useCart();
+
     const materials =
         printer.attributes
-            ?.filter((attr) => attr.attributeKey === "material")
-            .map((attr) => attr.attributeValue) || [];
-    const handleAddToCart = async () => {
-        if (!printer || isCartLoading) return;
+            ?.filter((a) => a.attributeKey === "material")
+            .map((a) => a.attributeValue) || [];
 
-        // Same auth logic as other product pages
+    const handleAddToCart = async () => {
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -155,23 +201,12 @@ function SimilarPrinterCard({ printer }) {
             return;
         }
 
-        setIsCartLoading(true);
-
         try {
-            await addToCart({
-                printerId: printer.id,
-                quantity: 1,
-            });
-
+            setIsCartLoading(true);
+            await addToCart({ printerId: printer.id, quantity: 1 });
             toast({
                 title: "Added to Cart",
-                description: `${printer.name} has been added to your cart.`,
-            });
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "Failed to add printer to cart.",
-                variant: "destructive",
+                description: `${printer.name} added to cart.`,
             });
         } finally {
             setIsCartLoading(false);
@@ -180,23 +215,21 @@ function SimilarPrinterCard({ printer }) {
 
     return (
         <Link href={`/printers/${printer.slug}`} className="block h-full">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+            <div className="bg-white rounded-xl border overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                 {/* IMAGE */}
-                <div className="relative h-[220px] w-full bg-gray-100 overflow-hidden">
+                <div className="relative h-[220px] bg-gray-100 overflow-hidden overflow-x-hidden">
                     {(printer.imageUrl || printer.images?.[0]?.url) && (
                         <Image
-                            src={printer.imageUrl || printer.images[0].url}
+                            src={printer.imageUrl || printer.images![0].url}
                             alt={printer.name}
                             fill
-                            className="object-cover"
+                            className="object-contain p-4"
                         />
                     )}
 
-                    {/* WISHLIST */}
                     <button
                         onClick={(e) => {
                             e.preventDefault();
-                            e.stopPropagation();
                             setIsFavorite(!isFavorite);
                         }}
                         className="absolute top-4 right-4 w-9 h-9 bg-white rounded-full shadow flex items-center justify-center"
@@ -213,117 +246,64 @@ function SimilarPrinterCard({ printer }) {
 
                 {/* CONTENT */}
                 <div className="p-4 flex-1">
-                    {/* TECHNOLOGY */}
                     <span className="inline-block mb-2 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
                         {printer.technology}
                     </span>
 
-                    {/* NAME */}
-                    <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-2">
+                    <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
                         {printer.name}
                     </h3>
 
-                    {/* DESCRIPTION */}
                     <p className="text-xs text-gray-600 mb-3 line-clamp-2">
                         {printer.shortDescription || printer.description}
                     </p>
 
-                    {/* SPECS */}
                     <div className="text-xs text-gray-700 space-y-1">
                         <div>
-                            <span className="font-semibold">Build Volume:</span>{" "}
-                            {printer.volumeLength} mm × {printer.volumeWidth} mm
-                            ×{printer.volumeHeight} mm
+                            <b>Build Volume:</b> {printer.volumeLength} ×{" "}
+                            {printer.volumeWidth} × {printer.volumeHeight} mm
                         </div>
 
                         {materials.length > 0 && (
                             <div className="line-clamp-2">
-                                <span className="font-semibold">
-                                    Materials:
-                                </span>{" "}
-                                {materials.join(", ")}
+                                <b>Materials:</b> {materials.join(", ")}
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* FOOTER (LOCKED) */}
-
-                {/* PRICE */}
-                <div className="mt-auto px-5 pb-5">
+                {/* FOOTER */}
+                <div className="px-5 pb-5">
                     <hr className="mb-4" />
 
-                    {/* PRICE ROW */}
-                    {/* PRICE ROW */}
-                    <div className="flex items-center mt-1">
-                        {/* FINAL PRICE */}
-                        <span
-                            className="
-      text-[16px]
-      leading-[24px]
-      font-semibold
-      text-[#101828]
-    "
-                        >
+                    <div className="flex items-center">
+                        <span className="text-[16px] font-semibold text-[#101828]">
                             ₹{printer.price.toLocaleString("en-IN")}
                         </span>
 
-                        {/* ORIGINAL PRICE */}
                         {printer.originalPrice && (
-                            <span
-                                className="
-        ml-5
-
-        text-[14px]
-        leading-[20px]
-        font-normal
-        line-through
-        text-[#99A1AF]
-      "
-                            >
+                            <span className="ml-5 text-sm line-through text-gray-400">
                                 ₹{printer.originalPrice.toLocaleString("en-IN")}
                             </span>
                         )}
 
-                        {/* DISCOUNT */}
                         {printer.discount && (
-                            <span
-                                className="
-        ml-6
-        h-[22px]
-        px-2
-        inline-flex
-        items-center
-        rounded-full
-        text-[12px]
-        leading-[16px]
-        font-medium
-        text-[#008236]
-        bg-[#F0FDF4]
-        border
-        border-[#B9F8CF]
-      "
-                            >
+                            <span className="ml-6 px-2 py-0.5 text-xs rounded-full text-green-700 bg-green-50 border border-green-200">
                                 {printer.discount}% OFF
                             </span>
                         )}
                     </div>
 
-                    <p className="text-[14px] leading-[20px] text-[#667085] mt-1 mb-3">
+                    <p className="text-sm text-gray-500 mt-1 mb-3">
                         (incl. GST)
                     </p>
 
-                    {/* ADD TO CART */}
                     <button
                         onClick={handleAddToCart}
                         disabled={isCartLoading}
-                        className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition flex items-center justify-center"
+                        className="w-full h-12 bg-black text-white font-semibold rounded-lg"
                     >
-                        {isCartLoading ? (
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            "Add to Cart"
-                        )}
+                        {isCartLoading ? "Adding..." : "Add to Cart"}
                     </button>
                 </div>
             </div>
