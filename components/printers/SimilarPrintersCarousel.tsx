@@ -223,7 +223,7 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                             src={printer.imageUrl || printer.images![0].url}
                             alt={printer.name}
                             fill
-                            className="object-contain p-4"
+                            className="object-contain "
                         />
                     )}
 

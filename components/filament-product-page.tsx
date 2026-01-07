@@ -238,8 +238,10 @@ export default function FilamentProductPage({
 
     const handleShareClick = () => {
         const productUrl = `https://scribbl3d.com/product/${id}`;
+        const textToCopy = `${productUrl}
+Check out ${name.toUpperCase()} on Scribbl3D`;
         navigator.clipboard
-            .writeText(productUrl)
+            .writeText(textToCopy)
             .then(() => {
                 toast({
                     title: "Link Copied!",
@@ -319,38 +321,41 @@ export default function FilamentProductPage({
             setIsWishlistLoading(false);
         }
     };
-
     const filteredColors =
         selectedColorCategory && availableColors[selectedColorCategory]
             ? availableColors[selectedColorCategory]
             : [];
 
-    const colorCategorySection = category && (
-        <div className="space-y-4">
-            <Label className="text-gray-400 font-inter font-medium text-[16px]">
-                Choose a Color Category
-            </Label>
-            <RadioGroup
-                value={selectedColorCategory || ""}
-                onValueChange={setSelectedColorCategory}
-                className="flex flex-wrap gap-4"
-            >
-                {colorCategories.map((category) => (
-                    <Label
-                        key={category}
-                        className={`relative px-4 py-2 border rounded-md cursor-pointer ${
-                            selectedColorCategory === category
-                                ? "border-[#2B3674] bg-[#2B3674] text-white"
-                                : "border-gray-300 hover:border-[#2B3674]"
-                        }`}
-                    >
-                        <RadioGroupItem value={category} className="sr-only" />
-                        <span className="font-medium">{category}</span>
-                    </Label>
-                ))}
-            </RadioGroup>
-        </div>
-    );
+    const colorCategorySection =
+        colorCategories.length > 0 ? (
+            <div className="space-y-4">
+                <Label className="text-gray-400 font-inter font-medium text-[16px]">
+                    Choose a Color Category
+                </Label>
+                <RadioGroup
+                    value={selectedColorCategory || ""}
+                    onValueChange={setSelectedColorCategory}
+                    className="flex flex-wrap gap-4"
+                >
+                    {colorCategories.map((category) => (
+                        <Label
+                            key={category}
+                            className={`relative px-4 py-2 border rounded-md cursor-pointer ${
+                                selectedColorCategory === category
+                                    ? "border-[#2B3674] bg-[#2B3674] text-white"
+                                    : "border-gray-300 hover:border-[#2B3674]"
+                            }`}
+                        >
+                            <RadioGroupItem
+                                value={category}
+                                className="sr-only"
+                            />
+                            <span className="font-medium">{category}</span>
+                        </Label>
+                    ))}
+                </RadioGroup>
+            </div>
+        ) : null;
 
     const colorSection = filteredColors.length > 0 && (
         <div className="space-y-4">
@@ -464,6 +469,29 @@ export default function FilamentProductPage({
         </div>
     );
 
+    const formatMaterial = (material?: string) => {
+        if (!material) return "";
+
+        const materialMap: Record<string, string> = {
+            PLAplus: "PLA+",
+            PLAPlus: "PLA+",
+            plaPlus: "PLA+",
+        };
+
+        return materialMap[material] ?? material;
+    };
+    const formatCategoryLabel = (category?: string) => {
+        if (!category) return "";
+
+        const map: Record<string, string> = {
+            PLAplus: "PLA+",
+            PLAPlus: "PLA+",
+            plaPlus: "PLA+",
+        };
+
+        return map[category] ?? category;
+    };
+
     if (error) {
         return <div className="text-center text-red-500 mt-8">{error}</div>;
     }
@@ -475,22 +503,15 @@ export default function FilamentProductPage({
                     {/* Product Images */}
                     <div className="space-y-4 w-full max-w-2xl mx-auto relative">
                         {/* Breadcrumbs for mobile: show above image */}
-                        <div className="block sm:hidden absolute top-2 left-2 right-2 z-20">
+                        {/* Breadcrumb — MOBILE ONLY */}
+                        <div className="block lg:hidden">
                             <Breadcrumb
                                 items={[
                                     { label: "Home", href: "/" },
                                     { label: "Filaments", href: "/filaments" },
                                     {
-                                        label: category
-                                            .split("-")
-                                            .map(
-                                                (word) =>
-                                                    word
-                                                        .charAt(0)
-                                                        .toUpperCase() +
-                                                    word.slice(1)
-                                            )
-                                            .join(" "),
+                                        label: formatCategoryLabel(category),
+
                                         href: `/filaments/categories/${category.toLowerCase()}`,
                                     },
                                     { label: name, href: `/products/${id}` },
@@ -505,11 +526,32 @@ export default function FilamentProductPage({
                                 }
                                 alt={name}
                                 fill
-                                className="object-contain p-4"
+                                className="object-cover"
                                 unoptimized={true} // Key prop
                             />
                             {/* Breadcrumbs for desktop: show below image as before */}
-                            <div className="hidden sm:block absolute top-2 left-2 right-2 z-20"></div>
+                            <div className="hidden sm:block absolute top-2 left-2 right-2 z-20">
+                                <Breadcrumb
+                                    items={[
+                                        { label: "Home", href: "/" },
+                                        {
+                                            label: "Filaments",
+                                            href: "/filaments",
+                                        },
+                                        {
+                                            label: formatCategoryLabel(
+                                                category
+                                            ),
+
+                                            href: `/filaments/categories/${category.toLowerCase()}`,
+                                        },
+                                        {
+                                            label: name,
+                                            href: `/products/${id}`,
+                                        },
+                                    ]}
+                                />
+                            </div>
                         </div>
                         <div className="relative">
                             <div className="flex justify-center space-x-4 overflow-x-auto pb-2">
@@ -562,8 +604,26 @@ export default function FilamentProductPage({
                     </div>
 
                     {/* Product Info */}
-                    <div className="space-y-4 sm:space-y-6">
-                        <div className="w-full overflow-x-auto"></div>
+                    <div className="space-y-6">
+                        <div className="hidden lg:block">
+                            <Breadcrumb
+                                items={[
+                                    { label: "Filaments", href: "/filaments" },
+                                    {
+                                        label: category
+                                            .split("-")
+                                            .map(
+                                                (w) =>
+                                                    w.charAt(0).toUpperCase() +
+                                                    w.slice(1)
+                                            )
+                                            .join(" "),
+                                        href: `/filaments/categories/${category.toLowerCase()}`,
+                                    },
+                                    { label: name, href: `/products/${id}` },
+                                ]}
+                            />
+                        </div>
                         <div className="flex justify-between items-start">
                             <div>
                                 <h1 className="text-xl sm:text-[28px] font-inter font-semibold leading-normal">
@@ -613,7 +673,9 @@ export default function FilamentProductPage({
                                     <p className="text-sm text-gray-500">
                                         Material
                                     </p>
-                                    <p className="font-medium">{material}</p>
+                                    <p className="font-medium">
+                                        {formatMaterial(material)}
+                                    </p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-500">

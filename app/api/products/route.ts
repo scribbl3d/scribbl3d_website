@@ -46,9 +46,17 @@ export async function GET(request: Request) {
         const sortBy = searchParams.get("sortBy");
         const order = searchParams.get("order") === "desc" ? "desc" : "asc";
 
-        const page = Number(searchParams.get("page") || 1);
-        const limit = Number(searchParams.get("limit") || 10);
-        const skip = (page - 1) * limit;
+       const pageParam = searchParams.get("page");
+const limitParam = searchParams.get("limit");
+
+const page = pageParam ? Number(pageParam) : null;
+const limit = limitParam ? Number(limitParam) : null;
+
+const skip =
+    page && limit
+        ? (page - 1) * limit
+        : undefined;
+
 
         // SEARCH LOGIC
         let fieldFilter: Prisma.PrebuiltProductWhereInput = {};
@@ -97,29 +105,41 @@ export async function GET(request: Request) {
             orderByClause = [{ name: "asc" }];
         }
 
-        const [products, totalCount] = await Promise.all([
-            prisma.product.findMany({
-                where: whereConditions,
-                orderBy: orderByClause,
-                skip,
-                take: limit,
-                include: {
-                    reviews: {
-                        include: {
-                            user: { select: { name: true } },
-                        },
-                    },
-                },
-            }),
-            prisma.product.count({ where: whereConditions }),
-        ]);
+const [products] = await Promise.all([
+  prisma.product.findMany({
+    where: whereConditions,
+    orderBy: orderByClause,
+    ...(skip !== undefined && skip !== null && { skip }),
+    ...(limit !== undefined && limit !== null && { take: limit }),
+    include: {
+      reviews: {
+        include: {
+          user: { select: { name: true } },
+        },
+      },
+    },
+  }),
+]);
 
-        return NextResponse.json({
-            products,
-            totalItems: totalCount,
-            totalPages: Math.ceil(totalCount / limit),
-            currentPage: page,
-        });
+const totalCount =
+    page && limit
+        ? await prisma.product.count({ where: whereConditions })
+        : null;
+
+
+      return NextResponse.json(
+    page && limit
+        ? {
+              products,
+              totalItems: totalCount,
+              totalPages: Math.ceil(totalCount! / limit),
+              currentPage: page,
+          }
+        : {
+              products,
+          }
+);
+
     } catch (error) {
         console.error("Database query failed:", error);
         return NextResponse.json(
