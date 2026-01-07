@@ -3,11 +3,12 @@
 
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+
+import { useEffect, useRef, useState } from "react";
 interface SimilarPrintersCarouselProps {
     currentPrinterId: string;
     technology: string;
@@ -40,7 +41,8 @@ export default function SimilarPrintersCarousel({
     const [printers, setPrinters] = useState<Printer[]>([]);
 
     const [loading, setLoading] = useState(true);
-    const [currentIndex, setCurrentIndex] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const autoScrollRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         fetchSimilarPrinters();
@@ -58,16 +60,6 @@ export default function SimilarPrintersCarousel({
         } finally {
             setLoading(false);
         }
-    };
-
-    const handlePrevious = () => {
-        setCurrentIndex((prev) =>
-            prev === 0 ? Math.max(0, printers.length - 3) : prev - 1
-        );
-    };
-
-    const handleNext = () => {
-        setCurrentIndex((prev) => (prev >= printers.length - 3 ? 0 : prev + 1));
     };
 
     if (loading) {
@@ -97,7 +89,6 @@ export default function SimilarPrintersCarousel({
     }
 
     // Determine how many cards to show based on screen size
-    const visiblePrinters = printers.slice(currentIndex, currentIndex + 3);
 
     return (
         <div className="py-8">
@@ -105,50 +96,31 @@ export default function SimilarPrintersCarousel({
                 <h2 className="text-2xl font-bold text-gray-900">
                     Similar Printers
                 </h2>
-
-                {printers.length > 3 && (
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handlePrevious}
-                            disabled={currentIndex === 0}
-                            className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronLeft className="w-5 h-5 text-gray-600" />
-                        </button>
-                        <button
-                            onClick={handleNext}
-                            disabled={currentIndex >= printers.length - 3}
-                            className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                            <ChevronRight className="w-5 h-5 text-gray-600" />
-                        </button>
-                    </div>
-                )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {visiblePrinters.map((printer) => (
-                    <SimilarPrinterCard key={printer.id} printer={printer} />
+            <div
+                ref={scrollRef}
+                className="
+        flex gap-5 overflow-x-auto scroll-smooth
+        snap-x snap-mandatory
+        scrollbar-hide pb-4
+    "
+            >
+                {printers.map((printer) => (
+                    <div
+                        key={printer.id}
+                        className="
+                snap-start flex-shrink-0
+                w-[85%]
+                sm:w-[48%]
+                lg:w-[32%]
+                xl:w-[24%]
+            "
+                    >
+                        <SimilarPrinterCard printer={printer} />
+                    </div>
                 ))}
             </div>
-
-            {printers.length > 3 && (
-                <div className="flex justify-center mt-6 gap-2">
-                    {Array.from({ length: Math.ceil(printers.length / 3) }).map(
-                        (_, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setCurrentIndex(index * 3)}
-                                className={`w-2 h-2 rounded-full transition-colors ${
-                                    Math.floor(currentIndex / 3) === index
-                                        ? "bg-blue-600 w-6"
-                                        : "bg-gray-300"
-                                }`}
-                            />
-                        )
-                    )}
-                </div>
-            )}
         </div>
     );
 }

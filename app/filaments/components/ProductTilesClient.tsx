@@ -244,9 +244,6 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
             setIsCartLoading(false);
         }
     };
-    const handleBuyNow = () => {
-        router.push(`/checkout?mode=buynow&type=product&productId=${id}`);
-    };
 
     return (
         <div className="w-[300px] bg-white overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col">
