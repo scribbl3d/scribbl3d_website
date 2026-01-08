@@ -2,9 +2,11 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/use-toast";
+import { clsx, type ClassValue } from "clsx";
 import { useSession } from "next-auth/react";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { ProductTileA, ProductTileB } from "./ProductTiles";
 
 interface Product {
@@ -28,6 +30,10 @@ interface CategoryProps {
     sortBy: { field: string; order: "asc" | "desc" };
     categoryName: string;
     apiCategory: string;
+    limit?: number;
+    showViewAll?: boolean;
+    viewAllHref?: string;
+    isStandalone?: boolean;
 }
 
 // Loading skeleton for products
@@ -49,6 +55,10 @@ const CategoryBase: React.FC<CategoryProps> = ({
     sortBy,
     categoryName,
     apiCategory,
+    limit,
+    showViewAll,
+    viewAllHref,
+    isStandalone,
 }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
@@ -60,8 +70,11 @@ const CategoryBase: React.FC<CategoryProps> = ({
             try {
                 setIsLoading(true);
                 const response = await fetch(
-                    `/api/products?category=${apiCategory}&search=${searchTerm}&sortBy=${sortBy.field}&order=${sortBy.order}`
+                    `/api/products?category=${apiCategory}&search=${searchTerm}&sortBy=${sortBy.field}&order=${sortBy.order}${
+                        limit ? `&limit=${limit}` : ""
+                    }`
                 );
+
                 if (!response.ok) throw new Error("Failed to fetch products");
 
                 const data = await response.json();
@@ -154,14 +167,44 @@ const CategoryBase: React.FC<CategoryProps> = ({
         }
     };
 
+    const cn = (...inputs: ClassValue[]) => {
+        return twMerge(clsx(inputs));
+    };
+
     return (
         <section
             id={categoryName}
-            className="flex flex-col items-center py-8 sm:py-12 md:py-16"
+            className={cn(
+                "flex flex-col items-center pb-8 sm:pb-12 md:pb-16",
+                isStandalone ? "pt-24 sm:pt-28 md:pt-32" : "pt-8"
+            )}
         >
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold font-lato mb-8 sm:mb-12">
-                {categoryName}
-            </h2>
+            {isStandalone && (
+                <div className="w-full max-w-[1400px] px-4 mb-4">
+                    <button
+                        onClick={() => window.history.back()}
+                        className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black"
+                    >
+                        ← Back to Filaments
+                    </button>
+                </div>
+            )}
+
+            <div className="flex items-center justify-between w-full max-w-[1400px] px-4 mb-8 sm:mb-12">
+                <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold font-lato">
+                    {categoryName}
+                </h2>
+
+                {showViewAll && viewAllHref && (
+                    <a
+                        href={viewAllHref}
+                        className="text-sm font-medium text-blue-600 hover:underline"
+                    >
+                        View All →
+                    </a>
+                )}
+            </div>
+
             <div className="w-full max-w-[1400px] px-4 mx-auto">
                 {isLoading ? (
                     // Loading state with skeletons

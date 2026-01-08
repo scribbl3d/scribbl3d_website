@@ -27,9 +27,6 @@ export default function FilterPanel({
 
     const isStepUnlocked = (key: string) =>
         selectedFilters[key] && selectedFilters[key].length > 0;
-    const isPriceSet = () =>
-        (selectedFilters.minPrice && selectedFilters.minPrice !== "") ||
-        (selectedFilters.maxPrice && selectedFilters.maxPrice !== "");
 
     const renderTechnologyButtons = () => {
         const technologies = filters?.technology || [];
@@ -162,8 +159,45 @@ export default function FilterPanel({
                         filters.material
                     )}
 
-                {/* Price Range: Shows after Material */}
-                {isStepUnlocked("material") && filters.priceRange && (
+                {/* Chamber Type: Shows after Material */}
+                {isStepUnlocked("material") &&
+                    renderCheckboxFilter(
+                        "atmosphereControl",
+                        "Chamber Type",
+                        filters.atmosphereControl
+                    )}
+
+                {/* Connectivity: Shows after Chamber Type */}
+                {isStepUnlocked("atmosphereControl") &&
+                    renderCheckboxFilter(
+                        "connectivity",
+                        "Connectivity",
+                        filters.connectivity
+                    )}
+
+                {/* Others: Show after Connectivity */}
+                {isStepUnlocked("connectivity") && (
+                    <>
+                        {renderCheckboxFilter(
+                            "application",
+                            "Application",
+                            filters.application
+                        )}
+                        {renderCheckboxFilter(
+                            "recyclingRatio",
+                            "Recycling Ratio",
+                            filters.recyclingRatio
+                        )}
+                        {renderCheckboxFilter(
+                            "experience",
+                            "Experience Level",
+                            filters.experience
+                        )}
+                    </>
+                )}
+
+                {/* Price Range: Shows at the very end after all other filters */}
+                {isStepUnlocked("connectivity") && filters.priceRange && (
                     <div className="mb-8">
                         <h3 className="text-base font-semibold text-gray-900 mb-3">
                             Price Range
@@ -201,43 +235,6 @@ export default function FilterPanel({
                             </div>
                         </div>
                     </div>
-                )}
-
-                {/* Chamber Type: Shows if Price is typed OR Material is selected */}
-                {(isPriceSet() || isStepUnlocked("material")) &&
-                    renderCheckboxFilter(
-                        "atmosphereControl",
-                        "Chamber Type",
-                        filters.atmosphereControl
-                    )}
-
-                {/* Connectivity: Shows after Chamber Type */}
-                {isStepUnlocked("atmosphereControl") &&
-                    renderCheckboxFilter(
-                        "connectivity",
-                        "Connectivity",
-                        filters.connectivity
-                    )}
-
-                {/* Others: Show at the end */}
-                {isStepUnlocked("connectivity") && (
-                    <>
-                        {renderCheckboxFilter(
-                            "application",
-                            "Application",
-                            filters.application
-                        )}
-                        {renderCheckboxFilter(
-                            "recyclingRatio",
-                            "Recycling Ratio",
-                            filters.recyclingRatio
-                        )}
-                        {renderCheckboxFilter(
-                            "experience",
-                            "Experience Level",
-                            filters.experience
-                        )}
-                    </>
                 )}
             </div>
         </div>

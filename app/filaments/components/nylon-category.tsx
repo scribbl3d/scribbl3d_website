@@ -13,6 +13,9 @@ const NylonCategory: FC<NylonCategoryProps> = ({ searchTerm, sortBy }) => {
             sortBy={sortBy}
             categoryName="Nylon"
             apiCategory="NYLON"
+            limit={8}
+            showViewAll
+            viewAllHref="/filaments/nylon"
         />
     );
 };

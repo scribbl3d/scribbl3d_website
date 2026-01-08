@@ -502,9 +502,8 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16">
                     {/* Product Images */}
                     <div className="space-y-4 w-full max-w-2xl mx-auto relative">
-                        {/* Breadcrumbs for mobile: show above image */}
                         {/* Breadcrumb — MOBILE ONLY */}
-                        <div className="block lg:hidden">
+                        <div className="block">
                             <Breadcrumb
                                 items={[
                                     { label: "Home", href: "/" },
@@ -512,7 +511,7 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
                                     {
                                         label: formatCategoryLabel(category),
 
-                                        href: `/filaments/categories/${category.toLowerCase()}`,
+                                        href: `/filaments/${category.toLowerCase()}`,
                                     },
                                     { label: name, href: `/products/${id}` },
                                 ]}
@@ -529,29 +528,6 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
                                 className="object-cover"
                                 unoptimized={true} // Key prop
                             />
-                            {/* Breadcrumbs for desktop: show below image as before */}
-                            <div className="hidden sm:block absolute top-2 left-2 right-2 z-20">
-                                <Breadcrumb
-                                    items={[
-                                        { label: "Home", href: "/" },
-                                        {
-                                            label: "Filaments",
-                                            href: "/filaments",
-                                        },
-                                        {
-                                            label: formatCategoryLabel(
-                                                category
-                                            ),
-
-                                            href: `/filaments/categories/${category.toLowerCase()}`,
-                                        },
-                                        {
-                                            label: name,
-                                            href: `/products/${id}`,
-                                        },
-                                    ]}
-                                />
-                            </div>
                         </div>
                         <div className="relative">
                             <div className="flex justify-center space-x-4 overflow-x-auto pb-2">
@@ -605,25 +581,6 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
 
                     {/* Product Info */}
                     <div className="space-y-6">
-                        <div className="hidden lg:block">
-                            <Breadcrumb
-                                items={[
-                                    { label: "Filaments", href: "/filaments" },
-                                    {
-                                        label: category
-                                            .split("-")
-                                            .map(
-                                                (w) =>
-                                                    w.charAt(0).toUpperCase() +
-                                                    w.slice(1)
-                                            )
-                                            .join(" "),
-                                        href: `/filaments/categories/${category.toLowerCase()}`,
-                                    },
-                                    { label: name, href: `/products/${id}` },
-                                ]}
-                            />
-                        </div>
                         <div className="flex justify-between items-start">
                             <div>
                                 <h1 className="text-xl sm:text-[28px] font-inter font-semibold leading-normal">
