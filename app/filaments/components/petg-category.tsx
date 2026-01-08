@@ -16,6 +16,7 @@ const PETGCategory: FC<PETGCategoryProps> = ({ searchTerm, sortBy }) => {
             limit={8}
             showViewAll
             viewAllHref="/filaments/petg"
+            disableWishlist
         />
     );
 };

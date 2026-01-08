@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { SlidersHorizontal } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Search } from "lucide-react";
 import ProductGrid from "./ProductGrid";
@@ -38,38 +38,38 @@ export default function FilamentsPage() {
             .then(setData);
     }, []);
 
-    if (!data) return null;
-    React.useEffect(() => {
-        if (!manualOverride) {
-            const handleScroll = () => {
-                let found = false;
-                for (let i = 0; i < sections.length; i++) {
-                    const section = sections[i];
-                    const el = document.getElementById(section);
-                    if (el) {
-                        const rect = el.getBoundingClientRect();
-                        // If the top of the section is at or above the navbar (80px offset for sticky header)
-                        if (rect.top <= 81) {
-                            setActiveSection(section);
-                            found = true;
-                        }
-                    }
-                }
-                // If scrolled above all sections, highlight the first
-                if (!found) setActiveSection(sections[0]);
-            };
-            window.addEventListener("scroll", handleScroll, { passive: true });
-            return () => window.removeEventListener("scroll", handleScroll);
-        }
-    }, [manualOverride]);
+    // if (!data) return null;
+    // React.useEffect(() => {
+    //     if (!manualOverride) {
+    //         const handleScroll = () => {
+    //             let found = false;
+    //             for (let i = 0; i < sections.length; i++) {
+    //                 const section = sections[i];
+    //                 const el = document.getElementById(section);
+    //                 if (el) {
+    //                     const rect = el.getBoundingClientRect();
+    //                     // If the top of the section is at or above the navbar (80px offset for sticky header)
+    //                     if (rect.top <= 81) {
+    //                         setActiveSection(section);
+    //                         found = true;
+    //                     }
+    //                 }
+    //             }
+    //             // If scrolled above all sections, highlight the first
+    //             if (!found) setActiveSection(sections[0]);
+    //         };
+    //         window.addEventListener("scroll", handleScroll, { passive: true });
+    //         return () => window.removeEventListener("scroll", handleScroll);
+    //     }
+    // }, [manualOverride]);
 
     // Release manual override after scroll animation
-    React.useEffect(() => {
-        if (manualOverride) {
-            const timeout = setTimeout(() => setManualOverride(false), 1000); // 600ms for smooth scroll
-            return () => clearTimeout(timeout);
-        }
-    }, [manualOverride]);
+    // React.useEffect(() => {
+    //     if (manualOverride) {
+    //         const timeout = setTimeout(() => setManualOverride(false), 1000); // 600ms for smooth scroll
+    //         return () => clearTimeout(timeout);
+    //     }
+    // }, [manualOverride]);
 
     const handleClick = (section: string) => {
         setActiveSection(section);
@@ -84,6 +84,13 @@ export default function FilamentsPage() {
             window.scrollTo({ top: y, behavior: "smooth" });
         }
     };
+    if (!data) {
+        return (
+            <div className="min-h-screen flex items-center justify-center text-white">
+                Loading...
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen">

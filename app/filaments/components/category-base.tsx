@@ -19,6 +19,7 @@ interface Product {
     color: string;
     category: string;
     tileType: string;
+    disableWishlist?: boolean;
 }
 
 interface WishlistItem {
@@ -34,6 +35,7 @@ interface CategoryProps {
     showViewAll?: boolean;
     viewAllHref?: string;
     isStandalone?: boolean;
+    disableWishlist?: boolean;
 }
 
 // Loading skeleton for products
@@ -59,6 +61,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
     showViewAll,
     viewAllHref,
     isStandalone,
+    disableWishlist,
 }) => {
     const [products, setProducts] = useState<Product[]>([]);
     const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
@@ -100,27 +103,26 @@ const CategoryBase: React.FC<CategoryProps> = ({
     }, [searchTerm, sortBy, apiCategory, limit]);
 
     useEffect(() => {
-        async function fetchWishlistItems() {
-            if (session) {
-                try {
-                    const response = await fetch("/api/wishlist");
-                    if (response.ok) {
-                        const json = await response.json();
-                        const items: WishlistItem[] = json.items ?? [];
+        if (disableWishlist) return;
+        if (!session) return;
 
-                        setWishlistItems(
-                            new Set(items.map((item) => item.productId))
-                        );
-                    }
-                } catch (error) {
-                    console.error("Error fetching wishlist:", error);
+        async function fetchWishlistItems() {
+            try {
+                const response = await fetch("/api/wishlist");
+                if (response.ok) {
+                    const json = await response.json();
+                    setWishlistItems(
+                        new Set(json.items.map((i) => i.productId))
+                    );
                 }
-            }
+            } catch {}
         }
+
         fetchWishlistItems();
-    }, [session]);
+    }, [session, disableWishlist]);
 
     const handleWishlistToggle = async (productId: string) => {
+        if (disableWishlist) return;
         if (!session) {
             toast({
                 title: "Authentication Required",
