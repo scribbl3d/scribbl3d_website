@@ -3,8 +3,6 @@ import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-export const dynamic = "force-dynamic";
-
 const validSortFields = ["name", "price", "category"] as const;
 type SortField = (typeof validSortFields)[number];
 
