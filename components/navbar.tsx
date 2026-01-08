@@ -1,16 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { Heart, ShoppingCart, User } from "lucide-react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { ShoppingCart, User } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ExpandableSearch } from "./expandable-search";
-import { NavbarClient } from "./navbar-client";
 
 const navItems = [
     { name: "Personalise", href: "/personalise" },
@@ -41,30 +38,6 @@ export default function Navbar() {
         }
         setIsLoading(true);
         router.push(href);
-    };
-
-    const handleWishlistClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to view your wishlist.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
-            return;
-        }
-        setIsLoading(true);
-        router.push("/profile?tab=wishlist");
     };
 
     const handleSignOut = async () => {
@@ -152,14 +125,7 @@ export default function Navbar() {
                                 </span>
                             )}
                         </button>
-                        {/* Wishlist icon: only show on lg and up */}
-                        <button
-                            onClick={handleWishlistClick}
-                            className="hidden lg:flex items-center justify-center h-10 w-10 hover:bg-white/10 rounded-full active:scale-95 transition-all"
-                            aria-label="Wishlist"
-                        >
-                            <Heart className="h-6 w-6 text-white" />
-                        </button>
+
                         <div className="relative" ref={profileRef}>
                             <button
                                 className="flex items-center justify-center h-10 w-10 hover:bg-white/10 rounded-full active:scale-95 transition-all"
@@ -211,18 +177,6 @@ export default function Navbar() {
                                     )}
                                 </div>
                             )}
-                        </div>
-                        {/* Mobile Menu - Only visible on smaller screens */}
-                        <div className="lg:hidden">
-                            <NavbarClient
-                                navItems={[
-                                    ...navItems,
-                                    {
-                                        name: "Wishlist",
-                                        href: "/profile?tab=wishlist",
-                                    },
-                                ]}
-                            />
                         </div>
                     </div>
                 </div>

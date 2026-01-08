@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { imageLoader } from "@/lib/utils";
 import { useCart } from "@/providers/CartProvider";
-import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,8 +23,7 @@ interface ProductTileProps {
     discount: number;
     images: string[];
     color?: string;
-    isInWishlist: boolean;
-    onWishlistToggle: () => Promise<void>;
+
     isPrebuilt?: boolean;
 }
 
@@ -140,62 +139,12 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
     originalPrice,
     discount,
     images,
-    isInWishlist,
-    onWishlistToggle,
 }) => {
-    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [isCartLoading, setIsCartLoading] = useState(false);
     const { data: session } = useSession();
     const { addToCart } = useCart();
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-
-    // Handle wishlist toggle with authentication check
-    const handleWishlistToggle = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
-            return;
-        }
-
-        setIsWishlistLoading(true);
-        try {
-            await onWishlistToggle();
-            toast({
-                title: isInWishlist
-                    ? "Removed from Wishlist"
-                    : "Added to Wishlist",
-                description: `${name} has been ${
-                    isInWishlist ? "removed from" : "added to"
-                } your wishlist.`,
-            });
-        } catch (error) {
-            console.error("Error updating wishlist:", error);
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsWishlistLoading(false);
-        }
-    };
 
     // Handle add to cart with authentication check
     const handleAddToCart = async (e: React.MouseEvent) => {
@@ -257,30 +206,6 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
                         </span>
                     </div>
 
-                    {/* Wishlist */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute bottom-2 right-2 z-[3] bg-white/80 hover:bg-white rounded-full w-10 h-10"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleWishlistToggle(e);
-                        }}
-                        disabled={isWishlistLoading || isCartLoading}
-                    >
-                        {isWishlistLoading ? (
-                            <div className="h-5 w-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                        ) : (
-                            <Heart
-                                className={`h-5 w-5 ${
-                                    isInWishlist
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-500"
-                                }`}
-                            />
-                        )}
-                    </Button>
-
                     <div className="pt-10">
                         <ImageCarousel images={images} name={name} />
                     </div>
@@ -320,7 +245,6 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
                         height: "37px",
                     }}
                     onClick={handleAddToCart}
-                    disabled={isWishlistLoading || isCartLoading}
                 >
                     {isCartLoading ? (
                         <div className="h-5 w-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
@@ -345,8 +269,6 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
     originalPrice,
     discount,
     images,
-    isInWishlist,
-    onWishlistToggle,
 }) => {
     const [isLoading, setIsLoading] = useState(false);
     const { data: session } = useSession();
@@ -354,51 +276,6 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
     const router = useRouter();
 
     // Handlers are identical to ProductTileA but with isPrebuilt: true
-    const handleWishlistToggle = async (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            await onWishlistToggle();
-            toast({
-                title: isInWishlist
-                    ? "Removed from Wishlist"
-                    : "Added to Wishlist",
-                description: `${name} has been ${
-                    isInWishlist ? "removed from" : "added to"
-                } your wishlist.`,
-            });
-        } catch (error) {
-            console.error("Error updating wishlist:", error);
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -463,26 +340,6 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
                                 Special Grade
                             </span>
                         </div>
-
-                        {/* Wishlist button */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute bottom-2 right-2 z-[3] bg-white/80 hover:bg-white rounded-full w-10 h-10"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleWishlistToggle(e as React.MouseEvent);
-                            }}
-                            disabled={isLoading}
-                        >
-                            <Heart
-                                className={`h-5 w-5 ${
-                                    isInWishlist
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-500"
-                                }`}
-                            />
-                        </Button>
 
                         <div className="pt-10">
                             <ImageCarousel images={images} name={name} />

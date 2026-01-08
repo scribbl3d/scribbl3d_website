@@ -47,8 +47,6 @@ export default function ProductGrid({
                             originalPrice={product.originalPrice}
                             discount={product.discount}
                             images={product.images}
-                            isInWishlist={product.isInWishlist || false}
-                            onWishlistToggle={async () => {}}
                         />
                     ) : (
                         <ProductTileA
@@ -59,8 +57,6 @@ export default function ProductGrid({
                             originalPrice={product.originalPrice}
                             discount={product.discount}
                             images={product.images}
-                            isInWishlist={product.isInWishlist || false}
-                            onWishlistToggle={async () => {}}
                         />
                     )
                 )}

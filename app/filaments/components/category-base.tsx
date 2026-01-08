@@ -19,11 +19,6 @@ interface Product {
     color: string;
     category: string;
     tileType: string;
-    disableWishlist?: boolean;
-}
-
-interface WishlistItem {
-    productId: string;
 }
 
 interface CategoryProps {
@@ -35,7 +30,6 @@ interface CategoryProps {
     showViewAll?: boolean;
     viewAllHref?: string;
     isStandalone?: boolean;
-    disableWishlist?: boolean;
 }
 
 // Loading skeleton for products
@@ -61,10 +55,9 @@ const CategoryBase: React.FC<CategoryProps> = ({
     showViewAll,
     viewAllHref,
     isStandalone,
-    disableWishlist,
 }) => {
     const [products, setProducts] = useState<Product[]>([]);
-    const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
+
     const [isLoading, setIsLoading] = useState(true);
     const { data: session } = useSession();
 
@@ -101,73 +94,6 @@ const CategoryBase: React.FC<CategoryProps> = ({
         }
         fetchProducts();
     }, [searchTerm, sortBy, apiCategory, limit]);
-
-    useEffect(() => {
-        if (disableWishlist) return;
-        if (!session) return;
-
-        async function fetchWishlistItems() {
-            try {
-                const response = await fetch("/api/wishlist");
-                if (response.ok) {
-                    const json = await response.json();
-                    setWishlistItems(
-                        new Set(json.items.map((i) => i.productId))
-                    );
-                }
-            } catch {}
-        }
-
-        fetchWishlistItems();
-    }, [session, disableWishlist]);
-
-    const handleWishlistToggle = async (productId: string) => {
-        if (disableWishlist) return;
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        try {
-            const method = wishlistItems.has(productId) ? "DELETE" : "POST";
-            const response = await fetch("/api/wishlist", {
-                method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId, isPrebuilt: false }),
-            });
-
-            if (!response.ok) throw new Error("Failed to update wishlist");
-
-            setWishlistItems((prev) => {
-                const newSet = new Set(prev);
-                method === "DELETE"
-                    ? newSet.delete(productId)
-                    : newSet.add(productId);
-                return newSet;
-            });
-
-            toast({
-                title:
-                    method === "DELETE"
-                        ? "Removed from Wishlist"
-                        : "Added to Wishlist",
-                description: `Product has been ${
-                    method === "DELETE" ? "removed from" : "added to"
-                } your wishlist.`,
-            });
-        } catch (error) {
-            console.error("Error updating wishlist:", error);
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
 
     const cn = (...inputs: ClassValue[]) => {
         return twMerge(clsx(inputs));
@@ -224,25 +150,9 @@ const CategoryBase: React.FC<CategoryProps> = ({
                                 className="flex justify-center"
                             >
                                 {product.tileType === "A" ? (
-                                    <ProductTileA
-                                        {...product}
-                                        isInWishlist={wishlistItems.has(
-                                            product.id
-                                        )}
-                                        onWishlistToggle={() =>
-                                            handleWishlistToggle(product.id)
-                                        }
-                                    />
+                                    <ProductTileA {...product} />
                                 ) : (
-                                    <ProductTileB
-                                        {...product}
-                                        isInWishlist={wishlistItems.has(
-                                            product.id
-                                        )}
-                                        onWishlistToggle={() =>
-                                            handleWishlistToggle(product.id)
-                                        }
-                                    />
+                                    <ProductTileB {...product} />
                                 )}
                             </div>
                         ))}
