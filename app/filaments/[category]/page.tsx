@@ -14,9 +14,13 @@ const CATEGORY_MAP: Record<string, { name: string; api: string }> = {
 export default function FilamentCategoryPage() {
     const params = useParams();
 
-    const slug = params?.category as string;
+    if (!params || !params.category) {
+        return <div className="p-8">Category not found</div>;
+    }
 
-    const config = CATEGORY_MAP[slug?.toLowerCase()];
+    const slug = params.category as string;
+
+    const config = CATEGORY_MAP[slug];
 
     if (!config) {
         return <div className="p-8">Category not found</div>;
@@ -27,8 +31,8 @@ export default function FilamentCategoryPage() {
             <CategoryBase
                 searchTerm=""
                 sortBy={{ field: "name", order: "asc" }}
-                categoryName={config.name}
-                apiCategory={config.api}
+                categoryName="PLA+"
+                apiCategory="PLAplus"
                 isStandalone
             />
         </div>
