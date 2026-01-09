@@ -16,6 +16,7 @@ const PLAPlusCategory: FC<PLAPlusCategoryProps> = ({ searchTerm, sortBy }) => {
             limit={8}
             showViewAll
             viewAllHref="/filaments/plaplus"
+            disableWishlist
         />
     );
 };

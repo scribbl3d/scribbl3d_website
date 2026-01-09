@@ -12,10 +12,11 @@ import {
     Check,
     ChevronLeft,
     ChevronRight,
+    Heart,
     Share2,
     ShoppingCart,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import Producttabs from "./product-tabs";
@@ -96,6 +97,30 @@ export default function ProductPage({
         useState(originalPrice);
     const { data: session } = useSession();
     const { addToCart } = useCart();
+    const [isInWishlist, setIsInWishlist] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+
+    useEffect(() => {
+        const checkWishlistStatus = async () => {
+            if (session) {
+                try {
+                    const response = await fetch(
+                        `/api/wishlist/check?productId=${id}&isPrebuilt=true`
+                    );
+                    if (!response.ok) {
+                        throw new Error("Failed to check wishlist status");
+                    }
+                    const { isInWishlist: wishlistStatus } =
+                        await response.json();
+                    setIsInWishlist(wishlistStatus);
+                } catch (error) {
+                    console.error("Error checking wishlist status:", error);
+                }
+            }
+        };
+
+        checkWishlistStatus();
+    }, [id, session]);
 
     useEffect(() => {
         const fetchRelatedProducts = async () => {
@@ -217,6 +242,69 @@ export default function ProductPage({
                     variant: "destructive",
                 });
             });
+    };
+
+    const handleWishlistToggle = async () => {
+        if (isWishlistLoading) return;
+
+        if (!session) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to add items to your wishlist.",
+                variant: "destructive",
+                action: (
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => signIn()}
+                        className="bg-white text-black hover:bg-gray-200"
+                    >
+                        Log in
+                    </Button>
+                ),
+            });
+            return;
+        }
+
+        setIsWishlistLoading(true);
+        try {
+            const method = isInWishlist ? "DELETE" : "POST";
+            const response = await fetch("/api/wishlist", {
+                method,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ productId: id, isPrebuilt: true }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Failed to update wishlist");
+            }
+
+            setIsInWishlist(!isInWishlist);
+            toast({
+                title: isInWishlist
+                    ? "Removed from Wishlist"
+                    : "Added to Wishlist",
+                description: `${name} has been ${
+                    isInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            console.error("Error updating wishlist:", err);
+            if (err instanceof Error) {
+                toast({
+                    title: "Error",
+                    description:
+                        err.message ||
+                        "Failed to update wishlist. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        } finally {
+            setIsWishlistLoading(false);
+        }
     };
 
     if (error) {
@@ -621,6 +709,24 @@ export default function ProductPage({
                             >
                                 <ShoppingCart className="h-5 w-5 mr-2" />
                                 Add To Cart
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className={`h-12 w-12 rounded-lg ${
+                                    isInWishlist ? "bg-red-100" : ""
+                                }`}
+                                onClick={handleWishlistToggle}
+                                disabled={isWishlistLoading}
+                            >
+                                <Heart
+                                    className={`h-6 w-6 ${
+                                        isInWishlist
+                                            ? "fill-red-500 text-red-500"
+                                            : ""
+                                    }`}
+                                />
                             </Button>
                         </div>
                     </div>

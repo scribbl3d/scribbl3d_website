@@ -16,6 +16,7 @@ const ABSCategory: FC<ABSCategoryProps> = ({ searchTerm, sortBy }) => {
             limit={8}
             showViewAll
             viewAllHref="/filaments/abs"
+            disableWishlist
         />
     );
 };

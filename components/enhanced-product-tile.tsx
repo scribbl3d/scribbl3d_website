@@ -3,8 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { ShoppingCart } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { Heart, ShoppingCart } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,7 +35,8 @@ export default function EnhancedProductTile({
     isPrinter,
 }: ProductProps) {
     const [isHovered, setIsHovered] = useState(false);
-
+    const [isInWishlist, setIsInWishlist] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [isCartLoading, setIsCartLoading] = useState(false);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false);
@@ -48,6 +49,33 @@ export default function EnhancedProductTile({
     const discountPercentage = Math.round(
         ((originalPrice - price) / originalPrice) * 100
     );
+
+    /* =========================
+     EFFECTS
+  ========================= */
+
+    useEffect(() => {
+        const checkWishlistStatus = async () => {
+            if (!session) {
+                setIsInitialLoad(false);
+                return;
+            }
+
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?productId=${id}&isPrebuilt=${isPrebuilt}`
+                );
+                const data = await res.json();
+                setIsInWishlist(data.isInWishlist);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsInitialLoad(false);
+            }
+        };
+
+        checkWishlistStatus();
+    }, [id, isPrebuilt, session]);
 
     useEffect(() => {
         setIsNavigating(false);
@@ -85,6 +113,41 @@ export default function EnhancedProductTile({
         }
     };
 
+    const handleWishlistToggle = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (isWishlistLoading || isInitialLoad) return;
+
+        if (!session) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to add items to your wishlist.",
+                variant: "destructive",
+                action: (
+                    <Button size="sm" onClick={() => signIn()}>
+                        Log in
+                    </Button>
+                ),
+            });
+            return;
+        }
+
+        setIsWishlistLoading(true);
+
+        try {
+            const method = isInWishlist ? "DELETE" : "POST";
+            await fetch("/api/wishlist", {
+                method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ productId: id, isPrebuilt }),
+            });
+
+            setIsInWishlist(!isInWishlist);
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
+
     /* =========================
      RENDER
   ========================= */
@@ -119,6 +182,31 @@ export default function EnhancedProductTile({
                         </span>
                     </div>
                 )}
+
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-[250px] right-2 z-20 bg-white/80 hover:bg-white rounded-full w-10 h-10 p-0 flex items-center justify-center"
+                    onClick={handleWishlistToggle}
+                    disabled={isWishlistLoading}
+                    aria-label={
+                        isInWishlist
+                            ? "Remove from Wishlist"
+                            : "Add to Wishlist"
+                    }
+                >
+                    {isWishlistLoading ? (
+                        <div className="w-5 h-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                        <Heart
+                            className={`h-5 w-5 ${
+                                isInWishlist
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-500"
+                            }`}
+                        />
+                    )}
+                </Button>
 
                 <div className="pt-[36px] px-4 relative z-10">
                     <div className="relative w-[250px] h-[250px] mx-auto overflow-hidden rounded-lg">

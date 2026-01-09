@@ -16,6 +16,7 @@ const NylonCategory: FC<NylonCategoryProps> = ({ searchTerm, sortBy }) => {
             limit={8}
             showViewAll
             viewAllHref="/filaments/nylon"
+            disableWishlist
         />
     );
 };

@@ -2,11 +2,12 @@
 
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
+import { Heart } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /* ================= TYPES ================= */
 interface PrinterGridProps {
@@ -147,6 +148,24 @@ function PrinterCard({ printer }: { printer: any }) {
         }
     };
 
+    useEffect(() => {
+        const checkWishlist = async () => {
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?printerId=${printer.id}`
+                );
+                const data = await res.json();
+                if (data.isAuthenticated) {
+                    setIsFavorite(data.isInWishlist);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        checkWishlist();
+    }, [printer.id]);
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
             {/* CARD LINK */}
@@ -165,6 +184,23 @@ function PrinterCard({ printer }: { printer: any }) {
                             className="object-cover"
                         />
                     )}
+
+                    {/* WISHLIST */}
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
+                        className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
+                    >
+                        <Heart
+                            className={`w-5 h-5 ${
+                                isFavorite
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-400"
+                            }`}
+                        />
+                    </button>
                 </div>
 
                 {/* CONTENT */}
