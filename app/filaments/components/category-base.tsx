@@ -97,7 +97,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
             }
         }
         fetchProducts();
-    }, [searchTerm, sortBy, apiCategory, limit]);
+    }, [searchTerm, sortBy, apiCategory]);
 
     useEffect(() => {
         async function fetchWishlistItems() {
