@@ -695,8 +695,7 @@ function SupportTab({ warrantyYears }) {
                 </h3>
                 <p className="text-gray-700">
                     24/7 technical support via email and phone. Live chat
-                    available during business hours. Access to comprehensive
-                    online knowledge base and community forums.
+                    through Whatsapp available during business hours.
                 </p>
             </div>
 
