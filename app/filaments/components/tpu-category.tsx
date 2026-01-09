@@ -16,7 +16,6 @@ const TPUCategory: FC<TPUCategoryProps> = ({ searchTerm, sortBy }) => {
             limit={8}
             showViewAll
             viewAllHref="/filaments/tpu"
-            disableWishlist
         />
     );
 };
