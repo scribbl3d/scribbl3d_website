@@ -149,11 +149,13 @@ model Wishlist {
 }
 
 model WishlistItem {
-  id                String           @id @default(cuid())
-  wishlistId        String
-  productId         String?
-  printerId        String?
-  printer          Printer?         @relation(fields: [printerId], references: [id])
+  id         String   @id @default(cuid())
+  wishlistId String
+  productId  String?
+  printerId  String?
+  printer    Printer? @relation(fields: [printerId], references: [id])
+  resinId    String?
+  resin      Resin?   @relation(fields: [resinId], references: [id], onDelete: Cascade)
 
   prebuiltProductId String?
   prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
@@ -171,7 +173,7 @@ model Cart {
 }
 
 model CartItem {
-  id                String   @id @default(cuid())
+  id                String       @id @default(cuid())
   cartId            String
   productId         String?
   prebuiltProductId String?
@@ -179,7 +181,14 @@ model CartItem {
   productColorId    String?
   quantity          Int
   printerId         String?
-  printer           Printer? @relation(fields: [printerId], references: [id])
+  printer           Printer?     @relation(fields: [printerId], references: [id])
+  // Resin selection
+  resinId           String?
+  resin             Resin?       @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  resinColourId     String?
+  resinColour       ResinColour? @relation(fields: [resinColourId], references: [id])
+  resinWeightId     String?
+  resinWeight       ResinWeight? @relation(fields: [resinWeightId], references: [id])
 
   addedAt         DateTime         @default(now())
   customization   String?
@@ -434,13 +443,6 @@ model HeroImage {
   updatedAt DateTime @updatedAt
 }
 
-
-
-
-
-
-
-
 model Printer {
   id    String @id @default(cuid())
   name  String
@@ -475,12 +477,12 @@ model Printer {
   downloads      PrinterDownload[]
 
   // SEO & Metadata
-  metaTitle       String?
-  metaDescription String?
- wishlistItems   WishlistItem[]
+  metaTitle        String?
+  metaDescription  String?
+  wishlistItems    WishlistItem[]
   // Warranty & Support
-  warrantyYears    Int     @default(1)
-  freeInstallation Boolean @default(true)
+  warrantyYears    Int            @default(1)
+  freeInstallation Boolean        @default(true)
 
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
@@ -560,17 +562,18 @@ model PrinterApplication {
 
 // Downloads (for Downloads tab)
 model PrinterDownload {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   printerId   String
-  title       String   // "Product Datasheet", "User Manual", etc.
-  description String?  // Optional description
-  downloadUrl String?   // Direct link to PDF (external URL or internal path)
-  sortOrder   Int      @default(0)
-  
-  printer     Printer  @relation(fields: [printerId], references: [id], onDelete: Cascade)
-  
+  title       String // "Product Datasheet", "User Manual", etc.
+  description String? // Optional description
+  downloadUrl String? // Direct link to PDF (external URL or internal path)
+  sortOrder   Int     @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
   @@index([printerId, sortOrder])
 }
+
 // Support & Warranty Content
 model SupportContent {
   id        String @id @default(cuid())
@@ -582,12 +585,152 @@ model SupportContent {
   @@index([printerId, sortOrder])
 }
 
-// Filter Metadata (optional)
-model FilterMetadata {
-  key         String @id
-  displayName String
-  sortOrder   Int
-  filterType  String
+model Resin {
+  id    String @id @default(cuid())
+  name  String
+  slug  String @unique
+  brand String
 
-  @@index([sortOrder])
+  technology String
+  resolution String[]
+
+  shortDescription String?
+  description      String?
+  cardImageUrl       String?
+  images ResinImage[]
+
+  colours        ResinColour[]
+  weights        ResinWeight[]
+  attributes     ResinAttribute[]
+  specifications ResinSpecification[]
+  features       ResinFeature[]
+  downloads      ResinDownload[]
+  applications ResinApplication[]
+  compatibilities ResinCompatibility[]
+  wishlistItems WishlistItem[]
+  cartItems     CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
+model ResinColour {
+  id      String @id @default(cuid())
+  resinId String
+
+  name      String // "Grey", "Clear", "Black"
+  hexCode   String?
+  sortOrder Int     @default(0)
+
+  images ResinImage[]
+
+  resin    Resin      @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  CartItem CartItem[]
+
+  @@index([resinId])
+}
+
+model ResinImage {
+  id       String @id @default(cuid())
+  colourId String
+
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isMain    Boolean @default(false)
+
+  colour  ResinColour @relation(fields: [colourId], references: [id], onDelete: Cascade)
+  Resin   Resin?      @relation(fields: [resinId], references: [id])
+  resinId String?
+
+  @@index([colourId, sortOrder])
+}
+
+model ResinWeight {
+  id      String @id @default(cuid())
+  resinId String
+
+  weightInGrams Int // 500, 1000, 2000
+  price         Int // ₹ (integer)
+  originalPrice Int? // ₹ (integer)
+  discount      Int? // ₹ (integer)
+
+  sortOrder     Int @default(0)
+
+  resin    Resin      @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  CartItem CartItem[]
+
+  @@index([resinId])
+}
+
+
+model ResinAttribute {
+  id      String @id @default(cuid())
+  resinId String
+
+  label String // "Viscosity"
+  value String // "Low"
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([label, value])
+}
+
+model ResinSpecification {
+  id      String @id @default(cuid())
+  resinId String
+
+  category  String
+  label     String
+  value     String
+  sortOrder Int    @default(0)
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([resinId, category, sortOrder])
+}
+
+model ResinFeature {
+  id      String @id @default(cuid())
+  resinId String
+
+  title       String
+  description String?
+  sortOrder   Int     @default(0)
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+}
+
+model ResinDownload {
+  id      String @id @default(cuid())
+  resinId String
+
+  title       String
+  description String?
+  downloadUrl String?
+  sortOrder   Int     @default(0)
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+}
+model ResinApplication {
+  id        String @id @default(cuid())
+ resinId String
+  name      String // "Rapid Prototyping", "Functional Parts", etc.
+  sortOrder Int    @default(0)
+
+ resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([resinId, sortOrder])
+}
+
+model ResinCompatibility {
+  id        String @id @default(cuid())
+ resinId String
+  name      String // "Rapid Prototyping", "Functional Parts", etc.
+  sortOrder Int    @default(0)
+
+ resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([resinId, sortOrder])
+}
+

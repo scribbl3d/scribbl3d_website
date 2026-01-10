@@ -45,6 +45,11 @@ export default function AdminPage() {
                         Printers
                     </Button>
                 </Link>
+                <Link href="/admin/resins" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Resins
+                    </Button>
+                </Link>
                 <Link href="/admin/blogs" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Blogs

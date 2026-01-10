@@ -16,6 +16,7 @@ const navItems = [
     { name: "Personalise", href: "/personalise" },
     { name: "Filaments", href: "/filaments" },
     { name: "Printers", href: "/printers" },
+    { name: "Resins", href: "/resins" },
     { name: "Services", href: "/services" },
     { name: "Blogs", href: "/blog" },
 ];
