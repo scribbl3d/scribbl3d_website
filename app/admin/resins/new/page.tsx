@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 /* ===================== CONSTANTS ===================== */
 
 const TECHNOLOGY_OPTIONS = ["LCD / MSLA", "SLA", "DLP"];
-const RESOLUTION_OPTIONS = ["2K", "4K", "6K", "8K", "12K"];
+const RESOLUTION_OPTIONS = ["2K", "4K", "6K", "8K", "12K", "16K"];
 
 const MATERIAL_OPTIONS = [
     "Standard Resin",
@@ -112,6 +112,9 @@ type ResinFormData = {
     compatibilities: Compatibility[];
     downloads: Download[];
 };
+const isValidHexColor = (value: string) => {
+    return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(value);
+};
 
 /* ===================== COMPONENT ===================== */
 
@@ -123,6 +126,9 @@ export default function ResinFormPage() {
 
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
+    const [colourErrors, setColourErrors] = useState<Record<number, string>>(
+        {}
+    );
 
     const [formData, setFormData] = useState<ResinFormData>({
         name: "",
@@ -580,21 +586,27 @@ export default function ResinFormPage() {
                                 </div>
                             </div>
                             <Input
-                                label={MANDATORY_LABELS.SHORE}
+                                label={MANDATORY_LABELS.SHORE + " (with units)"}
                                 value={getAttrValue(MANDATORY_LABELS.SHORE)}
                                 onChange={(v: string) =>
                                     setAttrValue(MANDATORY_LABELS.SHORE, v)
                                 }
                             />
                             <Input
-                                label={MANDATORY_LABELS.TEMP}
+                                label={
+                                    MANDATORY_LABELS.TEMP +
+                                    " For heat deflection temperature  (without units)"
+                                }
                                 value={getAttrValue(MANDATORY_LABELS.TEMP)}
                                 onChange={(v: string) =>
                                     setAttrValue(MANDATORY_LABELS.TEMP, v)
                                 }
                             />
                             <Input
-                                label={MANDATORY_LABELS.PRESSURE}
+                                label={
+                                    MANDATORY_LABELS.PRESSURE +
+                                    " For heat deflection temperature  (without units)"
+                                }
                                 value={getAttrValue(MANDATORY_LABELS.PRESSURE)}
                                 onChange={(v: string) =>
                                     setAttrValue(MANDATORY_LABELS.PRESSURE, v)
@@ -604,7 +616,7 @@ export default function ResinFormPage() {
                     </Section>
 
                     {/* ADDITIONAL ATTRIBUTES */}
-                    <Section title="Additional Attributes">
+                    <Section title="Additional Attributes for Quick Specs (Optional)">
                         {formData.attributes
                             .filter(
                                 (a) =>
@@ -801,15 +813,61 @@ export default function ResinFormPage() {
                                         <Input
                                             label="Hex Code"
                                             value={c.hexCode || ""}
-                                            onChange={(v: string) =>
+                                            onChange={(v: string) => {
+                                                // normalize input
+                                                const value = v.startsWith("#")
+                                                    ? v.toUpperCase()
+                                                    : `#${v.toUpperCase()}`;
+
                                                 updateArrayItem(
                                                     "colours",
                                                     i,
                                                     "hexCode",
-                                                    v
-                                                )
-                                            }
+                                                    value
+                                                );
+
+                                                // validate
+                                                if (
+                                                    value &&
+                                                    !isValidHexColor(value)
+                                                ) {
+                                                    setColourErrors((prev) => ({
+                                                        ...prev,
+                                                        [i]: "Invalid hex code (example: #FF5733)",
+                                                    }));
+                                                } else {
+                                                    setColourErrors((prev) => {
+                                                        const next = {
+                                                            ...prev,
+                                                        };
+                                                        delete next[i];
+                                                        return next;
+                                                    });
+                                                }
+                                            }}
                                         />
+                                        {colourErrors[i] && (
+                                            <p className="mt-2 text-sm text-red-500">
+                                                {colourErrors[i]}
+                                            </p>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                            <div
+                                                className="w-8 h-8 rounded border border-gray-300"
+                                                style={{
+                                                    backgroundColor:
+                                                        c.hexCode &&
+                                                        isValidHexColor(
+                                                            c.hexCode
+                                                        )
+                                                            ? c.hexCode
+                                                            : "#ffffff",
+                                                }}
+                                            />
+                                            <span className="text-xs text-gray-500">
+                                                Preview
+                                            </span>
+                                        </div>
                                     </div>
                                     <button
                                         type="button"

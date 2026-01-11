@@ -46,7 +46,7 @@ export default function ResinDetailPage() {
     if (!resin) return null;
 
     const colour = resin.colours[selectedColourIndex];
-    const images = colour.images;
+    const images = colour?.images;
     const weight = resin.weights[selectedWeightIndex];
     const groupedSpecs = resin.specifications.reduce((acc, spec) => {
         if (!acc[spec.category]) acc[spec.category] = [];
@@ -88,10 +88,10 @@ export default function ResinDetailPage() {
                             <div className="relative w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
                                 <Image
                                     src={
-                                        images[selectedImageIndex]?.url ||
+                                        images?.[selectedImageIndex]?.url ||
                                         "/placeholder.png"
                                     }
-                                    alt={resin.name}
+                                    alt={resin?.name ?? "Resin image"}
                                     fill
                                     className="object-cover"
                                 />
@@ -99,7 +99,7 @@ export default function ResinDetailPage() {
                         </div>
 
                         <div className="flex gap-2 overflow-x-auto">
-                            {images.map((img, idx) => (
+                            {images?.map((img, idx) => (
                                 <button
                                     key={img.id}
                                     onClick={() => setSelectedImageIndex(idx)}
@@ -400,7 +400,7 @@ export default function ResinDetailPage() {
                                 </div>
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
-                                        Technology
+                                        Shore Hardness
                                     </span>
                                     <span className="font-medium text-gray-900">
                                         {
@@ -424,6 +424,29 @@ export default function ResinDetailPage() {
                                         {pressure && `${pressure} MPa`}
                                     </span>
                                 </div>
+                                {resin.attributes?.map((attr: any) => {
+                                    if (
+                                        attr.label === "Temperature" ||
+                                        attr.label === "Pressure" ||
+                                        attr.label === "Heat Deflection Temp"
+                                    ) {
+                                        return null;
+                                    }
+
+                                    return (
+                                        <div
+                                            key={attr.label}
+                                            className="grid grid-cols-[1fr_auto] gap-x-6 text-sm"
+                                        >
+                                            <span className="text-gray-600">
+                                                {attr.label}
+                                            </span>
+                                            <span className="font-medium text-gray-900 text-right max-w-[260px]">
+                                                {attr.value}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
