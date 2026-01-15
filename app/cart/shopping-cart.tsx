@@ -43,7 +43,7 @@ export default function ShoppingCart() {
         updateQuantity,
         removeFromCart,
         fetchCart,
-        applyDiscount,
+
         updateCustomization,
     } = useCart();
     const [localCart, setLocalCart] = useState<CartItem[]>([]);
@@ -102,14 +102,14 @@ export default function ShoppingCart() {
 
     const handleApplyDiscount = async () => {
         try {
-            const discount = await applyDiscount(discountCode);
-            setAppliedDiscount(discount);
-            toast({
-                title: "Discount Applied",
-                description: `${
-                    discount * 100
-                }% discount has been applied to your order.`,
-            });
+            // const discount = await applyDiscount(discountCode);
+            // setAppliedDiscount(discount);
+            // toast({
+            //     title: "Discount Applied",
+            //     description: `${
+            //         discount * 100
+            //     }% discount has been applied to your order.`,
+            // });
         } catch {
             toast({
                 title: "Invalid Discount Code",

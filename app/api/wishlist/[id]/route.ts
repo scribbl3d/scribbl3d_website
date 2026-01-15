@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 ========================= */
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await getServerSession(authOptions);
 
@@ -16,10 +16,11 @@ export async function PATCH(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params; // ✅ await params
     const body = await req.json();
 
     const updated = await prisma.wishlistItem.update({
-        where: { id: params.id },
+        where: { id },
         data: {
             productSizeId: body.productSizeId ?? undefined,
             productColorId: body.productColorId ?? undefined,
@@ -40,7 +41,7 @@ export async function PATCH(
 ========================= */
 export async function DELETE(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await getServerSession(authOptions);
 
@@ -48,8 +49,10 @@ export async function DELETE(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params; // ✅ await params
+
     await prisma.wishlistItem.delete({
-        where: { id: params.id },
+        where: { id },
     });
 
     return NextResponse.json({ success: true });

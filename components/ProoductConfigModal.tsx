@@ -86,7 +86,7 @@ export default function ProductConfigModal({
                       }
                     : {
                           prebuiltProductId: product.id,
-                          prebuiltColor: color!,
+                          prebuiltColour: color!,
                           prebuiltSize: size!,
                           quantity: qty,
                       }
