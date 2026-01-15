@@ -1,12 +1,12 @@
-import { prisma } from "@/lib/prisma"; // 👈 recommended (see note below)
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(
     request: Request,
-    context: { params: { slug: string } }
+    { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const { slug } = await context.params; // ✅ unwrap FIRST
+        const { slug } = await params; // ✅ correct
 
         const resin = await prisma.resin.findUnique({
             where: { slug },
