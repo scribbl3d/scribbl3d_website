@@ -6,7 +6,7 @@ export async function GET(
     context: { params: { slug: string } }
 ) {
     try {
-        const { slug } = context.params; // ✅ unwrap FIRST
+        const { slug } = await context.params; // ✅ unwrap FIRST
 
         const resin = await prisma.resin.findUnique({
             where: { slug },

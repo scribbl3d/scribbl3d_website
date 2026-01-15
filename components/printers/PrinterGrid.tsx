@@ -166,6 +166,69 @@ function PrinterCard({ printer }: { printer: any }) {
         checkWishlist();
     }, [printer.id]);
 
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishLoading) return;
+
+        setIsWishLoading(true);
+
+        const wasInWishlist = isFavorite;
+
+        // ✅ Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    printerId: printer.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${printer.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // 🔁 rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishLoading(false);
+        }
+    };
+
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
             {/* CARD LINK */}
@@ -187,19 +250,21 @@ function PrinterCard({ printer }: { printer: any }) {
 
                     {/* WISHLIST */}
                     <button
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }}
+                        onClick={handleToggleWishlist}
+                        disabled={isWishLoading}
                         className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
                     >
-                        <Heart
-                            className={`w-5 h-5 ${
-                                isFavorite
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-400"
-                            }`}
-                        />
+                        {isWishLoading ? (
+                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                        ) : (
+                            <Heart
+                                className={`w-5 h-5 transition ${
+                                    isFavorite
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-400"
+                                }`}
+                            />
+                        )}
                     </button>
                 </div>
 

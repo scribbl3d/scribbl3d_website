@@ -1,155 +1,78 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
-import { useCart } from "@/providers/CartProvider";
-import { signIn, useSession } from "next-auth/react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import WishlistCard from "./wishlist-card";
+import WishlistModal from "./wishlist-modal";
+import { WishlistGridItem } from "./wishlist.types";
 
-type WishlistItem = {
-    id: string;
-    product?: any;
-    prebuiltProduct?: any;
-    printer?: any;
-};
+export default function Wishlist() {
+    const [items, setItems] = useState<WishlistGridItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeItem, setActiveItem] = useState<WishlistGridItem | null>(null);
 
-type Props = {
-    initialWishlist: WishlistItem[];
-};
-
-export function Wishlist({ initialWishlist }: Props) {
-    const [items, setItems] = useState(initialWishlist || []);
-    const [loadingId, setLoadingId] = useState<string | null>(null);
-
-    const { addToCart } = useCart();
-    const { data: session } = useSession();
-
-    // 🔄 Refresh wishlist on mount
     useEffect(() => {
-        async function refresh() {
-            const res = await fetch("/api/wishlist");
-            const data = await res.json();
-            setItems(data.items || []);
-        }
-        refresh();
+        fetch("/api/wishlist")
+            .then((r) => r.json())
+            .then((d) => {
+                setItems(d.items || []);
+                setLoading(false);
+            })
+            .catch(() => setLoading(false));
     }, []);
 
-    if (!items.length) {
-        return <p className="text-muted-foreground">Your wishlist is empty</p>;
-    }
-
-    const handleAddToCart = async (item: WishlistItem) => {
-        const entity = item.product || item.prebuiltProduct || item.printer;
-        if (!entity || loadingId === item.id) return;
-
-        // 🔐 Auth check
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your cart.",
-                variant: "destructive",
-                action: (
-                    <button
-                        onClick={() => signIn()}
-                        className="px-3 py-1 bg-white text-black rounded"
-                    >
-                        Log in
-                    </button>
-                ),
-            });
-            return;
-        }
-
-        setLoadingId(item.id);
-
-        try {
-            await addToCart({
-                ...(item.product && { productId: item.product.id }),
-                ...(item.prebuiltProduct && {
-                    prebuiltProductId: item.prebuiltProduct.id,
-                }),
-                ...(item.printer && { printerId: item.printer.id }),
-                quantity: 1,
-            });
-
-            toast({
-                title: "Added to Cart",
-                description: `${entity.name} has been added to your cart.`,
-            });
-        } catch (err) {
-            toast({
-                title: "Error",
-                description: "Failed to add item to cart.",
-                variant: "destructive",
-            });
-        } finally {
-            setLoadingId(null);
-        }
-    };
-
-    const handleRemove = async (item: WishlistItem) => {
-        await fetch("/api/wishlist", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                productId: item.product?.id,
-                prebuiltProductId: item.prebuiltProduct?.id,
-                printerId: item.printer?.id,
-            }),
-        });
-
-        setItems((prev) => prev.filter((i) => i.id !== item.id));
+    const removeFromWishlist = async (id: string) => {
+        setItems((prev) => prev.filter((i) => i.id !== id));
+        await fetch(`/api/wishlist/${id}`, { method: "DELETE" });
     };
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {items.map((item) => {
-                const entity =
-                    item.product || item.prebuiltProduct || item.printer;
-                if (!entity) return null;
+        <div className="p-6">
+            {/* HEADER */}
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h1 className="text-2xl font-semibold">Wishlist</h1>
+                    <p className="text-sm text-gray-500">
+                        Products you’ve saved for later
+                    </p>
+                </div>
 
-                const image =
-                    entity.images?.[0]?.url ||
-                    entity.images?.[0] ||
-                    "/placeholder.png";
+                <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500">
+                        {items.length} items
+                    </span>
+                    <Button className="bg-black text-white">
+                        Move all to Cart
+                    </Button>
+                </div>
+            </div>
 
-                return (
-                    <div
-                        key={item.id}
-                        className="border rounded-lg p-4 flex flex-col gap-3"
-                    >
-                        <Image
-                            src={image}
-                            alt={entity.name}
-                            width={300}
-                            height={300}
-                            className="rounded-md"
+            {loading && <p className="text-sm text-gray-500">Loading…</p>}
+
+            {!loading && items.length === 0 && (
+                <p className="text-sm text-gray-500">Wishlist is empty.</p>
+            )}
+
+            {!loading && items.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {items.map((item) => (
+                        <WishlistCard
+                            key={item.id}
+                            item={item}
+                            onRemove={removeFromWishlist}
+                            onSelect={setActiveItem}
                         />
+                    ))}
+                </div>
+            )}
 
-                        <h3 className="font-semibold">{entity.name}</h3>
-                        <p className="font-bold">₹{entity.price}</p>
-
-                        <div className="flex justify-between">
-                            <Button
-                                onClick={() => handleAddToCart(item)}
-                                disabled={loadingId === item.id}
-                            >
-                                {loadingId === item.id
-                                    ? "Adding..."
-                                    : "Add to Cart"}
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                onClick={() => handleRemove(item)}
-                            >
-                                Remove
-                            </Button>
-                        </div>
-                    </div>
-                );
-            })}
+            {/* MODAL */}
+            {activeItem && (
+                <WishlistModal
+                    item={activeItem}
+                    onClose={() => setActiveItem(null)}
+                />
+            )}
         </div>
     );
 }

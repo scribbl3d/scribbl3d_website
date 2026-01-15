@@ -175,47 +175,44 @@ export default function ProductPage({
             return;
         }
 
-        // If there's only one size/color, use that by default
+        // Auto-pick if only one option exists
         const effectiveSize = sizes.length === 1 ? sizes[0].id : selectedSize;
+
         const effectiveColor =
             colors.length === 1 ? colors[0].id : selectedColor;
 
         if (!effectiveSize || !effectiveColor) {
             toast({
                 title: "Selection Required",
-                description:
-                    "Please select a size and color before adding to cart.",
+                description: "Please select a size and color.",
                 variant: "destructive",
             });
             return;
         }
 
         setIsLoading(true);
-        setError(null);
+
         try {
-            const selectedSizeData = sizes.find(
-                (s: ProductSize) => s.id === effectiveSize
-            );
-            const selectedColorData = colors.find(
-                (c: ProductColor) => c.id === effectiveColor
-            );
+            const sizeObj = sizes.find((s) => s.id === effectiveSize);
+            const colorObj = colors.find((c) => c.id === effectiveColor);
 
             await addToCart({
-                productId: id,
-
+                prebuiltProductId: id,
                 quantity,
+
+                // 🔥 THIS IS THE FIX
+                prebuiltSize: sizeObj?.name,
+                prebuiltColour: colorObj?.name,
             });
 
             toast({
                 title: "Added to Cart",
                 description: `${name} has been added to your cart.`,
             });
-        } catch (error) {
-            console.error("Error adding to cart:", error);
-            setError("Failed to add item to cart. Please try again.");
+        } catch (err) {
             toast({
                 title: "Error",
-                description: "Failed to add item to cart. Please try again.",
+                description: "Failed to add item to cart.",
                 variant: "destructive",
             });
         } finally {

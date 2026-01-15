@@ -1,18 +1,25 @@
 "use client";
 
-import { useCart } from "@/providers/CartProvider";
 import { ArrowLeft, Check, Download, Heart } from "lucide-react";
-import { useSession } from "next-auth/react";
-import Image from "next/image";
-import Link from "next/link";
+
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import { toast } from "@/components/ui/use-toast";
+import { useCart } from "@/providers/CartProvider";
+
+import { signIn, useSession } from "next-auth/react";
+import Image from "next/image";
+import Link from "next/link";
 
 export default function ResinDetailPage() {
     const { slug } = useParams<{ slug: string }>();
     const { addToCart } = useCart();
     const [activeTab, setActiveTab] = useState("description");
     const { data: session } = useSession();
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isInWishlist, setIsInWishlist] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
     const [resin, setResin] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -42,27 +49,166 @@ export default function ResinDetailPage() {
         }
     }
 
-    if (loading) return <div className="pt-24 text-center">Loading...</div>;
-    if (!resin) return null;
-
-    const colour = resin.colours[selectedColourIndex];
+    const colour = resin?.colours[selectedColourIndex];
     const images = colour?.images;
-    const weight = resin.weights[selectedWeightIndex];
-    const groupedSpecs = resin.specifications.reduce((acc, spec) => {
+    const weight = resin?.weights[selectedWeightIndex];
+    const groupedSpecs = resin?.specifications.reduce((acc, spec) => {
         if (!acc[spec.category]) acc[spec.category] = [];
         acc[spec.category].push(spec);
         return acc;
     }, {});
-    const maxResolution = resin.resolution
+    const maxResolution = resin?.resolution
         ?.map((r: string) => parseInt(r)) // ["4K","8K"] → [4,8]
         ?.sort((a, b) => b - a)[0]; // → 8
-    const temperature = resin.attributes?.find(
+    const temperature = resin?.attributes?.find(
         (attr: any) => attr.label === "Temperature"
     )?.value;
 
-    const pressure = resin.attributes?.find(
+    const pressure = resin?.attributes?.find(
         (attr: any) => attr.label === "Pressure"
     )?.value;
+    const selectedColourId = resin?.colours?.[selectedColourIndex]?.id ?? null;
+    const selectedWeightId = resin?.weights?.[selectedWeightIndex]?.id ?? null;
+
+    const handleAddToCart = async () => {
+        if (!resin || isCartLoading) return;
+
+        /* ---------- AUTH CHECK ---------- */
+        if (!session) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to add items to your cart.",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        /* ---------- VARIANT VALIDATION ---------- */
+        if (!selectedColourId || !selectedWeightId) {
+            toast({
+                title: "Selection Required",
+                description:
+                    "Please select both a colour and pack size before adding to cart.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsCartLoading(true);
+
+        try {
+            await addToCart({
+                resinId: resin.id,
+                resinColourId: selectedColourId,
+                resinWeightId: selectedWeightId,
+                quantity,
+            });
+
+            toast({
+                title: "Added to Cart",
+                description: `${resin.name} has been added to your cart.`,
+            });
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Error",
+                description: "Failed to add resin to cart.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsCartLoading(false);
+        }
+    };
+    useEffect(() => {
+        if (!session || !resin?.id) return;
+
+        async function checkWishlist() {
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?resinId=${resin.id}`
+                );
+                const data = await res.json();
+                setIsFavorite(data.isInWishlist);
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        }
+
+        checkWishlist();
+    }, [session, resin?.id]);
+
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishlistLoading) return;
+
+        setIsWishlistLoading(true);
+
+        const wasInWishlist = isFavorite;
+
+        // ✅ Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    resinId: resin.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${resin.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // 🔁 rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
+    if (loading) return <div className="pt-24 text-center">Loading...</div>;
+    if (!resin) return null;
 
     return (
         <div className="min-h-screen bg-gray-50 pt-24">
@@ -122,12 +268,28 @@ export default function ResinDetailPage() {
                     </div>
 
                     {/* Info */}
-                    <div className="bg-white border rounded-lg p-6">
+                    <div className="bg-white border rounded-lg p-6 relative">
                         <div className="flex justify-between items-start mb-2">
                             <p className="text-sm text-gray-600">
                                 {resin.brand}
                             </p>
-                            <Heart className="w-5 h-5 text-gray-400" />
+                            <button
+                                onClick={handleToggleWishlist}
+                                disabled={isWishlistLoading}
+                                className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
+                            >
+                                {isWishlistLoading ? (
+                                    <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                ) : (
+                                    <Heart
+                                        className={`w-5 h-5 transition ${
+                                            isFavorite
+                                                ? "fill-red-500 text-red-500"
+                                                : "text-gray-400"
+                                        }`}
+                                    />
+                                )}
+                            </button>
                         </div>
 
                         <h1 className="text-3xl font-bold mb-2">
@@ -302,11 +464,14 @@ export default function ResinDetailPage() {
                         {/* CTA Buttons */}
                         <div className="space-y-3 mb-6">
                             <button
-                                className="relative w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                                onClick={() => {}}
-                                disabled={isCartLoading}
+                                className="relative w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                onClick={handleAddToCart}
+                                disabled={
+                                    !selectedColourId ||
+                                    !selectedWeightId ||
+                                    isCartLoading
+                                }
                             >
-                                {/* Button text (kept for width) */}
                                 <span
                                     className={
                                         isCartLoading
@@ -317,7 +482,6 @@ export default function ResinDetailPage() {
                                     Add to Cart
                                 </span>
 
-                                {/* Centered spinner */}
                                 {isCartLoading && (
                                     <span className="absolute inset-0 flex items-center justify-center">
                                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

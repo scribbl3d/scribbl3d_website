@@ -121,7 +121,7 @@ export default function EnhancedProductTile({
         if (!session) {
             toast({
                 title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
+                description: "Please log in to use wishlist",
                 variant: "destructive",
                 action: (
                     <Button size="sm" onClick={() => signIn()}>
@@ -135,14 +135,30 @@ export default function EnhancedProductTile({
         setIsWishlistLoading(true);
 
         try {
-            const method = isInWishlist ? "DELETE" : "POST";
+            const payload: any = {};
+
+            if (isPrinter) {
+                payload.printerId = id;
+            } else if (isPrebuilt) {
+                payload.prebuiltProductId = id;
+            } else {
+                payload.productId = id;
+            }
+
             await fetch("/api/wishlist", {
-                method,
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId: id, isPrebuilt }),
+                body: JSON.stringify(payload),
             });
 
-            setIsInWishlist(!isInWishlist);
+            setIsInWishlist((prev) => !prev);
+        } catch (err) {
+            console.error(err);
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist",
+                variant: "destructive",
+            });
         } finally {
             setIsWishlistLoading(false);
         }

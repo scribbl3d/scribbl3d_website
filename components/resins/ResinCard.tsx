@@ -2,13 +2,16 @@
 import { Heart } from "lucide-react";
 import Link from "next/link";
 
+import { toast } from "@/components/ui/use-toast";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
-
+import { useEffect, useState } from "react";
 interface ResinCardProps {
     resin: any;
 }
 
 export default function ResinCard({ resin }: ResinCardProps) {
+    const { data: session } = useSession();
     const colour = resin.colours?.[0];
     const image = resin.cardImageUrl;
     const shortDescription = resin.shortDescription;
@@ -21,8 +24,89 @@ export default function ResinCard({ resin }: ResinCardProps) {
     const discount = resin.weights?.[0]?.discount;
     const slug = resin.slug;
     const technology = resin.technology;
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isInWishlist, setIsInWishlist] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+    useEffect(() => {
+        if (!session || !resin?.id) return;
 
-    const isFavorite = false; // Placeholder for wishlist logic
+        async function checkWishlist() {
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?resinId=${resin.id}`
+                );
+                const data = await res.json();
+                setIsFavorite(data.isInWishlist);
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        }
+
+        checkWishlist();
+    }, [session, resin?.id]);
+
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishlistLoading) return;
+
+        setIsWishlistLoading(true);
+
+        const wasInWishlist = isFavorite;
+
+        // ✅ Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    resinId: resin.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${resin.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // 🔁 rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
@@ -40,19 +124,21 @@ export default function ResinCard({ resin }: ResinCardProps) {
 
                     {/* WISHLIST */}
                     <button
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }}
+                        onClick={handleToggleWishlist}
+                        disabled={isWishlistLoading}
                         className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
                     >
-                        <Heart
-                            className={`w-5 h-5 ${
-                                isFavorite
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-400"
-                            }`}
-                        />
+                        {isWishlistLoading ? (
+                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                        ) : (
+                            <Heart
+                                className={`w-5 h-5 transition ${
+                                    isFavorite
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-400"
+                                }`}
+                            />
+                        )}
                     </button>
                 </div>
 

@@ -4,7 +4,7 @@
 import SimilarPrintersCarousel from "@/components/printers/SimilarPrintersCarousel";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { ArrowLeft, Check, Download } from "lucide-react";
+import { ArrowLeft, Check, Download, Heart } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,7 +13,9 @@ import { useEffect, useState } from "react";
 
 export default function PrinterDetailPage() {
     const { slug } = useParams<{ slug: string }>() ?? {};
-
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isWishLoading, setIsWishLoading] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [printer, setPrinter] = useState<any>(null);
     const [selectedImage, setSelectedImage] = useState(0);
     const [activeTab, setActiveTab] = useState("specifications");
@@ -70,22 +72,107 @@ export default function PrinterDetailPage() {
             setIsCartLoading(false);
         }
     };
+    useEffect(() => {
+        if (!session || !printer?.id) return;
 
+        async function checkWishlist() {
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?printerId=${printer.id}`
+                );
+                const data = await res.json();
+                setIsFavorite(data.isInWishlist);
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        }
+
+        checkWishlist();
+    }, [session, printer?.id]);
+
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishlistLoading) return;
+
+        setIsWishlistLoading(true);
+        const wasInWishlist = isFavorite;
+
+        // ✅ Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    printerId: printer.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${printer.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // 🔁 rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
     const fetchPrinterDetails = async () => {
         setLoading(true);
         try {
+            if (!slug) return;
+
             const response = await fetch(`/api/printers/${slug}`);
+
             if (!response.ok) {
-                throw new Error("Printer not found");
+                setPrinter(null);
+                return;
             }
+
             const data = await response.json();
             setPrinter(data);
         } catch (error) {
             console.error("Error fetching printer:", error);
+            setPrinter(null);
         } finally {
             setLoading(false);
         }
     };
+
     if (loading) {
         return <PrinterDetailSkeleton />;
     }
@@ -190,11 +277,29 @@ export default function PrinterDetailPage() {
 
                     {/* Right Column - Product Info */}
                     <div>
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
                             {/* Brand */}
                             <p className="text-sm text-gray-600 mb-2">
                                 {printer.brand}
                             </p>
+
+                            <button
+                                onClick={handleToggleWishlist}
+                                disabled={isWishlistLoading}
+                                className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
+                            >
+                                {isWishlistLoading ? (
+                                    <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                ) : (
+                                    <Heart
+                                        className={`w-5 h-5 transition ${
+                                            isFavorite
+                                                ? "fill-red-500 text-red-500"
+                                                : "text-gray-400"
+                                        }`}
+                                    />
+                                )}
+                            </button>
 
                             {/* Title */}
                             <h1 className="text-3xl font-bold text-gray-900 mb-3">

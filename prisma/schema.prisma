@@ -149,21 +149,36 @@ model Wishlist {
 }
 
 model WishlistItem {
-  id         String   @id @default(cuid())
-  wishlistId String
-  productId  String?
-  printerId  String?
-  printer    Printer? @relation(fields: [printerId], references: [id])
-  resinId    String?
-  resin      Resin?   @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  id                 String   @id @default(cuid())
+  wishlistId         String
 
-  prebuiltProductId String?
-  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  product           Product?         @relation(fields: [productId], references: [id])
-  wishlist          Wishlist         @relation(fields: [wishlistId], references: [id])
+  // item types
+  productId          String?
+  prebuiltProductId  String?
+  printerId          String?
+  resinId            String?
 
-  @@unique([wishlistId, productId, prebuiltProductId, printerId])
+  // variants (optional)
+  productSizeId      String?
+  productColorId     String?
+
+  resinColourId      String?
+  resinWeightId      String?
+
+  prebuiltColor      String?
+  prebuiltSize       String?
+
+  createdAt          DateTime @default(now())
+
+  wishlist           Wishlist @relation(fields: [wishlistId], references: [id])
+
+  product            Product?         @relation(fields: [productId], references: [id])
+  prebuiltProduct    PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  printer            Printer?         @relation(fields: [printerId], references: [id])
+  resin              Resin?           @relation(fields: [resinId], references: [id])
 }
+
+
 
 model Cart {
   id     String     @id @default(cuid())
@@ -182,6 +197,9 @@ model CartItem {
   quantity          Int
   printerId         String?
   printer           Printer?     @relation(fields: [printerId], references: [id])
+   /* 🧱 PREBUILT (NEW) */
+  prebuiltColour    String?
+  prebuiltSize      String?
   // Resin selection
   resinId           String?
   resin             Resin?       @relation(fields: [resinId], references: [id], onDelete: Cascade)

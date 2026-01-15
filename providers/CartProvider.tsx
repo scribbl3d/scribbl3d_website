@@ -1,8 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import type React from "react";
-import {
+import React, {
     createContext,
     useCallback,
     useContext,
@@ -16,22 +15,32 @@ import {
 
 export type CartItem = {
     id: string;
-    itemType: "product" | "prebuilt" | "printer" | "unknown";
+    itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
     name: string;
     price: number;
     quantity: number;
     images: string[];
-    size?: string | null;
-    color?: string | null;
+    size?: string | null; // weight for resin
+    color?: string | null; // colour for resin
+    prebuiltColour?: string | null;
+    prebuiltSize?: string | null;
     customization?: string | null;
 };
 
-type AddToCartPayload = {
+export type AddToCartPayload = {
     productId?: string;
     prebuiltProductId?: string;
     printerId?: string;
-    productSizeId?: string | null;
-    productColorId?: string | null;
+
+    /* 🧪 Resin */
+    resinId?: string;
+    resinColourId?: string;
+    resinWeightId?: string;
+
+    /* 🧱 Prebuilt */
+    prebuiltColour?: string;
+    prebuiltSize?: string;
+
     quantity?: number;
 };
 
@@ -43,7 +52,6 @@ type CartContextType = {
     updateCustomization: (id: string, customization: string) => Promise<void>;
     clearCart: () => Promise<void>;
     fetchCart: () => Promise<void>;
-    applyDiscount: (code: string) => Promise<number>;
 };
 
 /* =========================
@@ -53,11 +61,11 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const useCart = () => {
-    const context = useContext(CartContext);
-    if (!context) {
-        throw new Error("useCart must be used within a CartProvider");
+    const ctx = useContext(CartContext);
+    if (!ctx) {
+        throw new Error("useCart must be used within CartProvider");
     }
-    return context;
+    return ctx;
 };
 
 /* =========================
@@ -70,20 +78,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     const [cart, setCart] = useState<CartItem[]>([]);
     const { data: session } = useSession();
 
-    /* ---------- FETCH CART (FIXED) ---------- */
+    /* ---------- FETCH CART ---------- */
     const fetchCart = useCallback(async () => {
         if (!session) return;
 
         try {
-            const response = await fetch("/api/cart");
-            if (!response.ok) return;
+            const res = await fetch("/api/cart");
+            if (!res.ok) return;
 
-            const data = await response.json();
-
-            // ✅ IMPORTANT FIX
-            setCart(data.items ?? data.cart ?? []);
-        } catch (error) {
-            console.error("Failed to fetch cart:", error);
+            const data = await res.json();
+            setCart(data.items ?? []);
+        } catch (err) {
+            console.error("Failed to fetch cart:", err);
             setCart([]);
         }
     }, [session]);
@@ -95,119 +101,95 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     /* ---------- ADD TO CART ---------- */
     const addToCart = async (payload: AddToCartPayload) => {
         try {
-            const response = await fetch("/api/cart", {
+            const res = await fetch("/api/cart", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     productId: payload.productId,
                     prebuiltProductId: payload.prebuiltProductId,
                     printerId: payload.printerId,
-                    productSizeId: payload.productSizeId ?? null,
-                    productColorId: payload.productColorId ?? null,
+
+                    resinId: payload.resinId,
+                    resinColourId: payload.resinColourId,
+                    resinWeightId: payload.resinWeightId,
+
+                    prebuiltColour: payload.prebuiltColour,
+                    prebuiltSize: payload.prebuiltSize,
+
                     quantity: payload.quantity ?? 1,
                 }),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(
-                    errorData.error || "Failed to add item to cart"
-                );
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || "Add to cart failed");
             }
 
             await fetchCart();
-        } catch (error) {
-            console.error("Error adding item to cart:", error);
-            throw error;
+        } catch (err) {
+            console.error("Add to cart error:", err);
+            throw err;
         }
     };
 
-    /* ---------- REMOVE FROM CART ---------- */
+    /* ---------- REMOVE ---------- */
     const removeFromCart = async (id: string) => {
         try {
-            const response = await fetch(`/api/cart/${id}`, {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                setCart((prev) => prev.filter((item) => item.id !== id));
+            const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
+            if (res.ok) {
+                setCart((prev) => prev.filter((i) => i.id !== id));
             }
-        } catch (error) {
-            console.error("Failed to remove item from cart:", error);
+        } catch (err) {
+            console.error("Remove cart item failed:", err);
         }
     };
 
-    /* ---------- UPDATE QUANTITY ---------- */
+    /* ---------- UPDATE QTY ---------- */
     const updateQuantity = async (id: string, quantity: number) => {
         try {
-            const response = await fetch(`/api/cart/${id}`, {
+            const res = await fetch(`/api/cart/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ quantity }),
             });
 
-            if (response.ok) {
+            if (res.ok) {
                 setCart((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, quantity } : item
-                    )
+                    prev.map((i) => (i.id === id ? { ...i, quantity } : i))
                 );
             }
-        } catch (error) {
-            console.error("Failed to update quantity:", error);
+        } catch (err) {
+            console.error("Update quantity failed:", err);
         }
     };
 
     /* ---------- UPDATE CUSTOMIZATION ---------- */
     const updateCustomization = async (id: string, customization: string) => {
         try {
-            const response = await fetch(`/api/cart/${id}`, {
+            const res = await fetch(`/api/cart/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ customization }),
             });
 
-            if (response.ok) {
+            if (res.ok) {
                 setCart((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, customization } : item
-                    )
+                    prev.map((i) => (i.id === id ? { ...i, customization } : i))
                 );
             }
-        } catch (error) {
-            console.error("Failed to update customization:", error);
+        } catch (err) {
+            console.error("Update customization failed:", err);
         }
     };
 
-    /* ---------- CLEAR CART ---------- */
+    /* ---------- CLEAR ---------- */
     const clearCart = async () => {
         try {
-            const response = await fetch("/api/cart", {
-                method: "DELETE",
-            });
-
-            if (response.ok) {
-                setCart([]);
-            }
-        } catch (error) {
-            console.error("Failed to clear cart:", error);
+            const res = await fetch("/api/cart", { method: "DELETE" });
+            if (res.ok) setCart([]);
+        } catch (err) {
+            console.error("Clear cart failed:", err);
         }
-    };
-
-    /* ---------- APPLY DISCOUNT ---------- */
-    const applyDiscount = async (code: string): Promise<number> => {
-        const response = await fetch("/api/apply-discount", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code }),
-        });
-
-        if (!response.ok) {
-            throw new Error("Invalid discount code");
-        }
-
-        const data = await response.json();
-        return data.discount;
     };
 
     return (
@@ -220,7 +202,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
                 updateCustomization,
                 clearCart,
                 fetchCart,
-                applyDiscount,
             }}
         >
             {children}
