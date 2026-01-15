@@ -413,12 +413,6 @@ export default function ResinDetailPage() {
                         {/* STOCK + COMPATIBILITY LINE */}
                         <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                             {/* Green dot */}
-                            <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-
-                            {/* In Stock (hard-coded) */}
-                            <span className="font-medium text-green-700">
-                                In Stock
-                            </span>
 
                             {/* Separator dot */}
                             <span className="text-gray-400">•</span>

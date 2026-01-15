@@ -181,7 +181,7 @@ export async function POST(req: Request) {
         const order = await prisma.order.create({
             data: {
                 userId: session.user.id,
-                items: JSON.stringify(orderItems),
+                items: orderItems,
                 totalAmount,
                 shippingAddress,
                 billingAddress,

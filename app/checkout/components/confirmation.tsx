@@ -191,11 +191,6 @@ export function Confirmation() {
 
                 {/* ===================== TOTAL ===================== */}
                 <div className="pt-6 space-y-4">
-                    <div className="flex justify-between items-center text-lg font-semibold">
-                        <span>Total Amount</span>
-                        <span>{formatPrice(totalAmount)}</span>
-                    </div>
-
                     <Button
                         variant="outline"
                         onClick={prevStep}

@@ -571,19 +571,59 @@ export default function OrdersPage() {
                                                                             key={
                                                                                 i
                                                                             }
+                                                                            className="flex flex-col gap-1 rounded-md border p-3"
                                                                         >
-                                                                            {
-                                                                                item.name
-                                                                            }{" "}
-                                                                            -
-                                                                            Quantity:{" "}
-                                                                            {
-                                                                                item.quantity
-                                                                            }{" "}
-                                                                            -{" "}
-                                                                            {formatRupees(
-                                                                                item.price
+                                                                            {/* Product name */}
+                                                                            <span className="font-medium">
+                                                                                {
+                                                                                    item.name
+                                                                                }
+                                                                            </span>
+
+                                                                            {/* Optional meta info */}
+                                                                            {(item.size ||
+                                                                                item.color) && (
+                                                                                <span className="text-sm text-gray-600">
+                                                                                    {item.size && (
+                                                                                        <span>
+                                                                                            Size:{" "}
+                                                                                            {
+                                                                                                item.size
+                                                                                            }
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {item.size &&
+                                                                                        item.color && (
+                                                                                            <span>
+                                                                                                {" "}
+                                                                                                •{" "}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    {item.color && (
+                                                                                        <span>
+                                                                                            Color:{" "}
+                                                                                            {
+                                                                                                item.color
+                                                                                            }
+                                                                                        </span>
+                                                                                    )}
+                                                                                </span>
                                                                             )}
+
+                                                                            {/* Quantity & price */}
+                                                                            <div className="flex justify-between text-sm">
+                                                                                <span>
+                                                                                    Qty:{" "}
+                                                                                    {
+                                                                                        item.quantity
+                                                                                    }
+                                                                                </span>
+                                                                                <span className="font-semibold">
+                                                                                    {formatRupees(
+                                                                                        item.price
+                                                                                    )}
+                                                                                </span>
+                                                                            </div>
                                                                         </li>
                                                                     )
                                                                 )

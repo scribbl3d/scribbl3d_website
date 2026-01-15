@@ -1444,21 +1444,42 @@ export default function PrinterFormPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => {
-                                                            const newImages =
-                                                                formData.images.map(
+                                                            const newImages = [
+                                                                ...formData.images,
+                                                            ];
+
+                                                            // take clicked image out
+                                                            const [selected] =
+                                                                newImages.splice(
+                                                                    idx,
+                                                                    1
+                                                                );
+
+                                                            // insert it at index 0
+                                                            newImages.unshift({
+                                                                ...selected,
+                                                                isMain: true,
+                                                            });
+
+                                                            // fix isMain + sortOrder for all
+                                                            const normalizedImages =
+                                                                newImages.map(
                                                                     (
-                                                                        im,
+                                                                        img,
                                                                         i
                                                                     ) => ({
-                                                                        ...im,
+                                                                        ...img,
                                                                         isMain:
                                                                             i ===
-                                                                            idx,
+                                                                            0,
+                                                                        sortOrder:
+                                                                            i,
                                                                     })
                                                                 );
+
                                                             setFormData({
                                                                 ...formData,
-                                                                images: newImages,
+                                                                images: normalizedImages,
                                                             });
                                                         }}
                                                         className="text-xs bg-white text-black px-2 py-1 rounded hover:bg-gray-100"

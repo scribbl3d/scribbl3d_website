@@ -18,7 +18,6 @@ interface PrinterGridProps {
     onPageChange: (page: number) => void;
 }
 
-/* ================= GRID ================= */
 export default function PrinterGrid({
     printers,
     page,
@@ -89,7 +88,6 @@ export default function PrinterGrid({
     );
 }
 
-/* ================= CARD (UNCHANGED) ================= */
 function PrinterCard({ printer }: { printer: any }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishLoading, setIsWishLoading] = useState(false);
@@ -240,7 +238,10 @@ function PrinterCard({ printer }: { printer: any }) {
                 <div className="relative h-[260px] w-full bg-gray-100 overflow-hidden">
                     {printer.images?.[0]?.url && (
                         <Image
-                            src={printer.images[0].url}
+                            src={
+                                printer.images.find((img) => img.isMain)?.url ||
+                                printer.images[0].url
+                            }
                             alt={printer.name}
                             fill
                             priority
