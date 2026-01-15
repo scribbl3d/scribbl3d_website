@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
 /* =========================
-   CREATE ORDER (CART + BUY NOW)
+   CREATE ORDER
 ========================= */
 export async function POST(req: Request) {
     try {
@@ -26,7 +26,6 @@ export async function POST(req: Request) {
             transactionId,
         } = await req.json();
 
-        // ✅ Normalize mode
         const normalizedMode =
             mode === "buynow" || mode === "cart" ? mode : "cart";
 
@@ -45,8 +44,8 @@ export async function POST(req: Request) {
         let orderItems: any[] = [];
 
         /* =====================================================
-       BUY NOW FLOW (NO CART EVER)
-    ===================================================== */
+           BUY NOW
+        ===================================================== */
         if (normalizedMode === "buynow") {
             if (!Array.isArray(items) || items.length !== 1) {
                 return NextResponse.json(
@@ -60,32 +59,44 @@ export async function POST(req: Request) {
             orderItems = [
                 {
                     name: item.name,
-                    quantity: 1, // 🔒 FORCE 1
+                    quantity: 1,
                     price: item.price,
                     image: item.images?.[0] ?? null,
                     size: item.size ?? null,
                     color: item.color ?? null,
+                    itemType: item.itemType,
                 },
             ];
         } else {
-
-        /* =====================================================
-       CART FLOW (DEFAULT)
-    ===================================================== */
+            /* =====================================================
+           CART FLOW
+        ===================================================== */
             const cart = await prisma.cart.findFirst({
                 where: { userId: session.user.id },
                 include: {
                     items: {
                         include: {
                             product: true,
-                            prebuiltProduct: {
-                                include: { sizes: true, colors: true },
-                            },
+
                             printer: {
                                 include: {
                                     images: { orderBy: { sortOrder: "asc" } },
                                 },
                             },
+
+                            prebuiltProduct: true,
+
+                            resin: true,
+                            resinWeight: true,
+
+                            resinColour: {
+                                include: {
+                                    images: {
+                                        orderBy: { sortOrder: "asc" },
+                                    },
+                                },
+                            },
+
                             productSize: true,
                             productColor: true,
                         },
@@ -101,17 +112,36 @@ export async function POST(req: Request) {
             }
 
             orderItems = cart.items.map((item) => {
-                if (item.printer) {
+                /* ---------- RESIN ---------- */
+                if (item.resin) {
                     return {
-                        name: item.printer.name,
+                        itemType: "resin",
+                        name: item.resin.name,
                         quantity: item.quantity,
-                        price: item.printer.price,
-                        image: item.printer.images?.[0]?.url || null,
+                        price: item.resinWeight?.price ?? 0,
+                        image: item.resinColour?.images?.[0]?.url ?? null,
+                        size: item.resinWeight
+                            ? `${item.resinWeight.weightInGrams}g`
+                            : null,
+                        color: item.resinColour?.name ?? null,
                     };
                 }
 
+                /* ---------- PRINTER ---------- */
+                if (item.printer) {
+                    return {
+                        itemType: "printer",
+                        name: item.printer.name,
+                        quantity: item.quantity,
+                        price: item.printer.price,
+                        image: item.printer.images?.[0]?.url ?? null,
+                    };
+                }
+
+                /* ---------- PREBUILT ---------- */
                 if (item.prebuiltProduct) {
                     return {
+                        itemType: "prebuilt",
                         name: item.prebuiltProduct.name,
                         quantity: item.quantity,
                         price:
@@ -119,33 +149,35 @@ export async function POST(req: Request) {
                             item.prebuiltProduct.price,
                         size: item.productSize?.name ?? null,
                         color: item.productColor?.name ?? null,
-                        image: item.prebuiltProduct.images?.[0] || null,
+                        image: item.prebuiltProduct.images?.[0] ?? null,
                     };
                 }
 
+                /* ---------- PRODUCT (FILAMENT) ---------- */
                 if (item.product) {
                     return {
+                        itemType: "product",
                         name: item.product.name,
                         quantity: item.quantity,
                         price: item.productSize?.price ?? item.product.price,
                         size: item.productSize?.name ?? null,
                         color: item.productColor?.name ?? null,
-                        image: item.product.images?.[0] || null,
+                        image: item.product.images?.[0] ?? null,
                     };
                 }
 
-                throw new Error(`Invalid cart item: ${item.id}`);
+                throw new Error(`Invalid cart item ${item.id}`);
             });
 
-            // ✅ Clear cart ONLY for cart checkout
+            // ✅ CLEAR CART AFTER ORDER CREATION
             await prisma.cartItem.deleteMany({
                 where: { cartId: cart.id },
             });
         }
 
         /* =====================================================
-       CREATE ORDER
-    ===================================================== */
+           CREATE ORDER
+        ===================================================== */
         const order = await prisma.order.create({
             data: {
                 userId: session.user.id,

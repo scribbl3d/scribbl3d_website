@@ -11,7 +11,7 @@ export function mapOrderToDelhiveryShipment(order: any) {
 
     return {
         name: shipping.fullName || "Customer",
-        phone: String(shipping.phone), // 🔥 MUST be string
+        phone: String(shipping.phone),
         add: shipping.address,
         city: shipping.city,
         state: shipping.state,
