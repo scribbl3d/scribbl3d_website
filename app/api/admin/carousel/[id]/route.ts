@@ -1,4 +1,4 @@
-import cloudinary from "@/lib/cloudinary"; // adjust path if needed
+import cloudinary from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -9,12 +9,9 @@ const carouselItemSchema = z.object({
     duration: z.number().int().positive(),
 });
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }) {
     try {
-        const id = params.id;
+        const { id } = params;
 
         const formData = await request.formData();
 
@@ -48,7 +45,6 @@ export async function PUT(
             );
         }
 
-        // 🔹 Upload to Cloudinary if file is present
         let src = existing.src;
 
         if (file) {
@@ -93,10 +89,8 @@ export async function PUT(
         );
     }
 }
-export async function DELETE(
-    _: Request,
-    { params }: { params: { id: string } }
-) {
+
+export async function DELETE(_: Request, { params }) {
     await prisma.carouselItem.delete({
         where: { id: params.id },
     });
