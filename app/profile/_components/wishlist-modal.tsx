@@ -38,6 +38,7 @@ export default function WishlistModal({
     const [selectedPrebuiltSize, setSelectedPrebuiltSize] = useState<
         string | null
     >(null);
+    const [displayPrice, setDisplayPrice] = useState<number>(item.price);
 
     const [quantity, setQuantity] = useState(1);
 
@@ -141,7 +142,7 @@ export default function WishlistModal({
                 <div className="p-6">
                     {/* PRICE */}
                     <div className="text-xl font-semibold">
-                        ₹{item.price}{" "}
+                        ₹{displayPrice}{" "}
                         <span className="text-sm text-gray-500">
                             (incl. GST)
                         </span>
@@ -194,9 +195,10 @@ export default function WishlistModal({
                                         {item.resinWeights.map((w) => (
                                             <button
                                                 key={w.id}
-                                                onClick={() =>
-                                                    setSelectedWeightId(w.id)
-                                                }
+                                                onClick={() => {
+                                                    setSelectedWeightId(w.id);
+                                                    setDisplayPrice(w.price);
+                                                }}
                                                 className={`h-10 rounded-lg border text-sm ${
                                                     selectedWeightId === w.id
                                                         ? "bg-blue-600 text-white border-blue-600"

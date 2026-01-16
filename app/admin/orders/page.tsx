@@ -284,13 +284,12 @@ export default function OrdersPage() {
     const deliveredOrdersV2 = orders.filter(
         (o) => o.status === "delivered" || o.shipment?.status === "delivered"
     );
-    // 🔹 Pagination helpers
+
     const paginate = <T,>(data: T[], page: number) => {
         const start = (page - 1) * ITEMS_PER_PAGE;
         return data.slice(start, start + ITEMS_PER_PAGE);
     };
 
-    // 🔹 Paginated datasets
     const paymentPendingOrdersPageData = paginate(
         paymentPendingOrders,
         paymentPendingPage
@@ -325,6 +324,7 @@ export default function OrdersPage() {
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Payment</TableHead>
+                        <TableHead>Order Date</TableHead>
                         {includeShipmentColumn && (
                             <TableHead>Shipment</TableHead>
                         )}
@@ -370,6 +370,9 @@ export default function OrdersPage() {
 
                                 <TableCell>
                                     {order.paymentMethod || "—"}
+                                </TableCell>
+                                <TableCell>
+                                    {formatDate(order.createdAt)}
                                 </TableCell>
 
                                 {includeShipmentColumn && (
@@ -620,7 +623,8 @@ export default function OrdersPage() {
                                                                                 </span>
                                                                                 <span className="font-semibold">
                                                                                     {formatRupees(
-                                                                                        item.price
+                                                                                        item.price *
+                                                                                            item.quantity
                                                                                     )}
                                                                                 </span>
                                                                             </div>
@@ -1063,7 +1067,6 @@ export default function OrdersPage() {
                 "bg-green-50",
                 true
             )} */}
-            {/* 🔹 NEW TABLES (V2) — added for redesign */}
 
             {renderOrdersTable(
                 paymentPendingOrdersPageData,

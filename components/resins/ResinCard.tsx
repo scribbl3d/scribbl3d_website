@@ -6,11 +6,12 @@ import { toast } from "@/components/ui/use-toast";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+
 interface ResinCardProps {
     resin: any;
+    onSelect: () => void;
 }
-
-export default function ResinCard({ resin }: ResinCardProps) {
+export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     const { data: session } = useSession();
     const colour = resin.colours?.[0];
     const image = resin.cardImageUrl;
@@ -25,7 +26,7 @@ export default function ResinCard({ resin }: ResinCardProps) {
     const slug = resin.slug;
     const technology = resin.technology;
     const [isFavorite, setIsFavorite] = useState(false);
-    const [isInWishlist, setIsInWishlist] = useState(false);
+
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     useEffect(() => {
         if (!session || !resin?.id) return;
@@ -237,12 +238,14 @@ export default function ResinCard({ resin }: ResinCardProps) {
                     (incl. GST)
                 </p>
 
-                {/* ADD TO CART */}
                 <button
-                    onClick={() => {}}
-                    className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition flex items-center justify-center"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        onSelect();
+                    }}
+                    className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition"
                 >
-                    Add to Cart
+                    Select Options
                 </button>
             </div>
         </div>

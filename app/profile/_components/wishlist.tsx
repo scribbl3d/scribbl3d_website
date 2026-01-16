@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import WishlistCard from "./wishlist-card";
 import WishlistModal from "./wishlist-modal";
@@ -41,9 +40,6 @@ export default function Wishlist() {
                     <span className="text-sm text-gray-500">
                         {items.length} items
                     </span>
-                    <Button className="bg-black text-white">
-                        Move all to Cart
-                    </Button>
                 </div>
             </div>
 

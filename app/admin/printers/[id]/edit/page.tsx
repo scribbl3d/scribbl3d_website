@@ -610,6 +610,26 @@ export default function PrinterFormPage() {
                                             ))}
                                         </select>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Warranty (Years)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={formData.warrantyYears}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    warrantyYears:
+                                                        e.target.value,
+                                                })
+                                            }
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="e.g. 1"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
