@@ -376,6 +376,8 @@ export default function ResinFormPage() {
         <div className="min-h-screen bg-gray-50 pb-20">
             <form onSubmit={handleSubmit}>
                 {/* HEADER */}
+                <LoadingModal open={loading} isEdit={isEdit} />
+
                 <div className="sticky top-0 bg-white border-b z-20 shadow-sm">
                     <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between">
                         <div className="flex items-center gap-3">
@@ -1118,6 +1120,31 @@ export default function ResinFormPage() {
 }
 
 /* ===================== SMALL COMPONENTS ===================== */
+function LoadingModal({ open, isEdit }: { open: boolean; isEdit: boolean }) {
+    if (!open) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl shadow-lg px-8 py-6 w-[360px] text-center">
+                {/* Spinner */}
+                <div className="flex justify-center mb-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+                </div>
+
+                {/* Title */}
+                <h2 className="text-lg font-semibold mb-2">
+                    {isEdit ? "Editing Product…" : "Adding Product…"}
+                </h2>
+
+                {/* Subtitle */}
+                <p className="text-sm text-gray-600">
+                    This may take up to a few minutes. Please do not close this
+                    window.
+                </p>
+            </div>
+        </div>
+    );
+}
 
 function Section({ title, children }: any) {
     return (

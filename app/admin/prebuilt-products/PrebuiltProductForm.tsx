@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import type { PrebuiltProduct, ProductSize } from "@prisma/client";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ArrowDown, ArrowUp, Loader2, Plus, Star, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -64,6 +65,7 @@ export default function PrebuiltProductForm({
     const [newFeature, setNewFeature] = useState("");
     const [newDetail, setNewDetail] = useState("");
     const { toast } = useToast();
+    const isEdit = !!product;
 
     useEffect(() => {
         if (product) {
@@ -324,588 +326,637 @@ export default function PrebuiltProductForm({
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-[90vw] w-[1200px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="text-3xl font-bold mb-2">
-                        {product
-                            ? "Edit Prebuilt Product"
-                            : "Add New Prebuilt Product"}
-                    </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    {/* Main Product Information */}
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
-                            <h3 className="text-xl font-semibold mb-4">
-                                Basic Information
-                            </h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <Label htmlFor="name" className="text-base">
-                                        Product Name
-                                    </Label>
+        <>
+            <Dialog open={isSubmitting}>
+                <DialogContent
+                    className="sm:max-w-md"
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                >
+                    {/* Accessibility title (hidden visually) */}
+                    <VisuallyHidden>
+                        <DialogTitle>
+                            {isEdit ? "Editing Product" : "Adding Product"}
+                        </DialogTitle>
+                    </VisuallyHidden>
 
-                                    <Input
-                                        type="text"
-                                        id="name"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleChange}
-                                        required
-                                        placeholder="Enter product name"
-                                        className="mt-1.5"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col items-center justify-center py-10 text-center gap-4">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+
+                        <h2 className="text-lg font-semibold">
+                            {isEdit ? "Editing Product…" : "Adding Product…"}
+                        </h2>
+
+                        <p className="text-sm text-muted-foreground">
+                            This may take up to a few minutes. Please do not
+                            close this window.
+                        </p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={open} onOpenChange={onOpenChange}>
+                <DialogContent className="max-w-[90vw] w-[1200px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-3xl font-bold mb-2">
+                            {product
+                                ? "Edit Prebuilt Product"
+                                : "Add New Prebuilt Product"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        {/* Main Product Information */}
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
+                                <h3 className="text-xl font-semibold mb-4">
+                                    Basic Information
+                                </h3>
+                                <div className="space-y-4">
                                     <div>
                                         <Label
-                                            htmlFor="price"
+                                            htmlFor="name"
                                             className="text-base"
                                         >
-                                            Price (₹)
+                                            Product Name
                                         </Label>
+
                                         <Input
-                                            type="number"
-                                            id="price"
-                                            name="price"
-                                            value={formData.price}
+                                            type="text"
+                                            id="name"
+                                            name="name"
+                                            value={formData.name}
                                             onChange={handleChange}
                                             required
-                                            min={1}
-                                            placeholder="Enter price"
+                                            placeholder="Enter product name"
                                             className="mt-1.5"
                                         />
                                     </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label
+                                                htmlFor="price"
+                                                className="text-base"
+                                            >
+                                                Price (₹)
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                id="price"
+                                                name="price"
+                                                value={formData.price}
+                                                onChange={handleChange}
+                                                required
+                                                min={1}
+                                                placeholder="Enter price"
+                                                className="mt-1.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label
+                                                htmlFor="originalPrice"
+                                                className="text-base"
+                                            >
+                                                Original Price (₹)
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                id="originalPrice"
+                                                name="originalPrice"
+                                                value={formData.originalPrice}
+                                                onChange={handleChange}
+                                                required
+                                                min={1}
+                                                placeholder="Enter original price"
+                                                className="mt-1.5"
+                                            />
+                                        </div>
+                                    </div>
                                     <div>
                                         <Label
-                                            htmlFor="originalPrice"
+                                            htmlFor="category"
                                             className="text-base"
                                         >
-                                            Original Price (₹)
+                                            Category
                                         </Label>
                                         <Input
-                                            type="number"
-                                            id="originalPrice"
-                                            name="originalPrice"
-                                            value={formData.originalPrice}
+                                            type="text"
+                                            id="category"
+                                            name="category"
+                                            value={formData.category}
                                             onChange={handleChange}
                                             required
-                                            min={1}
-                                            placeholder="Enter original price"
+                                            placeholder="Enter category"
                                             className="mt-1.5"
                                         />
                                     </div>
-                                </div>
-                                <div>
-                                    <Label
-                                        htmlFor="category"
-                                        className="text-base"
-                                    >
-                                        Category
-                                    </Label>
-                                    <Input
-                                        type="text"
-                                        id="category"
-                                        name="category"
-                                        value={formData.category}
-                                        onChange={handleChange}
-                                        required
-                                        placeholder="Enter category"
-                                        className="mt-1.5"
-                                    />
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Product Images */}
-                        <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
-                            <h3 className="text-xl font-semibold mb-4">
-                                Product Images
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
-                                    <Input
-                                        type="file"
-                                        id="images"
-                                        onChange={handleImageUpload}
-                                        accept="image/*"
-                                        className="cursor-pointer"
-                                    />
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                        Upload product images (drag and drop
-                                        supported)
-                                    </p>
-                                </div>
-                                {formData.images.length === 0 ? (
-                                    <div className="col-span-4 text-muted-foreground text-sm p-4 text-center border rounded-lg">
-                                        No images uploaded yet
+                            {/* Product Images */}
+                            <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
+                                <h3 className="text-xl font-semibold mb-4">
+                                    Product Images
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
+                                        <Input
+                                            type="file"
+                                            id="images"
+                                            onChange={handleImageUpload}
+                                            accept="image/*"
+                                            className="cursor-pointer"
+                                        />
+                                        <p className="text-sm text-muted-foreground mt-2">
+                                            Upload product images (drag and drop
+                                            supported)
+                                        </p>
                                     </div>
-                                ) : (
-                                    formData.images.map((image, index) => (
-                                        <div
-                                            key={`image-${index}`}
-                                            className="relative group flex flex-col items-center"
-                                        >
-                                            <Image
-                                                src={image}
-                                                alt={`Image ${index + 1}`}
-                                                width={200}
-                                                height={200}
-                                                unoptimized={true} // Key prop
-                                                className="w-full h-32 object-cover rounded-lg"
-                                                onError={(e) => {
-                                                    const target =
-                                                        e.target as HTMLImageElement;
-                                                    target.src =
-                                                        "/placeholder.png";
-                                                }}
-                                            />
-                                            {index === 0 && (
-                                                <span className="absolute top-2 left-2 bg-yellow-400 text-xs px-2 py-1 rounded font-bold flex items-center gap-1">
-                                                    <Star className="w-3 h-3" />{" "}
-                                                    Main
-                                                </span>
-                                            )}
-                                            <div className="flex gap-1 mt-2">
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    onClick={() => {
-                                                        if (index > 0) {
-                                                            setFormData(
-                                                                (prev) => {
-                                                                    const imgs =
-                                                                        [
-                                                                            ...prev.images,
-                                                                        ];
-                                                                    [
-                                                                        imgs[
-                                                                            index -
-                                                                                1
-                                                                        ],
-                                                                        imgs[
-                                                                            index
-                                                                        ],
-                                                                    ] = [
-                                                                        imgs[
-                                                                            index
-                                                                        ],
-                                                                        imgs[
-                                                                            index -
-                                                                                1
-                                                                        ],
-                                                                    ];
-                                                                    return {
-                                                                        ...prev,
-                                                                        images: imgs,
-                                                                    };
-                                                                }
-                                                            );
-                                                        }
+                                    {formData.images.length === 0 ? (
+                                        <div className="col-span-4 text-muted-foreground text-sm p-4 text-center border rounded-lg">
+                                            No images uploaded yet
+                                        </div>
+                                    ) : (
+                                        formData.images.map((image, index) => (
+                                            <div
+                                                key={`image-${index}`}
+                                                className="relative group flex flex-col items-center"
+                                            >
+                                                <Image
+                                                    src={image}
+                                                    alt={`Image ${index + 1}`}
+                                                    width={200}
+                                                    height={200}
+                                                    unoptimized={true} // Key prop
+                                                    className="w-full h-32 object-cover rounded-lg"
+                                                    onError={(e) => {
+                                                        const target =
+                                                            e.target as HTMLImageElement;
+                                                        target.src =
+                                                            "/placeholder.png";
                                                     }}
-                                                    disabled={index === 0}
-                                                >
-                                                    <ArrowUp className="w-4 h-4" />
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    onClick={() => {
-                                                        if (
-                                                            index <
+                                                />
+                                                {index === 0 && (
+                                                    <span className="absolute top-2 left-2 bg-yellow-400 text-xs px-2 py-1 rounded font-bold flex items-center gap-1">
+                                                        <Star className="w-3 h-3" />{" "}
+                                                        Main
+                                                    </span>
+                                                )}
+                                                <div className="flex gap-1 mt-2">
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            if (index > 0) {
+                                                                setFormData(
+                                                                    (prev) => {
+                                                                        const imgs =
+                                                                            [
+                                                                                ...prev.images,
+                                                                            ];
+                                                                        [
+                                                                            imgs[
+                                                                                index -
+                                                                                    1
+                                                                            ],
+                                                                            imgs[
+                                                                                index
+                                                                            ],
+                                                                        ] = [
+                                                                            imgs[
+                                                                                index
+                                                                            ],
+                                                                            imgs[
+                                                                                index -
+                                                                                    1
+                                                                            ],
+                                                                        ];
+                                                                        return {
+                                                                            ...prev,
+                                                                            images: imgs,
+                                                                        };
+                                                                    }
+                                                                );
+                                                            }
+                                                        }}
+                                                        disabled={index === 0}
+                                                    >
+                                                        <ArrowUp className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            if (
+                                                                index <
+                                                                formData.images
+                                                                    .length -
+                                                                    1
+                                                            ) {
+                                                                setFormData(
+                                                                    (prev) => {
+                                                                        const imgs =
+                                                                            [
+                                                                                ...prev.images,
+                                                                            ];
+                                                                        [
+                                                                            imgs[
+                                                                                index +
+                                                                                    1
+                                                                            ],
+                                                                            imgs[
+                                                                                index
+                                                                            ],
+                                                                        ] = [
+                                                                            imgs[
+                                                                                index
+                                                                            ],
+                                                                            imgs[
+                                                                                index +
+                                                                                    1
+                                                                            ],
+                                                                        ];
+                                                                        return {
+                                                                            ...prev,
+                                                                            images: imgs,
+                                                                        };
+                                                                    }
+                                                                );
+                                                            }
+                                                        }}
+                                                        disabled={
+                                                            index ===
                                                             formData.images
                                                                 .length -
                                                                 1
-                                                        ) {
-                                                            setFormData(
-                                                                (prev) => {
-                                                                    const imgs =
-                                                                        [
-                                                                            ...prev.images,
-                                                                        ];
-                                                                    [
-                                                                        imgs[
-                                                                            index +
-                                                                                1
-                                                                        ],
-                                                                        imgs[
-                                                                            index
-                                                                        ],
-                                                                    ] = [
-                                                                        imgs[
-                                                                            index
-                                                                        ],
-                                                                        imgs[
-                                                                            index +
-                                                                                1
-                                                                        ],
-                                                                    ];
-                                                                    return {
-                                                                        ...prev,
-                                                                        images: imgs,
-                                                                    };
-                                                                }
-                                                            );
                                                         }
-                                                    }}
-                                                    disabled={
-                                                        index ===
-                                                        formData.images.length -
-                                                            1
+                                                    >
+                                                        <ArrowDown className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handleImageDelete(
+                                                                index
+                                                            )
+                                                        }
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Product Descriptions */}
+                        <div className="grid grid-cols-2 gap-8">
+                            <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
+                                <h3 className="text-xl font-semibold mb-4">
+                                    Product Description
+                                </h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <Label
+                                            htmlFor="description"
+                                            className="text-base"
+                                        >
+                                            Short Description
+                                        </Label>
+                                        <Textarea
+                                            id="description"
+                                            name="description"
+                                            value={formData.description}
+                                            onChange={handleChange}
+                                            required
+                                            placeholder="Enter a brief product description"
+                                            className="min-h-[100px] mt-1.5"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label
+                                            htmlFor="productdesc"
+                                            className="text-base"
+                                        >
+                                            Detailed Description
+                                        </Label>
+                                        <Textarea
+                                            id="productdesc"
+                                            name="productdesc"
+                                            value={formData.productdesc}
+                                            onChange={handleChange}
+                                            placeholder="Enter detailed product description"
+                                            className="min-h-[150px] mt-1.5"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Product Features & Details */}
+                            <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
+                                <h3 className="text-xl font-semibold mb-4">
+                                    Features & Details
+                                </h3>
+                                <div className="space-y-6">
+                                    <div>
+                                        <Label className="text-base mb-2 block">
+                                            Features
+                                        </Label>
+                                        <div className="space-y-2">
+                                            {formData.features.map(
+                                                (feature, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="flex items-center gap-2 bg-background p-2 rounded-md"
+                                                    >
+                                                        <span className="w-2 h-2 bg-primary rounded-full" />
+                                                        <span className="flex-1">
+                                                            {feature}
+                                                        </span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                removeFeature(
+                                                                    index
+                                                                )
+                                                            }
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                )
+                                            )}
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={newFeature}
+                                                    onChange={(e) =>
+                                                        setNewFeature(
+                                                            e.target.value
+                                                        )
                                                     }
-                                                >
-                                                    <ArrowDown className="w-4 h-4" />
-                                                </Button>
+                                                    placeholder="Add new feature"
+                                                    className="flex-1"
+                                                />
                                                 <Button
                                                     type="button"
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        handleImageDelete(index)
-                                                    }
+                                                    onClick={addFeature}
                                                 >
-                                                    <X className="h-4 w-4" />
+                                                    <Plus className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                                    </div>
 
-                    {/* Product Descriptions */}
-                    <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
-                            <h3 className="text-xl font-semibold mb-4">
-                                Product Description
-                            </h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <Label
-                                        htmlFor="description"
-                                        className="text-base"
-                                    >
-                                        Short Description
-                                    </Label>
-                                    <Textarea
-                                        id="description"
-                                        name="description"
-                                        value={formData.description}
-                                        onChange={handleChange}
-                                        required
-                                        placeholder="Enter a brief product description"
-                                        className="min-h-[100px] mt-1.5"
-                                    />
-                                </div>
-                                <div>
-                                    <Label
-                                        htmlFor="productdesc"
-                                        className="text-base"
-                                    >
-                                        Detailed Description
-                                    </Label>
-                                    <Textarea
-                                        id="productdesc"
-                                        name="productdesc"
-                                        value={formData.productdesc}
-                                        onChange={handleChange}
-                                        placeholder="Enter detailed product description"
-                                        className="min-h-[150px] mt-1.5"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Product Features & Details */}
-                        <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
-                            <h3 className="text-xl font-semibold mb-4">
-                                Features & Details
-                            </h3>
-                            <div className="space-y-6">
-                                <div>
-                                    <Label className="text-base mb-2 block">
-                                        Features
-                                    </Label>
-                                    <div className="space-y-2">
-                                        {formData.features.map(
-                                            (feature, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="flex items-center gap-2 bg-background p-2 rounded-md"
-                                                >
-                                                    <span className="w-2 h-2 bg-primary rounded-full" />
-                                                    <span className="flex-1">
-                                                        {feature}
-                                                    </span>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            removeFeature(index)
-                                                        }
+                                    <div>
+                                        <Label className="text-base mb-2 block">
+                                            Product Details
+                                        </Label>
+                                        <div className="space-y-2">
+                                            {formData.productDetails.map(
+                                                (detail, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="flex items-center gap-2 bg-background p-2 rounded-md"
                                                     >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            )
-                                        )}
-                                        <div className="flex gap-2">
+                                                        <span className="w-2 h-2 bg-primary rounded-full" />
+                                                        <span className="flex-1">
+                                                            {detail}
+                                                        </span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                removeDetail(
+                                                                    index
+                                                                )
+                                                            }
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                )
+                                            )}
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    value={newDetail}
+                                                    onChange={(e) =>
+                                                        setNewDetail(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="Add new detail"
+                                                    className="flex-1"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    onClick={addDetail}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Product Sizes */}
+                        <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-xl font-semibold">
+                                    Product Sizes
+                                </h3>
+                                <Button
+                                    type="button"
+                                    onClick={addSize}
+                                    size="sm"
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Size
+                                </Button>
+                            </div>
+                            <div className="space-y-4">
+                                {formData.sizes.map((size, index) => (
+                                    <div
+                                        key={index}
+                                        className="grid grid-cols-5 gap-4 items-end bg-background p-4 rounded-lg"
+                                    >
+                                        <div>
+                                            <Label>Size Name</Label>
                                             <Input
-                                                value={newFeature}
+                                                type="text"
+                                                value={size.name}
                                                 onChange={(e) =>
-                                                    setNewFeature(
+                                                    updateSize(
+                                                        index,
+                                                        "name",
                                                         e.target.value
                                                     )
                                                 }
-                                                placeholder="Add new feature"
-                                                className="flex-1"
+                                                placeholder="Size name"
+                                                required
+                                                className="mt-1.5"
                                             />
-                                            <Button
-                                                type="button"
-                                                onClick={addFeature}
-                                            >
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <Label className="text-base mb-2 block">
-                                        Product Details
-                                    </Label>
-                                    <div className="space-y-2">
-                                        {formData.productDetails.map(
-                                            (detail, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="flex items-center gap-2 bg-background p-2 rounded-md"
-                                                >
-                                                    <span className="w-2 h-2 bg-primary rounded-full" />
-                                                    <span className="flex-1">
-                                                        {detail}
-                                                    </span>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            removeDetail(index)
-                                                        }
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            )
-                                        )}
-                                        <div className="flex gap-2">
+                                        <div>
+                                            <Label>Price (₹)</Label>
                                             <Input
-                                                value={newDetail}
+                                                type="number"
+                                                value={size.price}
                                                 onChange={(e) =>
-                                                    setNewDetail(e.target.value)
+                                                    updateSize(
+                                                        index,
+                                                        "price",
+                                                        e.target.value
+                                                    )
                                                 }
-                                                placeholder="Add new detail"
-                                                className="flex-1"
+                                                placeholder="Price"
+                                                min={1}
+                                                required
+                                                className="mt-1.5"
                                             />
+                                        </div>
+                                        <div>
+                                            <Label>Original Price (₹)</Label>
+                                            <Input
+                                                type="number"
+                                                value={size.originalPrice}
+                                                onChange={(e) =>
+                                                    updateSize(
+                                                        index,
+                                                        "originalPrice",
+                                                        e.target.value
+                                                    )
+                                                }
+                                                placeholder="Original price"
+                                                min={1}
+                                                required
+                                                className="mt-1.5"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Size Type</Label>
+                                            <select
+                                                value={size.sizeType}
+                                                onChange={(e) =>
+                                                    updateSize(
+                                                        index,
+                                                        "sizeType",
+                                                        e.target.value
+                                                    )
+                                                }
+                                                className="w-full rounded-md border border-input bg-background px-3 py-2 mt-1.5"
+                                                required
+                                            >
+                                                <option value="standard">
+                                                    Standard
+                                                </option>
+                                                <option value="fractional">
+                                                    Fractional
+                                                </option>
+                                                <option value="custom">
+                                                    Custom
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div>
                                             <Button
                                                 type="button"
-                                                onClick={addDetail}
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() =>
+                                                    removeSize(index)
+                                                }
+                                                className="w-full"
                                             >
-                                                <Plus className="h-4 w-4" />
+                                                <X className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Product Sizes */}
-                    <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-xl font-semibold">
-                                Product Sizes
+                        {/* Product Settings */}
+                        <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
+                            <h3 className="text-xl font-semibold mb-4">
+                                Product Settings
                             </h3>
-                            <Button type="button" onClick={addSize} size="sm">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Size
-                            </Button>
-                        </div>
-                        <div className="space-y-4">
-                            {formData.sizes.map((size, index) => (
-                                <div
-                                    key={index}
-                                    className="grid grid-cols-5 gap-4 items-end bg-background p-4 rounded-lg"
-                                >
-                                    <div>
-                                        <Label>Size Name</Label>
-                                        <Input
-                                            type="text"
-                                            value={size.name}
-                                            onChange={(e) =>
-                                                updateSize(
-                                                    index,
-                                                    "name",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Size name"
-                                            required
-                                            className="mt-1.5"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Price (₹)</Label>
-                                        <Input
-                                            type="number"
-                                            value={size.price}
-                                            onChange={(e) =>
-                                                updateSize(
-                                                    index,
-                                                    "price",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Price"
-                                            min={1}
-                                            required
-                                            className="mt-1.5"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Original Price (₹)</Label>
-                                        <Input
-                                            type="number"
-                                            value={size.originalPrice}
-                                            onChange={(e) =>
-                                                updateSize(
-                                                    index,
-                                                    "originalPrice",
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Original price"
-                                            min={1}
-                                            required
-                                            className="mt-1.5"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label>Size Type</Label>
-                                        <select
-                                            value={size.sizeType}
-                                            onChange={(e) =>
-                                                updateSize(
-                                                    index,
-                                                    "sizeType",
-                                                    e.target.value
-                                                )
-                                            }
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 mt-1.5"
-                                            required
-                                        >
-                                            <option value="standard">
-                                                Standard
-                                            </option>
-                                            <option value="fractional">
-                                                Fractional
-                                            </option>
-                                            <option value="custom">
-                                                Custom
-                                            </option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => removeSize(index)}
-                                            className="w-full"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                            <div className="space-y-4">
+                                <div className="flex items-center space-x-2 p-4 bg-background rounded-lg">
+                                    <Checkbox
+                                        id="isCustomizable"
+                                        name="isCustomizable"
+                                        checked={formData.isCustomizable}
+                                        onCheckedChange={(checked) =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                isCustomizable:
+                                                    checked as boolean,
+                                            }))
+                                        }
+                                    />
+                                    <Label
+                                        htmlFor="isCustomizable"
+                                        className="text-base cursor-pointer"
+                                    >
+                                        Is Customizable
+                                    </Label>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Product Settings */}
-                    <div className="space-y-6 bg-muted/30 p-6 rounded-lg">
-                        <h3 className="text-xl font-semibold mb-4">
-                            Product Settings
-                        </h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center space-x-2 p-4 bg-background rounded-lg">
-                                <Checkbox
-                                    id="isCustomizable"
-                                    name="isCustomizable"
-                                    checked={formData.isCustomizable}
-                                    onCheckedChange={(checked) =>
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            isCustomizable: checked as boolean,
-                                        }))
-                                    }
-                                />
-                                <Label
-                                    htmlFor="isCustomizable"
-                                    className="text-base cursor-pointer"
-                                >
-                                    Is Customizable
-                                </Label>
-                            </div>
-                            <div className="flex items-center space-x-2 p-4 bg-background rounded-lg">
-                                <Checkbox
-                                    id="highlighted"
-                                    name="highlighted"
-                                    checked={formData.highlighted}
-                                    onCheckedChange={(checked) =>
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            highlighted: checked as boolean,
-                                        }))
-                                    }
-                                />
-                                <Label
-                                    htmlFor="highlighted"
-                                    className="text-base cursor-pointer"
-                                >
-                                    Highlight Product
-                                </Label>
+                                <div className="flex items-center space-x-2 p-4 bg-background rounded-lg">
+                                    <Checkbox
+                                        id="highlighted"
+                                        name="highlighted"
+                                        checked={formData.highlighted}
+                                        onCheckedChange={(checked) =>
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                highlighted: checked as boolean,
+                                            }))
+                                        }
+                                    />
+                                    <Label
+                                        htmlFor="highlighted"
+                                        className="text-base cursor-pointer"
+                                    >
+                                        Highlight Product
+                                    </Label>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <DialogFooter className="gap-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                            disabled={isSubmitting}
-                            className="px-8"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="px-8"
-                        >
-                            {isSubmitting && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            {product ? "Update Product" : "Add Product"}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        <DialogFooter className="gap-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                                disabled={isSubmitting}
+                                className="px-8"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="px-8"
+                            >
+                                {isSubmitting && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
+                                {product ? "Update Product" : "Add Product"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

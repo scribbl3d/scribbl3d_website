@@ -626,7 +626,10 @@ export default function PrinterDetailPage() {
                             <DownloadsTab downloads={printer.downloads} />
                         )}
                         {activeTab === "support" && (
-                            <SupportTab warrantyYears={printer.warrantyYears} />
+                            <SupportTab
+                                warrantyYears={printer.warrantyYears}
+                                price={printer.price}
+                            />
                         )}
                     </div>
                 </div>
@@ -781,7 +784,7 @@ function DownloadsTab({ downloads }) {
     );
 }
 
-function SupportTab({ warrantyYears }) {
+function SupportTab({ warrantyYears, price }) {
     return (
         <div className="space-y-6">
             <div>
@@ -809,9 +812,9 @@ function SupportTab({ warrantyYears }) {
                     Installation & Training
                 </h3>
                 <p className="text-gray-700">
-                    Professional installation available. Includes on-site setup,
-                    calibration, and 2-hour training session for up to 3
-                    operators.
+                    {price < 50000
+                        ? "Guided video setup support with complete manuals and documentation for a seamless self-installation experience."
+                        : "On-site professional installation and 2-hour operator training for select pincodes; structured video assistance and documentation for all other locations."}
                 </p>
             </div>
         </div>

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import WishlistCard from "./wishlist-card";
+import WishlistCardSkeleton from "./wishlist-card-skeleton";
 import WishlistModal from "./wishlist-modal";
+
 import { WishlistGridItem } from "./wishlist.types";
 
 export default function Wishlist() {
@@ -43,7 +45,13 @@ export default function Wishlist() {
                 </div>
             </div>
 
-            {loading && <p className="text-sm text-gray-500">Loading…</p>}
+            {loading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <WishlistCardSkeleton key={i} />
+                    ))}
+                </div>
+            )}
 
             {!loading && items.length === 0 && (
                 <p className="text-sm text-gray-500">Wishlist is empty.</p>

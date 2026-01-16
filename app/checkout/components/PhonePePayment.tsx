@@ -74,7 +74,7 @@ export default function PhonePePayment({
                 orderId,
                 MUID: `MUID${Date.now()}${Math.random().toString(36).slice(2)}`,
             });
-
+            console.log("resposne from paytm after payment ", response);
             if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
                 sessionStorage.setItem("phonepe_transaction_id", transactionId);
                 sessionStorage.setItem("phonepe_order_id", orderId);

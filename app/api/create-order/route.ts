@@ -169,7 +169,6 @@ export async function POST(req: Request) {
                 throw new Error(`Invalid cart item ${item.id}`);
             });
 
-            // ✅ CLEAR CART AFTER ORDER CREATION
             await prisma.cartItem.deleteMany({
                 where: { cartId: cart.id },
             });

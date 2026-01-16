@@ -5,9 +5,9 @@ import { ArrowLeft, Check, Download, Heart } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import SimilarResinsCarousel from "@/components/resins/SimilarResinsCarousel";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,7 +18,7 @@ export default function ResinDetailPage() {
     const [activeTab, setActiveTab] = useState("description");
     const { data: session } = useSession();
     const [isFavorite, setIsFavorite] = useState(false);
-    const [isInWishlist, setIsInWishlist] = useState(false);
+
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
     const [resin, setResin] = useState<any>(null);
@@ -660,6 +660,12 @@ export default function ResinDetailPage() {
                         <SafetyTab downloads={resin.downloads} />
                     )}
                 </div>
+            </div>
+            <div className="mt-12">
+                <SimilarResinsCarousel
+                    currentResinId={resin.id}
+                    technology={resin.technology}
+                />
             </div>
         </div>
     );

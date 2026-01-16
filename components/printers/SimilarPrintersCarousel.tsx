@@ -177,6 +177,7 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
 
     const { data: session } = useSession();
     const { addToCart } = useCart();
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
     const materials =
         printer.attributes
@@ -212,6 +213,68 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
             setIsCartLoading(false);
         }
     };
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishlistLoading) return;
+
+        setIsWishlistLoading(true);
+
+        const wasInWishlist = isFavorite;
+
+        // ✅ Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    resinId: printer.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${printer.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // 🔁 rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
 
     return (
         <Link href={`/printers/${printer.slug}`} className="block h-full">
@@ -228,19 +291,20 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                     )}
 
                     <button
-                        onClick={(e) => {
-                            e.preventDefault();
-                            setIsFavorite(!isFavorite);
-                        }}
+                        onClick={handleToggleWishlist}
                         className="absolute top-4 right-4 w-9 h-9 bg-white rounded-full shadow flex items-center justify-center"
                     >
-                        <Heart
-                            className={`w-4 h-4 ${
-                                isFavorite
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-400"
-                            }`}
-                        />
+                        {isWishlistLoading ? (
+                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                        ) : (
+                            <Heart
+                                className={`w-5 h-5 transition ${
+                                    isFavorite
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-400"
+                                }`}
+                            />
+                        )}
                     </button>
                 </div>
 

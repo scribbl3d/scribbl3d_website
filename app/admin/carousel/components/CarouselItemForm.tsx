@@ -20,7 +20,7 @@ interface CarouselItem {
 
 interface CarouselItemFormProps {
     item: CarouselItem;
-    onSave: (formData: FormData, id?: string) => void;
+    onSave: (formData: FormData, id?: string) => Promise<void>;
     onCancel: () => void;
 }
 
@@ -33,16 +33,18 @@ export function CarouselItemForm({
     const [duration, setDuration] = useState(item.duration || 5);
     const [file, setFile] = useState<File | null>(null);
 
+    const isEdit = !!item.id;
+
     useEffect(() => {
         setType(item.type || "image");
         setDuration(item.duration || 5);
         setFile(null);
     }, [item]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!file && !item.id) {
+        if (!file && !isEdit) {
             alert("Please select a file");
             return;
         }
@@ -52,14 +54,17 @@ export function CarouselItemForm({
         formData.append("type", type);
         formData.append("duration", String(duration));
 
-        onSave(formData, item.id || undefined);
+        await onSave(formData, item.id || undefined);
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
                 <Label>Type</Label>
-                <Select value={type} onValueChange={(v) => setType(v as any)}>
+                <Select
+                    value={type}
+                    onValueChange={(v) => setType(v as "image" | "video")}
+                >
                     <SelectTrigger>
                         <SelectValue />
                     </SelectTrigger>
@@ -94,7 +99,7 @@ export function CarouselItemForm({
                     Cancel
                 </Button>
                 <Button type="submit">
-                    {item.id ? "Update" : "Add"} Carousel Item
+                    {isEdit ? "Update" : "Add"} Carousel Item
                 </Button>
             </div>
         </form>
