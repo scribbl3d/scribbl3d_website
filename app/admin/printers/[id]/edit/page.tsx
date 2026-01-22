@@ -26,16 +26,13 @@ const MATERIAL_OPTIONS = [
     "PLA",
     "PETG",
     "ABS",
-    "ASA",
     "TPU (Flexible)",
     "Nylon (PA)",
-    "Polycarbonate (PC)",
     "Standard Resin",
     "ABS-Like Resin",
     "Tough Resin",
     "Flexible Resin",
     "Water-Washable Resin",
-    "High-Temperature Resin",
     "Dental Resin",
     "Castable Resin",
     "Nylon PA12",
@@ -248,14 +245,14 @@ export default function PrinterFormPage() {
         // 1. Validation for Mandatory Specs
         const missingSpecs = MANDATORY_SPECS.filter((mandatoryLabel) => {
             const spec = formData.specifications.find(
-                (s) => s.label.toLowerCase() === mandatoryLabel.toLowerCase()
+                (s) => s.label.toLowerCase() === mandatoryLabel.toLowerCase(),
             );
             return !spec || !spec.value.trim();
         });
 
         if (missingSpecs.length > 0) {
             alert(
-                `Missing mandatory specifications:\n- ${missingSpecs.join("\n- ")}`
+                `Missing mandatory specifications:\n- ${missingSpecs.join("\n- ")}`,
             );
             return;
         }
@@ -278,13 +275,13 @@ export default function PrinterFormPage() {
                 discount = Math.round(
                     ((originalPriceInPaise - priceInPaise) /
                         originalPriceInPaise) *
-                        100
+                        100,
                 );
             }
             const volMax = Math.max(
                 Number(formData.volumeLength) || 0,
                 Number(formData.volumeWidth) || 0,
-                Number(formData.volumeHeight) || 0
+                Number(formData.volumeHeight) || 0,
             );
 
             const data = new FormData();
@@ -311,7 +308,7 @@ export default function PrinterFormPage() {
 
             data.append(
                 "specifications",
-                JSON.stringify(formData.specifications)
+                JSON.stringify(formData.specifications),
             );
             data.append("features", JSON.stringify(formData.features));
             data.append("applications", JSON.stringify(formData.applications));
@@ -334,7 +331,7 @@ export default function PrinterFormPage() {
                         JSON.stringify({
                             isMain: img.isMain,
                             sortOrder: img.sortOrder,
-                        })
+                        }),
                     );
                 }
             });
@@ -376,7 +373,7 @@ export default function PrinterFormPage() {
     const handleMachineDimensions = (
         index: number,
         axis: "L" | "W" | "H",
-        val: string
+        val: string,
     ) => {
         const spec = formData.specifications[index];
         // Clean current string to get raw numbers.
@@ -421,7 +418,7 @@ export default function PrinterFormPage() {
         field: keyof PrinterFormData,
         index: number,
         key: string,
-        value: any
+        value: any,
     ) => {
         setFormData((prev) => {
             const arr = [...(prev[field] as any[])];
@@ -518,7 +515,7 @@ export default function PrinterFormPage() {
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Basic Details",
-                                    <FileText className="w-5 h-5" />
+                                    <FileText className="w-5 h-5" />,
                                 )}
                                 <div className="grid gap-6">
                                     <div>
@@ -639,7 +636,7 @@ export default function PrinterFormPage() {
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Detailed Specifications",
-                                    <Cpu className="w-5 h-5" />
+                                    <Cpu className="w-5 h-5" />,
                                 )}
 
                                 {SPEC_CATEGORIES.map((cat) => (
@@ -675,7 +672,7 @@ export default function PrinterFormPage() {
                                                 }))
                                                 .filter(
                                                     ({ spec }) =>
-                                                        spec.category === cat
+                                                        spec.category === cat,
                                                 )
                                                 .map(
                                                     ({
@@ -685,7 +682,7 @@ export default function PrinterFormPage() {
                                                         // Only "Supported Materials" and "Chamber Type" are strict Mandatory
                                                         const isStrictMandatory =
                                                             MANDATORY_SPECS.includes(
-                                                                spec.label
+                                                                spec.label,
                                                             );
 
                                                         /* --- RENDER LOGIC BASED ON LABEL --- */
@@ -711,7 +708,7 @@ export default function PrinterFormPage() {
                                                                             spec.value
                                                                         }
                                                                         onChange={(
-                                                                            e
+                                                                            e,
                                                                         ) =>
                                                                             updateArrayItem(
                                                                                 "specifications",
@@ -719,7 +716,7 @@ export default function PrinterFormPage() {
                                                                                 "value",
                                                                                 e
                                                                                     .target
-                                                                                    .value
+                                                                                    .value,
                                                                             )
                                                                         }
                                                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md"
@@ -731,7 +728,7 @@ export default function PrinterFormPage() {
                                                                         </option>
                                                                         {CHAMBER_OPTIONS.map(
                                                                             (
-                                                                                opt
+                                                                                opt,
                                                                             ) => (
                                                                                 <option
                                                                                     key={
@@ -745,7 +742,7 @@ export default function PrinterFormPage() {
                                                                                         opt
                                                                                     }
                                                                                 </option>
-                                                                            )
+                                                                            ),
                                                                         )}
                                                                     </select>
                                                                 </div>
@@ -767,7 +764,7 @@ export default function PrinterFormPage() {
                                                             const currentVals =
                                                                 spec.value
                                                                     ? spec.value.split(
-                                                                          ", "
+                                                                          ", ",
                                                                       )
                                                                     : [];
 
@@ -788,7 +785,7 @@ export default function PrinterFormPage() {
                                                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 bg-white p-3 border rounded-md max-h-48 overflow-y-auto">
                                                                         {options.map(
                                                                             (
-                                                                                opt
+                                                                                opt,
                                                                             ) => (
                                                                                 <label
                                                                                     key={
@@ -799,12 +796,12 @@ export default function PrinterFormPage() {
                                                                                     <input
                                                                                         type="checkbox"
                                                                                         checked={currentVals.includes(
-                                                                                            opt
+                                                                                            opt,
                                                                                         )}
                                                                                         onChange={() =>
                                                                                             handleMultiSelectSpec(
                                                                                                 originalIndex,
-                                                                                                opt
+                                                                                                opt,
                                                                                             )
                                                                                         }
                                                                                         className="rounded border-gray-300 text-black focus:ring-black"
@@ -815,7 +812,7 @@ export default function PrinterFormPage() {
                                                                                         }
                                                                                     </span>
                                                                                 </label>
-                                                                            )
+                                                                            ),
                                                                         )}
                                                                     </div>
                                                                     <p className="text-xs text-gray-400">
@@ -836,15 +833,15 @@ export default function PrinterFormPage() {
                                                             const parts =
                                                                 spec.value
                                                                     .split(
-                                                                        " x "
+                                                                        " x ",
                                                                     )
                                                                     .map((p) =>
                                                                         p
                                                                             .replace(
                                                                                 "mm",
-                                                                                ""
+                                                                                "",
                                                                             )
-                                                                            .trim()
+                                                                            .trim(),
                                                                     );
                                                             return (
                                                                 <div
@@ -867,14 +864,14 @@ export default function PrinterFormPage() {
                                                                                 ""
                                                                             }
                                                                             onChange={(
-                                                                                e
+                                                                                e,
                                                                             ) =>
                                                                                 handleMachineDimensions(
                                                                                     originalIndex,
                                                                                     "L",
                                                                                     e
                                                                                         .target
-                                                                                        .value
+                                                                                        .value,
                                                                                 )
                                                                             }
                                                                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md text-center"
@@ -890,14 +887,14 @@ export default function PrinterFormPage() {
                                                                                 ""
                                                                             }
                                                                             onChange={(
-                                                                                e
+                                                                                e,
                                                                             ) =>
                                                                                 handleMachineDimensions(
                                                                                     originalIndex,
                                                                                     "W",
                                                                                     e
                                                                                         .target
-                                                                                        .value
+                                                                                        .value,
                                                                                 )
                                                                             }
                                                                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md text-center"
@@ -913,14 +910,14 @@ export default function PrinterFormPage() {
                                                                                 ""
                                                                             }
                                                                             onChange={(
-                                                                                e
+                                                                                e,
                                                                             ) =>
                                                                                 handleMachineDimensions(
                                                                                     originalIndex,
                                                                                     "H",
                                                                                     e
                                                                                         .target
-                                                                                        .value
+                                                                                        .value,
                                                                                 )
                                                                             }
                                                                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md text-center"
@@ -949,7 +946,7 @@ export default function PrinterFormPage() {
                                                             const numericValue =
                                                                 spec.value.replace(
                                                                     ` ${unit}`,
-                                                                    ""
+                                                                    "",
                                                                 );
 
                                                             return (
@@ -966,7 +963,7 @@ export default function PrinterFormPage() {
                                                                         }
                                                                         // User can rename "Print Speed" if they really want, but usually won't
                                                                         onChange={(
-                                                                            e
+                                                                            e,
                                                                         ) =>
                                                                             updateArrayItem(
                                                                                 "specifications",
@@ -974,7 +971,7 @@ export default function PrinterFormPage() {
                                                                                 "label",
                                                                                 e
                                                                                     .target
-                                                                                    .value
+                                                                                    .value,
                                                                             )
                                                                         }
                                                                         className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700"
@@ -987,14 +984,14 @@ export default function PrinterFormPage() {
                                                                                 numericValue
                                                                             }
                                                                             onChange={(
-                                                                                e
+                                                                                e,
                                                                             ) =>
                                                                                 handleUnitInput(
                                                                                     originalIndex,
                                                                                     e
                                                                                         .target
                                                                                         .value,
-                                                                                    unit
+                                                                                    unit,
                                                                                 )
                                                                             }
                                                                             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md"
@@ -1010,7 +1007,7 @@ export default function PrinterFormPage() {
                                                                         onClick={() =>
                                                                             removeArrayItem(
                                                                                 "specifications",
-                                                                                originalIndex
+                                                                                originalIndex,
                                                                             )
                                                                         }
                                                                         className="p-2 text-gray-400 hover:text-red-500"
@@ -1038,7 +1035,7 @@ export default function PrinterFormPage() {
                                                                         isStrictMandatory
                                                                     }
                                                                     onChange={(
-                                                                        e
+                                                                        e,
                                                                     ) =>
                                                                         !isStrictMandatory &&
                                                                         updateArrayItem(
@@ -1047,7 +1044,7 @@ export default function PrinterFormPage() {
                                                                             "label",
                                                                             e
                                                                                 .target
-                                                                                .value
+                                                                                .value,
                                                                         )
                                                                     }
                                                                     className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700 ${isStrictMandatory ? "bg-gray-100 cursor-not-allowed" : ""}`}
@@ -1059,7 +1056,7 @@ export default function PrinterFormPage() {
                                                                         spec.value
                                                                     }
                                                                     onChange={(
-                                                                        e
+                                                                        e,
                                                                     ) =>
                                                                         updateArrayItem(
                                                                             "specifications",
@@ -1067,7 +1064,7 @@ export default function PrinterFormPage() {
                                                                             "value",
                                                                             e
                                                                                 .target
-                                                                                .value
+                                                                                .value,
                                                                         )
                                                                     }
                                                                     className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md"
@@ -1080,7 +1077,7 @@ export default function PrinterFormPage() {
                                                                         onClick={() =>
                                                                             removeArrayItem(
                                                                                 "specifications",
-                                                                                originalIndex
+                                                                                originalIndex,
                                                                             )
                                                                         }
                                                                         className="p-2 text-gray-400 hover:text-red-500"
@@ -1090,7 +1087,7 @@ export default function PrinterFormPage() {
                                                                 )}
                                                             </div>
                                                         );
-                                                    }
+                                                    },
                                                 )}
                                         </div>
                                     </div>
@@ -1133,7 +1130,7 @@ export default function PrinterFormPage() {
                                                                     i,
                                                                     "title",
                                                                     e.target
-                                                                        .value
+                                                                        .value,
                                                                 )
                                                             }
                                                             className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md"
@@ -1144,7 +1141,7 @@ export default function PrinterFormPage() {
                                                             onClick={() =>
                                                                 removeArrayItem(
                                                                     "features",
-                                                                    i
+                                                                    i,
                                                                 )
                                                             }
                                                             className="text-gray-400 hover:text-red-500"
@@ -1152,7 +1149,7 @@ export default function PrinterFormPage() {
                                                             <X className="w-4 h-4" />
                                                         </button>
                                                     </div>
-                                                )
+                                                ),
                                             )}
                                         </div>
                                     </div>
@@ -1189,7 +1186,7 @@ export default function PrinterFormPage() {
                                                                     i,
                                                                     "name",
                                                                     e.target
-                                                                        .value
+                                                                        .value,
                                                                 )
                                                             }
                                                             className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md"
@@ -1200,7 +1197,7 @@ export default function PrinterFormPage() {
                                                             onClick={() =>
                                                                 removeArrayItem(
                                                                     "applications",
-                                                                    i
+                                                                    i,
                                                                 )
                                                             }
                                                             className="text-gray-400 hover:text-red-500"
@@ -1208,7 +1205,7 @@ export default function PrinterFormPage() {
                                                             <X className="w-4 h-4" />
                                                         </button>
                                                     </div>
-                                                )
+                                                ),
                                             )}
                                         </div>
                                     </div>
@@ -1261,7 +1258,7 @@ export default function PrinterFormPage() {
                                                         onClick={() =>
                                                             removeArrayItem(
                                                                 "downloads",
-                                                                i
+                                                                i,
                                                             )
                                                         }
                                                         className="text-gray-400 hover:text-red-600"
@@ -1278,7 +1275,7 @@ export default function PrinterFormPage() {
                                                                 "downloads",
                                                                 i,
                                                                 "title",
-                                                                e.target.value
+                                                                e.target.value,
                                                             )
                                                         }
                                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white"
@@ -1294,7 +1291,7 @@ export default function PrinterFormPage() {
                                                                 "downloads",
                                                                 i,
                                                                 "description",
-                                                                e.target.value
+                                                                e.target.value,
                                                             )
                                                         }
                                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white"
@@ -1310,7 +1307,7 @@ export default function PrinterFormPage() {
                                                                 "downloads",
                                                                 i,
                                                                 "downloadUrl",
-                                                                e.target.value
+                                                                e.target.value,
                                                             )
                                                         }
                                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded bg-white font-mono text-gray-600"
@@ -1372,7 +1369,7 @@ export default function PrinterFormPage() {
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Build Volume (mm) *",
-                                    <Settings className="w-4 h-4" />
+                                    <Settings className="w-4 h-4" />,
                                 )}
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="text-center">
@@ -1442,7 +1439,7 @@ export default function PrinterFormPage() {
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Images",
-                                    <ImageIcon className="w-4 h-4" />
+                                    <ImageIcon className="w-4 h-4" />,
                                 )}
                                 <div className="grid grid-cols-2 gap-3 mb-4">
                                     {formData.images.map((img, idx) => (
@@ -1474,7 +1471,7 @@ export default function PrinterFormPage() {
                                                             const [selected] =
                                                                 newImages.splice(
                                                                     idx,
-                                                                    1
+                                                                    1,
                                                                 );
 
                                                             // insert it at index 0
@@ -1488,7 +1485,7 @@ export default function PrinterFormPage() {
                                                                 newImages.map(
                                                                     (
                                                                         img,
-                                                                        i
+                                                                        i,
                                                                     ) => ({
                                                                         ...img,
                                                                         isMain:
@@ -1496,7 +1493,7 @@ export default function PrinterFormPage() {
                                                                             0,
                                                                         sortOrder:
                                                                             i,
-                                                                    })
+                                                                    }),
                                                                 );
 
                                                             setFormData({
@@ -1514,7 +1511,7 @@ export default function PrinterFormPage() {
                                                     onClick={() =>
                                                         removeArrayItem(
                                                             "images",
-                                                            idx
+                                                            idx,
                                                         )
                                                     }
                                                     className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"

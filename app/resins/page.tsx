@@ -2,6 +2,11 @@
 
 import PrinterHero from "@/components/printers/PrinterHero"; // reused
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
+
+import MobileFilterBar from "@/components/resins/Mobilefilterbar";
+import MobileResinFilters from "@/components/resins/Mobileresinfilters";
+import MobileSortSheet from "@/components/resins/Mobilesortsheet";
+
 import ResinFilters from "@/components/resins/ResinFilters";
 import ResinGrid from "@/components/resins/ResinGrid";
 import { useEffect, useState } from "react";
@@ -36,7 +41,7 @@ export default function ResinsPage() {
     /* ================= SORT ================= */
 
     const [sortBy, setSortBy] = useState<"new" | "price_asc" | "price_desc">(
-        "new"
+        "new",
     );
 
     /* ================= FILTER STATE ================= */
@@ -50,6 +55,11 @@ export default function ResinsPage() {
         washable: null,
         price: null,
     });
+
+    /* ================= MOBILE MODALS ================= */
+
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isSortOpen, setIsSortOpen] = useState(false);
 
     /* ================= SELECTED FILTERS (FOR BAR) ================= */
 
@@ -66,6 +76,17 @@ export default function ResinsPage() {
         minPrice: filters.price?.[0] ?? null,
         maxPrice: filters.price?.[1] ?? null,
     };
+
+    /* ================= ACTIVE FILTER COUNT ================= */
+
+    const activeFilterCount =
+        filters.materialTypes.length +
+        filters.technologies.length +
+        filters.resolutions.length +
+        filters.colours.length +
+        filters.brands.length +
+        (filters.washable !== null ? 1 : 0) +
+        (filters.price !== null ? 1 : 0);
 
     /* ================= FETCH ================= */
 
@@ -87,7 +108,7 @@ export default function ResinsPage() {
 
             /* ARRAY FILTERS */
             filters.materialTypes.forEach((v) =>
-                params.append("materialType", v)
+                params.append("materialType", v),
             );
             filters.technologies.forEach((v) => params.append("technology", v));
             filters.resolutions.forEach((v) => params.append("resolution", v));
@@ -132,19 +153,19 @@ export default function ResinsPage() {
                 /* ARRAY FILTERS */
                 case "material":
                     next.materialTypes = prev.materialTypes.filter(
-                        (v) => v !== value
+                        (v) => v !== value,
                     );
                     break;
 
                 case "technology":
                     next.technologies = prev.technologies.filter(
-                        (v) => v !== value
+                        (v) => v !== value,
                     );
                     break;
 
                 case "resolution":
                     next.resolutions = prev.resolutions.filter(
-                        (v) => v !== value
+                        (v) => v !== value,
                     );
                     break;
 
@@ -182,9 +203,16 @@ export default function ResinsPage() {
             <PrinterHero />
 
             <div className="container mx-auto px-4 py-8">
+                {/* Mobile Filter Bar */}
+                <MobileFilterBar
+                    onOpenFilters={() => setIsFilterOpen(true)}
+                    onOpenSort={() => setIsSortOpen(true)}
+                    activeFilterCount={activeFilterCount}
+                />
+
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar */}
-                    <div className="lg:w-1/4">
+                    {/* Sidebar - Hidden on mobile */}
+                    <div className="hidden lg:block lg:w-1/4">
                         <ResinFilters
                             filters={filters}
                             setFilters={setFilters}
@@ -192,13 +220,13 @@ export default function ResinsPage() {
                     </div>
 
                     {/* Grid */}
-                    <div className="lg:w-3/4">
+                    <div className="w-full lg:w-3/4">
                         <SelectedFiltersBar
                             selectedFilters={selectedFilters}
                             onRemove={removeFilter}
                         />
 
-                        {/* Top Bar */}
+                        {/* Top Bar - Hidden sort on mobile */}
                         <div className="mb-6 flex justify-between items-center">
                             <p className="text-gray-600">
                                 Showing{" "}
@@ -206,7 +234,8 @@ export default function ResinsPage() {
                                 resin{total !== 1 ? "s" : ""}
                             </p>
 
-                            <div className="relative min-w-[180px]">
+                            {/* Desktop Sort - Hidden on mobile */}
+                            <div className="hidden lg:block relative min-w-[180px]">
                                 <select
                                     value={sortBy}
                                     onChange={(e) =>
@@ -273,6 +302,23 @@ export default function ResinsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Filter Sheet */}
+            <MobileResinFilters
+                isOpen={isFilterOpen}
+                onClose={() => setIsFilterOpen(false)}
+                filters={filters}
+                setFilters={setFilters}
+                onApply={() => {}}
+            />
+
+            {/* Mobile Sort Sheet */}
+            <MobileSortSheet
+                isOpen={isSortOpen}
+                onClose={() => setIsSortOpen(false)}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+            />
         </div>
     );
 }

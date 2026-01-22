@@ -1,6 +1,8 @@
 "use client";
 
 import FilterPanel from "@/components/printers/FilterPanel";
+import MobileFilterHeader from "@/components/printers/Mobilefilterheader";
+import MobileFilterSheet from "@/components/printers/Mobilefiltersheet ";
 import PrinterGrid from "@/components/printers/PrinterGrid";
 import PrinterHero from "@/components/printers/PrinterHero";
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
@@ -12,6 +14,9 @@ export default function PrintersPage() {
     const [printers, setPrinters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
+
+    /* ================= MOBILE FILTER SHEET STATE ================= */
+    const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
     /* ================= FILTER OPTIONS ================= */
     const [filters, setFilters] = useState({
@@ -81,7 +86,7 @@ export default function PrintersPage() {
                 if (selectedFilters[key]?.length > 0) {
                     // @ts-ignore
                     selectedFilters[key].forEach((val) =>
-                        params.append(key, val)
+                        params.append(key, val),
                     );
                 }
             });
@@ -161,10 +166,29 @@ export default function PrintersPage() {
         <div className="min-h-screen bg-gray-50">
             <PrinterHero />
 
+            {/* Mobile Header with Filters & Sort - only visible on mobile */}
+            <div className="lg:hidden sticky top-0 z-30 bg-white">
+                <MobileFilterHeader
+                    onOpenFilters={() => setIsMobileFilterOpen(true)}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                />
+            </div>
+
+            {/* Mobile Filter Sheet */}
+            <MobileFilterSheet
+                isOpen={isMobileFilterOpen}
+                onClose={() => setIsMobileFilterOpen(false)}
+                filters={filters}
+                selectedFilters={selectedFilters}
+                onFilterChange={handleFilterChange}
+                onReset={resetFilters}
+            />
+
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar FIlter Panel*/}
-                    <div className="lg:w-1/4">
+                    {/* Sidebar Filter Panel - hidden on mobile */}
+                    <div className="hidden lg:block lg:w-1/4">
                         <FilterPanel
                             filters={filters}
                             selectedFilters={selectedFilters}
@@ -174,14 +198,14 @@ export default function PrintersPage() {
                     </div>
 
                     {/* Grid */}
-                    <div className="lg:w-3/4">
+                    <div className="w-full lg:w-3/4">
                         <SelectedFiltersBar
                             selectedFilters={selectedFilters}
                             onRemove={removeFilter}
                         />
 
-                        {/* Top Bar */}
-                        <div className="mb-6 flex justify-between items-center">
+                        {/* Top Bar - hidden on mobile since we have MobileFilterHeader */}
+                        <div className="hidden lg:flex mb-6 justify-between items-center">
                             <p className="text-gray-600">
                                 Showing{" "}
                                 <span className="font-semibold">{total}</span>{" "}
@@ -193,18 +217,18 @@ export default function PrintersPage() {
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value)}
                                     className="
-      w-full
-      h-[38px]
-      bg-white
-      border border-[#D1D5DC]
-      rounded-[10px]
-      px-4 pr-10
-      text-sm
-      text-gray-700
-      focus:outline-none
-      appearance-none
-      cursor-pointer
-    "
+                                        w-full
+                                        h-[38px]
+                                        bg-white
+                                        border border-[#D1D5DC]
+                                        rounded-[10px]
+                                        px-4 pr-10
+                                        text-sm
+                                        text-gray-700
+                                        focus:outline-none
+                                        appearance-none
+                                        cursor-pointer
+                                    "
                                 >
                                     <option value="popularity">
                                         Sort by: Popularity
@@ -239,6 +263,15 @@ export default function PrintersPage() {
                                     <polyline points="6 9 12 15 18 9" />
                                 </svg>
                             </div>
+                        </div>
+
+                        {/* Mobile results count */}
+                        <div className="lg:hidden mb-4">
+                            <p className="text-sm text-gray-600">
+                                Showing{" "}
+                                <span className="font-semibold">{total}</span>{" "}
+                                printer{total !== 1 ? "s" : ""}
+                            </p>
                         </div>
 
                         {/* Content */}
