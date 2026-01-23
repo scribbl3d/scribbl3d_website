@@ -21,20 +21,20 @@ sgMail.setApiKey(SENDGRID_API_KEY);
 
 export async function GET(
     req: NextRequest,
-    context: { params: Promise<{ transactionId: string }> }
+    context: { params: Promise<{ transactionId: string }> },
 ) {
     try {
         const { transactionId } = await context.params;
 
         console.log(
             "[Payment Status Check] Starting status check for:",
-            transactionId
+            transactionId,
         );
 
         if (!transactionId) {
             return NextResponse.json(
                 { success: false, message: "Transaction ID required" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -77,19 +77,43 @@ export async function GET(
             if (!order) {
                 return NextResponse.json(
                     { success: false, code: "ORDER_NOT_FOUND" },
-                    { status: 404 }
+                    { status: 404 },
                 );
             }
 
-            // Prevent duplicate execution
             if (order.status !== "confirmed" && order.status !== "shipped") {
+                const pi = result.data?.paymentInstrument;
+
+                let paymentMethod: string | null = null;
+                let maskedPaymentId: string | null = null;
+
+                if (pi?.type === "UPI") {
+                    paymentMethod = "UPI";
+                    maskedPaymentId = pi.payerVpa ?? null;
+                }
+
+                if (pi?.type === "CARD") {
+                    paymentMethod = pi.cardType ?? "CARD";
+                    maskedPaymentId = pi.maskedCardNumber ?? null;
+                }
+
                 const updatedOrder = await prisma.order.update({
                     where: { id: order.id },
-                    data: { status: "confirmed" },
+                    data: {
+                        status: "confirmed",
+
+                        // 🔐 payment details
+                        paymentMethod,
+                        paymentReference: result.data.transactionId, // PhonePe dispute ref
+                        maskedPaymentId,
+                    },
                     include: { user: true },
                 });
 
-                console.log("[Order] Marked as confirmed:", updatedOrder.id);
+                console.log(
+                    "[Order] Confirmed & payment details saved:",
+                    updatedOrder.id,
+                );
 
                 /* 📧 Send confirmation email */
                 try {
@@ -98,29 +122,16 @@ export async function GET(
                     console.error("[Email] Failed:", err);
                 }
 
-                /* 🚚 Trigger Delhivery shipment */
+                /* 🚚 Trigger shipment */
                 try {
                     await fetch(`${APP_URL}/api/internal/create-shipment`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ orderId: updatedOrder.id }),
                     });
-                    console.log(
-                        "[Delhivery] Shipment created for:",
-                        updatedOrder.id
-                    );
                 } catch (shipErr) {
-                    console.error(
-                        "[Delhivery] Shipment creation failed:",
-                        shipErr
-                    );
+                    console.error("[Shipment] Failed:", shipErr);
                 }
-            } else {
-                console.log(
-                    "[Order] Already processed, skipping:",
-                    order.id,
-                    order.status
-                );
             }
 
             return NextResponse.json({
@@ -157,7 +168,7 @@ export async function GET(
                 code: "ERROR",
                 message: "Failed to check payment status",
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
         if (!session?.user?.id) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
             if (!Array.isArray(items) || items.length !== 1) {
                 return NextResponse.json(
                     { error: "Buy Now must contain exactly one item" },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
 
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
             if (!cart || cart.items.length === 0) {
                 return NextResponse.json(
                     { error: "Cart is empty" },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
 
@@ -184,7 +184,7 @@ export async function POST(req: Request) {
                 totalAmount,
                 shippingAddress,
                 billingAddress,
-                paymentMethod,
+
                 status: "payment_pending",
                 transactionId,
             },
@@ -201,7 +201,7 @@ export async function POST(req: Request) {
                 error: "Failed to create order",
                 details: (error as Error).message,
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

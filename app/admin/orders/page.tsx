@@ -60,6 +60,8 @@ interface Order {
     };
     billingAddress?: any;
     paymentMethod?: string;
+    paymentReference?: string;
+    maskedPaymentId?: string;
     transactionId?: string;
     user?: {
         name?: string | null;
@@ -129,11 +131,11 @@ export default function OrdersPage() {
 
         const res = await fetch(
             `/api/internal/generate-label?waybill=${encodeURIComponent(
-                waybill
+                waybill,
             )}`,
             {
                 method: "GET",
-            }
+            },
         );
 
         if (!res.ok) {
@@ -253,7 +255,7 @@ export default function OrdersPage() {
         (o) =>
             o.status === "confirmed" ||
             o.status === "processing" ||
-            o.status === "payment_pending"
+            o.status === "payment_pending",
     );
 
     const shippedOrders = orders.filter((o) => o.status === "shipped");
@@ -261,13 +263,13 @@ export default function OrdersPage() {
     // 🔹 NEW BUCKETS (do not remove old ones yet)
 
     const paymentPendingOrders = orders.filter(
-        (o) => o.status === "payment_pending"
+        (o) => o.status === "payment_pending",
     );
 
     const confirmedProcessingOrders = orders.filter(
         (o) =>
             (o.status === "confirmed" || o.status === "processing") &&
-            !o.shipment?.waybill
+            !o.shipment?.waybill,
     );
 
     const inTransitOrders = orders.filter(
@@ -278,11 +280,11 @@ export default function OrdersPage() {
                 "picked_up",
                 "in_transit",
                 "out_for_delivery",
-            ].includes(o.shipment?.status ?? "")
+            ].includes(o.shipment?.status ?? ""),
     );
 
     const deliveredOrdersV2 = orders.filter(
-        (o) => o.status === "delivered" || o.shipment?.status === "delivered"
+        (o) => o.status === "delivered" || o.shipment?.status === "delivered",
     );
 
     const paginate = <T,>(data: T[], page: number) => {
@@ -292,12 +294,12 @@ export default function OrdersPage() {
 
     const paymentPendingOrdersPageData = paginate(
         paymentPendingOrders,
-        paymentPendingPage
+        paymentPendingPage,
     );
 
     const confirmedProcessingOrdersPageData = paginate(
         confirmedProcessingOrders,
-        confirmedProcessingPage
+        confirmedProcessingPage,
     );
 
     const inTransitOrdersPageData = paginate(inTransitOrders, inTransitPage);
@@ -312,7 +314,7 @@ export default function OrdersPage() {
 
         includeShipmentColumn: boolean,
         isConfirmedProcessing?: boolean,
-        paginationNode?: React.ReactNode
+        paginationNode?: React.ReactNode,
     ) => (
         <div className={`mb-8 rounded-lg shadow border ${colorClass} p-4`}>
             <h3 className="text-2xl font-semibold mb-4">{tableTitle}</h3>
@@ -351,7 +353,7 @@ export default function OrdersPage() {
                                         // SHIPPED TABLE → show shipment.status from DB
                                         <Badge
                                             className={getShipmentStatusColor(
-                                                order.shipment?.status
+                                                order.shipment?.status,
                                             )}
                                         >
                                             {order.shipment?.status ?? "—"}
@@ -360,7 +362,7 @@ export default function OrdersPage() {
                                         // CONFIRMED / DELIVERED TABLE → show order.status
                                         <Badge
                                             className={getStatusColor(
-                                                order.status
+                                                order.status,
                                             )}
                                         >
                                             {order.status}
@@ -419,7 +421,7 @@ export default function OrdersPage() {
                                                     setSelectedOrder(order);
                                                     // prefill trackingInfo in modal if present
                                                     const t = parseTracking(
-                                                        order.trackingInfo
+                                                        order.trackingInfo,
                                                     );
                                                     setTrackingInfo({
                                                         trackingNumber:
@@ -450,7 +452,7 @@ export default function OrdersPage() {
                                                 <DialogDescription>
                                                     Order #
                                                     {selectedOrder?.id.slice(
-                                                        -6
+                                                        -6,
                                                     )}
                                                 </DialogDescription>
                                             </DialogHeader>
@@ -539,6 +541,67 @@ export default function OrdersPage() {
                                                             </p>
                                                         </div>
                                                     </div>
+                                                    {/* Payment Details */}
+                                                    {(selectedOrder.paymentMethod ||
+                                                        selectedOrder.paymentReference ||
+                                                        selectedOrder.maskedPaymentId) && (
+                                                        <div>
+                                                            <h4 className="font-semibold mb-2">
+                                                                Payment Details
+                                                            </h4>
+
+                                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                                <div>
+                                                                    <strong>
+                                                                        Payment
+                                                                        Mode:
+                                                                    </strong>
+                                                                    <p className="capitalize">
+                                                                        {selectedOrder.paymentMethod
+                                                                            ? selectedOrder.paymentMethod.replace(
+                                                                                  "_",
+                                                                                  " ",
+                                                                              )
+                                                                            : "N/A"}
+                                                                    </p>
+                                                                </div>
+
+                                                                <div>
+                                                                    <strong>
+                                                                        Payment
+                                                                        Reference:
+                                                                    </strong>
+                                                                    <p className="break-all">
+                                                                        {selectedOrder.paymentReference ||
+                                                                            "N/A"}
+                                                                    </p>
+                                                                </div>
+
+                                                                <div>
+                                                                    <strong>
+                                                                        Masked
+                                                                        Identifier:
+                                                                    </strong>
+                                                                    <p>
+                                                                        {selectedOrder.maskedPaymentId ||
+                                                                            "N/A"}
+                                                                    </p>
+                                                                </div>
+
+                                                                <div>
+                                                                    <strong>
+                                                                        Payment
+                                                                        Status:
+                                                                    </strong>
+                                                                    <p className="capitalize">
+                                                                        {
+                                                                            selectedOrder.status
+                                                                        }
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                     <div>
                                                         <h4 className="font-semibold mb-2">
@@ -546,7 +609,7 @@ export default function OrdersPage() {
                                                         </h4>
                                                         <p>
                                                             {formatDate(
-                                                                selectedOrder.createdAt
+                                                                selectedOrder.createdAt,
                                                             )}
                                                         </p>
                                                     </div>
@@ -557,7 +620,7 @@ export default function OrdersPage() {
                                                         </h4>
                                                         <ul className="list-disc pl-5">
                                                             {(Array.isArray(
-                                                                selectedOrder.items
+                                                                selectedOrder.items,
                                                             )
                                                                 ? selectedOrder.items
                                                                 : []
@@ -568,7 +631,7 @@ export default function OrdersPage() {
                                                                 ).map(
                                                                     (
                                                                         item: any,
-                                                                        i: number
+                                                                        i: number,
                                                                     ) => (
                                                                         <li
                                                                             key={
@@ -624,12 +687,12 @@ export default function OrdersPage() {
                                                                                 <span className="font-semibold">
                                                                                     {formatRupees(
                                                                                         item.price *
-                                                                                            item.quantity
+                                                                                            item.quantity,
                                                                                     )}
                                                                                 </span>
                                                                             </div>
                                                                         </li>
-                                                                    )
+                                                                    ),
                                                                 )
                                                             ) : (
                                                                 <li>
@@ -644,7 +707,7 @@ export default function OrdersPage() {
                                                     {/* show tracking info if present */}
                                                     {(() => {
                                                         const t = parseTracking(
-                                                            selectedOrder.trackingInfo
+                                                            selectedOrder.trackingInfo,
                                                         );
                                                         if (
                                                             t &&
@@ -705,7 +768,7 @@ export default function OrdersPage() {
                                                         </h4>
                                                         <p>
                                                             {formatRupees(
-                                                                selectedOrder.totalAmount
+                                                                selectedOrder.totalAmount,
                                                             )}
                                                         </p>
                                                     </div>
@@ -718,13 +781,13 @@ export default function OrdersPage() {
                                                             variant="secondary"
                                                             onClick={() => {
                                                                 setPendingOrder(
-                                                                    selectedOrder
+                                                                    selectedOrder,
                                                                 );
                                                                 setShowStatusDialog(
-                                                                    true
+                                                                    true,
                                                                 );
                                                                 setPendingStatus(
-                                                                    selectedOrder.status
+                                                                    selectedOrder.status,
                                                                 );
                                                             }}
                                                         >
@@ -754,9 +817,9 @@ export default function OrdersPage() {
                                                                     {
                                                                         orderId:
                                                                             order.id,
-                                                                    }
+                                                                    },
                                                                 ),
-                                                            }
+                                                            },
                                                         );
 
                                                         const data =
@@ -765,7 +828,7 @@ export default function OrdersPage() {
                                                         if (!res.ok) {
                                                             throw new Error(
                                                                 data?.error ||
-                                                                    "Failed to create shipment"
+                                                                    "Failed to create shipment",
                                                             );
                                                         }
 
@@ -780,12 +843,12 @@ export default function OrdersPage() {
                                                             "/api/internal/sync-shipments",
                                                             {
                                                                 method: "POST",
-                                                            }
+                                                            },
                                                         );
 
                                                         // 2️⃣ THEN refetch orders
                                                         await fetchOrders().catch(
-                                                            () => {}
+                                                            () => {},
                                                         );
                                                     } catch (err: any) {
                                                         toast({
@@ -811,12 +874,12 @@ export default function OrdersPage() {
                                                 onClick={() => {
                                                     // track order: open tracking URL if available, else nothing
                                                     const t = parseTracking(
-                                                        order.trackingInfo
+                                                        order.trackingInfo,
                                                     );
                                                     if (t?.trackingUrl) {
                                                         window.open(
                                                             t.trackingUrl,
-                                                            "_blank"
+                                                            "_blank",
                                                         );
                                                     } else if (t?.waybill) {
                                                         // fallback to external delhivery url if you have env var
@@ -826,7 +889,7 @@ export default function OrdersPage() {
                                                             "https://delhivery.com/track/package/";
                                                         window.open(
                                                             `${base}${t.waybill}`,
-                                                            "_blank"
+                                                            "_blank",
                                                         );
                                                     } else {
                                                         toast({
@@ -845,7 +908,7 @@ export default function OrdersPage() {
                                                         onClick={() => {
                                                             const t =
                                                                 parseTracking(
-                                                                    order.trackingInfo
+                                                                    order.trackingInfo,
                                                                 );
                                                             if (!t?.waybill) {
                                                                 toast({
@@ -858,7 +921,7 @@ export default function OrdersPage() {
                                                                 return;
                                                             }
                                                             generateLabel(
-                                                                t.waybill
+                                                                t.waybill,
                                                             );
                                                         }}
                                                     >
@@ -1006,12 +1069,12 @@ export default function OrdersPage() {
                                         }
                                         await updateOrderStatus(
                                             pendingOrder.id,
-                                            "shipped"
+                                            "shipped",
                                         );
                                     } else {
                                         await updateOrderStatus(
                                             pendingOrder.id,
-                                            pendingStatus
+                                            pendingStatus,
                                         );
                                     }
 
@@ -1047,27 +1110,6 @@ export default function OrdersPage() {
 
             {statusDialog}
 
-            {/* {renderOrdersTable(
-                confirmedOrders,
-                "Confirmed & Processing Orders",
-                "bg-blue-50",
-                false
-            )}
-
-            {renderOrdersTable(
-                shippedOrders,
-                "Shipped Orders",
-                "bg-purple-50",
-                true
-            )}
-
-            {renderOrdersTable(
-                deliveredOrders,
-                "Delivered Orders",
-                "bg-green-50",
-                true
-            )} */}
-
             {renderOrdersTable(
                 paymentPendingOrdersPageData,
                 "Payment Pending",
@@ -1077,10 +1119,10 @@ export default function OrdersPage() {
                 <Pagination
                     page={paymentPendingPage}
                     totalPages={Math.ceil(
-                        paymentPendingOrders.length / ITEMS_PER_PAGE
+                        paymentPendingOrders.length / ITEMS_PER_PAGE,
                     )}
                     onPageChange={setPaymentPendingPage}
-                />
+                />,
             )}
 
             {renderOrdersTable(
@@ -1092,10 +1134,10 @@ export default function OrdersPage() {
                 <Pagination
                     page={confirmedProcessingPage}
                     totalPages={Math.ceil(
-                        confirmedProcessingOrders.length / ITEMS_PER_PAGE
+                        confirmedProcessingOrders.length / ITEMS_PER_PAGE,
                     )}
                     onPageChange={setConfirmedProcessingPage}
-                />
+                />,
             )}
 
             {renderOrdersTable(
@@ -1107,10 +1149,10 @@ export default function OrdersPage() {
                 <Pagination
                     page={inTransitPage}
                     totalPages={Math.ceil(
-                        inTransitOrders.length / ITEMS_PER_PAGE
+                        inTransitOrders.length / ITEMS_PER_PAGE,
                     )}
                     onPageChange={setInTransitPage}
-                />
+                />,
             )}
 
             {renderOrdersTable(
@@ -1122,10 +1164,10 @@ export default function OrdersPage() {
                 <Pagination
                     page={deliveredPage}
                     totalPages={Math.ceil(
-                        deliveredOrdersV2.length / ITEMS_PER_PAGE
+                        deliveredOrdersV2.length / ITEMS_PER_PAGE,
                     )}
                     onPageChange={setDeliveredPage}
-                />
+                />,
             )}
         </div>
     );

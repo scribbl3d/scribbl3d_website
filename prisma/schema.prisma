@@ -408,22 +408,31 @@ model Announcement {
 }
 
 model Order {
-  id              String    @id @default(cuid())
-  userId          String
-  items           Json
-  totalAmount     Float
-  status          String    @default("payment_pending")
-  shippingAddress Json
-  billingAddress  Json
-  paymentMethod   String
-  transactionId   String?   @unique
-  trackingInfo    Json?
-  createdAt       DateTime  @default(now())
-  user            User      @relation(fields: [userId], references: [id])
-  shipment        Shipment?
+  id                String    @id @default(cuid())
+  userId            String
+  items             Json
+  totalAmount       Float
+  status            String    @default("payment_pending")
+
+  shippingAddress   Json
+  billingAddress    Json
+
+  paymentMethod       String?       // UPI | CREDIT_CARD | DEBIT_CARD | NET_BANKING | WALLET (from PhonePe)
+  paymentReference  String?       // PhonePe ref / RRN
+  maskedPaymentId   String?       // masked UPI or card
+
+  transactionId     String?   @unique
+  trackingInfo      Json?
+
+  createdAt         DateTime  @default(now())
+
+  user              User      @relation(fields: [userId], references: [id])
+  shipment          Shipment?
 
   @@index([userId])
 }
+
+
 
 model Shipment {
   id               String    @id @default(cuid())
@@ -512,7 +521,7 @@ model Printer {
   @@index([price])
 }
 
-// Image Gallery
+
 model PrinterImage {
   id        String  @id @default(cuid())
   printerId String
@@ -526,7 +535,7 @@ model PrinterImage {
   @@index([printerId, sortOrder])
 }
 
-// Filterable Attributes (for filters)
+
 model PrinterAttribute {
   id             String @id @default(cuid())
   printerId      String
@@ -539,7 +548,7 @@ model PrinterAttribute {
   @@index([attributeKey, attributeValue])
 }
 
-// Detailed Specifications (for Specifications tab)
+
 model PrinterSpecification {
   id        String @id @default(cuid())
   printerId String
@@ -553,7 +562,7 @@ model PrinterSpecification {
   @@index([printerId, category, sortOrder])
 }
 
-// Key Features (for Features & Applications tab)
+
 model PrinterFeature {
   id          String  @id @default(cuid())
   printerId   String
@@ -566,7 +575,7 @@ model PrinterFeature {
   @@index([printerId, sortOrder])
 }
 
-// Ideal Applications (for Features & Applications tab)
+
 model PrinterApplication {
   id        String @id @default(cuid())
   printerId String
@@ -578,7 +587,7 @@ model PrinterApplication {
   @@index([printerId, sortOrder])
 }
 
-// Downloads (for Downloads tab)
+
 model PrinterDownload {
   id          String  @id @default(cuid())
   printerId   String
@@ -592,7 +601,7 @@ model PrinterDownload {
   @@index([printerId, sortOrder])
 }
 
-// Support & Warranty Content
+
 model SupportContent {
   id        String @id @default(cuid())
   printerId String
