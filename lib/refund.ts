@@ -7,19 +7,34 @@ const SALT_INDEX = process.env.PHONEPE_SALT_INDEX!;
 
 interface RefundParams {
     merchantRefundId: string;
-    originalTransactionId: string;
+    originalTransactionId: string; // OMO...
+    merchantTransactionId: string; // T176...
     amount: number; // paise
 }
 
 export async function initiatePhonePeRefund({
     merchantRefundId,
     originalTransactionId,
+    merchantTransactionId,
     amount,
 }: RefundParams) {
+    console.log("🚀 [REFUND] Initiating PhonePe refund");
+    console.log("➡️ merchantRefundId:", merchantRefundId);
+    console.log("➡️ originalTransactionId:", originalTransactionId);
+    console.log("➡️ merchantTransactionId:", merchantTransactionId);
+    console.log("➡️ amount (paise):", amount);
+
+    if (!originalTransactionId || !merchantTransactionId) {
+        throw new Error(
+            "Both originalTransactionId and merchantTransactionId are required",
+        );
+    }
+
     const payload = {
         merchantId: MERCHANT_ID,
         merchantRefundId,
         originalTransactionId,
+        merchantTransactionId,
         amount,
     };
 
@@ -34,6 +49,9 @@ export async function initiatePhonePeRefund({
         "###" +
         SALT_INDEX;
 
+    console.log("🧾 [REFUND] Payload:", payload);
+    console.log("🔐 [REFUND] X-VERIFY:", checksum);
+
     const res = await fetch(`${PHONEPE_BASE_URL}/pg/v1/refund`, {
         method: "POST",
         headers: {
@@ -47,9 +65,15 @@ export async function initiatePhonePeRefund({
 
     const data = await res.json();
 
+    console.log("📦 [REFUND] PhonePe Response:", JSON.stringify(data, null, 2));
+
     if (!data.success) {
-        throw new Error(data.message || "PhonePe refund failed");
+        throw new Error(
+            data.message || data.data?.responseCode || "PhonePe refund failed",
+        );
     }
+
+    console.log("✅ [REFUND] PhonePe refund initiated");
 
     return data;
 }

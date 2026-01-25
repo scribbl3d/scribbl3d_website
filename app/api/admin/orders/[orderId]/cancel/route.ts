@@ -1,53 +1,72 @@
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import { initiatePhonePeRefund } from "@/lib/refund";
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 
-export async function POST(req: Request, context: any) {
-    const { orderId } = context.params;
-
-    // 1️⃣ Fetch order
-    const order = await prisma.order.findUnique({
-        where: { id: orderId },
-    });
-
-    if (!order) {
-        return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    }
-
-    // 2️⃣ Validate cancellation state
-    if (!["confirmed", "processing"].includes(order.status)) {
-        return NextResponse.json(
-            { error: "Order cannot be cancelled now" },
-            { status: 400 },
-        );
-    }
-
-    if (!order.transactionId || !order.paymentReference) {
-        return NextResponse.json(
-            { error: "Payment transaction missing" },
-            { status: 400 },
-        );
-    }
-
-    if (order.refundStatus === "initiated") {
-        return NextResponse.json(
-            { error: "Refund already initiated" },
-            { status: 400 },
-        );
-    }
-
-    const merchantRefundId = `RFD_${order.id}_${Date.now()}`;
-
+export async function POST(
+    _req: Request,
+    context: { params: Promise<{ orderId: string }> },
+) {
     try {
-        // 3️⃣ Initiate PhonePe refund
-        await initiatePhonePeRefund({
+        const { orderId } = await context.params;
+
+        console.log("🧨 [CANCEL] Cancel request for order:", orderId);
+
+        const order = await db.order.findUnique({
+            where: { id: orderId },
+        });
+
+        if (!order) {
+            console.log("❌ [CANCEL] Order not found");
+            return NextResponse.json(
+                { error: "Order not found" },
+                { status: 404 },
+            );
+        }
+
+        console.log("📄 [CANCEL] Order found:", {
+            id: order.id,
+            paymentMethod: order.paymentMethod,
+            paymentReference: order.paymentReference,
+            totalAmount: order.totalAmount,
+        });
+
+        /**
+         * 🔑 RULE:
+         * If paymentReference (OMO...) exists → PhonePe refund
+         * If not → just cancel order
+         */
+        if (!order.paymentReference) {
+            console.log(
+                "⚠️ [CANCEL] No paymentReference found. Skipping refund.",
+            );
+
+            await db.order.update({
+                where: { id: order.id },
+                data: {
+                    status: "cancelled",
+                },
+            });
+
+            return NextResponse.json({
+                ok: true,
+                message: "Order cancelled (no refund required)",
+            });
+        }
+
+        const merchantRefundId =
+            "RFD_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+
+        console.log("💸 [CANCEL] Calling PhonePe refund…");
+
+        const refundResponse = await initiatePhonePeRefund({
             merchantRefundId,
-            originalTransactionId: order.transactionId,
+            originalTransactionId: order.paymentReference, // OMO...
+            merchantTransactionId: order.transactionId!, // T176...
             amount: Math.round(order.totalAmount * 100),
         });
 
-        // 4️⃣ Update DB
-        await prisma.order.update({
+        await db.order.update({
             where: { id: order.id },
             data: {
                 status: "cancelled",
@@ -57,14 +76,17 @@ export async function POST(req: Request, context: any) {
             },
         });
 
+        console.log("✅ [CANCEL] Order cancelled & refund initiated");
+
         return NextResponse.json({
             ok: true,
-            message: "Order cancelled and refund initiated",
+            refund: refundResponse,
         });
-    } catch (err) {
-        console.error("Refund failed:", err);
+    } catch (err: any) {
+        console.error("🔥 [CANCEL] Refund failed:", err);
+
         return NextResponse.json(
-            { error: "Refund initiation failed" },
+            { error: err.message || "Refund failed" },
             { status: 500 },
         );
     }
