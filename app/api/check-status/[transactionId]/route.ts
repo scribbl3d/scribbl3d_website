@@ -39,7 +39,7 @@ export async function GET(
         }
 
         /* -------------------------
-       1️⃣ Call PhonePe Status API
+       1️⃣ Call PhonePe Status APIIIIIi
        ------------------------- */
         const merchantId = MERCHANT_ID;
         const statusUrl = `https://api${
