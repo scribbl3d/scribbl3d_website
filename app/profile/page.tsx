@@ -11,6 +11,16 @@ import { PersonalInfo } from "./_components/personal-info";
 import { ProfileSidebar } from "./_components/profile-sidebar";
 import Wishlist from "./_components/wishlist";
 
+/* ✅ LOCAL ORDER STATUS (ONLY HERE, NO GLOBAL BS) */
+type LocalOrderStatus =
+    | "payment_pending"
+    | "confirmed"
+    | "processing"
+    | "shipped"
+    | "delivered"
+    | "cancelled"
+    | "error";
+
 interface SearchParams {
     tab?: string;
 }
@@ -36,13 +46,19 @@ export default async function ProfilePage({ searchParams }: PageProps) {
         createdAt: new Date(),
     };
 
-    /* ---------- ORDERS ---------- */
-    const orders = (await db.order.findMany({
+    /* ---------- ORDERS (RAW FROM DB) ---------- */
+    const ordersFromDb = (await db.order.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
     })) as DbOrder[];
 
-    /* ---------- WISHLIST (SERVER SIDE FOR OVERVIEW ONLY) ---------- */
+    /* ✅ CAST STATUS LOCALLY */
+    const orders = ordersFromDb.map((order) => ({
+        ...order,
+        status: order.status as LocalOrderStatus,
+    }));
+
+    /* ---------- WISHLIST ---------- */
     const wishlist = await db.wishlist.findUnique({
         where: { userId: session.user.id },
         include: {
@@ -79,16 +95,15 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                 return (
                     <Overview
                         user={user}
-                        orders={orders}
+                        orders={orders as any}
                         wishlist={wishlist?.items || []}
                     />
                 );
 
             case "orders":
-                return <Orders orders={orders} />;
+                return <Orders orders={orders as any} />;
 
             case "wishlist":
-                // 🔥 IMPORTANT FIX: no props passed
                 return <Wishlist />;
 
             case "account":
@@ -98,7 +113,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                 return (
                     <Overview
                         user={user}
-                        orders={orders}
+                        orders={orders as any}
                         wishlist={wishlist?.items || []}
                     />
                 );

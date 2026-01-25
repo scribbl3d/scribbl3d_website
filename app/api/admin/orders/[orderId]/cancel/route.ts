@@ -2,11 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { initiatePhonePeRefund } from "@/lib/refund";
 import { NextResponse } from "next/server";
 
-export async function POST(
-    req: Request,
-    { params }: { params: { orderId: string } },
-) {
-    const { orderId } = params;
+export async function POST(req: Request, context: any) {
+    const { orderId } = context.params;
 
     // 1️⃣ Fetch order
     const order = await prisma.order.findUnique({
@@ -39,18 +36,17 @@ export async function POST(
         );
     }
 
-    // 3️⃣ Generate refund reference
     const merchantRefundId = `RFD_${order.id}_${Date.now()}`;
 
     try {
-        // 4️⃣ Call PhonePe Refund API
+        // 3️⃣ Initiate PhonePe refund
         await initiatePhonePeRefund({
             merchantRefundId,
             originalTransactionId: order.transactionId,
-            amount: Math.round(order.totalAmount * 100), // paise
+            amount: Math.round(order.totalAmount * 100),
         });
 
-        // 5️⃣ Update DB
+        // 4️⃣ Update DB
         await prisma.order.update({
             where: { id: order.id },
             data: {
@@ -65,9 +61,8 @@ export async function POST(
             ok: true,
             message: "Order cancelled and refund initiated",
         });
-    } catch (err: any) {
-        console.error("PhonePe refund error:", err);
-
+    } catch (err) {
+        console.error("Refund failed:", err);
         return NextResponse.json(
             { error: "Refund initiation failed" },
             { status: 500 },
