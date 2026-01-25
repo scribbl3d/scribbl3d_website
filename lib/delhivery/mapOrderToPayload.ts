@@ -1,4 +1,7 @@
-export function mapOrderToDelhiveryShipment(order: any) {
+// lib/delhivery/mapOrderToPayload.ts
+export function mapOrderToDelhiveryShipment(input: any) {
+    const { order, shipping_mode, dimensions, weight, quantity } = input;
+
     const shipping = order.shippingAddress as any;
 
     if (!shipping?.phone) {
@@ -19,20 +22,24 @@ export function mapOrderToDelhiveryShipment(order: any) {
         country: "India",
 
         order: order.id,
+
         payment_mode: order.paymentMethod === "COD" ? "COD" : "Prepaid",
+
         cod_amount:
             order.paymentMethod === "COD" ? String(order.totalAmount) : "0",
+
         total_amount: String(order.totalAmount),
 
-        quantity: "1",
-        weight: String(order.weightInGrams || 500),
+        quantity: String(quantity),
+        weight: String(weight), // grams
 
-        shipment_length: "10",
-        shipment_width: "10",
-        shipment_height: "10",
+        shipment_length: String(dimensions.length),
+        shipment_width: String(dimensions.breadth),
+        shipment_height: String(dimensions.height),
 
         address_type: "home",
-        shipping_mode: "Surface",
-        end_date: "2025-12-31",
+        shipping_mode: shipping_mode === "Express" ? "Express" : "Surface",
+
+        end_date: "2026-12-31",
     };
 }

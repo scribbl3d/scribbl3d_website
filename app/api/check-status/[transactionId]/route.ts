@@ -102,7 +102,6 @@ export async function GET(
                     data: {
                         status: "confirmed",
 
-                        // 🔐 payment details
                         paymentMethod,
                         paymentReference: result.data.transactionId, // PhonePe dispute ref
                         maskedPaymentId,
@@ -123,15 +122,15 @@ export async function GET(
                 }
 
                 /* 🚚 Trigger shipment */
-                try {
-                    await fetch(`${APP_URL}/api/internal/create-shipment`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ orderId: updatedOrder.id }),
-                    });
-                } catch (shipErr) {
-                    console.error("[Shipment] Failed:", shipErr);
-                }
+                // try {
+                //     await fetch(`${APP_URL}/api/internal/create-shipment`, {
+                //         method: "POST",
+                //         headers: { "Content-Type": "application/json" },
+                //         body: JSON.stringify({ orderId: updatedOrder.id }),
+                //     });
+                // } catch (shipErr) {
+                //     console.error("[Shipment] Failed:", shipErr);
+                // }
             }
 
             return NextResponse.json({

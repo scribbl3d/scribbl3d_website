@@ -1,4 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { calculateExpressShipping } from "@/app/checkout/components/expressShipping";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
@@ -20,6 +21,9 @@ export async function POST(req: Request) {
             mode = "cart",
             items,
             totalAmount,
+
+            shippingMode, // SURFACE | EXPRESS
+
             shippingAddress,
             billingAddress,
             paymentMethod,
@@ -28,6 +32,14 @@ export async function POST(req: Request) {
 
         const normalizedMode =
             mode === "buynow" || mode === "cart" ? mode : "cart";
+
+        /* ---------- VALIDATE SHIPPING MODE ---------- */
+        if (shippingMode !== "Surface" && shippingMode !== "Express") {
+            return NextResponse.json(
+                { error: "Invalid shipping mode" },
+                { status: 400 },
+            );
+        }
 
         /* ---------- IDEMPOTENCY ---------- */
         const existingOrder = await prisma.order.findUnique({
@@ -42,6 +54,7 @@ export async function POST(req: Request) {
         }
 
         let orderItems: any[] = [];
+        let cartIdToClear: string | null = null;
 
         /* =====================================================
            BUY NOW
@@ -58,37 +71,33 @@ export async function POST(req: Request) {
 
             orderItems = [
                 {
+                    itemType: item.itemType,
                     name: item.name,
                     quantity: 1,
                     price: item.price,
                     image: item.images?.[0] ?? null,
                     size: item.size ?? null,
                     color: item.color ?? null,
-                    itemType: item.itemType,
                 },
             ];
         } else {
             /* =====================================================
-           CART FLOW
-        ===================================================== */
+               CART FLOW
+            ===================================================== */
             const cart = await prisma.cart.findFirst({
                 where: { userId: session.user.id },
                 include: {
                     items: {
                         include: {
                             product: true,
-
                             printer: {
                                 include: {
                                     images: { orderBy: { sortOrder: "asc" } },
                                 },
                             },
-
                             prebuiltProduct: true,
-
                             resin: true,
                             resinWeight: true,
-
                             resinColour: {
                                 include: {
                                     images: {
@@ -96,7 +105,6 @@ export async function POST(req: Request) {
                                     },
                                 },
                             },
-
                             productSize: true,
                             productColor: true,
                         },
@@ -111,8 +119,9 @@ export async function POST(req: Request) {
                 );
             }
 
+            cartIdToClear = cart.id;
+
             orderItems = cart.items.map((item) => {
-                /* ---------- RESIN ---------- */
                 if (item.resin) {
                     return {
                         itemType: "resin",
@@ -127,7 +136,6 @@ export async function POST(req: Request) {
                     };
                 }
 
-                /* ---------- PRINTER ---------- */
                 if (item.printer) {
                     return {
                         itemType: "printer",
@@ -138,7 +146,6 @@ export async function POST(req: Request) {
                     };
                 }
 
-                /* ---------- PREBUILT ---------- */
                 if (item.prebuiltProduct) {
                     return {
                         itemType: "prebuilt",
@@ -153,7 +160,6 @@ export async function POST(req: Request) {
                     };
                 }
 
-                /* ---------- PRODUCT (FILAMENT) ---------- */
                 if (item.product) {
                     return {
                         itemType: "product",
@@ -168,9 +174,24 @@ export async function POST(req: Request) {
 
                 throw new Error(`Invalid cart item ${item.id}`);
             });
+        }
 
+        /* ---------- BACKEND EXPRESS VALIDATION ---------- */
+        if (shippingMode === "EXPRESS") {
+            const expressCheck = calculateExpressShipping(orderItems);
+
+            if (!expressCheck.allowed) {
+                return NextResponse.json(
+                    { error: "Express shipping not allowed for this order" },
+                    { status: 400 },
+                );
+            }
+        }
+
+        /* ---------- CLEAR CART ---------- */
+        if (cartIdToClear) {
             await prisma.cartItem.deleteMany({
-                where: { cartId: cart.id },
+                where: { cartId: cartIdToClear },
             });
         }
 
@@ -182,8 +203,12 @@ export async function POST(req: Request) {
                 userId: session.user.id,
                 items: orderItems,
                 totalAmount,
+
+                shippingMode,
+
                 shippingAddress,
                 billingAddress,
+                paymentMethod,
 
                 status: "payment_pending",
                 transactionId,

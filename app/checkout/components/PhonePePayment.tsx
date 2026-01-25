@@ -48,12 +48,17 @@ export default function PhonePePayment({
             const transactionId = `T${Date.now()}${Math.random()
                 .toString(36)
                 .slice(2)}`;
+            const shippingMode =
+                state.selectedShipping?.id === "premium"
+                    ? "Express"
+                    : "Surface";
 
             // ✅ CREATE ORDER (CART OR BUY NOW)
             const orderResponse = await axios.post("/api/create-order", {
                 mode,
                 items,
                 totalAmount: amount,
+                shippingMode,
                 shippingAddress: state.shippingDetails,
                 billingAddress: state.shippingDetails,
                 paymentMethod: "PhonePe",
@@ -104,7 +109,7 @@ export default function PhonePePayment({
         async (transactionId: string, orderId: string) => {
             try {
                 const response = await axios.get(
-                    `/api/check-status/${transactionId}`
+                    `/api/check-status/${transactionId}`,
                 );
 
                 if (
@@ -115,17 +120,17 @@ export default function PhonePePayment({
                     resetCheckout();
 
                     router.push(
-                        `/payment/success?txnId=${transactionId}&amount=${amount}&orderId=${orderId}`
+                        `/payment/success?txnId=${transactionId}&amount=${amount}&orderId=${orderId}`,
                     );
                 } else if (response.data.code === "PAYMENT_PENDING") {
                     setTimeout(
                         () => checkPaymentStatus(transactionId, orderId),
-                        5000
+                        5000,
                     );
                 } else {
                     setPaymentStatus("error");
                     router.push(
-                        `/payment/failure?txnId=${transactionId}&orderId=${orderId}`
+                        `/payment/failure?txnId=${transactionId}&orderId=${orderId}`,
                     );
                 }
             } catch {
@@ -133,7 +138,7 @@ export default function PhonePePayment({
                 router.push(`/payment/failure`);
             }
         },
-        [router, amount, resetCheckout]
+        [router, amount, resetCheckout],
     );
 
     useEffect(() => {

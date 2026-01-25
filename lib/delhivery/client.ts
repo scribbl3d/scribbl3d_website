@@ -1,23 +1,24 @@
+// lib/delhivery/client.ts
 import axios from "axios";
 import qs from "qs";
 import { mapOrderToDelhiveryShipment } from "./mapOrderToPayload";
+
 const DELHIVERY_URL =
     "https://staging-express.delhivery.com/api/cmu/create.json";
 
-// lib/delhivery/client.ts
-
-export async function createDelhiveryShipmentRaw(order: any) {
-    const shipment = mapOrderToDelhiveryShipment(order);
+export async function createDelhiveryShipmentRaw(input: any) {
+    const shipment = mapOrderToDelhiveryShipment(input);
 
     const payload = {
-        end_date: "2025-12-31",
+        end_date: "2026-12-31",
         shipments: [shipment],
         pickup_location: {
             name: "Scribbl SURFACE",
-            end_date: "2025-12-31",
+            end_date: "2026-12-31",
         },
     };
 
+    // 🔍 Final payload log
     console.log("Delhivery Payload:", JSON.stringify(payload, null, 2));
 
     const body = qs.stringify({

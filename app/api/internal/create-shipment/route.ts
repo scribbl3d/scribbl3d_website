@@ -4,50 +4,67 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-    const { orderId } = await req.json();
+    const {
+        orderId,
+        shipping_mode,
+        length,
+        breadth,
+        height,
+        weight,
+        quantity,
+    } = await req.json();
 
+    /* -------------------- Validation -------------------- */
     if (!orderId) {
         return NextResponse.json(
             { ok: false, error: "orderId required" },
-            { status: 400 }
+            { status: 400 },
         );
     }
 
+    if (!length || !breadth || !height || !weight || !quantity) {
+        return NextResponse.json(
+            { ok: false, error: "Shipment dimensions incomplete" },
+            { status: 400 },
+        );
+    }
+
+    /* -------------------- Fetch order -------------------- */
     const order = await prisma.order.findUnique({
         where: { id: orderId },
     });
-    const existingShipment = await prisma.shipment.findUnique({
+
+    if (!order || order.status !== "confirmed") {
+        return NextResponse.json(
+            { ok: false, error: "Order not ready for shipment" },
+            { status: 400 },
+        );
+    }
+
+    /* -------------------- Idempotency -------------------- */
+    const existingShipment = await prisma.shipment.findFirst({
         where: { orderId },
     });
 
     if (existingShipment && existingShipment.status !== "failed") {
         return NextResponse.json(
-            { error: "Shipment already exists" },
-            { status: 409 }
+            { ok: false, error: "Shipment already exists" },
+            { status: 409 },
         );
     }
 
-    if (!order || order.status !== "confirmed") {
-        return NextResponse.json(
-            { ok: false, error: "Order not ready for shipment" },
-            { status: 400 }
-        );
-    }
-
-    // 🔒 Idempotency: do not create duplicate shipments
-    const existing = await prisma.shipment.findFirst({
-        where: { orderId },
+    /* -------------------- Create Delhivery shipment -------------------- */
+    const result = await createDelhiveryShipment({
+        order,
+        shipping_mode,
+        dimensions: {
+            length: Number(length),
+            breadth: Number(breadth),
+            height: Number(height),
+        },
+        weight: Number(weight),
+        quantity: Number(quantity),
     });
-
-    if (existing) {
-        return NextResponse.json({
-            ok: true,
-            reused: true,
-            shipmentId: existing.id,
-        });
-    }
-
-    const result = await createDelhiveryShipment(order);
 
     if (!result.ok || !result.waybill) {
         return NextResponse.json(
@@ -56,21 +73,23 @@ export async function POST(req: Request) {
                 error: "Delhivery shipment failed",
                 delhivery: result.raw,
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 
+    /* -------------------- DB Transaction -------------------- */
     try {
         await prisma.$transaction(async (tx) => {
             await tx.shipment.create({
                 data: {
                     orderId,
                     provider: "DELHIVERY",
-                    waybill: result.waybill!,
+                    waybill: result.waybill,
                     trackingUrl: `https://www.delhivery.com/track/package/${result.waybill}`,
                     status: "created",
-                    rawResponse: result.raw,
                     attempts: 1,
+
+                    rawResponse: result.raw,
                 },
             });
 
@@ -87,13 +106,16 @@ export async function POST(req: Request) {
             });
         });
 
-        return NextResponse.json({ ok: true, waybill: result.waybill });
+        return NextResponse.json({
+            ok: true,
+            waybill: result.waybill,
+        });
     } catch (err: any) {
-        // 🔒 Idempotency guard for race conditions
+        // 🔒 Unique constraint safety
         if (err.code === "P2002") {
             console.warn(
-                "[create-shipment] Duplicate shipment prevented for order:",
-                orderId
+                "[create-shipment] Duplicate shipment prevented:",
+                orderId,
             );
 
             return NextResponse.json({
@@ -104,9 +126,4 @@ export async function POST(req: Request) {
 
         throw err;
     }
-
-    return NextResponse.json({
-        ok: true,
-        waybill: result.waybill,
-    });
 }

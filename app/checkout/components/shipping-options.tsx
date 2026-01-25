@@ -10,50 +10,60 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Truck, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
-/* ===================== SHIPPING OPTIONS ===================== */
-const shippingOptions: ShippingOption[] = [
-    {
-        id: "free",
-        name: "Free Shipping",
-        description: "5–7 business days",
-        price: 0,
-        estimatedDays: "5–7 days",
-        icon: Truck,
-    },
-    {
-        id: "premium",
-        name: "Premium Shipping",
-        description: "1–2 business days",
-        price: 200,
-        estimatedDays: "1–2 days",
-        icon: Zap,
-    },
-];
-
 export function ShippingOptions() {
-    const { setShippingOption, nextStep, prevStep } = useCheckout();
+    const { setShippingOption, nextStep, prevStep, expressShipping, state } =
+        useCheckout();
 
-    const [selectedOption, setSelectedOption] = useState<string>("free");
+    const [selectedOption, setSelectedOption] = useState<"free" | "premium">(
+        "free",
+    );
     const [isHovered, setIsHovered] = useState<string | null>(null);
 
-    /* ===================== IMPORTANT FIX ===================== */
-    /* Sync default selection into checkout state */
+    /* ===================== SHIPPING OPTIONS ===================== */
+    const shippingOptions: ShippingOption[] = [
+        {
+            id: "free",
+            name: "Free Shipping",
+            description: "5–7 business days",
+            price: 0,
+            estimatedDays: "5–7 days",
+            icon: Truck,
+        },
+        {
+            id: "premium",
+            name: "Premium Shipping",
+            description: "1–2 business days",
+            price: expressShipping.price,
+            estimatedDays: "1–2 days",
+            icon: Zap,
+        },
+    ];
+
+    /* ===================== SYNC DEFAULT ===================== */
     useEffect(() => {
-        const defaultOption = shippingOptions.find(
-            (opt) => opt.id === selectedOption
-        );
-        if (defaultOption) {
-            setShippingOption(defaultOption);
+        const defaultOption =
+            shippingOptions.find((opt) => opt.id === selectedOption) ??
+            shippingOptions[0];
+
+        setShippingOption(defaultOption);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    /* ===================== AUTO-FALLBACK IF EXPRESS DISABLED ===================== */
+    useEffect(() => {
+        if (!expressShipping.allowed && selectedOption === "premium") {
+            setSelectedOption("free");
+            setShippingOption(shippingOptions[0]);
         }
-    }, []); // run once on mount
+    }, [expressShipping.allowed]);
 
     /* ===================== HANDLERS ===================== */
-    const handleOptionChange = (value: string) => {
+    const handleOptionChange = (value: "free" | "premium") => {
         setSelectedOption(value);
 
         const option = shippingOptions.find((opt) => opt.id === value);
         if (option) {
-            setShippingOption(option); // 🔥 SOURCE OF TRUTH
+            setShippingOption(option);
         }
     };
 
@@ -77,6 +87,8 @@ export function ShippingOptions() {
                     {shippingOptions.map((option) => {
                         const Icon = option.icon;
                         const isSelected = selectedOption === option.id;
+                        const isPremiumDisabled =
+                            option.id === "premium" && !expressShipping.allowed;
 
                         return (
                             <motion.div
@@ -96,12 +108,14 @@ export function ShippingOptions() {
                             : "border-gray-200"
                     }
                     ${isHovered === option.id ? "border-primary/50" : ""}
+                    ${isPremiumDisabled ? "opacity-50 cursor-not-allowed" : ""}
                   `}
                                 >
                                     <div className="p-4">
                                         <RadioGroupItem
                                             value={option.id}
                                             id={option.id}
+                                            disabled={isPremiumDisabled}
                                             className="peer sr-only"
                                         />
 
@@ -130,6 +144,13 @@ export function ShippingOptions() {
                                                     <p className="text-sm text-muted-foreground">
                                                         {option.description}
                                                     </p>
+                                                    {isPremiumDisabled && (
+                                                        <p className="text-xs text-red-500 mt-1">
+                                                            {
+                                                                expressShipping.reason
+                                                            }
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -163,7 +184,13 @@ export function ShippingOptions() {
                         Back to Details
                     </Button>
 
-                    <Button onClick={handleContinue}>
+                    <Button
+                        onClick={handleContinue}
+                        disabled={
+                            selectedOption === "premium" &&
+                            !expressShipping.allowed
+                        }
+                    >
                         Continue to Review
                         <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>

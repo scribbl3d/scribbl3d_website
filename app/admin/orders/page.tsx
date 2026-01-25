@@ -59,6 +59,7 @@ interface Order {
         provider?: string;
     };
     billingAddress?: any;
+    shippingMode?: string;
     paymentMethod?: string;
     paymentReference?: string;
     maskedPaymentId?: string;
@@ -303,6 +304,14 @@ export default function OrdersPage() {
     );
 
     const inTransitOrdersPageData = paginate(inTransitOrders, inTransitPage);
+    const [open, setOpen] = useState(false);
+    const [shipmentData, setShipmentData] = useState({
+        length: "",
+        breadth: "",
+        height: "",
+        weight: "",
+        quantity: "",
+    });
 
     const deliveredOrdersPageData = paginate(deliveredOrdersV2, deliveredPage);
 
@@ -799,70 +808,278 @@ export default function OrdersPage() {
                                         </DialogContent>
                                     </Dialog>
                                     {/* Create Shipment — ONLY for Confirmed & Processing */}
+                                    {/* Create Shipment — ONLY for Confirmed & Processing */}
                                     {isConfirmedProcessing &&
                                         !order.shipment && (
-                                            <Button
-                                                variant="outline"
-                                                onClick={async () => {
-                                                    try {
-                                                        const res = await fetch(
-                                                            "/api/internal/create-shipment",
-                                                            {
-                                                                method: "POST",
-                                                                headers: {
-                                                                    "Content-Type":
-                                                                        "application/json",
-                                                                },
-                                                                body: JSON.stringify(
+                                            <Dialog
+                                                open={open}
+                                                onOpenChange={setOpen}
+                                            >
+                                                <DialogTrigger asChild>
+                                                    <Button variant="outline">
+                                                        Create Shipment
+                                                    </Button>
+                                                </DialogTrigger>
+
+                                                <DialogContent className="sm:max-w-[520px]">
+                                                    <DialogHeader>
+                                                        <DialogTitle>
+                                                            Create Shipment
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                            Verify order details
+                                                            and enter shipment
+                                                            dimensions.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+
+                                                    {/* Order summary */}
+                                                    <div className="rounded-md border p-3 text-sm space-y-1">
+                                                        <p>
+                                                            <b>Order ID:</b>{" "}
+                                                            {order.id}
+                                                        </p>
+                                                        <p>
+                                                            <b>Total Amount:</b>{" "}
+                                                            ₹{order.totalAmount}
+                                                        </p>
+                                                        <p>
+                                                            <b>Total Items:</b>{" "}
+                                                            {order.items.length}
+                                                        </p>
+                                                        <p>
+                                                            <b>
+                                                                Shipping Mode:
+                                                            </b>{" "}
+                                                            <span className="capitalize">
+                                                                {
+                                                                    order.shippingMode
+                                                                }
+                                                            </span>
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Order Items */}
+                                                    <div className="mt-4 space-y-2">
+                                                        <p className="text-sm font-medium">
+                                                            Order Items
+                                                        </p>
+
+                                                        <div className="rounded-md border divide-y text-sm">
+                                                            {order.items.map(
+                                                                (
+                                                                    item: any,
+                                                                    idx: number,
+                                                                ) => (
+                                                                    <div
+                                                                        key={
+                                                                            idx
+                                                                        }
+                                                                        className="flex justify-between px-3 py-2"
+                                                                    >
+                                                                        <div>
+                                                                            <p className="font-medium">
+                                                                                {
+                                                                                    item.name
+                                                                                }
+                                                                            </p>
+                                                                            <p className="text-muted-foreground">
+                                                                                Color:{" "}
+                                                                                {
+                                                                                    item.color
+                                                                                }{" "}
+                                                                                •
+                                                                                Size:{" "}
+                                                                                {
+                                                                                    item.size
+                                                                                }
+                                                                            </p>
+                                                                        </div>
+
+                                                                        <div className="text-right">
+                                                                            <p>
+                                                                                Qty:{" "}
+                                                                                {
+                                                                                    item.quantity
+                                                                                }
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Shipment Inputs */}
+                                                    <div className="grid grid-cols-2 gap-3 mt-4">
+                                                        {[
+                                                            [
+                                                                "length",
+                                                                "Length (cm)",
+                                                            ],
+                                                            [
+                                                                "breadth",
+                                                                "Breadth (cm)",
+                                                            ],
+                                                            [
+                                                                "height",
+                                                                "Height (cm)",
+                                                            ],
+                                                            [
+                                                                "weight",
+                                                                "Weight (g)",
+                                                            ],
+                                                        ].map(
+                                                            ([key, label]) => (
+                                                                <div key={key}>
+                                                                    <Label>
+                                                                        {label}
+                                                                    </Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={
+                                                                            (
+                                                                                shipmentData as any
+                                                                            )[
+                                                                                key
+                                                                            ]
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            setShipmentData(
+                                                                                (
+                                                                                    prev,
+                                                                                ) => ({
+                                                                                    ...prev,
+                                                                                    [key]: e
+                                                                                        .target
+                                                                                        .value,
+                                                                                }),
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            ),
+                                                        )}
+
+                                                        <div className="col-span-2">
+                                                            <Label>
+                                                                Shipment
+                                                                Quantity
+                                                            </Label>
+                                                            <Input
+                                                                type="number"
+                                                                value={
+                                                                    shipmentData.quantity
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setShipmentData(
+                                                                        (
+                                                                            prev,
+                                                                        ) => ({
+                                                                            ...prev,
+                                                                            quantity:
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                        }),
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="flex justify-end gap-2 mt-6">
+                                                        <Button
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                setOpen(false)
+                                                            }
+                                                        >
+                                                            Cancel
+                                                        </Button>
+
+                                                        <Button
+                                                            onClick={async () => {
+                                                                // 🔍 Log payload on click
+                                                                const payload =
                                                                     {
                                                                         orderId:
                                                                             order.id,
-                                                                    },
-                                                                ),
-                                                            },
-                                                        );
+                                                                        shipping_mode:
+                                                                            order.shippingMode,
+                                                                        ...shipmentData,
+                                                                    };
 
-                                                        const data =
-                                                            await res.json();
+                                                                console.log(
+                                                                    "Create Shipment Payload:",
+                                                                    payload,
+                                                                );
 
-                                                        if (!res.ok) {
-                                                            throw new Error(
-                                                                data?.error ||
-                                                                    "Failed to create shipment",
-                                                            );
-                                                        }
+                                                                try {
+                                                                    const res =
+                                                                        await fetch(
+                                                                            "/api/internal/create-shipment",
+                                                                            {
+                                                                                method: "POST",
+                                                                                headers:
+                                                                                    {
+                                                                                        "Content-Type":
+                                                                                            "application/json",
+                                                                                    },
+                                                                                body: JSON.stringify(
+                                                                                    payload,
+                                                                                ),
+                                                                            },
+                                                                        );
 
-                                                        toast({
-                                                            title: "Shipment created",
-                                                            description:
-                                                                "Updating shipment status…",
-                                                        });
+                                                                    const data =
+                                                                        await res.json();
+                                                                    if (
+                                                                        !res.ok
+                                                                    ) {
+                                                                        throw new Error(
+                                                                            data?.error ||
+                                                                                "Failed to create shipment",
+                                                                        );
+                                                                    }
 
-                                                        // 1️⃣ First sync shipment (wait for status)
-                                                        await fetch(
-                                                            "/api/internal/sync-shipments",
-                                                            {
-                                                                method: "POST",
-                                                            },
-                                                        );
+                                                                    toast({
+                                                                        title: "Shipment created",
+                                                                        description:
+                                                                            "Syncing shipment status…",
+                                                                    });
 
-                                                        // 2️⃣ THEN refetch orders
-                                                        await fetchOrders().catch(
-                                                            () => {},
-                                                        );
-                                                    } catch (err: any) {
-                                                        toast({
-                                                            title: "Shipment creation failed",
-                                                            description:
-                                                                err.message,
-                                                            variant:
-                                                                "destructive",
-                                                        });
-                                                    }
-                                                }}
-                                            >
-                                                Create Shipment
-                                            </Button>
+                                                                    setOpen(
+                                                                        false,
+                                                                    );
+
+                                                                    await fetch(
+                                                                        "/api/internal/sync-shipments",
+                                                                        {
+                                                                            method: "POST",
+                                                                        },
+                                                                    );
+
+                                                                    await fetchOrders();
+                                                                } catch (err: any) {
+                                                                    toast({
+                                                                        title: "Shipment creation failed",
+                                                                        description:
+                                                                            err.message,
+                                                                        variant:
+                                                                            "destructive",
+                                                                    });
+                                                                }
+                                                            }}
+                                                        >
+                                                            Confirm & Create
+                                                        </Button>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
                                         )}
 
                                     {/* For shipped/delivered rows we show extra action buttons */}

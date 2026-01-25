@@ -1,7 +1,20 @@
-import { Order } from "@prisma/client";
+// lib/delhivery/createShipment.ts
 import { createDelhiveryShipmentRaw } from "./client";
-export async function createDelhiveryShipment(order: Order) {
-    const response = await createDelhiveryShipmentRaw(order);
+
+type CreateShipmentInput = {
+    order: any;
+    shipping_mode: string;
+    dimensions: {
+        length: number;
+        breadth: number;
+        height: number;
+    };
+    weight: number;
+    quantity: number;
+};
+
+export async function createDelhiveryShipment(input: CreateShipmentInput) {
+    const response = await createDelhiveryShipmentRaw(input);
 
     const pkg = response?.packages?.[0];
 
