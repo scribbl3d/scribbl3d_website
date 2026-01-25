@@ -70,6 +70,10 @@ interface Order {
         phone?: string | null;
     };
 
+    refundStatus?: string;
+    refundId?: string;
+    refundInitiatedAt?: string;
+
     createdAt?: string;
 }
 
@@ -106,7 +110,9 @@ export default function OrdersPage() {
             fetch("/api/internal/sync-shipments", {
                 method: "POST",
             }).catch(() => {});
-
+            fetch("/api/internal/sync-refunds", { method: "POST" }).catch(
+                () => {},
+            );
             // 2. Fetch updated orders
             await fetchOrders();
         }
@@ -316,6 +322,10 @@ export default function OrdersPage() {
         weight: "",
         quantity: "",
     });
+    const cancelledOrders = orders.filter((o) => o.status === "cancelled");
+    const [cancelledPage, setCancelledPage] = useState(1);
+
+    const cancelledOrdersPageData = paginate(cancelledOrders, cancelledPage);
 
     const deliveredOrdersPageData = paginate(deliveredOrdersV2, deliveredPage);
 
@@ -1336,6 +1346,102 @@ export default function OrdersPage() {
             )}
         </div>
     );
+    const renderCancelledOrdersTable = (
+        ordersToShow: Order[],
+        paginationNode?: React.ReactNode,
+    ) => (
+        <div className="mb-8 rounded-lg shadow border bg-red-50 p-4">
+            <h3 className="text-2xl font-semibold mb-4">Cancelled Orders</h3>
+
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Order ID</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Refund Status</TableHead>
+                        <TableHead>Refund ID</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead>Refund Initiated</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                    {ordersToShow.map((order) => (
+                        <TableRow key={order.id}>
+                            <TableCell>{order.id.slice(-6)}</TableCell>
+
+                            <TableCell>
+                                {order.shippingAddress?.fullName ||
+                                    order.user?.name ||
+                                    "Anonymous"}
+                            </TableCell>
+
+                            <TableCell>
+                                {formatRupees(order.totalAmount)}
+                            </TableCell>
+
+                            <TableCell>
+                                <Badge className="bg-orange-500">
+                                    {order.refundStatus || "initiated"}
+                                </Badge>
+                            </TableCell>
+
+                            <TableCell className="text-xs break-all">
+                                {order.refundId || "—"}
+                            </TableCell>
+
+                            <TableCell>{order.paymentMethod || "—"}</TableCell>
+
+                            <TableCell>
+                                {order.refundInitiatedAt
+                                    ? formatDate(order.refundInitiatedAt)
+                                    : "—"}
+                            </TableCell>
+
+                            <TableCell>
+                                {/* View Details ONLY */}
+                                <Dialog
+                                    open={
+                                        isDialogOpen &&
+                                        selectedOrder?.id === order.id
+                                    }
+                                    onOpenChange={(open) => {
+                                        setIsDialogOpen(open);
+                                        if (!open) setSelectedOrder(null);
+                                    }}
+                                >
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setSelectedOrder(order);
+                                                setIsDialogOpen(true);
+                                            }}
+                                        >
+                                            View Details
+                                        </Button>
+                                    </DialogTrigger>
+
+                                    {/* 🔥 SAME dialog you already use */}
+                                    <DialogContent className="max-w-3xl">
+                                        {/* reuse existing View Details content */}
+                                    </DialogContent>
+                                </Dialog>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+
+            {paginationNode && (
+                <div className="w-full flex justify-center mt-4">
+                    {paginationNode}
+                </div>
+            )}
+        </div>
+    );
 
     // Status change confirmation dialog
     const statusDialog = (
@@ -1556,6 +1662,16 @@ export default function OrdersPage() {
                         deliveredOrdersV2.length / ITEMS_PER_PAGE,
                     )}
                     onPageChange={setDeliveredPage}
+                />,
+            )}
+            {renderCancelledOrdersTable(
+                cancelledOrdersPageData,
+                <Pagination
+                    page={cancelledPage}
+                    totalPages={Math.ceil(
+                        cancelledOrders.length / ITEMS_PER_PAGE,
+                    )}
+                    onPageChange={setCancelledPage}
                 />,
             )}
         </div>

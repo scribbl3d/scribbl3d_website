@@ -1,58 +1,68 @@
 import crypto from "crypto";
 
-const PHONEPE_BASE_URL = process.env.PHONEPE_URL!;
+const PHONEPE_BASE_URL = "https://mercury-t2.phonepe.com"; // PROD
 const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID!;
 const SALT_KEY = process.env.PHONEPE_SALT_KEY!;
 const SALT_INDEX = process.env.PHONEPE_SALT_INDEX!;
 
 interface RefundParams {
-    merchantRefundId: string;
-    originalTransactionId: string; // OMO...
-    merchantTransactionId: string; // T176...
+    refundTransactionId: string; // NEW refund txn id
+    providerReferenceId: string; // OMOxxxx (PhonePe txn id)
     amount: number; // paise
+    orderId: string;
 }
 
 export async function initiatePhonePeRefund({
-    merchantRefundId,
-    originalTransactionId,
-    merchantTransactionId,
+    refundTransactionId,
+    providerReferenceId,
     amount,
+    orderId,
 }: RefundParams) {
-    console.log("🚀 [REFUND] Initiating PhonePe refund");
-    console.log("➡️ merchantRefundId:", merchantRefundId);
-    console.log("➡️ originalTransactionId:", originalTransactionId);
-    console.log("➡️ merchantTransactionId:", merchantTransactionId);
-    console.log("➡️ amount (paise):", amount);
+    console.log("=================================================");
+    console.log(" [REFUND] NEW REFUND FUNCTION LOADED (v3 CREDIT)");
+    console.log(
+        " [REFUND] Endpoint:",
+        `${PHONEPE_BASE_URL}/v3/credit/backToSource`,
+    );
+    console.log("🧩 [REFUND] Inputs:", {
+        refundTransactionId,
+        providerReferenceId,
+        amount,
+        orderId,
+    });
 
-    if (!originalTransactionId || !merchantTransactionId) {
-        throw new Error(
-            "Both originalTransactionId and merchantTransactionId are required",
-        );
+    if (!providerReferenceId) {
+        throw new Error(" providerReferenceId (OMO id) is required");
     }
 
     const payload = {
         merchantId: MERCHANT_ID,
-        merchantRefundId,
-        originalTransactionId,
-        merchantTransactionId,
+        transactionId: refundTransactionId, // refund txn id
+        providerReferenceId, // OMO id
         amount,
+        merchantOrderId: orderId,
+        message: "Refund for cancelled order",
     };
+
+    console.log(" [REFUND] FINAL PAYLOAD (before base64):", payload);
 
     const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString(
         "base64",
     );
 
-    const stringToSign = payloadBase64 + "/pg/v1/refund" + SALT_KEY;
+    console.log("📦 [REFUND] Base64 Payload:", payloadBase64);
+
+    const stringToSign = payloadBase64 + "/v3/credit/backToSource" + SALT_KEY;
 
     const checksum =
         crypto.createHash("sha256").update(stringToSign).digest("hex") +
         "###" +
         SALT_INDEX;
 
-    console.log("🧾 [REFUND] Payload:", payload);
-    console.log("🔐 [REFUND] X-VERIFY:", checksum);
+    console.log(" [REFUND] StringToSign:", stringToSign);
+    console.log(" [REFUND] X-VERIFY:", checksum);
 
-    const res = await fetch(`${PHONEPE_BASE_URL}/pg/v1/refund`, {
+    const res = await fetch(`${PHONEPE_BASE_URL}/v3/credit/backToSource`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -63,17 +73,19 @@ export async function initiatePhonePeRefund({
         }),
     });
 
+    console.log(" [REFUND] HTTP STATUS:", res.status);
+
     const data = await res.json();
 
-    console.log("📦 [REFUND] PhonePe Response:", JSON.stringify(data, null, 2));
+    console.log("📦 [REFUND] PHONEPE RESPONSE (RAW):");
+    console.log(JSON.stringify(data, null, 2));
+    console.log("=================================================");
 
     if (!data.success) {
         throw new Error(
-            data.message || data.data?.responseCode || "PhonePe refund failed",
+            data.message || data.payResponseCode || "PhonePe refund failed",
         );
     }
-
-    console.log("✅ [REFUND] PhonePe refund initiated");
 
     return data;
 }

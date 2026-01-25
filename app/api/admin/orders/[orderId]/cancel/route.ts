@@ -4,89 +4,81 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 
 export async function POST(
-    _req: Request,
-    context: { params: Promise<{ orderId: string }> },
+    req: Request,
+    { params }: { params: { orderId: string } },
 ) {
+    console.log("=================================================");
+    console.log(" [CANCEL] API HIT");
+    console.log(" [CANCEL] Order ID:", params.orderId);
+
     try {
-        const { orderId } = await context.params;
-
-        console.log("🧨 [CANCEL] Cancel request for order:", orderId);
-
         const order = await db.order.findUnique({
-            where: { id: orderId },
+            where: { id: params.orderId },
         });
 
         if (!order) {
-            console.log("❌ [CANCEL] Order not found");
+            console.log(" [CANCEL] Order not found");
             return NextResponse.json(
                 { error: "Order not found" },
                 { status: 404 },
             );
         }
 
-        console.log("📄 [CANCEL] Order found:", {
+        console.log(" [CANCEL] ORDER FOUND:", {
             id: order.id,
             paymentMethod: order.paymentMethod,
+            transactionId: order.transactionId,
             paymentReference: order.paymentReference,
             totalAmount: order.totalAmount,
         });
 
-        /**
-         * 🔑 RULE:
-         * If paymentReference (OMO...) exists → PhonePe refund
-         * If not → just cancel order
-         */
+        // For v3 refund we ONLY need OMO id
         if (!order.paymentReference) {
-            console.log(
-                "⚠️ [CANCEL] No paymentReference found. Skipping refund.",
+            throw new Error(
+                "Missing providerReferenceId (paymentReference / OMO id)",
             );
-
-            await db.order.update({
-                where: { id: order.id },
-                data: {
-                    status: "cancelled",
-                },
-            });
-
-            return NextResponse.json({
-                ok: true,
-                message: "Order cancelled (no refund required)",
-            });
         }
 
-        const merchantRefundId =
+        const refundTxnId =
             "RFD_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
 
-        console.log("💸 [CANCEL] Calling PhonePe refund…");
+        console.log(" [CANCEL] Generated refundTxnId:", refundTxnId);
+        console.log(" [CANCEL] Initiating PhonePe refund…");
 
         const refundResponse = await initiatePhonePeRefund({
-            merchantRefundId,
-            originalTransactionId: order.paymentReference, // OMO...
-            merchantTransactionId: order.transactionId!, // T176...
+            refundTransactionId: refundTxnId,
+            providerReferenceId: order.paymentReference, // OMOxxxx
             amount: Math.round(order.totalAmount * 100),
+            orderId: order.id,
         });
+
+        console.log(" [CANCEL] Refund API SUCCESS RESPONSE:");
+        console.log(JSON.stringify(refundResponse, null, 2));
 
         await db.order.update({
             where: { id: order.id },
             data: {
                 status: "cancelled",
                 refundStatus: "initiated",
-                refundId: merchantRefundId,
+                refundId: refundTxnId,
                 refundInitiatedAt: new Date(),
             },
         });
 
-        console.log("✅ [CANCEL] Order cancelled & refund initiated");
+        console.log(" [CANCEL] Order updated with refund info");
+        console.log("=================================================");
 
         return NextResponse.json({
-            ok: true,
+            success: true,
             refund: refundResponse,
         });
     } catch (err: any) {
-        console.error("🔥 [CANCEL] Refund failed:", err);
+        console.error(" [CANCEL] ERROR OCCURRED");
+        console.error(err);
+        console.log("=================================================");
 
         return NextResponse.json(
-            { error: err.message || "Refund failed" },
+            { error: err.message || "Cancel failed" },
             { status: 500 },
         );
     }
