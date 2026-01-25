@@ -94,6 +94,10 @@ export default function OrdersPage() {
     const [confirmedProcessingPage, setConfirmedProcessingPage] = useState(1);
     const [inTransitPage, setInTransitPage] = useState(1);
     const [deliveredPage, setDeliveredPage] = useState(1);
+    const [openShipment, setOpenShipment] = useState(false);
+    const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+
     const router = useRouter();
 
     useEffect(() => {
@@ -807,279 +811,447 @@ export default function OrdersPage() {
                                             )}
                                         </DialogContent>
                                     </Dialog>
-                                    {/* Create Shipment — ONLY for Confirmed & Processing */}
+
                                     {/* Create Shipment — ONLY for Confirmed & Processing */}
                                     {isConfirmedProcessing &&
                                         !order.shipment && (
-                                            <Dialog
-                                                open={open}
-                                                onOpenChange={setOpen}
-                                            >
-                                                <DialogTrigger asChild>
-                                                    <Button variant="outline">
-                                                        Create Shipment
-                                                    </Button>
-                                                </DialogTrigger>
-
-                                                <DialogContent className="sm:max-w-[520px]">
-                                                    <DialogHeader>
-                                                        <DialogTitle>
+                                            <div className="flex flex-col gap-2">
+                                                {/* ================= CREATE SHIPMENT ================= */}
+                                                <Dialog
+                                                    open={
+                                                        openShipment &&
+                                                        selectedOrder?.id ===
+                                                            order.id
+                                                    }
+                                                    onOpenChange={(open) => {
+                                                        setOpenShipment(open);
+                                                        if (!open)
+                                                            setSelectedOrder(
+                                                                null,
+                                                            );
+                                                    }}
+                                                >
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                setSelectedOrder(
+                                                                    order,
+                                                                );
+                                                                setOpenShipment(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                        >
                                                             Create Shipment
-                                                        </DialogTitle>
-                                                        <DialogDescription>
-                                                            Verify order details
-                                                            and enter shipment
-                                                            dimensions.
-                                                        </DialogDescription>
-                                                    </DialogHeader>
+                                                        </Button>
+                                                    </DialogTrigger>
 
-                                                    {/* Order summary */}
-                                                    <div className="rounded-md border p-3 text-sm space-y-1">
-                                                        <p>
-                                                            <b>Order ID:</b>{" "}
-                                                            {order.id}
-                                                        </p>
-                                                        <p>
-                                                            <b>Total Amount:</b>{" "}
-                                                            ₹{order.totalAmount}
-                                                        </p>
-                                                        <p>
-                                                            <b>Total Items:</b>{" "}
-                                                            {order.items.length}
-                                                        </p>
-                                                        <p>
-                                                            <b>
-                                                                Shipping Mode:
-                                                            </b>{" "}
-                                                            <span className="capitalize">
+                                                    <DialogContent className="sm:max-w-[520px]">
+                                                        <DialogHeader>
+                                                            <DialogTitle>
+                                                                Create Shipment
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                Verify order
+                                                                details and
+                                                                enter shipment
+                                                                dimensions.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+
+                                                        {/* Order summary */}
+                                                        <div className="rounded-md border p-3 text-sm space-y-1">
+                                                            <p>
+                                                                <b>Order ID:</b>{" "}
+                                                                {order.id}
+                                                            </p>
+                                                            <p>
+                                                                <b>
+                                                                    Total
+                                                                    Amount:
+                                                                </b>{" "}
+                                                                ₹
                                                                 {
-                                                                    order.shippingMode
+                                                                    order.totalAmount
                                                                 }
-                                                            </span>
-                                                        </p>
-                                                    </div>
+                                                            </p>
+                                                            <p>
+                                                                <b>
+                                                                    Total Items:
+                                                                </b>{" "}
+                                                                {
+                                                                    order.items
+                                                                        .length
+                                                                }
+                                                            </p>
+                                                            <p>
+                                                                <b>
+                                                                    Shipping
+                                                                    Mode:
+                                                                </b>{" "}
+                                                                <span className="capitalize">
+                                                                    {
+                                                                        order.shippingMode
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                        </div>
 
-                                                    {/* Order Items */}
-                                                    <div className="mt-4 space-y-2">
-                                                        <p className="text-sm font-medium">
-                                                            Order Items
-                                                        </p>
+                                                        {/* Order Items */}
+                                                        <div className="mt-4 space-y-2">
+                                                            <p className="text-sm font-medium">
+                                                                Order Items
+                                                            </p>
+                                                            <div className="rounded-md border divide-y text-sm">
+                                                                {order.items.map(
+                                                                    (
+                                                                        item: any,
+                                                                        idx: number,
+                                                                    ) => (
+                                                                        <div
+                                                                            key={
+                                                                                idx
+                                                                            }
+                                                                            className="flex justify-between px-3 py-2"
+                                                                        >
+                                                                            <div>
+                                                                                <p className="font-medium">
+                                                                                    {
+                                                                                        item.name
+                                                                                    }
+                                                                                </p>
+                                                                                <p className="text-muted-foreground">
+                                                                                    Color:{" "}
+                                                                                    {
+                                                                                        item.color
+                                                                                    }{" "}
+                                                                                    •
+                                                                                    Size:{" "}
+                                                                                    {
+                                                                                        item.size
+                                                                                    }
+                                                                                </p>
+                                                                            </div>
+                                                                            <div className="text-right">
+                                                                                <p>
+                                                                                    Qty:{" "}
+                                                                                    {
+                                                                                        item.quantity
+                                                                                    }
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        </div>
 
-                                                        <div className="rounded-md border divide-y text-sm">
-                                                            {order.items.map(
-                                                                (
-                                                                    item: any,
-                                                                    idx: number,
-                                                                ) => (
+                                                        {/* Shipment Inputs */}
+                                                        <div className="grid grid-cols-2 gap-3 mt-4">
+                                                            {[
+                                                                [
+                                                                    "length",
+                                                                    "Length (cm)",
+                                                                ],
+                                                                [
+                                                                    "breadth",
+                                                                    "Breadth (cm)",
+                                                                ],
+                                                                [
+                                                                    "height",
+                                                                    "Height (cm)",
+                                                                ],
+                                                                [
+                                                                    "weight",
+                                                                    "Weight (g)",
+                                                                ],
+                                                            ].map(
+                                                                ([
+                                                                    key,
+                                                                    label,
+                                                                ]) => (
                                                                     <div
                                                                         key={
-                                                                            idx
+                                                                            key
                                                                         }
-                                                                        className="flex justify-between px-3 py-2"
                                                                     >
-                                                                        <div>
-                                                                            <p className="font-medium">
-                                                                                {
-                                                                                    item.name
-                                                                                }
-                                                                            </p>
-                                                                            <p className="text-muted-foreground">
-                                                                                Color:{" "}
-                                                                                {
-                                                                                    item.color
-                                                                                }{" "}
-                                                                                •
-                                                                                Size:{" "}
-                                                                                {
-                                                                                    item.size
-                                                                                }
-                                                                            </p>
-                                                                        </div>
-
-                                                                        <div className="text-right">
-                                                                            <p>
-                                                                                Qty:{" "}
-                                                                                {
-                                                                                    item.quantity
-                                                                                }
-                                                                            </p>
-                                                                        </div>
+                                                                        <Label>
+                                                                            {
+                                                                                label
+                                                                            }
+                                                                        </Label>
+                                                                        <Input
+                                                                            type="number"
+                                                                            value={
+                                                                                (
+                                                                                    shipmentData as any
+                                                                                )[
+                                                                                    key
+                                                                                ]
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                setShipmentData(
+                                                                                    (
+                                                                                        prev,
+                                                                                    ) => ({
+                                                                                        ...prev,
+                                                                                        [key]: e
+                                                                                            .target
+                                                                                            .value,
+                                                                                    }),
+                                                                                )
+                                                                            }
+                                                                        />
                                                                     </div>
                                                                 ),
                                                             )}
-                                                        </div>
-                                                    </div>
 
-                                                    {/* Shipment Inputs */}
-                                                    <div className="grid grid-cols-2 gap-3 mt-4">
-                                                        {[
-                                                            [
-                                                                "length",
-                                                                "Length (cm)",
-                                                            ],
-                                                            [
-                                                                "breadth",
-                                                                "Breadth (cm)",
-                                                            ],
-                                                            [
-                                                                "height",
-                                                                "Height (cm)",
-                                                            ],
-                                                            [
-                                                                "weight",
-                                                                "Weight (g)",
-                                                            ],
-                                                        ].map(
-                                                            ([key, label]) => (
-                                                                <div key={key}>
-                                                                    <Label>
-                                                                        {label}
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={
+                                                            <div className="col-span-2">
+                                                                <Label>
+                                                                    Shipment
+                                                                    Quantity
+                                                                </Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={
+                                                                        shipmentData.quantity
+                                                                    }
+                                                                    onChange={(
+                                                                        e,
+                                                                    ) =>
+                                                                        setShipmentData(
                                                                             (
-                                                                                shipmentData as any
-                                                                            )[
-                                                                                key
-                                                                            ]
-                                                                        }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) =>
-                                                                            setShipmentData(
-                                                                                (
-                                                                                    prev,
-                                                                                ) => ({
-                                                                                    ...prev,
-                                                                                    [key]: e
+                                                                                prev,
+                                                                            ) => ({
+                                                                                ...prev,
+                                                                                quantity:
+                                                                                    e
                                                                                         .target
                                                                                         .value,
-                                                                                }),
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                            ),
-                                                        )}
+                                                                            }),
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        </div>
 
-                                                        <div className="col-span-2">
-                                                            <Label>
-                                                                Shipment
-                                                                Quantity
-                                                            </Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={
-                                                                    shipmentData.quantity
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setShipmentData(
-                                                                        (
-                                                                            prev,
-                                                                        ) => ({
-                                                                            ...prev,
-                                                                            quantity:
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                        }),
+                                                        {/* Actions */}
+                                                        <div className="flex justify-end gap-2 mt-6">
+                                                            <Button
+                                                                variant="ghost"
+                                                                onClick={() =>
+                                                                    setOpenShipment(
+                                                                        false,
                                                                     )
                                                                 }
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                            >
+                                                                Cancel
+                                                            </Button>
 
-                                                    {/* Actions */}
-                                                    <div className="flex justify-end gap-2 mt-6">
-                                                        <Button
-                                                            variant="ghost"
-                                                            onClick={() =>
-                                                                setOpen(false)
-                                                            }
-                                                        >
-                                                            Cancel
-                                                        </Button>
+                                                            <Button
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        const res =
+                                                                            await fetch(
+                                                                                "/api/internal/create-shipment",
+                                                                                {
+                                                                                    method: "POST",
+                                                                                    headers:
+                                                                                        {
+                                                                                            "Content-Type":
+                                                                                                "application/json",
+                                                                                        },
+                                                                                    body: JSON.stringify(
+                                                                                        {
+                                                                                            orderId:
+                                                                                                order.id,
+                                                                                            shipping_mode:
+                                                                                                order.shippingMode,
+                                                                                            ...shipmentData,
+                                                                                        },
+                                                                                    ),
+                                                                                },
+                                                                            );
 
-                                                        <Button
-                                                            onClick={async () => {
-                                                                // 🔍 Log payload on click
-                                                                const payload =
-                                                                    {
-                                                                        orderId:
-                                                                            order.id,
-                                                                        shipping_mode:
-                                                                            order.shippingMode,
-                                                                        ...shipmentData,
-                                                                    };
+                                                                        const data =
+                                                                            await res.json();
+                                                                        if (
+                                                                            !res.ok
+                                                                        )
+                                                                            throw new Error(
+                                                                                data?.error ||
+                                                                                    "Failed to create shipment",
+                                                                            );
 
-                                                                console.log(
-                                                                    "Create Shipment Payload:",
-                                                                    payload,
-                                                                );
+                                                                        toast({
+                                                                            title: "Shipment created",
+                                                                            description:
+                                                                                "Syncing shipment status…",
+                                                                        });
 
-                                                                try {
-                                                                    const res =
+                                                                        setOpenShipment(
+                                                                            false,
+                                                                        );
                                                                         await fetch(
-                                                                            "/api/internal/create-shipment",
+                                                                            "/api/internal/sync-shipments",
                                                                             {
                                                                                 method: "POST",
-                                                                                headers:
-                                                                                    {
-                                                                                        "Content-Type":
-                                                                                            "application/json",
-                                                                                    },
-                                                                                body: JSON.stringify(
-                                                                                    payload,
-                                                                                ),
                                                                             },
                                                                         );
-
-                                                                    const data =
-                                                                        await res.json();
-                                                                    if (
-                                                                        !res.ok
-                                                                    ) {
-                                                                        throw new Error(
-                                                                            data?.error ||
-                                                                                "Failed to create shipment",
-                                                                        );
+                                                                        await fetchOrders();
+                                                                    } catch (err: any) {
+                                                                        toast({
+                                                                            title: "Shipment creation failed",
+                                                                            description:
+                                                                                err.message,
+                                                                            variant:
+                                                                                "destructive",
+                                                                        });
                                                                     }
+                                                                }}
+                                                            >
+                                                                Confirm & Create
+                                                            </Button>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
 
-                                                                    toast({
-                                                                        title: "Shipment created",
-                                                                        description:
-                                                                            "Syncing shipment status…",
-                                                                    });
-
-                                                                    setOpen(
-                                                                        false,
-                                                                    );
-
-                                                                    await fetch(
-                                                                        "/api/internal/sync-shipments",
-                                                                        {
-                                                                            method: "POST",
-                                                                        },
-                                                                    );
-
-                                                                    await fetchOrders();
-                                                                } catch (err: any) {
-                                                                    toast({
-                                                                        title: "Shipment creation failed",
-                                                                        description:
-                                                                            err.message,
-                                                                        variant:
-                                                                            "destructive",
-                                                                    });
-                                                                }
+                                                {/* ================= CANCEL ORDER (VIEW-DETAILS STYLE) ================= */}
+                                                <Dialog
+                                                    open={
+                                                        isCancelDialogOpen &&
+                                                        selectedOrder?.id ===
+                                                            order.id
+                                                    }
+                                                    onOpenChange={(open) => {
+                                                        setIsCancelDialogOpen(
+                                                            open,
+                                                        );
+                                                        if (!open)
+                                                            setSelectedOrder(
+                                                                null,
+                                                            );
+                                                    }}
+                                                >
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={() => {
+                                                                setSelectedOrder(
+                                                                    order,
+                                                                );
+                                                                setIsCancelDialogOpen(
+                                                                    true,
+                                                                );
                                                             }}
                                                         >
-                                                            Confirm & Create
+                                                            Cancel Order
                                                         </Button>
-                                                    </div>
-                                                </DialogContent>
-                                            </Dialog>
+                                                    </DialogTrigger>
+
+                                                    <DialogContent className="max-w-md">
+                                                        <DialogHeader>
+                                                            <DialogTitle>
+                                                                Cancel Order &
+                                                                Refund
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                This will cancel
+                                                                the order and
+                                                                initiate a
+                                                                refund to the
+                                                                customer.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+
+                                                        <p className="text-sm text-muted-foreground">
+                                                            This action cannot
+                                                            be undone.
+                                                        </p>
+
+                                                        <div className="flex justify-end gap-2 mt-6">
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    setIsCancelDialogOpen(
+                                                                        false,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Keep Order
+                                                            </Button>
+
+                                                            <Button
+                                                                variant="destructive"
+                                                                disabled={
+                                                                    isCancelling
+                                                                }
+                                                                onClick={async () => {
+                                                                    if (
+                                                                        !selectedOrder
+                                                                    )
+                                                                        return;
+
+                                                                    setIsCancelling(
+                                                                        true,
+                                                                    );
+                                                                    try {
+                                                                        const res =
+                                                                            await fetch(
+                                                                                `/api/admin/orders/${selectedOrder.id}/cancel`,
+                                                                                {
+                                                                                    method: "POST",
+                                                                                },
+                                                                            );
+
+                                                                        const data =
+                                                                            await res.json();
+                                                                        if (
+                                                                            !res.ok
+                                                                        )
+                                                                            throw new Error(
+                                                                                data.error,
+                                                                            );
+
+                                                                        toast({
+                                                                            title: "Order cancelled",
+                                                                            description:
+                                                                                "Refund initiated successfully",
+                                                                        });
+
+                                                                        setIsCancelDialogOpen(
+                                                                            false,
+                                                                        );
+                                                                        setSelectedOrder(
+                                                                            null,
+                                                                        );
+                                                                        await fetchOrders();
+                                                                    } catch (err: any) {
+                                                                        toast({
+                                                                            title: "Cancel failed",
+                                                                            description:
+                                                                                err.message,
+                                                                            variant:
+                                                                                "destructive",
+                                                                        });
+                                                                    } finally {
+                                                                        setIsCancelling(
+                                                                            false,
+                                                                        );
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {isCancelling
+                                                                    ? "Cancelling..."
+                                                                    : "Cancel & Refund"}
+                                                            </Button>
+                                                        </div>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
                                         )}
 
                                     {/* For shipped/delivered rows we show extra action buttons */}

@@ -1,14 +1,126 @@
 // app/profile/orders/[orderId]/page.tsx
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { db } from "@/lib/db";
-import { IndianRupee } from "lucide-react";
+import { Calendar, IndianRupee } from "lucide-react";
 import { getServerSession } from "next-auth/next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-type PageProps = {
-    params: Promise<{ orderId: string }>;
-    searchParams: Promise<Record<string, string | string[] | undefined>>;
+/* -------------------- Types -------------------- */
+
+const SHIPMENT_STATUSES = [
+    "manifested",
+    "pickup",
+    "in_transit",
+    "out_for_delivery",
+    "delivered",
+] as const;
+
+type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
+
+type DisplayStatus =
+    | "payment_pending"
+    | "order_confirmed"
+    | "order_processing"
+    | "order_shipped"
+    | "out_for_delivery"
+    | "delivered"
+    | "cancelled";
+
+/* -------------------- Guards & Helpers -------------------- */
+
+function isShipmentStatus(value: any): value is ShipmentStatus {
+    return SHIPMENT_STATUSES.includes(value);
+}
+
+function getOrderDisplayStatus(
+    orderStatus: string,
+    shipmentStatus?: ShipmentStatus | null,
+): DisplayStatus {
+    // Payment pending
+    if (orderStatus === "payment_pending") {
+        return "payment_pending";
+    }
+
+    // Cancelled overrides everything
+    if (orderStatus === "cancelled") {
+        return "cancelled";
+    }
+
+    // Delivered (hard stop)
+    if (orderStatus === "delivered" && shipmentStatus === "delivered") {
+        return "delivered";
+    }
+
+    // 🔑 Shipment-driven states (VERY IMPORTANT)
+    if (shipmentStatus) {
+        if (shipmentStatus === "manifested") {
+            return "order_processing";
+        }
+
+        if (shipmentStatus === "out_for_delivery") {
+            return "out_for_delivery";
+        }
+
+        if (shipmentStatus === "delivered") {
+            return "delivered";
+        }
+
+        // pickup | in_transit
+        return "order_shipped";
+    }
+
+    // No shipment yet → order-based
+    if (orderStatus === "confirmed") {
+        return "order_confirmed";
+    }
+
+    if (orderStatus === "shipped") {
+        return "order_processing";
+    }
+
+    return "order_confirmed";
+}
+
+const STATUS_UI: Record<
+    DisplayStatus,
+    { label: string; className: string; emoji: string }
+> = {
+    payment_pending: {
+        label: "Payment Pending",
+        className: "bg-yellow-100 text-yellow-900",
+        emoji: "⏳",
+    },
+    order_confirmed: {
+        label: "Order Confirmed",
+        className: "bg-blue-100 text-blue-900",
+        emoji: "✅",
+    },
+    order_processing: {
+        label: "Order Processing",
+        className: "bg-purple-100 text-purple-900",
+        emoji: "⚙️",
+    },
+    order_shipped: {
+        label: "Order Shipped",
+        className: "bg-indigo-100 text-indigo-900",
+        emoji: "🚚",
+    },
+    out_for_delivery: {
+        label: "Out for Delivery",
+        className: "bg-orange-100 text-orange-900",
+        emoji: "🚚💨",
+    },
+    delivered: {
+        label: "Delivered",
+        className: "bg-green-100 text-green-900",
+        emoji: "📦",
+    },
+    cancelled: {
+        label: "Cancelled",
+        className: "bg-red-100 text-red-900",
+        emoji: "❌",
+    },
 };
 
 function safeParseJson(x: any) {
@@ -24,284 +136,165 @@ function safeParseJson(x: any) {
     return null;
 }
 
-export default async function OrderDetailsPage({
-    params,
-    searchParams,
-}: PageProps) {
-    const [{ orderId }] = await Promise.all([params, searchParams]);
+/* -------------------- Page -------------------- */
+
+type PageProps = {
+    params: Promise<{ orderId: string }>;
+};
+
+export default async function OrderDetailsPage({ params }: PageProps) {
+    const { orderId } = await params;
+
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-        redirect("/login");
-    }
+    if (!session?.user) redirect("/login");
 
     const order = await db.order.findUnique({
         where: { id: orderId },
+        include: { shipment: true },
     });
 
-    if (!order || order.userId !== session.user.id) {
-        notFound();
-    }
+    if (!order || order.userId !== session.user.id) notFound();
 
-    // Parse items and addresses if stored as JSON strings
-    let items: any[] = [];
-    try {
-        items =
-            typeof order.items === "string"
-                ? JSON.parse(order.items)
-                : order.items || [];
-    } catch {
-        items = [];
-    }
+    const items =
+        typeof order.items === "string"
+            ? JSON.parse(order.items)
+            : order.items || [];
 
-    let shippingAddress: any = order.shippingAddress;
-    try {
-        shippingAddress =
-            typeof order.shippingAddress === "string"
-                ? JSON.parse(order.shippingAddress)
-                : order.shippingAddress;
-    } catch {
-        shippingAddress = order.shippingAddress;
-    }
+    const shippingAddress =
+        typeof order.shippingAddress === "string"
+            ? JSON.parse(order.shippingAddress)
+            : order.shippingAddress;
 
-    // --- Fetch correct images for each item ---
-    const productIds = items
-        .filter((item: any) => item.productId)
-        .map((item: any) => item.productId);
-    const prebuiltProductIds = items
-        .filter((item: any) => item.prebuiltProductId)
-        .map((item: any) => item.prebuiltProductId);
+    const trackingInfo = safeParseJson(order.trackingInfo) || {};
+    const waybill = trackingInfo.waybill || trackingInfo.trackingNumber || null;
 
-    const [products, prebuiltProducts] = await Promise.all([
-        productIds.length > 0
-            ? db.product.findMany({ where: { id: { in: productIds } } })
-            : Promise.resolve([]),
-        prebuiltProductIds.length > 0
-            ? db.prebuiltProduct.findMany({
-                  where: { id: { in: prebuiltProductIds } },
-              })
-            : Promise.resolve([]),
-    ]);
-
-    const productImageMap = Object.fromEntries(
-        products.map((p: any) => [
-            p.id,
-            Array.isArray(p.images)
-                ? p.images[0]
-                : typeof p.images === "string"
-                  ? p.images
-                  : null,
-        ])
-    );
-    const prebuiltProductImageMap = Object.fromEntries(
-        prebuiltProducts.map((p: any) => [
-            p.id,
-            Array.isArray(p.images)
-                ? p.images[0]
-                : typeof p.images === "string"
-                  ? p.images
-                  : null,
-        ])
-    );
-
-    function getItemImage(item: any) {
-        if (item.productId && productImageMap[item.productId])
-            return productImageMap[item.productId];
-        if (
-            item.prebuiltProductId &&
-            prebuiltProductImageMap[item.prebuiltProductId]
-        )
-            return prebuiltProductImageMap[item.prebuiltProductId];
-        return null;
-    }
-
-    // Safe parse trackingInfo (may be stringified or object)
-    const trackingInfoRaw = order.trackingInfo ?? null;
-    const trackingInfo = safeParseJson(trackingInfoRaw) || {};
-
-    const waybill =
-        trackingInfo.waybill ||
-        trackingInfo.trackingNumber ||
-        trackingInfo.tracking_number ||
-        trackingInfo.awb ||
-        null;
-
-    const explicitTrackingUrl =
+    const trackingUrl =
         trackingInfo.trackingUrl ||
-        trackingInfo.tracking_link ||
-        trackingInfo.tracking_link_url ||
-        null;
+        (waybill ? `https://delhivery.com/track/package/${waybill}` : null);
 
-    const baseWaybillUrl =
-        process.env.NEXT_PUBLIC_DELHIVERY_WAYBILL_URL ||
-        "https://delhivery.com/track/package";
+    const shipmentStatus = isShipmentStatus(order.shipment?.status)
+        ? order.shipment?.status
+        : undefined;
 
-    const fallbackWaybillUrl = waybill
-        ? `${baseWaybillUrl}${baseWaybillUrl.endsWith("/") ? "" : "/"}${waybill}`
-        : null;
+    const displayStatus = getOrderDisplayStatus(order.status, shipmentStatus);
 
-    const finalTrackingUrl = explicitTrackingUrl || fallbackWaybillUrl || null;
+    const statusUI = STATUS_UI[displayStatus];
 
-    const formatPrice = (amount: number) =>
-        `₹${amount?.toLocaleString?.("en-IN") ?? amount}`;
+    /* -------------------- UI -------------------- */
 
     return (
-        <div className="max-w-4xl mx-auto py-12 px-6 bg-white/80 rounded-lg shadow-sm mt-10">
-            <div className="flex items-center gap-2 mb-6">
+        <div className="max-w-5xl mx-auto pt-24 pb-12 px-6">
+            {/* Breadcrumb / Back Nav */}
+            <div className="flex items-center gap-2 mb-6 text-sm text-gray-600">
                 <Link
                     href="/profile?tab=orders"
                     className="text-blue-600 hover:underline font-medium flex items-center gap-1"
                 >
-                    <span className="text-lg">←</span>
-                    Back to Orders
+                    <span className="text-lg">←</span> Back to Orders
                 </Link>
-                <span className="mx-2 text-gray-400">/</span>
-                <Link href="/profile" className="text-gray-500 hover:underline">
+                <span className="mx-1">/</span>
+                <Link href="/profile" className="hover:underline">
                     Profile
                 </Link>
-                <span className="mx-2 text-gray-400">/</span>
-                <Link
-                    href="/profile?tab=orders"
-                    className="text-gray-500 hover:underline"
-                >
+                <span className="mx-1">/</span>
+                <Link href="/profile?tab=orders" className="hover:underline">
                     Orders
                 </Link>
-                <span className="mx-2 text-gray-400">/</span>
-                <span className="text-gray-700 font-semibold">
+                <span className="mx-1">/</span>
+                <span className="text-gray-800 font-semibold">
                     Order Details
                 </span>
             </div>
 
-            <h1 className="text-3xl font-bold mb-4">Order Details</h1>
-
-            <div className="mb-4">
-                <div className="text-gray-600 text-sm">
-                    Order ID: <span className="select-all">{order.id}</span>
-                </div>
-                <div className="text-gray-600 text-sm">
-                    Placed on: {new Date(order.createdAt).toLocaleString()}
-                </div>
-                <div className="text-gray-600 text-sm mb-2">
-                    Status:{" "}
-                    <span className="font-semibold">{order.status}</span>
-                </div>
-
-                {/* WAYBILL text directly below status */}
-                {waybill ? (
-                    <div className="text-gray-700 text-sm mb-3">
-                        Waybill: <span className="font-medium">{waybill}</span>
-                    </div>
-                ) : null}
-
-                {/* Track Order button appears after the waybill (or directly after status if no waybill) */}
-                {order.status === "shipped" && finalTrackingUrl ? (
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
                     <div>
-                        <a
-                            href={finalTrackingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                        >
-                            Track Order
-                        </a>
+                        <h1 className="text-3xl font-bold text-gray-900">
+                            Order Details
+                        </h1>
+                        <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(order.createdAt).toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Order ID:{" "}
+                            <span className="select-all font-medium">
+                                {order.id}
+                            </span>
+                        </p>
                     </div>
-                ) : order.status === "shipped" ? (
-                    <div className="text-sm text-gray-600 italic">
-                        Shipment created — tracking pending.
-                    </div>
-                ) : null}
-            </div>
 
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">Items</h2>
-                {Array.isArray(items) && items.length > 0 ? (
-                    <ul className="divide-y divide-gray-200">
-                        {items.map((item: any, idx: number) => {
-                            const image = getItemImage(item);
-                            return (
-                                <li
-                                    key={idx}
-                                    className="py-3 flex items-center gap-4"
-                                >
-                                    {image ? (
-                                        <img
-                                            src={image}
-                                            alt={item.name}
-                                            className="w-12 h-12 rounded object-cover border"
-                                        />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-gray-400 border">
-                                            <span className="text-2xl">🛍️</span>
-                                        </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-semibold text-base text-gray-900 truncate">
-                                            {item.name}
-                                        </div>
-                                        <div className="text-xs text-gray-500 truncate">
-                                            {item.description || ""}
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-sm">
-                                            Qty: {item.quantity || 1}
-                                        </span>
-                                        <span className="flex items-center gap-1 text-gray-700 font-semibold text-sm">
-                                            <IndianRupee className="w-4 h-4" />
-                                            {item.price || 0}
-                                        </span>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                ) : (
-                    <div className="text-gray-400 text-sm italic">
-                        No items found
-                    </div>
-                )}
-            </div>
+                    <span
+                        className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold shadow-sm ${statusUI.className}`}
+                    >
+                        <span className="text-lg">{statusUI.emoji}</span>
+                        {statusUI.label}
+                    </span>
+                </div>
 
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">Shipping Address</h2>
-                {shippingAddress &&
-                typeof shippingAddress === "object" &&
-                !Array.isArray(shippingAddress) ? (
-                    <div className="text-gray-700 text-sm">
-                        <div>
-                            {typeof shippingAddress.name === "string"
-                                ? shippingAddress.name
-                                : typeof shippingAddress.fullName === "string"
-                                  ? shippingAddress.fullName
-                                  : ""}
+                {/* Tracking */}
+                {trackingUrl &&
+                    (displayStatus === "order_shipped" ||
+                        displayStatus === "out_for_delivery") && (
+                        <div className="mb-6">
+                            <a
+                                href={trackingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold shadow hover:scale-105 transition"
+                            >
+                                🚚 Track Order
+                            </a>
                         </div>
-                        <div>
-                            {typeof shippingAddress.street === "string"
-                                ? shippingAddress.street
-                                : ""}
-                        </div>
-                        <div>
-                            {typeof shippingAddress.city === "string"
-                                ? shippingAddress.city
-                                : ""}
-                            ,{" "}
-                            {typeof shippingAddress.state === "string"
-                                ? shippingAddress.state
-                                : ""}{" "}
-                            {typeof shippingAddress.zipCode === "string"
-                                ? shippingAddress.zipCode
-                                : ""}
-                        </div>
-                        <div>
-                            {typeof shippingAddress.country === "string"
-                                ? shippingAddress.country
-                                : ""}
-                        </div>
+                    )}
+
+                {/* Items */}
+                <div className="mb-8">
+                    <h2 className="text-xl font-semibold mb-4">Items</h2>
+                    <div className="space-y-3">
+                        {items.map((item: any, idx: number) => (
+                            <div
+                                key={idx}
+                                className="flex items-center gap-4 bg-gray-50 rounded-xl p-4 border"
+                            >
+                                <div className="flex-1">
+                                    <div className="font-semibold text-gray-900">
+                                        {item.name}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        {item.description || ""}
+                                    </div>
+                                </div>
+
+                                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+                                    x{item.quantity || 1}
+                                </span>
+
+                                <span className="flex items-center gap-1 font-bold text-gray-800">
+                                    <IndianRupee className="w-4 h-4" />
+                                    {item.price || 0}
+                                </span>
+                            </div>
+                        ))}
                     </div>
-                ) : (
-                    <div className="text-gray-400 text-sm italic">
-                        No shipping address
+                </div>
+
+                {/* Address */}
+                <div>
+                    <h2 className="text-xl font-semibold mb-2">
+                        Shipping Address
+                    </h2>
+                    <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 border">
+                        <div>{shippingAddress.name}</div>
+                        <div>{shippingAddress.street}</div>
+                        <div>
+                            {shippingAddress.city}, {shippingAddress.state}{" "}
+                            {shippingAddress.zipCode}
+                        </div>
+                        <div>{shippingAddress.country}</div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

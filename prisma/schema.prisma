@@ -424,10 +424,16 @@ model Order {
   transactionId     String?   @unique
   trackingInfo      Json?
 
+  // Refund
+  refundStatus           String?  // initiated | success | failed
+  refundId               String?
+  refundInitiatedAt      DateTime?  @default(now())
+  refundCompletedAt      DateTime?   @default(now())
   createdAt         DateTime  @default(now())
  shippingMode      String?
   user              User      @relation(fields: [userId], references: [id])
   shipment          Shipment?
+
 
   @@index([userId])
 }
