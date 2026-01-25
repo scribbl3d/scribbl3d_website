@@ -3,28 +3,27 @@ import { initiatePhonePeRefund } from "@/lib/refund";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 
-export async function POST(
-    req: Request,
-    { params }: { params: { orderId: string } },
-) {
+export async function POST(req: Request, context: any) {
+    const orderId = context.params.orderId;
+
     console.log("=================================================");
-    console.log(" [CANCEL] API HIT");
-    console.log(" [CANCEL] Order ID:", params.orderId);
+    console.log("🧨 [CANCEL] API HIT");
+    console.log("🧨 [CANCEL] Order ID:", orderId);
 
     try {
         const order = await db.order.findUnique({
-            where: { id: params.orderId },
+            where: { id: orderId },
         });
 
         if (!order) {
-            console.log(" [CANCEL] Order not found");
+            console.log("❌ [CANCEL] Order not found");
             return NextResponse.json(
                 { error: "Order not found" },
                 { status: 404 },
             );
         }
 
-        console.log(" [CANCEL] ORDER FOUND:", {
+        console.log("📄 [CANCEL] ORDER FOUND:", {
             id: order.id,
             paymentMethod: order.paymentMethod,
             transactionId: order.transactionId,
@@ -32,7 +31,7 @@ export async function POST(
             totalAmount: order.totalAmount,
         });
 
-        // For v3 refund we ONLY need OMO id
+        // For PhonePe v3 refund → providerReferenceId (OMO...) is mandatory
         if (!order.paymentReference) {
             throw new Error(
                 "Missing providerReferenceId (paymentReference / OMO id)",
@@ -42,8 +41,8 @@ export async function POST(
         const refundTxnId =
             "RFD_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
 
-        console.log(" [CANCEL] Generated refundTxnId:", refundTxnId);
-        console.log(" [CANCEL] Initiating PhonePe refund…");
+        console.log("💸 [CANCEL] Generated refundTxnId:", refundTxnId);
+        console.log("💸 [CANCEL] Initiating PhonePe refund…");
 
         const refundResponse = await initiatePhonePeRefund({
             refundTransactionId: refundTxnId,
@@ -52,7 +51,7 @@ export async function POST(
             orderId: order.id,
         });
 
-        console.log(" [CANCEL] Refund API SUCCESS RESPONSE:");
+        console.log("✅ [CANCEL] Refund API RESPONSE:");
         console.log(JSON.stringify(refundResponse, null, 2));
 
         await db.order.update({
@@ -65,7 +64,7 @@ export async function POST(
             },
         });
 
-        console.log(" [CANCEL] Order updated with refund info");
+        console.log("✅ [CANCEL] Order updated in DB");
         console.log("=================================================");
 
         return NextResponse.json({
@@ -73,7 +72,7 @@ export async function POST(
             refund: refundResponse,
         });
     } catch (err: any) {
-        console.error(" [CANCEL] ERROR OCCURRED");
+        console.error("🔥 [CANCEL] ERROR");
         console.error(err);
         console.log("=================================================");
 
