@@ -3,12 +3,13 @@
 import PrinterHero from "@/components/printers/PrinterHero"; // reused
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 
+import Loader from "@/components/Loader";
 import MobileFilterBar from "@/components/resins/Mobilefilterbar";
 import MobileResinFilters from "@/components/resins/Mobileresinfilters";
 import MobileSortSheet from "@/components/resins/Mobilesortsheet";
-
 import ResinFilters from "@/components/resins/ResinFilters";
 import ResinGrid from "@/components/resins/ResinGrid";
+import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useEffect, useState } from "react";
 
 /* ================= TYPES ================= */
@@ -29,7 +30,7 @@ const PAGE_LIMIT = 3;
 
 export default function ResinsPage() {
     /* ================= DATA ================= */
-
+    const isInitialLoading = useAutoImageLoader();
     const [resins, setResins] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
@@ -199,49 +200,64 @@ export default function ResinsPage() {
     /* ================= UI ================= */
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <PrinterHero />
+        <main className="w-full">
+            {/* 1. GLOBAL OVERLAY LOADER */}
+            {isInitialLoading && <Loader />}
 
-            <div className="container mx-auto px-4 py-8">
-                {/* Mobile Filter Bar */}
-                <MobileFilterBar
-                    onOpenFilters={() => setIsFilterOpen(true)}
-                    onOpenSort={() => setIsSortOpen(true)}
-                    activeFilterCount={activeFilterCount}
-                />
+            {/* 2. PAGE CONTENT WRAPPER */}
+            <div
+                className="min-h-screen bg-gray-50"
+                style={{
+                    opacity: isInitialLoading ? 0 : 1,
+                    visibility: isInitialLoading ? "hidden" : "visible",
+                    transition: "opacity 0.8s ease-in-out",
+                }}
+            >
+                <div className="min-h-screen bg-gray-50">
+                    <PrinterHero />
 
-                <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Sidebar - Hidden on mobile */}
-                    <div className="hidden lg:block lg:w-1/4">
-                        <ResinFilters
-                            filters={filters}
-                            setFilters={setFilters}
-                        />
-                    </div>
-
-                    {/* Grid */}
-                    <div className="w-full lg:w-3/4">
-                        <SelectedFiltersBar
-                            selectedFilters={selectedFilters}
-                            onRemove={removeFilter}
+                    <div className="container mx-auto px-4 py-8">
+                        {/* Mobile Filter Bar */}
+                        <MobileFilterBar
+                            onOpenFilters={() => setIsFilterOpen(true)}
+                            onOpenSort={() => setIsSortOpen(true)}
+                            activeFilterCount={activeFilterCount}
                         />
 
-                        {/* Top Bar - Hidden sort on mobile */}
-                        <div className="mb-6 flex justify-between items-center">
-                            <p className="text-gray-600">
-                                Showing{" "}
-                                <span className="font-semibold">{total}</span>{" "}
-                                resin{total !== 1 ? "s" : ""}
-                            </p>
+                        <div className="flex flex-col lg:flex-row gap-8">
+                            {/* Sidebar - Hidden on mobile */}
+                            <div className="hidden lg:block lg:w-1/4">
+                                <ResinFilters
+                                    filters={filters}
+                                    setFilters={setFilters}
+                                />
+                            </div>
 
-                            {/* Desktop Sort - Hidden on mobile */}
-                            <div className="hidden lg:block relative min-w-[180px]">
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) =>
-                                        setSortBy(e.target.value as any)
-                                    }
-                                    className="
+                            {/* Grid */}
+                            <div className="w-full lg:w-3/4">
+                                <SelectedFiltersBar
+                                    selectedFilters={selectedFilters}
+                                    onRemove={removeFilter}
+                                />
+
+                                {/* Top Bar - Hidden sort on mobile */}
+                                <div className="mb-6 flex justify-between items-center">
+                                    <p className="text-gray-600">
+                                        Showing{" "}
+                                        <span className="font-semibold">
+                                            {total}
+                                        </span>{" "}
+                                        resin{total !== 1 ? "s" : ""}
+                                    </p>
+
+                                    {/* Desktop Sort - Hidden on mobile */}
+                                    <div className="hidden lg:block relative min-w-[180px]">
+                                        <select
+                                            value={sortBy}
+                                            onChange={(e) =>
+                                                setSortBy(e.target.value as any)
+                                            }
+                                            className="
                                         w-full
                                         h-[38px]
                                         bg-white
@@ -254,71 +270,73 @@ export default function ResinsPage() {
                                         appearance-none
                                         cursor-pointer
                                     "
-                                >
-                                    <option value="new">
-                                        Sort by: New Arrivals
-                                    </option>
-                                    <option value="price_asc">
-                                        Price: Low to High
-                                    </option>
-                                    <option value="price_desc">
-                                        Price: High to Low
-                                    </option>
-                                </select>
+                                        >
+                                            <option value="new">
+                                                Sort by: New Arrivals
+                                            </option>
+                                            <option value="price_asc">
+                                                Price: Low to High
+                                            </option>
+                                            <option value="price_desc">
+                                                Price: High to Low
+                                            </option>
+                                        </select>
 
-                                <svg
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="#6B7280"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <polyline points="6 9 12 15 18 9" />
-                                </svg>
+                                        <svg
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="#6B7280"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                {loading ? (
+                                    <div className="text-center py-20">
+                                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
+                                        <p className="mt-4 text-gray-600">
+                                            Loading resins...
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <ResinGrid
+                                        resins={resins}
+                                        page={page}
+                                        total={total}
+                                        limit={PAGE_LIMIT}
+                                        onPageChange={setPage}
+                                    />
+                                )}
                             </div>
                         </div>
-
-                        {/* Content */}
-                        {loading ? (
-                            <div className="text-center py-20">
-                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
-                                <p className="mt-4 text-gray-600">
-                                    Loading resins...
-                                </p>
-                            </div>
-                        ) : (
-                            <ResinGrid
-                                resins={resins}
-                                page={page}
-                                total={total}
-                                limit={PAGE_LIMIT}
-                                onPageChange={setPage}
-                            />
-                        )}
                     </div>
+
+                    {/* Mobile Filter Sheet */}
+                    <MobileResinFilters
+                        isOpen={isFilterOpen}
+                        onClose={() => setIsFilterOpen(false)}
+                        filters={filters}
+                        setFilters={setFilters}
+                        onApply={() => {}}
+                    />
+
+                    {/* Mobile Sort Sheet */}
+                    <MobileSortSheet
+                        isOpen={isSortOpen}
+                        onClose={() => setIsSortOpen(false)}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
+                    />
                 </div>
             </div>
-
-            {/* Mobile Filter Sheet */}
-            <MobileResinFilters
-                isOpen={isFilterOpen}
-                onClose={() => setIsFilterOpen(false)}
-                filters={filters}
-                setFilters={setFilters}
-                onApply={() => {}}
-            />
-
-            {/* Mobile Sort Sheet */}
-            <MobileSortSheet
-                isOpen={isSortOpen}
-                onClose={() => setIsSortOpen(false)}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-            />
-        </div>
+        </main>
     );
 }

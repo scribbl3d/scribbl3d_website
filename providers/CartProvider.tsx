@@ -25,6 +25,7 @@ export type CartItem = {
     prebuiltColour?: string | null;
     prebuiltSize?: string | null;
     customization?: string | null;
+    weight?: string | null;
 };
 
 export type AddToCartPayload = {
@@ -155,7 +156,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
             if (res.ok) {
                 setCart((prev) =>
-                    prev.map((i) => (i.id === id ? { ...i, quantity } : i))
+                    prev.map((i) => (i.id === id ? { ...i, quantity } : i)),
                 );
             }
         } catch (err) {
@@ -174,7 +175,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
             if (res.ok) {
                 setCart((prev) =>
-                    prev.map((i) => (i.id === id ? { ...i, customization } : i))
+                    prev.map((i) =>
+                        i.id === id ? { ...i, customization } : i,
+                    ),
                 );
             }
         } catch (err) {

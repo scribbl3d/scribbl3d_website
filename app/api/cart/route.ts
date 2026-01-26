@@ -8,12 +8,13 @@ import { NextResponse } from "next/server";
 ========================= */
 export async function POST(req: Request) {
     try {
-        const session = await getServerSession(authOptions);
-
+        const session = (await getServerSession(authOptions as any)) as {
+            user?: { id?: string; name?: string; email?: string };
+        } | null;
         if (!session?.user?.id) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 401 }
+                { status: 401 },
             );
         }
 
@@ -36,14 +37,14 @@ export async function POST(req: Request) {
         if (!productId && !prebuiltProductId && !printerId && !resinId) {
             return NextResponse.json(
                 { error: "Invalid cart item" },
-                { status: 400 }
+                { status: 400 },
             );
         }
         if (prebuiltProductId) {
             if (!prebuiltColour || !prebuiltSize) {
                 return NextResponse.json(
                     { error: "Prebuilt colour & size required" },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
         }
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
             if (!resinColourId || !resinWeightId) {
                 return NextResponse.json(
                     { error: "Resin colour & weight required" },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
 
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
             if (!weightExists) {
                 return NextResponse.json(
                     { error: "Invalid resin weight" },
-                    { status: 400 }
+                    { status: 400 },
                 );
             }
         }
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
         console.error("POST /api/cart error:", error);
         return NextResponse.json(
             { error: "Failed to add to cart" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -146,8 +147,9 @@ export async function POST(req: Request) {
    GET CART
 ========================= */
 export async function GET() {
-    const session = await getServerSession(authOptions);
-
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string; name?: string; email?: string };
+    } | null;
     if (!session?.user?.id) {
         return NextResponse.json({ items: [] });
     }
@@ -161,6 +163,7 @@ export async function GET() {
                         product: true,
                         prebuiltProduct: true,
                         printer: {
+                            // By using 'include' without 'select', Prisma fetches all scalars (including weight)
                             include: {
                                 images: { orderBy: { sortOrder: "asc" } },
                             },
@@ -207,6 +210,10 @@ export async function GET() {
                     price: item.printer.price,
                     quantity: item.quantity,
                     images: item.printer.images.map((i) => i.url),
+                    // ✅ ADDED THIS LINE: Send weight to frontend
+                    weight: item.printer.weight
+                        ? item.printer.weight.toString()
+                        : null,
                 };
             }
 

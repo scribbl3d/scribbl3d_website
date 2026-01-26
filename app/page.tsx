@@ -1,7 +1,8 @@
 "use client";
 
+import Loader from "@/components/Loader";
+import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useState } from "react";
-
 import AnnouncementBanner from "./landingpage/AnnouncementBanner";
 import Cosplay from "./landingpage/cosplay";
 import Figurine from "./landingpage/figurine";
@@ -22,16 +23,22 @@ import WallDecor from "./landingpage/wall-decor";
 
 export default function Home() {
     const [isHeroVisible, setIsHeroVisible] = useState(false);
-
+    // Automatically detects all images in all sub-sections
+    const isLoading = useAutoImageLoader();
     return (
         <main className="w-full">
-            <div className="pt-[80px]">
+            {isLoading && <Loader />}
+
+            <div
+                className="pt-[80px]"
+                style={{
+                    opacity: isLoading ? 0 : 1,
+                    transition: "opacity 0.8s ease-in-out", // Smoother reveal
+                }}
+            >
                 <AnnouncementBanner />
-
                 <MakeItYourOwn onHeroVisible={setIsHeroVisible} />
-
                 {isHeroVisible && <ImageCarousel />}
-
                 <TrendingNow />
                 <NewLaunch />
                 <HomeEssentials />

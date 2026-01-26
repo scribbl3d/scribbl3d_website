@@ -23,7 +23,10 @@ function resolveWeight(item: CartItem): number {
             return Number(item.size.replace("kg", ""));
         }
     }
-
+    if (item.itemType === "printer" && item.weight) {
+        // Convert grams to kg
+        return Number(item.weight) / 1000;
+    }
     // defaults
     if (item.itemType === "prebuilt") return 1;
     if (item.itemType === "product") return 1;

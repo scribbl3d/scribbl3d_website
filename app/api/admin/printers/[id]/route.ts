@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 // =======================
 export async function GET(
     req: Request,
-    props: { params: Promise<{ id: string }> }
+    props: { params: Promise<{ id: string }> },
 ) {
     const params = await props.params;
 
@@ -26,7 +26,7 @@ export async function GET(
         if (!printer) {
             return NextResponse.json(
                 { error: "Printer not found" },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -35,7 +35,7 @@ export async function GET(
         console.error("[PRINTER_GET]", error);
         return NextResponse.json(
             { error: "Internal Server Error" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -45,7 +45,7 @@ export async function GET(
 // =======================
 export async function PUT(
     req: Request,
-    props: { params: Promise<{ id: string }> }
+    props: { params: Promise<{ id: string }> },
 ) {
     const params = await props.params;
 
@@ -63,16 +63,16 @@ export async function PUT(
 
         // 2️⃣ Parse JSON arrays
         const specifications = JSON.parse(
-            (formData.get("specifications") as string) || "[]"
+            (formData.get("specifications") as string) || "[]",
         );
         const features = JSON.parse(
-            (formData.get("features") as string) || "[]"
+            (formData.get("features") as string) || "[]",
         );
         const applications = JSON.parse(
-            (formData.get("applications") as string) || "[]"
+            (formData.get("applications") as string) || "[]",
         );
         const downloads = JSON.parse(
-            (formData.get("downloads") as string) || "[]"
+            (formData.get("downloads") as string) || "[]",
         );
 
         // 3️⃣ Extract materials (from Specifications)
@@ -93,8 +93,8 @@ export async function PUT(
                     spec.value
                         .split(",")
                         .map((v: string) => v.trim().toUpperCase())
-                        .filter(Boolean)
-                )
+                        .filter(Boolean),
+                ),
             );
 
             uniqueMaterials.forEach((material) => {
@@ -107,7 +107,7 @@ export async function PUT(
 
         // 4️⃣ Images (merge existing + new)
         const existingImages = JSON.parse(
-            (formData.get("existingImages") as string) || "[]"
+            (formData.get("existingImages") as string) || "[]",
         );
 
         const newFiles = formData.getAll("newImages") as File[];
@@ -135,7 +135,7 @@ export async function PUT(
                         (error, result) => {
                             if (error) reject(error);
                             else resolve(result);
-                        }
+                        },
                     )
                     .end(buffer);
             });
@@ -165,21 +165,23 @@ export async function PUT(
                     discount: parseInt(formData.get("discount") as string),
                     description: formData.get("description") as string,
                     shortDescription: formData.get(
-                        "shortDescription"
+                        "shortDescription",
                     ) as string,
                     volumeLength: parseInt(
-                        formData.get("volumeLength") as string
+                        formData.get("volumeLength") as string,
                     ),
                     volumeWidth: parseInt(
-                        formData.get("volumeWidth") as string
+                        formData.get("volumeWidth") as string,
                     ),
                     volumeHeight: parseInt(
-                        formData.get("volumeHeight") as string
+                        formData.get("volumeHeight") as string,
                     ),
                     volumeMax: parseInt(formData.get("volumeMax") as string),
                     warrantyYears: parseInt(
-                        formData.get("warrantyYears") as string
+                        formData.get("warrantyYears") as string,
                     ),
+                    // 👇 Added weight here. The frontend sends grams as a string, e.g. "15500"
+                    weight: parseInt(formData.get("weight") as string) || 0,
                     freeInstallation:
                         formData.get("freeInstallation") === "true",
                 },
@@ -271,7 +273,7 @@ export async function PUT(
         console.error("[PRINTER_PUT]", error);
         return NextResponse.json(
             { error: "Internal Server Error" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -281,7 +283,7 @@ export async function PUT(
 // =======================
 export async function DELETE(
     req: Request,
-    props: { params: Promise<{ id: string }> }
+    props: { params: Promise<{ id: string }> },
 ) {
     const params = await props.params;
 
@@ -297,7 +299,7 @@ export async function DELETE(
         if (!printer) {
             return NextResponse.json(
                 { error: "Printer not found" },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -326,7 +328,7 @@ export async function DELETE(
         console.error("[PRINTER_DELETE]", error);
         return NextResponse.json(
             { error: "Failed to delete printer" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

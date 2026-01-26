@@ -511,6 +511,7 @@ model Printer {
   volumeWidth  Int
   volumeHeight Int
   volumeMax    Int
+  weight     Int?
 
   // Images
   images PrinterImage[]

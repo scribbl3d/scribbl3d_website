@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         console.error("[ADMIN_PRINTERS_GET]", error);
         return NextResponse.json(
             { error: "Failed to fetch printers" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
@@ -143,18 +143,21 @@ export async function POST(request: NextRequest) {
         const vH = parseInt(formData.get("volumeHeight") as string);
         const volumeMax = Math.max(vL, vW, vH);
 
+        // 👇 Extract weight here
+        const weight = parseInt((formData.get("weight") as string) || "0");
+
         // 2️⃣ Parse JSON arrays
         const specifications = JSON.parse(
-            (formData.get("specifications") as string) || "[]"
+            (formData.get("specifications") as string) || "[]",
         );
         const features = JSON.parse(
-            (formData.get("features") as string) || "[]"
+            (formData.get("features") as string) || "[]",
         );
         const applications = JSON.parse(
-            (formData.get("applications") as string) || "[]"
+            (formData.get("applications") as string) || "[]",
         );
         const downloads = JSON.parse(
-            (formData.get("downloads") as string) || "[]"
+            (formData.get("downloads") as string) || "[]",
         );
 
         // 3️⃣ Extract materials → PrinterAttribute
@@ -175,8 +178,8 @@ export async function POST(request: NextRequest) {
                     spec.value
                         .split(",")
                         .map((v: string) => v.trim().toUpperCase())
-                        .filter(Boolean)
-                )
+                        .filter(Boolean),
+                ),
             );
 
             uniqueMaterials.forEach((material) => {
@@ -213,7 +216,7 @@ export async function POST(request: NextRequest) {
                         (error, result) => {
                             if (error) reject(error);
                             else resolve(result);
-                        }
+                        },
                     )
                     .end(buffer);
             });
@@ -242,8 +245,10 @@ export async function POST(request: NextRequest) {
                 description: formData.get("description") as string,
                 shortDescription: formData.get("shortDescription") as string,
                 warrantyYears: parseInt(
-                    (formData.get("warrantyYears") as string) || "1"
+                    (formData.get("warrantyYears") as string) || "1",
                 ),
+                // 👇 Save weight to DB
+                weight: weight,
                 freeInstallation: formData.get("freeInstallation") === "true",
 
                 images: { create: imageRecords },
@@ -295,7 +300,7 @@ export async function POST(request: NextRequest) {
         console.error("[PRINTER_POST]", error);
         return NextResponse.json(
             { error: "Failed to create printer" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

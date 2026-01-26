@@ -26,13 +26,16 @@ const MATERIAL_OPTIONS = [
     "PLA",
     "PETG",
     "ABS",
+    "ASA",
     "TPU (Flexible)",
     "Nylon (PA)",
+    "Polycarbonate (PC)",
     "Standard Resin",
     "ABS-Like Resin",
     "Tough Resin",
     "Flexible Resin",
     "Water-Washable Resin",
+    "High-Temperature Resin",
     "Dental Resin",
     "Castable Resin",
     "Nylon PA12",
@@ -155,6 +158,7 @@ type PrinterFormData = {
     description: string;
     shortDescription: string;
     warrantyYears: string;
+    weight: string; // Added weight field
     freeInstallation: boolean;
     images: ImageItem[];
     specifications: Specification[];
@@ -189,6 +193,7 @@ export default function PrinterFormPage() {
         description: "",
         shortDescription: "",
         warrantyYears: "1",
+        weight: "", // Initialize weight
         freeInstallation: true,
         images: [],
         specifications: isEdit ? [] : DEFAULT_SPECS,
@@ -221,6 +226,10 @@ export default function PrinterFormPage() {
                         price: data.price ? data.price.toString() : "",
                         originalPrice: data.originalPrice
                             ? data.originalPrice.toString()
+                            : "",
+                        // Convert grams from DB to Kg for UI
+                        weight: data.weight
+                            ? (data.weight / 1000).toString()
                             : "",
                         images: data.images || [],
                         specifications: data.specifications || [],
@@ -270,6 +279,12 @@ export default function PrinterFormPage() {
             const originalPriceInPaise = formData.originalPrice
                 ? Math.round(parseFloat(formData.originalPrice))
                 : null;
+
+            // Convert UI Weight (Kg) to Grams for DB
+            const weightInGrams = formData.weight
+                ? Math.round(parseFloat(formData.weight) * 1000)
+                : 0;
+
             let discount = 0;
             if (originalPriceInPaise && originalPriceInPaise > priceInPaise) {
                 discount = Math.round(
@@ -304,6 +319,8 @@ export default function PrinterFormPage() {
             data.append("volumeHeight", formData.volumeHeight);
             data.append("volumeMax", volMax.toString());
             data.append("warrantyYears", formData.warrantyYears);
+            // Append the weight in grams
+            data.append("weight", weightInGrams.toString());
             data.append("freeInstallation", String(formData.freeInstallation));
 
             data.append(
@@ -461,9 +478,9 @@ export default function PrinterFormPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <form onSubmit={handleSubmit}>
+                {/* Header */}
                 <LoadingModal open={loading} isEdit={isEdit} />
 
-                {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                         <div className="flex items-center gap-4">
@@ -609,25 +626,46 @@ export default function PrinterFormPage() {
                                             ))}
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Warranty (Years)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            step="0.5"
-                                            value={formData.warrantyYears}
-                                            onChange={(e) =>
-                                                setFormData({
-                                                    ...formData,
-                                                    warrantyYears:
-                                                        e.target.value,
-                                                })
-                                            }
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                                            placeholder="e.g. 1"
-                                        />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Warranty (Years)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.5"
+                                                value={formData.warrantyYears}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        warrantyYears:
+                                                            e.target.value,
+                                                    })
+                                                }
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                placeholder="e.g. 1"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                Weight (Kg)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.1"
+                                                value={formData.weight}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        weight: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                                placeholder="e.g. 15.5"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -639,6 +677,7 @@ export default function PrinterFormPage() {
                                     <Cpu className="w-5 h-5" />,
                                 )}
 
+                                {/* ... (Rest of the component remains exactly same as existing code) ... */}
                                 {SPEC_CATEGORIES.map((cat) => (
                                     <div
                                         key={cat}
