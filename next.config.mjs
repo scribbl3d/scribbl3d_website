@@ -4,6 +4,10 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    compiler: {
+        // This is the specific patch for Next.js production builds
+        styledComponents: true,
+    },
 
     images: {
         remotePatterns: [
