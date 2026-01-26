@@ -50,7 +50,7 @@ export async function initiatePhonePeRefund({
         "base64",
     );
 
-    console.log("📦 [REFUND] Base64 Payload:", payloadBase64);
+    console.log(" [REFUND] Base64 Payload:", payloadBase64);
 
     const stringToSign = payloadBase64 + "/v3/credit/backToSource" + SALT_KEY;
 
@@ -77,7 +77,7 @@ export async function initiatePhonePeRefund({
 
     const data = await res.json();
 
-    console.log("📦 [REFUND] PHONEPE RESPONSE (RAW):");
+    console.log(" [REFUND] PHONEPE RESPONSE (RAW):");
     console.log(JSON.stringify(data, null, 2));
     console.log("=================================================");
 

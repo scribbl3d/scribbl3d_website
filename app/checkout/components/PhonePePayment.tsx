@@ -45,8 +45,8 @@ export default function PhonePePayment({
                 throw new Error("No checkout items found");
             }
 
-            const transactionId = `T${Date.now()}${Math.random()
-                .toString(36)
+            const transactionId = `TXN${Date.now()}${Math.random()
+                .toString(34)
                 .slice(2)}`;
             const shippingMode =
                 state.selectedShipping?.id === "premium"

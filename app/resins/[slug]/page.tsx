@@ -3,7 +3,7 @@
 import { ArrowLeft, Check, Download, Heart } from "lucide-react";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import SimilarResinsCarousel from "@/components/resins/SimilarResinsCarousel";
 import { toast } from "@/components/ui/use-toast";
@@ -29,6 +29,41 @@ export default function ResinDetailPage() {
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isCartLoading, setIsCartLoading] = useState(false);
+    const ArrowRight = ({ size = 22 }: { size?: number }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path
+                d="M5 12H19"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+            />
+            <path
+                d="M13 6L19 12L13 18"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+
+    const ArrowLefti = ({ size = 22 }: { size?: number }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path
+                d="M19 12H5"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+            />
+            <path
+                d="M11 6L5 12L11 18"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
 
     useEffect(() => {
         if (!slug) return;
@@ -61,11 +96,11 @@ export default function ResinDetailPage() {
         ?.map((r: string) => parseInt(r)) // ["4K","8K"] → [4,8]
         ?.sort((a, b) => b - a)[0]; // → 8
     const temperature = resin?.attributes?.find(
-        (attr: any) => attr.label === "Temperature"
+        (attr: any) => attr.label === "Temperature",
     )?.value;
 
     const pressure = resin?.attributes?.find(
-        (attr: any) => attr.label === "Pressure"
+        (attr: any) => attr.label === "Pressure",
     )?.value;
     const selectedColourId = resin?.colours?.[selectedColourIndex]?.id ?? null;
     const selectedWeightId = resin?.weights?.[selectedWeightIndex]?.id ?? null;
@@ -133,7 +168,7 @@ export default function ResinDetailPage() {
         async function checkWishlist() {
             try {
                 const res = await fetch(
-                    `/api/wishlist/check?resinId=${resin.id}`
+                    `/api/wishlist/check?resinId=${resin.id}`,
                 );
                 const data = await res.json();
                 setIsFavorite(data.isInWishlist);
@@ -146,7 +181,7 @@ export default function ResinDetailPage() {
     }, [session, resin?.id]);
 
     const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>
+        e: React.MouseEvent<HTMLButtonElement>,
     ) => {
         e.preventDefault();
         e.stopPropagation();
@@ -207,9 +242,53 @@ export default function ResinDetailPage() {
             setIsWishlistLoading(false);
         }
     };
+
+    const [current, setCurrent] = useState(0);
+    const [isHovering, setIsHovering] = useState(false);
+    const touchStartX = useRef<number | null>(null);
+
+    const total = images?.length || 0;
+
+    /* =====================
+       AUTO SLIDE (3s)
+    ===================== */
+    useEffect(() => {
+        if (!total || isHovering) return;
+
+        const interval = setInterval(() => {
+            setCurrent((prev) => (prev + 1) % total);
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [total, isHovering]);
+
+    /* =====================
+       NAVIGATION
+    ===================== */
+    const next = () => setCurrent((c) => (c + 1) % total);
+    const prev = () => setCurrent((c) => (c === 0 ? total - 1 : c - 1));
+
+    /* =====================
+       TOUCH (SWIPE)
+    ===================== */
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const onTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const diff = touchStartX.current - touchEndX;
+
+        if (diff > 50)
+            next(); // swipe left
+        else if (diff < -50) prev(); // swipe right
+
+        touchStartX.current = null;
+    };
     if (loading) return <div className="pt-24 text-center">Loading...</div>;
     if (!resin) return null;
-
     return (
         <div className="min-h-screen bg-gray-50 pt-24">
             {/* Header */}
@@ -230,27 +309,98 @@ export default function ResinDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     {/* Images */}
                     <div>
-                        <div className="bg-white border rounded-lg p-4 mb-4">
+                        {/* MAIN CAROUSEL */}
+                        <div
+                            className="bg-white border rounded-lg p-4 mb-4"
+                            onMouseEnter={() => setIsHovering(true)}
+                            onMouseLeave={() => setIsHovering(false)}
+                            onTouchStart={onTouchStart}
+                            onTouchEnd={onTouchEnd}
+                        >
                             <div className="relative w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                                <Image
-                                    src={
-                                        images?.[selectedImageIndex]?.url ||
-                                        "/placeholder.png"
-                                    }
-                                    alt={resin?.name ?? "Resin image"}
-                                    fill
-                                    className="object-cover"
-                                />
+                                {/* SLIDER */}
+                                <div
+                                    className="flex h-full transition-transform duration-500 ease-in-out"
+                                    style={{
+                                        transform: `translateX(-${current * 100}%)`,
+                                    }}
+                                >
+                                    {images?.map((img) => (
+                                        <div
+                                            key={img.id}
+                                            className="relative min-w-full h-full"
+                                        >
+                                            <Image
+                                                src={img.url}
+                                                alt={
+                                                    img.altText ||
+                                                    resin?.name ||
+                                                    "Resin image"
+                                                }
+                                                fill
+                                                className="object-cover"
+                                                priority
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* LEFT ARROW */}
+                                {isHovering && (
+                                    <button
+                                        onClick={prev}
+                                        aria-label="Previous image"
+                                        className="
+                        absolute left-4 top-1/2 -translate-y-1/2
+                        w-12 h-12
+                        bg-white
+                        rounded-full
+                        flex items-center justify-center
+                        shadow-[0_4px_20px_rgba(0,0,0,0.12)]
+                        transition-transform duration-300
+                        hover:scale-110
+                        group
+                    "
+                                    >
+                                        <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                            <ArrowLefti size={22} />
+                                        </span>
+                                    </button>
+                                )}
+
+                                {/* RIGHT ARROW */}
+                                {isHovering && (
+                                    <button
+                                        onClick={next}
+                                        aria-label="Next image"
+                                        className="
+                        absolute right-4 top-1/2 -translate-y-1/2
+                        w-12 h-12
+                        bg-white
+                        rounded-full
+                        flex items-center justify-center
+                        shadow-[0_4px_20px_rgba(0,0,0,0.12)]
+                        transition-transform duration-300
+                        hover:scale-110
+                        group
+                    "
+                                    >
+                                        <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                            <ArrowRight size={22} />
+                                        </span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
+                        {/* THUMBNAILS */}
                         <div className="flex gap-2 overflow-x-auto">
                             {images?.map((img, idx) => (
                                 <button
                                     key={img.id}
-                                    onClick={() => setSelectedImageIndex(idx)}
-                                    className={`w-20 h-20 rounded-lg border-2 ${
-                                        selectedImageIndex === idx
+                                    onClick={() => setCurrent(idx)}
+                                    className={`w-20 h-20 rounded-lg border-2 transition ${
+                                        current === idx
                                             ? "border-blue-600"
                                             : "border-gray-300"
                                     }`}
@@ -384,7 +534,7 @@ export default function ResinDetailPage() {
                                         <span className="text-lg text-gray-400 line-through">
                                             ₹
                                             {weight.originalPrice.toLocaleString(
-                                                "en-IN"
+                                                "en-IN",
                                             )}
                                         </span>
                                         <span className="text-sm font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded">
@@ -442,7 +592,10 @@ export default function ResinDetailPage() {
                                 value={quantity}
                                 onChange={(e) =>
                                     setQuantity(
-                                        Math.max(1, Number(e.target.value || 1))
+                                        Math.max(
+                                            1,
+                                            Number(e.target.value || 1),
+                                        ),
                                     )
                                 }
                                 className="w-16 h-10 border rounded text-center"
@@ -529,7 +682,7 @@ export default function ResinDetailPage() {
                                         {
                                             resin.attributes?.find(
                                                 (attr: any) =>
-                                                    attr.label === "Material"
+                                                    attr.label === "Material",
                                             )?.value
                                         }
                                     </span>
@@ -551,7 +704,7 @@ export default function ResinDetailPage() {
                                         {
                                             resin.attributes?.find(
                                                 (attr: any) =>
-                                                    attr.label === "Washable"
+                                                    attr.label === "Washable",
                                             )?.value
                                         }
                                     </span>
@@ -565,7 +718,7 @@ export default function ResinDetailPage() {
                                             resin.attributes?.find(
                                                 (attr: any) =>
                                                     attr.label ===
-                                                    "Shore Hardness"
+                                                    "Shore Hardness",
                                             )?.value
                                         }
                                     </span>

@@ -9,7 +9,7 @@ import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function PrinterDetailPage() {
     const { slug } = useParams<{ slug: string }>() ?? {};
@@ -24,6 +24,68 @@ export default function PrinterDetailPage() {
     const { data: session } = useSession();
     const [isCartLoading, setIsCartLoading] = useState(false);
     const [quantity, setQuantity] = useState(1);
+    const ArrowRight = ({ size = 22 }: { size?: number }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path
+                d="M5 12H19"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+            />
+            <path
+                d="M13 6L19 12L13 18"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+    const [current, setCurrent] = useState(0);
+    const [isHovering, setIsHovering] = useState(false);
+    const [isTouching, setIsTouching] = useState(false);
+
+    const touchStartX = useRef<number | null>(null);
+
+    const totalImages = printer?.images?.length || 0;
+
+    const next = () => setCurrent((c) => (c + 1) % totalImages);
+
+    const prev = () => setCurrent((c) => (c === 0 ? totalImages - 1 : c - 1));
+    const onTouchStart = (e: React.TouchEvent) => {
+        setIsTouching(true);
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const onTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return;
+
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+
+        if (diff > 50) next();
+        else if (diff < -50) prev();
+
+        touchStartX.current = null;
+        setIsTouching(false);
+    };
+
+    const ArrowLefti = ({ size = 22 }: { size?: number }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path
+                d="M19 12H5"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+            />
+            <path
+                d="M11 6L5 12L11 18"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
 
     useEffect(() => {
         if (!slug) return;
@@ -78,7 +140,7 @@ export default function PrinterDetailPage() {
         async function checkWishlist() {
             try {
                 const res = await fetch(
-                    `/api/wishlist/check?printerId=${printer.id}`
+                    `/api/wishlist/check?printerId=${printer.id}`,
                 );
                 const data = await res.json();
                 setIsFavorite(data.isInWishlist);
@@ -89,9 +151,20 @@ export default function PrinterDetailPage() {
 
         checkWishlist();
     }, [session, printer?.id]);
+    useEffect(() => {
+        if (!printer?.images || printer.images.length <= 1) return;
+        if (isHovering || isTouching) return; // pause on hover or swipe
 
+        const interval = setInterval(() => {
+            setCurrent((prev) =>
+                prev === printer.images.length - 1 ? 0 : prev + 1,
+            );
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [printer?.images, isHovering, isTouching]);
     const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>
+        e: React.MouseEvent<HTMLButtonElement>,
     ) => {
         e.preventDefault();
         e.stopPropagation();
@@ -221,22 +294,88 @@ export default function PrinterDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                     {/* Left Column - Images */}
                     <div>
-                        {/* Main Image */}
-                        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                        {/* MAIN CAROUSEL */}
+                        <div
+                            className="bg-white rounded-lg border border-gray-200 p-4 mb-4"
+                            onMouseEnter={() => setIsHovering(true)}
+                            onMouseLeave={() => setIsHovering(false)}
+                            onTouchStart={onTouchStart}
+                            onTouchEnd={onTouchEnd}
+                        >
                             <div className="relative w-full aspect-square sm:aspect-[4/3] lg:h-[400px] bg-gray-50 rounded-lg overflow-hidden">
                                 {printer.images && printer.images.length > 0 ? (
-                                    <Image
-                                        src={
-                                            printer.images[selectedImage]
-                                                ?.url || "/placeholder.png"
-                                        }
-                                        alt={
-                                            printer.images[selectedImage]
-                                                ?.altText || printer.name
-                                        }
-                                        fill
-                                        className="object-cover"
-                                    />
+                                    <>
+                                        {/* SLIDER */}
+                                        <div
+                                            className="flex h-full transition-transform duration-500 ease-in-out"
+                                            style={{
+                                                transform: `translateX(-${current * 100}%)`,
+                                            }}
+                                        >
+                                            {printer.images.map((image) => (
+                                                <div
+                                                    key={image.id}
+                                                    className="relative min-w-full h-full"
+                                                >
+                                                    <Image
+                                                        src={image.url}
+                                                        alt={
+                                                            image.altText ||
+                                                            printer.name
+                                                        }
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* LEFT ARROW */}
+                                        {isHovering && totalImages > 1 && (
+                                            <button
+                                                onClick={prev}
+                                                aria-label="Previous image"
+                                                className="
+                                absolute left-4 top-1/2 -translate-y-1/2
+                                w-12 h-12
+                                bg-white
+                                rounded-full
+                                flex items-center justify-center
+                                shadow-[0_4px_20px_rgba(0,0,0,0.12)]
+                                transition-transform duration-300
+                                hover:scale-110
+                                group
+                            "
+                                            >
+                                                <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                                    <ArrowLefti />
+                                                </span>
+                                            </button>
+                                        )}
+
+                                        {/* RIGHT ARROW */}
+                                        {isHovering && totalImages > 1 && (
+                                            <button
+                                                onClick={next}
+                                                aria-label="Next image"
+                                                className="
+                                absolute right-4 top-1/2 -translate-y-1/2
+                                w-12 h-12
+                                bg-white
+                                rounded-full
+                                flex items-center justify-center
+                                shadow-[0_4px_20px_rgba(0,0,0,0.12)]
+                                transition-transform duration-300
+                                hover:scale-110
+                                group
+                            "
+                                            >
+                                                <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                                    <ArrowRight />
+                                                </span>
+                                            </button>
+                                        )}
+                                    </>
                                 ) : (
                                     <div className="flex items-center justify-center h-full">
                                         <p className="text-gray-400">
@@ -247,31 +386,29 @@ export default function PrinterDetailPage() {
                             </div>
                         </div>
 
-                        {/* Thumbnail Images */}
+                        {/* THUMBNAILS */}
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                            {printer.images &&
-                                printer.images.map((image, index) => (
-                                    <button
-                                        key={image.id}
-                                        onClick={() => setSelectedImage(index)}
-                                        className={`w-20 h-20 rounded-lg border-2 overflow-hidden ${
-                                            selectedImage === index
-                                                ? "border-blue-600"
-                                                : "border-gray-300"
-                                        }`}
-                                    >
-                                        <Image
-                                            src={image.url}
-                                            alt={
-                                                image.altText ||
-                                                `View ${index + 1}`
-                                            }
-                                            width={80}
-                                            height={80}
-                                            className="object-cover w-full h-full"
-                                        />
-                                    </button>
-                                ))}
+                            {printer.images?.map((image, index) => (
+                                <button
+                                    key={image.id}
+                                    onClick={() => setCurrent(index)}
+                                    className={`w-20 h-20 rounded-lg border-2 overflow-hidden transition ${
+                                        current === index
+                                            ? "border-blue-600"
+                                            : "border-gray-300"
+                                    }`}
+                                >
+                                    <Image
+                                        src={image.url}
+                                        alt={
+                                            image.altText || `View ${index + 1}`
+                                        }
+                                        width={80}
+                                        height={80}
+                                        className="object-cover w-full h-full"
+                                    />
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -330,7 +467,7 @@ export default function PrinterDetailPage() {
                                             <span className="text-lg text-gray-400 line-through">
                                                 ₹
                                                 {printer.originalPrice.toLocaleString(
-                                                    "en-IN"
+                                                    "en-IN",
                                                 )}
                                             </span>
                                             <span className="text-sm font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded">
@@ -376,7 +513,7 @@ export default function PrinterDetailPage() {
       "
                                         onClick={() =>
                                             setQuantity((q) =>
-                                                Math.max(1, q - 1)
+                                                Math.max(1, q - 1),
                                             )
                                         }
                                         disabled={quantity === 1}
@@ -393,10 +530,10 @@ export default function PrinterDetailPage() {
                                         onChange={(e) => {
                                             const val = e.target.value.replace(
                                                 /\D/g,
-                                                ""
+                                                "",
                                             );
                                             setQuantity(
-                                                Math.max(1, Number(val || 1))
+                                                Math.max(1, Number(val || 1)),
                                             );
                                         }}
                                         className="
@@ -508,7 +645,8 @@ export default function PrinterDetailPage() {
                                         </span>
                                     </div>
                                     {printer.specifications.find(
-                                        (s) => s.label === "Supported Materials"
+                                        (s) =>
+                                            s.label === "Supported Materials",
                                     ) && (
                                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
@@ -519,14 +657,14 @@ export default function PrinterDetailPage() {
                                                     printer.specifications.find(
                                                         (s) =>
                                                             s.label ===
-                                                            "Supported Materials"
+                                                            "Supported Materials",
                                                     ).value
                                                 }
                                             </span>
                                         </div>
                                     )}
                                     {printer.specifications.find(
-                                        (s) => s.label === "Print Speed"
+                                        (s) => s.label === "Print Speed",
                                     ) && (
                                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
@@ -537,14 +675,14 @@ export default function PrinterDetailPage() {
                                                     printer.specifications.find(
                                                         (s) =>
                                                             s.label ===
-                                                            "Print Speed"
+                                                            "Print Speed",
                                                     ).value
                                                 }
                                             </span>
                                         </div>
                                     )}
                                     {printer.specifications.find(
-                                        (s) => s.label === "Extruder Type"
+                                        (s) => s.label === "Extruder Type",
                                     ) && (
                                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
@@ -555,14 +693,14 @@ export default function PrinterDetailPage() {
                                                     printer.specifications.find(
                                                         (s) =>
                                                             s.label ===
-                                                            "Extruder Type"
+                                                            "Extruder Type",
                                                     ).value
                                                 }
                                             </span>
                                         </div>
                                     )}
                                     {printer.specifications.find(
-                                        (s) => s.label === "Connectivity"
+                                        (s) => s.label === "Connectivity",
                                     ) && (
                                         <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
                                             <span className="text-gray-600">
@@ -573,7 +711,7 @@ export default function PrinterDetailPage() {
                                                     printer.specifications.find(
                                                         (s) =>
                                                             s.label ===
-                                                            "Connectivity"
+                                                            "Connectivity",
                                                     ).value
                                                 }
                                             </span>

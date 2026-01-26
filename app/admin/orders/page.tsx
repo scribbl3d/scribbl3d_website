@@ -29,7 +29,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -45,6 +45,8 @@ interface Order {
         name?: string;
         street?: string;
         city?: string;
+        address?: string;
+        email?: string;
         state?: string;
         zipCode?: string;
         pincode?: string;
@@ -101,6 +103,15 @@ export default function OrdersPage() {
     const [openShipment, setOpenShipment] = useState(false);
     const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
+    const PICKUP_LOCATION =
+        process.env.NEXT_PUBLIC_PICKUP_LOCATION || "Scribbl SURFACE";
+    const PICKUP_SLOTS = [
+        { label: "10:00 – 12:00", value: "10:00" },
+        { label: "12:00 – 14:00", value: "12:00" },
+        { label: "14:00 – 18:00", value: "14:00" },
+    ];
+    const [isCalculating, setIsCalculating] = useState(false);
+    const [shippingCharge, setShippingCharge] = useState<any | null>(null);
 
     const router = useRouter();
 
@@ -113,6 +124,17 @@ export default function OrdersPage() {
             fetch("/api/internal/sync-refunds", { method: "POST" }).catch(
                 () => {},
             );
+            async function fetchPickupStatus() {
+                const res = await fetch(
+                    `/api/internal/pickup-status?pickup_location=${encodeURIComponent(
+                        PICKUP_LOCATION,
+                    )}`,
+                );
+                const data = await res.json();
+                if (data.ok) setPickupStatus(data);
+            }
+
+            fetchPickupStatus();
             // 2. Fetch updated orders
             await fetchOrders();
         }
@@ -248,6 +270,87 @@ export default function OrdersPage() {
             minute: "2-digit",
         });
     };
+    function downloadCSV(data: any[], filename: string) {
+        if (!data.length) {
+            toast({
+                title: "No data to export",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const headers = Object.keys(data[0]);
+
+        const csvContent = [
+            headers.join(","),
+
+            ...data.map((row) =>
+                headers
+                    .map(
+                        (key) =>
+                            `"${String(row[key] ?? "").replace(/"/g, '""')}"`,
+                    )
+                    .join(","),
+            ),
+        ].join("\n");
+
+        const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;",
+        });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function exportPaymentPendingCSV(orders: Order[]) {
+        const rows: any[] = [];
+
+        orders.forEach((order) => {
+            const items = Array.isArray(order.items) ? order.items : [];
+
+            items.forEach((item) => {
+                rows.push({
+                    order_id: order.id,
+                    order_date: formatDate(order.createdAt),
+                    order_status: order.status,
+                    order_total: order.totalAmount,
+
+                    customer_name: order.shippingAddress?.fullName || "",
+
+                    customer_email:
+                        order.shippingAddress?.email || order.user?.email || "",
+
+                    customer_phone: order.shippingAddress?.phone || "",
+
+                    payment_method: order.paymentMethod || "",
+                    payment_reference: order.paymentReference || "",
+
+                    address_line: order.shippingAddress?.address || "",
+
+                    landmark: order.shippingAddress?.landmark || "",
+
+                    city: order.shippingAddress?.city || "",
+
+                    state: order.shippingAddress?.state || "",
+
+                    pincode: order.shippingAddress?.pincode || "",
+
+                    item_name: item.name || "",
+                    item_size: item.size || "",
+                    item_color: item.color || "",
+                    item_quantity: item.quantity || 0,
+                    item_price: item.price || 0,
+                    item_total: (item.price || 0) * (item.quantity || 0),
+                });
+            });
+        });
+
+        downloadCSV(rows, "payment_pending_orders.csv");
+    }
 
     // safe parse for trackingInfo (may be string in DB)
     const parseTracking = (raw: any) => {
@@ -328,6 +431,27 @@ export default function OrdersPage() {
     const cancelledOrdersPageData = paginate(cancelledOrders, cancelledPage);
 
     const deliveredOrdersPageData = paginate(deliveredOrdersV2, deliveredPage);
+    const [isPickupDialogOpen, setIsPickupDialogOpen] = useState(false);
+    const [pickupData, setPickupData] = useState({
+        pickup_date: "",
+        pickup_time: "",
+        pickup_location: PICKUP_LOCATION,
+        expected_package_count: "",
+    });
+    const [isRequestingPickup, setIsRequestingPickup] = useState(false);
+    const [pickupStatus, setPickupStatus] = useState<{
+        scheduled: boolean;
+        pickupTime?: string;
+        pickupDate?: string; // 👈 ADD THIS
+        pickupId?: number;
+    } | null>(null);
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const tomorrowStr = (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().slice(0, 10);
+    })();
 
     // render table with optional shipment column
     const renderOrdersTable = (
@@ -338,9 +462,14 @@ export default function OrdersPage() {
         includeShipmentColumn: boolean,
         isConfirmedProcessing?: boolean,
         paginationNode?: React.ReactNode,
+        headerAction?: React.ReactNode,
     ) => (
         <div className={`mb-8 rounded-lg shadow border ${colorClass} p-4`}>
-            <h3 className="text-2xl font-semibold mb-4">{tableTitle}</h3>
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-semibold">{tableTitle}</h3>
+                {headerAction}
+            </div>
+
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -1048,17 +1177,141 @@ export default function OrdersPage() {
                                                             </div>
                                                         </div>
 
+                                                        {shippingCharge && (
+                                                            <div className="mt-4 rounded-md border p-4 bg-muted text-sm space-y-1">
+                                                                <p className="font-medium text-base">
+                                                                    Estimated
+                                                                    Shipping
+                                                                    Cost
+                                                                </p>
+
+                                                                <div className="flex justify-between">
+                                                                    <span>
+                                                                        Zone
+                                                                    </span>
+                                                                    <span>
+                                                                        {
+                                                                            shippingCharge.zone
+                                                                        }
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="flex justify-between">
+                                                                    <span>
+                                                                        Chargeable
+                                                                        Weight
+                                                                    </span>
+                                                                    <span>
+                                                                        {
+                                                                            shippingCharge.charged_weight
+                                                                        }{" "}
+                                                                        g
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="border-t pt-2 flex justify-between font-semibold">
+                                                                    <span>
+                                                                        Total
+                                                                    </span>
+                                                                    <span>
+                                                                        ₹
+                                                                        {
+                                                                            shippingCharge.total_amount
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
                                                         {/* Actions */}
                                                         <div className="flex justify-end gap-2 mt-6">
                                                             <Button
-                                                                variant="ghost"
-                                                                onClick={() =>
-                                                                    setOpenShipment(
-                                                                        false,
-                                                                    )
+                                                                variant="outline"
+                                                                disabled={
+                                                                    isCalculating
                                                                 }
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        setIsCalculating(
+                                                                            true,
+                                                                        );
+                                                                        setShippingCharge(
+                                                                            null,
+                                                                        );
+
+                                                                        const res =
+                                                                            await fetch(
+                                                                                "/api/internal/calculate-shipping",
+                                                                                {
+                                                                                    method: "POST",
+                                                                                    headers:
+                                                                                        {
+                                                                                            "Content-Type":
+                                                                                                "application/json",
+                                                                                        },
+                                                                                    body: JSON.stringify(
+                                                                                        {
+                                                                                            shippingMode:
+                                                                                                order.shippingMode,
+                                                                                            weight: Number(
+                                                                                                shipmentData.weight,
+                                                                                            ),
+                                                                                            length: Number(
+                                                                                                shipmentData.length,
+                                                                                            ),
+                                                                                            breadth:
+                                                                                                Number(
+                                                                                                    shipmentData.breadth,
+                                                                                                ),
+                                                                                            height: Number(
+                                                                                                shipmentData.height,
+                                                                                            ),
+                                                                                            originPincode:
+                                                                                                "110042", // warehouse pin (config)
+                                                                                            destinationPincode:
+                                                                                                order
+                                                                                                    .shippingAddress
+                                                                                                    ?.pincode ||
+                                                                                                order
+                                                                                                    .shippingAddress
+                                                                                                    ?.zipCode,
+                                                                                            paymentType:
+                                                                                                "Pre-paid",
+                                                                                        },
+                                                                                    ),
+                                                                                },
+                                                                            );
+
+                                                                        const data =
+                                                                            await res.json();
+                                                                        if (
+                                                                            !data.ok
+                                                                        )
+                                                                            throw new Error(
+                                                                                data.error,
+                                                                            );
+
+                                                                        setShippingCharge(
+                                                                            data.charge,
+                                                                        );
+                                                                    } catch (err: any) {
+                                                                        toast({
+                                                                            title: "Failed to calculate shipping",
+                                                                            description:
+                                                                                err.message,
+                                                                            variant:
+                                                                                "destructive",
+                                                                        });
+                                                                    } finally {
+                                                                        setIsCalculating(
+                                                                            false,
+                                                                        );
+                                                                    }
+                                                                }}
                                                             >
-                                                                Cancel
+                                                                {isCalculating
+                                                                    ? "Calculating…"
+                                                                    : "Calculate Shipping Cost"}
                                                             </Button>
 
                                                             <Button
@@ -1442,6 +1695,190 @@ export default function OrdersPage() {
             )}
         </div>
     );
+    const pickupDialog = (
+        <Dialog open={isPickupDialogOpen} onOpenChange={setIsPickupDialogOpen}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Request Pickup</DialogTitle>
+                    <DialogDescription>
+                        Raise a pickup request for manifested shipments from a
+                        warehouse.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                    {/* PICKUP DAY */}
+                    <div>
+                        <Label>Pickup Day</Label>
+                        <div className="flex gap-2 mt-2">
+                            <Button
+                                type="button"
+                                variant={
+                                    pickupData.pickup_date === todayStr
+                                        ? "default"
+                                        : "outline"
+                                }
+                                onClick={() =>
+                                    setPickupData((p) => ({
+                                        ...p,
+                                        pickup_date: todayStr,
+                                    }))
+                                }
+                            >
+                                Today
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant={
+                                    pickupData.pickup_date === tomorrowStr
+                                        ? "default"
+                                        : "outline"
+                                }
+                                onClick={() =>
+                                    setPickupData((p) => ({
+                                        ...p,
+                                        pickup_date: tomorrowStr,
+                                    }))
+                                }
+                            >
+                                Tomorrow
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* PICKUP SLOT */}
+                    <div>
+                        <Label>Pickup Slot</Label>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            {PICKUP_SLOTS.map((slot) => (
+                                <Button
+                                    key={slot.value}
+                                    type="button"
+                                    variant={
+                                        pickupData.pickup_time === slot.value
+                                            ? "default"
+                                            : "outline"
+                                    }
+                                    onClick={() =>
+                                        setPickupData((p) => ({
+                                            ...p,
+                                            pickup_time: slot.value,
+                                        }))
+                                    }
+                                >
+                                    {slot.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* EXPECTED PACKAGE COUNT */}
+                    <div>
+                        <Label>Expected Package Count</Label>
+                        <Input
+                            type="number"
+                            min={1}
+                            value={pickupData.expected_package_count}
+                            onChange={(e) =>
+                                setPickupData((p) => ({
+                                    ...p,
+                                    expected_package_count: e.target.value,
+                                }))
+                            }
+                        />
+                    </div>
+                </div>
+                {shippingCharge && (
+                    <div className="mt-4 rounded-md border p-4 bg-muted text-sm space-y-1">
+                        <p className="font-medium text-base">
+                            Estimated Shipping Cost
+                        </p>
+
+                        <div className="flex justify-between">
+                            <span>Freight</span>
+                            <span>₹{shippingCharge.freight_charge}</span>
+                        </div>
+
+                        <div className="flex justify-between">
+                            <span>Fuel Surcharge</span>
+                            <span>₹{shippingCharge.fuel_surcharge}</span>
+                        </div>
+
+                        <div className="flex justify-between">
+                            <span>GST</span>
+                            <span>₹{shippingCharge.gst}</span>
+                        </div>
+
+                        <div className="border-t pt-2 flex justify-between font-semibold">
+                            <span>Total</span>
+                            <span>₹{shippingCharge.total_amount}</span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-6">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsPickupDialogOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+
+                    <Button
+                        disabled={isRequestingPickup}
+                        onClick={async () => {
+                            try {
+                                setIsRequestingPickup(true);
+
+                                const res = await fetch(
+                                    "/api/internal/request-pickup",
+                                    {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify(pickupData),
+                                    },
+                                );
+
+                                const data = await res.json();
+
+                                if (!data.ok) {
+                                    throw new Error(data.error);
+                                }
+
+                                toast({
+                                    title: data.alreadyExists
+                                        ? "Pickup already scheduled"
+                                        : "Pickup requested",
+                                    description: data.alreadyExists
+                                        ? data.message
+                                        : "Pickup request raised successfully",
+                                });
+
+                                setIsPickupDialogOpen(false);
+
+                                setIsPickupDialogOpen(false);
+                            } catch (err: any) {
+                                toast({
+                                    title: "Pickup failed",
+                                    description: err.message,
+                                    variant: "destructive",
+                                });
+                            } finally {
+                                setIsRequestingPickup(false);
+                            }
+                        }}
+                    >
+                        {isRequestingPickup
+                            ? "Requesting..."
+                            : "Request Pickup"}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
 
     // Status change confirmation dialog
     const statusDialog = (
@@ -1604,6 +2041,7 @@ export default function OrdersPage() {
             </div>
 
             {statusDialog}
+            {pickupDialog}
 
             {renderOrdersTable(
                 paymentPendingOrdersPageData,
@@ -1618,6 +2056,16 @@ export default function OrdersPage() {
                     )}
                     onPageChange={setPaymentPendingPage}
                 />,
+                <Button
+                    variant="outline"
+                    onClick={() =>
+                        exportPaymentPendingCSV(paymentPendingOrders)
+                    }
+                    className="flex items-center gap-2"
+                >
+                    <Download className="h-4 w-4 stroke-[2.2]" />
+                    Export CSV
+                </Button>,
             )}
 
             {renderOrdersTable(
@@ -1648,6 +2096,24 @@ export default function OrdersPage() {
                     )}
                     onPageChange={setInTransitPage}
                 />,
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsPickupDialogOpen(true)}
+                    >
+                        Request Pickup
+                    </Button>
+
+                    {pickupStatus?.scheduled && (
+                        <span className="text-sm text-muted-foreground">
+                            ⏰ Scheduled on{" "}
+                            {new Date(
+                                pickupStatus.pickupDate!,
+                            ).toLocaleDateString("en-IN")}{" "}
+                            at {pickupStatus.pickupTime}
+                        </span>
+                    )}
+                </div>,
             )}
 
             {renderOrdersTable(

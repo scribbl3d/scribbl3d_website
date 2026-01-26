@@ -18,7 +18,7 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     const shortDescription = resin.shortDescription;
     const name = resin.name;
     const material = resin.attributes?.find(
-        (attr: any) => attr.label === "Material"
+        (attr: any) => attr.label === "Material",
     )?.value;
     const price = resin.weights?.[0]?.price;
     const originalPrice = resin.weights?.[0]?.originalPrice;
@@ -34,7 +34,7 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
         async function checkWishlist() {
             try {
                 const res = await fetch(
-                    `/api/wishlist/check?resinId=${resin.id}`
+                    `/api/wishlist/check?resinId=${resin.id}`,
                 );
                 const data = await res.json();
                 setIsFavorite(data.isInWishlist);
@@ -47,7 +47,7 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     }, [session, resin?.id]);
 
     const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>
+        e: React.MouseEvent<HTMLButtonElement>,
     ) => {
         e.preventDefault();
         e.stopPropagation();
@@ -114,7 +114,7 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
             {/* CARD LINK */}
             <Link href={`/resins/${slug}`} className=" flex flex-col h-full">
                 {/* IMAGE */}
-                <div className="relative h-[260px] w-full bg-gray-100 overflow-hidden">
+                <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
                     <Image
                         src={image || "/images/placeholder-image.png"}
                         alt={name}
@@ -178,7 +178,6 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
             <div className="mt-auto px-5 pb-5">
                 <hr className="mb-4" />
 
-                {/* PRICE ROW */}
                 {/* PRICE ROW */}
                 <div className="flex items-center mt-1">
                     {/* FINAL PRICE */}

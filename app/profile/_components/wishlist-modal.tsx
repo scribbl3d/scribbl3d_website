@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
 import { X } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,10 +25,10 @@ export default function WishlistModal({
     ===================== */
 
     const [selectedColourId, setSelectedColourId] = useState<string | null>(
-        null
+        null,
     );
     const [selectedWeightId, setSelectedWeightId] = useState<string | null>(
-        null
+        null,
     );
     const prebuiltColours = item.availableColours ?? [];
     const prebuiltSizes = item.availableSizes ?? [];
@@ -41,6 +42,7 @@ export default function WishlistModal({
     const [displayPrice, setDisplayPrice] = useState<number>(item.price);
 
     const [quantity, setQuantity] = useState(1);
+    const { data: session } = useSession();
 
     /* =====================
        VALIDATION
@@ -57,6 +59,22 @@ export default function WishlistModal({
     ===================== */
 
     const handleAddToCart = async () => {
+        if (!session) {
+            toast({
+                title: "Authentication Required",
+                description: "Please log in to add items to your cart.",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
         await addToCart({
             ...item.cartPayload,
 
@@ -228,7 +246,7 @@ export default function WishlistModal({
                                             key={c.label}
                                             onClick={() =>
                                                 setSelectedPrebuiltColour(
-                                                    c.label
+                                                    c.label,
                                                 )
                                             }
                                             className={`px-3 py-2 rounded-lg border text-sm ${

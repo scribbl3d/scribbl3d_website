@@ -458,6 +458,19 @@ model Shipment {
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id])
 }
+model PickupRequest {
+  id                  String   @id @default(cuid())
+  pickupLocation       String
+  pickupDate           DateTime
+  pickupTime           String
+  expectedPackageCount Int
+  pickupId             Int
+  status               String   @default("scheduled")
+  createdAt            DateTime @default(now())
+
+  @@unique([pickupLocation, pickupDate])
+}
+
 
 model PincodeLocation {
   pincode   String  @id
