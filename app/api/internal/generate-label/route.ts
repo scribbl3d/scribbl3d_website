@@ -12,13 +12,13 @@ export async function GET(req: Request) {
     if (!waybill) {
         return NextResponse.json(
             { error: "waybill required" },
-            { status: 400 }
+            { status: 400 },
         );
     }
 
     try {
         const delhiveryRes = await axios.get(
-            "https://staging-express.delhivery.com/api/p/packing_slip",
+            "https://track.delhivery.com/api/p/packing_slip",
             {
                 params: {
                     wbns: waybill,
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
                 headers: {
                     Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
                 },
-            }
+            },
         );
 
         const pkg = delhiveryRes.data?.packages?.[0];
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
         if (!pkg) {
             return NextResponse.json(
                 { error: "No package data returned by Delhivery" },
-                { status: 500 }
+                { status: 500 },
             );
         }
 
@@ -85,14 +85,14 @@ export async function GET(req: Request) {
 
         return NextResponse.json(
             { error: "No label returned by Delhivery" },
-            { status: 500 }
+            { status: 500 },
         );
     } catch (err: any) {
         console.error("Delhivery label error:", err?.response?.data || err);
 
         return NextResponse.json(
             { error: "Failed to generate label from Delhivery" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

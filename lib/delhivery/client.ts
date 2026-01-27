@@ -3,8 +3,7 @@ import axios from "axios";
 import qs from "qs";
 import { mapOrderToDelhiveryShipment } from "./mapOrderToPayload";
 
-const DELHIVERY_URL =
-    "https://staging-express.delhivery.com/api/cmu/create.json";
+const DELHIVERY_URL = "https://track.delhivery.com/api/cmu/create.json";
 
 export async function createDelhiveryShipmentRaw(input: any) {
     const shipment = mapOrderToDelhiveryShipment(input);

@@ -27,8 +27,9 @@ export function ConfirmedProcessingTab({
     onCancel,
 }: Props) {
     return (
-        <div className="rounded-xl border bg-background p-5">
-            <h3 className="text-2xl font-semibold mb-4">
+        <div className="rounded-xl border bg-background p-6 shadow-sm">
+            {/* HEADER */}
+            <h3 className="text-2xl font-semibold mb-5">
                 Confirmed & Processing
             </h3>
 
@@ -48,37 +49,57 @@ export function ConfirmedProcessingTab({
                 <TableBody>
                     {orders.map((order) => (
                         <TableRow key={order.id}>
+                            {/* ORDER ID */}
                             <TableCell className="font-mono">
                                 {order.id.slice(-5)}
                             </TableCell>
 
+                            {/* CUSTOMER */}
                             <TableCell>
                                 {order.shippingAddress?.fullName ||
                                     order.user?.name ||
                                     "Anonymous"}
                             </TableCell>
 
+                            {/* AMOUNT */}
                             <TableCell>
                                 {formatRupees(order.totalAmount)}
                             </TableCell>
 
+                            {/* STATUS */}
                             <TableCell>
-                                <Badge className="capitalize">
+                                <Badge
+                                    variant="secondary"
+                                    className={
+                                        order.status === "confirmed"
+                                            ? "bg-green-100 text-green-800"
+                                            : order.status === "processing"
+                                              ? "bg-yellow-100 text-yellow-800"
+                                              : "bg-muted text-foreground"
+                                    }
+                                >
                                     {order.status}
                                 </Badge>
                             </TableCell>
 
+                            {/* PAYMENT */}
                             <TableCell>{order.paymentMethod || "—"}</TableCell>
 
+                            {/* DATE */}
                             <TableCell>{formatDate(order.createdAt)}</TableCell>
 
+                            {/* ACTIONS */}
                             <TableCell className="text-right">
                                 <div className="flex flex-col gap-2 items-end">
-                                    <ActionButton onClick={() => onView(order)}>
+                                    <ActionButton
+                                        variant="outline"
+                                        onClick={() => onView(order)}
+                                    >
                                         View Details
                                     </ActionButton>
 
                                     <ActionButton
+                                        variant="outline"
                                         onClick={() => onCreateShipment(order)}
                                     >
                                         Create Shipment
@@ -99,7 +120,7 @@ export function ConfirmedProcessingTab({
                         <TableRow>
                             <TableCell
                                 colSpan={7}
-                                className="text-center text-muted-foreground py-6"
+                                className="text-center text-muted-foreground py-8"
                             >
                                 No confirmed or processing orders found.
                             </TableCell>

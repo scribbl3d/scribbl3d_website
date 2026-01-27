@@ -84,7 +84,7 @@ export function InTransitTab({
                     <Button
                         variant="outline"
                         onClick={onRequestPickup}
-                        disabled={!!pickupInfo}
+                        // disabled={!!pickupInfo}
                     >
                         Request Pickup
                     </Button>
