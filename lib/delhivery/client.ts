@@ -12,7 +12,7 @@ export async function createDelhiveryShipmentRaw(input: any) {
         end_date: "2026-12-31",
         shipments: [shipment],
         pickup_location: {
-            name: "Scribbl SURFACE",
+            name: "Scribble3D Warehouse",
             end_date: "2026-12-31",
         },
     };

@@ -105,6 +105,6 @@ export async function GET(req: Request) {
 // {
 //   "pickup_time": "11:00:00",
 //   "pickup_date": "2025-12-29",
-//   "pickup_location": "Scribbl SURFACE",
+//   "pickup_location": "Scribble3D Warehouse",
 //   "expected_package_count": 1
 // }

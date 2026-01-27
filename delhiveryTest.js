@@ -24,7 +24,7 @@ const payload = {
             end_date: "2025-12-31",
         },
     ],
-    pickup_location: { name: "Scribbl SURFACE", end_date: "2025-12-31" },
+    pickup_location: { name: "Scribble3D Warehouse", end_date: "2025-12-31" },
 };
 axios
     .post(

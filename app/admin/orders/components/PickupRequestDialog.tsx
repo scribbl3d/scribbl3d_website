@@ -14,7 +14,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useState } from "react";
 
 const PICKUP_LOCATION =
-    process.env.NEXT_PUBLIC_PICKUP_LOCATION || "Scribbl SURFACE";
+    process.env.NEXT_PUBLIC_PICKUP_LOCATION || "Scribble3D Warehouse";
 
 const PICKUP_SLOTS = [
     { label: "10:00 – 12:00", value: "10:00" },

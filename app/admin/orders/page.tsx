@@ -28,7 +28,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
-const PICKUP_LOCATION = "Scribbl SURFACE";
+const PICKUP_LOCATION = "Scribble3D Warehouse";
 
 export default function OrdersPage() {
     const { orders, fetchOrders } = useOrders();
