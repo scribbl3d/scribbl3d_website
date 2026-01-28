@@ -11,5 +11,5 @@ export function shouldSyncShipment(shipment: any) {
         age,
     );
     // 30 minutes
-    return age > 30 * 1000;
+    return age > 30 * 60 * 1000;
 }
