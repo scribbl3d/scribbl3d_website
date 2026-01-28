@@ -1,9 +1,21 @@
 import { prisma } from "@/lib/prisma";
+import { shouldSyncShipment } from "@/lib/shipment/shouldSync";
 import { NextResponse } from "next/server";
+
+/**
+ * Fire-and-forget background sync
+ * NEVER await this
+ */
+function triggerShipmentSync(orderId: string) {
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/internal/sync-shipment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+    }).catch(() => {});
+}
 
 export async function GET() {
     try {
-        // Fetch orders from the database with user information
         const orders = await prisma.order.findMany({
             orderBy: { id: "desc" },
             include: {
@@ -18,12 +30,26 @@ export async function GET() {
                         status: true,
                         waybill: true,
                         provider: true,
+                        syncing: true,
+                        lastSyncedAt: true,
                     },
                 },
             },
         });
 
-        // Parse JSON fields before returning
+        /**
+         * 🔁 AUTO SYNC (hosting-agnostic)
+         * Admin page read heals stale shipment data
+         */
+        for (const order of orders) {
+            if (shouldSyncShipment(order.shipment)) {
+                triggerShipmentSync(order.id);
+            }
+        }
+
+        /**
+         * Parse JSON fields
+         */
         const parsedOrders = orders.map((order) => ({
             ...order,
             items:
@@ -49,7 +75,7 @@ export async function GET() {
         console.error("Error fetching orders:", error);
         return NextResponse.json(
             { error: "Internal Server Error" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

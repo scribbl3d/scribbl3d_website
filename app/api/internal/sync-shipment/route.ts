@@ -2,6 +2,9 @@ import { getDelhiveryTracking } from "@/lib/delhivery/getTracking";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
+/**
+ * Derive order status from shipment + order
+ */
 function deriveOrderStatus(order: any, shipment: any) {
     if (!order.transactionId) return "payment_pending";
     if (!shipment?.waybill) return "confirmed";
@@ -16,36 +19,65 @@ function deriveOrderStatus(order: any, shipment: any) {
 }
 
 export async function POST(req: NextRequest) {
+    let orderId: string | null = null;
+
     try {
-        const { orderId } = await req.json();
+        const body = await req.json();
+        orderId = body?.orderId;
 
         if (!orderId) {
             return NextResponse.json(
                 { error: "orderId is required" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
-        // 1. Fetch shipment + order
+        /**
+         * 0️⃣ Acquire DB lock (prevents duplicate syncs)
+         */
+        const lock = await prisma.shipment.updateMany({
+            where: {
+                orderId,
+                syncing: false,
+            },
+            data: {
+                syncing: true,
+            },
+        });
+
+        // Someone else is already syncing
+        if (lock.count === 0) {
+            return NextResponse.json({ skipped: true });
+        }
+
+        /**
+         * 1️⃣ Fetch shipment + order
+         */
         const shipment = await prisma.shipment.findUnique({
             where: { orderId },
             include: { order: true },
         });
 
         if (!shipment || !shipment.waybill) {
-            return NextResponse.json(
-                { error: "Shipment or waybill not found" },
-                { status: 404 }
-            );
+            throw new Error("Shipment or waybill not found");
         }
 
-        // 2. Call Delhivery tracking API
+        /**
+         * 2️⃣ Call Delhivery tracking API
+         */
         const trackingJson = await getDelhiveryTracking({
             waybill: shipment.waybill,
         });
+        console.log(
+            "[SHIPMENT SYNC] Delhivery tracking response:",
+            trackingJson,
+        );
 
         const shipmentData = trackingJson?.ShipmentData?.[0]?.Shipment;
-
+        console.log(
+            "[SHIPMENT SYNC] Delhivery tracking response:",
+            trackingJson?.ShipmentData,
+        );
         if (!shipmentData) {
             throw new Error("Invalid Delhivery tracking response");
         }
@@ -53,7 +85,11 @@ export async function POST(req: NextRequest) {
         const delhiveryStatus =
             shipmentData?.Status?.Status?.toLowerCase() || "unknown";
 
-        // 3. Update Shipment
+        console.log(`[SHIPMENT SYNC] ${shipment.waybill} → ${delhiveryStatus}`);
+
+        /**
+         * 3️⃣ Update Shipment
+         */
         const updatedShipment = await prisma.shipment.update({
             where: { orderId },
             data: {
@@ -61,22 +97,34 @@ export async function POST(req: NextRequest) {
                 rawResponse: trackingJson,
                 attempts: { increment: 1 },
                 lastError: null,
+                lastSyncedAt: new Date(),
             },
         });
 
-        // 4. Derive Order status
+        /**
+         * 4️⃣ Derive + update Order status (only if changed)
+         */
         const newOrderStatus = deriveOrderStatus(
             shipment.order,
-            updatedShipment
+            updatedShipment,
         );
 
-        // 5. Update Order ONLY if changed
         if (shipment.order.status !== newOrderStatus) {
             await prisma.order.update({
                 where: { id: shipment.order.id },
                 data: { status: newOrderStatus },
             });
         }
+
+        /**
+         * 5️⃣ Release lock
+         */
+        await prisma.shipment.update({
+            where: { orderId },
+            data: {
+                syncing: false,
+            },
+        });
 
         return NextResponse.json({
             success: true,
@@ -86,11 +134,14 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
         console.error("SYNC SHIPMENT ERROR", err);
 
-        // Best-effort error tracking
-        if (err?.orderId) {
+        /**
+         * Best-effort error logging + lock release
+         */
+        if (orderId) {
             await prisma.shipment.update({
-                where: { orderId: err.orderId },
+                where: { orderId },
                 data: {
+                    syncing: false,
                     lastError: err.message,
                     attempts: { increment: 1 },
                 },
@@ -99,7 +150,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(
             { error: err.message || "Failed to sync shipment" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

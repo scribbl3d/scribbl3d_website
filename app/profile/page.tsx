@@ -1,5 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { DbOrder, User } from "@/app/types";
+import { User } from "@/app/types";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
@@ -10,6 +10,9 @@ import { Overview } from "./_components/overview";
 import { PersonalInfo } from "./_components/personal-info";
 import { ProfileSidebar } from "./_components/profile-sidebar";
 import Wishlist from "./_components/wishlist";
+
+import { shouldSyncShipment } from "@/lib/shipment/shouldSync";
+import { triggerShipmentSync } from "@/lib/shipment/triggerSync";
 
 /* ✅ LOCAL ORDER STATUS (ONLY HERE, NO GLOBAL BS) */
 type LocalOrderStatus =
@@ -47,10 +50,54 @@ export default async function ProfilePage({ searchParams }: PageProps) {
     };
 
     /* ---------- ORDERS (RAW FROM DB) ---------- */
-    const ordersFromDb = (await db.order.findMany({
+    const ordersFromDb = await db.order.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
-    })) as DbOrder[];
+        include: {
+            shipment: {
+                select: {
+                    waybill: true,
+                    status: true,
+                    syncing: true,
+                    lastSyncedAt: true,
+                },
+            },
+        },
+    });
+
+    /* 🔥 TEST LOG */
+    console.log(
+        "[PROFILE] Orders fetched:",
+        ordersFromDb.map((o) => ({
+            id: o.id,
+            hasShipment: !!o.shipment,
+            syncing: o.shipment?.syncing,
+            lastSyncedAt: o.shipment?.lastSyncedAt,
+            status: o.shipment?.status,
+        })),
+    );
+
+    for (const order of ordersFromDb) {
+        if (!order.shipment) continue;
+
+        const shouldSync = shouldSyncShipment(order.shipment);
+
+        /* 🔥 TEST LOG */
+        console.log(`[PROFILE] shouldSyncShipment?`, {
+            orderId: order.id,
+            waybill: order.shipment.waybill,
+            shouldSync,
+        });
+
+        if (shouldSync) {
+            console.log(
+                `[PROFILE] Triggering shipment sync for order ${order.id}`,
+            );
+
+            // 🚨 DO NOT await (important)
+            triggerShipmentSync(order.id);
+        }
+    }
 
     /* ✅ CAST STATUS LOCALLY */
     const orders = ordersFromDb.map((order) => ({
