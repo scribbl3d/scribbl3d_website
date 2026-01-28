@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,20 +12,16 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { useMemo, useState } from "react";
+
+import { getNextValidPickup } from "@/lib/pickup/getNextValidPickup";
 import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
-import { Order } from "../types";
+import { Order, PickupInfo } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
 /* =========================================================
    TYPES
    ========================================================= */
-interface PickupInfo {
-    pickupDate: string;
-    pickupTime: string;
-}
-
 interface Props {
     orders: Order[];
     onView(order: Order): void;
@@ -43,7 +41,7 @@ function getShipmentStatusColor(status?: string) {
         case "not picked":
             return "bg-orange-500";
         case "picked_up":
-        case "in transit":
+        case "in_transit":
             return "bg-blue-500";
         case "delivered":
             return "bg-green-500";
@@ -61,29 +59,10 @@ function formatPickupDate(dateStr: string) {
         year: "numeric",
     });
 }
-function getNextValidPickup(
-    pickups?:
-        | { pickupDate: string; pickupTime: string }[]
-        | { pickupDate: string; pickupTime: string }
-        | null,
-) {
-    if (!pickups) return null;
 
-    const pickupArray = Array.isArray(pickups) ? pickups : [pickups];
-
-    const now = new Date();
-
-    const validPickups = pickupArray
-        .map((p) => ({
-            ...p,
-            dateTime: new Date(`${p.pickupDate}T${p.pickupTime}:00`),
-        }))
-        .filter((p) => !isNaN(p.dateTime.getTime()) && p.dateTime > now)
-        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
-
-    return validPickups.length ? validPickups[0] : null;
-}
-
+/* =========================================================
+   COMPONENT
+   ========================================================= */
 export function InTransitTab({
     orders,
     onView,
@@ -92,6 +71,7 @@ export function InTransitTab({
     onRequestPickup,
     pickupInfo,
 }: Props) {
+    /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
 
@@ -109,6 +89,7 @@ export function InTransitTab({
         });
     }, [orders, search, filterBy]);
 
+    /* ---------- PICKUP LOGIC ---------- */
     const nextPickup = useMemo(
         () => getNextValidPickup(pickupInfo),
         [pickupInfo],
@@ -127,22 +108,19 @@ export function InTransitTab({
 
                     {nextPickup ? (
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            ⏰
-                            <span>
-                                Scheduled on{" "}
-                                <b>{formatPickupDate(nextPickup.pickupDate)}</b>{" "}
-                                at <b>{nextPickup.pickupTime}</b>
-                            </span>
+                            ⏰ Scheduled on{" "}
+                            <b>{formatPickupDate(nextPickup.pickupDate)}</b> at{" "}
+                            <b>{nextPickup.pickupTime}</b>
                         </div>
                     ) : (
                         <div className="text-sm text-muted-foreground">
-                            No Pickup Scheduled
+                            No upcoming pickup scheduled
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* 🔍 SEARCH */}
+            {/* ================= SEARCH ================= */}
             <OrdersSearchBar
                 search={search}
                 onSearchChange={setSearch}

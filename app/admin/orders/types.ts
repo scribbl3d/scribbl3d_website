@@ -39,3 +39,7 @@ export interface Order {
         phone?: string;
     };
 }
+export interface PickupInfo {
+    pickupDate: string;
+    pickupTime: string;
+}

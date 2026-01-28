@@ -27,7 +27,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-
+import { PickupInfo } from "./types";
 const PICKUP_LOCATION = "Scribble3D Warehouse";
 
 export default function OrdersPage() {
@@ -40,10 +40,7 @@ export default function OrdersPage() {
     const [cancelOrder, setCancelOrder] = useState<Order | null>(null);
 
     const [pickupOpen, setPickupOpen] = useState(false);
-    const [pickupInfo, setPickupInfo] = useState<{
-        pickupDate: string;
-        pickupTime: string;
-    } | null>(null);
+    const [pickupInfo, setPickupInfo] = useState<PickupInfo[] | null>(null);
 
     const [showStatusDialog, setShowStatusDialog] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -59,10 +56,12 @@ export default function OrdersPage() {
             const data = await res.json();
 
             if (data.ok && data.scheduled) {
-                setPickupInfo({
-                    pickupDate: data.pickupDate,
-                    pickupTime: data.pickupTime,
-                });
+                setPickupInfo([
+                    {
+                        pickupDate: data.pickupDate,
+                        pickupTime: data.pickupTime,
+                    },
+                ]);
             } else {
                 setPickupInfo(null);
             }
