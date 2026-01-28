@@ -10,25 +10,27 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { useMemo, useState } from "react";
 import { ActionButton } from "../components/ActionButton";
+import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { Order } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
 /* =========================================================
    TYPES
    ========================================================= */
+interface PickupInfo {
+    pickupDate: string;
+    pickupTime: string;
+}
+
 interface Props {
     orders: Order[];
-
     onView(order: Order): void;
     onTrack(order: Order): void;
     onGenerateLabel(order: Order): void;
-
     onRequestPickup(): void;
-    pickupInfo?: {
-        pickupDate: string;
-        pickupTime: string;
-    } | null;
+    pickupInfo?: PickupInfo[] | null;
 }
 
 /* =========================================================
@@ -40,10 +42,8 @@ function getShipmentStatusColor(status?: string) {
             return "bg-yellow-500";
         case "not picked":
             return "bg-orange-500";
-        case "time pass":
-            return "bg-red-500";
         case "picked_up":
-        case "in_transit":
+        case "in transit":
             return "bg-blue-500";
         case "delivered":
             return "bg-green-500";
@@ -55,17 +55,35 @@ function getShipmentStatusColor(status?: string) {
 }
 
 function formatPickupDate(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-IN", {
+    return new Date(dateStr).toLocaleDateString("en-IN", {
         day: "numeric",
         month: "short",
         year: "numeric",
     });
 }
+function getNextValidPickup(
+    pickups?:
+        | { pickupDate: string; pickupTime: string }[]
+        | { pickupDate: string; pickupTime: string }
+        | null,
+) {
+    if (!pickups) return null;
 
-/* =========================================================
-   COMPONENT
-   ========================================================= */
+    const pickupArray = Array.isArray(pickups) ? pickups : [pickups];
+
+    const now = new Date();
+
+    const validPickups = pickupArray
+        .map((p) => ({
+            ...p,
+            dateTime: new Date(`${p.pickupDate}T${p.pickupTime}:00`),
+        }))
+        .filter((p) => !isNaN(p.dateTime.getTime()) && p.dateTime > now)
+        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
+
+    return validPickups.length ? validPickups[0] : null;
+}
+
 export function InTransitTab({
     orders,
     onView,
@@ -74,6 +92,28 @@ export function InTransitTab({
     onRequestPickup,
     pickupInfo,
 }: Props) {
+    const [search, setSearch] = useState("");
+    const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
+
+    const filteredOrders = useMemo(() => {
+        if (!search) return orders;
+
+        return orders.filter((order) => {
+            if (filterBy === "customer") {
+                const name =
+                    order.shippingAddress?.fullName || order.user?.name || "";
+                return name.toLowerCase().includes(search.toLowerCase());
+            }
+
+            return String(order.totalAmount).includes(search);
+        });
+    }, [orders, search, filterBy]);
+
+    const nextPickup = useMemo(
+        () => getNextValidPickup(pickupInfo),
+        [pickupInfo],
+    );
+
     return (
         <div className="rounded-lg border bg-purple-50 p-4">
             {/* ================= HEADER ================= */}
@@ -81,30 +121,34 @@ export function InTransitTab({
                 <h3 className="text-2xl font-semibold">In Transit</h3>
 
                 <div className="flex items-center gap-4">
-                    <Button
-                        variant="outline"
-                        onClick={onRequestPickup}
-                        // disabled={!!pickupInfo}
-                    >
+                    <Button variant="outline" onClick={onRequestPickup}>
                         Request Pickup
                     </Button>
 
-                    {pickupInfo ? (
+                    {nextPickup ? (
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
                             ⏰
                             <span>
                                 Scheduled on{" "}
-                                <b>{formatPickupDate(pickupInfo.pickupDate)}</b>{" "}
-                                at <b>{pickupInfo.pickupTime}</b>
+                                <b>{formatPickupDate(nextPickup.pickupDate)}</b>{" "}
+                                at <b>{nextPickup.pickupTime}</b>
                             </span>
                         </div>
                     ) : (
                         <div className="text-sm text-muted-foreground">
-                            No pickup scheduled
+                            No Pickup Scheduled
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* 🔍 SEARCH */}
+            <OrdersSearchBar
+                search={search}
+                onSearchChange={setSearch}
+                filterBy={filterBy}
+                onFilterChange={setFilterBy}
+            />
 
             {/* ================= TABLE ================= */}
             <Table>
@@ -122,7 +166,7 @@ export function InTransitTab({
                 </TableHeader>
 
                 <TableBody>
-                    {orders.map((order) => {
+                    {filteredOrders.map((order) => {
                         const shipmentStatus = order.shipment?.status;
                         const waybill =
                             order.shipment?.waybill ||
@@ -145,7 +189,6 @@ export function InTransitTab({
                                     {formatRupees(order.totalAmount)}
                                 </TableCell>
 
-                                {/* ✅ CORRECT STATUS */}
                                 <TableCell>
                                     <Badge
                                         className={`${getShipmentStatusColor(
@@ -167,6 +210,7 @@ export function InTransitTab({
                                 <TableCell className="font-mono text-sm">
                                     {waybill || "—"}
                                 </TableCell>
+
                                 <TableCell className="text-right">
                                     <div className="flex flex-col gap-2 items-end">
                                         <ActionButton
@@ -197,7 +241,7 @@ export function InTransitTab({
                         );
                     })}
 
-                    {!orders.length && (
+                    {!filteredOrders.length && (
                         <TableRow>
                             <TableCell
                                 colSpan={8}

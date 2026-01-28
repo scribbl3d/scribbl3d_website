@@ -199,7 +199,7 @@ export function CreateShipmentDialog({
                     ))}
 
                     <div className="col-span-2">
-                        <Label>Shipment Quantity</Label>
+                        <Label>Number of Items in Box</Label>
                         <Input
                             type="number"
                             value={shipmentData.quantity}

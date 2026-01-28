@@ -1,8 +1,14 @@
 "use client";
 
 import { DbOrder } from "@/app/types";
-import { Calendar, IndianRupee } from "lucide-react";
-
+import {
+    CheckCircle,
+    Clock,
+    IndianRupee,
+    Package,
+    Truck,
+    XCircle,
+} from "lucide-react";
 /* -------------------- Types -------------------- */
 
 type OrderStatus =
@@ -94,42 +100,42 @@ function getOrderDisplayStatus(
 
 const ORDER_STATUS_UI: Record<
     DisplayStatus,
-    { label: string; className: string; emoji: string }
+    { label: string; className: string; Icon: any }
 > = {
     payment_pending: {
         label: "Payment Pending",
-        className: "bg-yellow-200 text-yellow-900",
-        emoji: "⏳",
+        Icon: Clock,
+        className: "border border-yellow-300 text-yellow-700 bg-yellow-50",
     },
     order_confirmed: {
-        label: "Order Confirmed",
-        className: "bg-blue-200 text-blue-900",
-        emoji: "✅",
+        label: "Confirmed",
+        Icon: CheckCircle,
+        className: "border border-blue-300 text-blue-700 bg-blue-50",
     },
     order_processing: {
-        label: "Order Processing",
-        className: "bg-purple-200 text-purple-900",
-        emoji: "⚙️",
+        label: "Processing",
+        Icon: Package,
+        className: "border border-gray-300 text-gray-700 bg-gray-50",
     },
     order_shipped: {
-        label: "Order Shipped",
-        className: "bg-indigo-200 text-indigo-900",
-        emoji: "🚚",
+        label: "Shipped",
+        Icon: Truck,
+        className: "border border-indigo-300 text-indigo-700 bg-indigo-50",
     },
     out_for_delivery: {
         label: "Out for Delivery",
-        className: "bg-orange-200 text-orange-900",
-        emoji: "🚚💨",
+        Icon: Truck,
+        className: "border border-orange-300 text-orange-700 bg-orange-50",
     },
     delivered: {
         label: "Delivered",
-        className: "bg-green-200 text-green-900",
-        emoji: "📦",
+        Icon: CheckCircle,
+        className: "border border-green-300 text-green-700 bg-green-50",
     },
     cancelled: {
         label: "Cancelled",
-        className: "bg-red-200 text-red-900",
-        emoji: "❌",
+        Icon: XCircle,
+        className: "border border-red-300 text-red-700 bg-red-50",
     },
 };
 
@@ -182,26 +188,42 @@ export function Orders({ orders }: OrdersProps) {
                                 }
                             >
                                 {/* Left */}
-                                <div className="px-4 py-6 md:w-1/5 border-b md:border-b-0 md:border-r border-gray-200">
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <Calendar className="w-4 h-4" />
-                                        {new Date(
-                                            order.createdAt,
-                                        ).toLocaleDateString()}
+                                <div className="px-4 py-6 md:w-1/5 border-b md:border-b-0 md:border-r border-gray-200 space-y-4">
+                                    {/* Order Date */}
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wide text-gray-400">
+                                            Order Date
+                                        </p>
+                                        <p className="text-sm font-semibold text-gray-900">
+                                            {new Date(
+                                                order.createdAt,
+                                            ).toLocaleDateString("en-IN", {
+                                                day: "2-digit",
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </p>
                                     </div>
 
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        <span className="font-semibold">
-                                            Order ID:
-                                        </span>{" "}
-                                        <span className="select-all">
-                                            {order.id.slice(0, 8)}
-                                        </span>
+                                    {/* Order ID */}
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wide text-gray-400">
+                                            Order ID
+                                        </p>
+                                        <p className="text-sm font-semibold text-gray-700 select-all">
+                                            #{order.id.slice(0, 8)}
+                                        </p>
                                     </div>
 
-                                    <div className="flex items-center gap-1 mt-3 text-xl font-bold">
-                                        <IndianRupee className="w-5 h-5" />
-                                        {order.totalAmount}
+                                    {/* Total Order Value */}
+                                    <div>
+                                        <p className="text-xs uppercase tracking-wide text-gray-400">
+                                            Total Order Value
+                                        </p>
+                                        <div className="flex items-center gap-1 text-lg font-bold text-gray-900">
+                                            <IndianRupee className="w-4 h-4" />
+                                            {order.totalAmount}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -259,11 +281,9 @@ export function Orders({ orders }: OrdersProps) {
                                 {/* Right */}
                                 <div className="px-4 py-6 md:w-1/4 flex flex-col items-end justify-between">
                                     <span
-                                        className={`flex items-center gap-1 text-sm font-bold px-4 py-1 rounded-full ${statusUI.className}`}
+                                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${statusUI.className}`}
                                     >
-                                        <span className="text-lg">
-                                            {statusUI.emoji}
-                                        </span>
+                                        <statusUI.Icon className="w-4 h-4" />
                                         {statusUI.label}
                                     </span>
 

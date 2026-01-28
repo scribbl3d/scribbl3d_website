@@ -22,6 +22,22 @@ const PICKUP_SLOTS = [
     { label: "14:00 – 18:00", value: "14:00" },
 ];
 
+function isSlotDisabled(
+    slotTime: string,
+    selectedDate: string,
+    todayStr: string,
+) {
+    if (selectedDate !== todayStr) return false;
+
+    const now = new Date();
+    const [slotHour] = slotTime.split(":").map(Number);
+
+    const slotDateTime = new Date();
+    slotDateTime.setHours(slotHour, 0, 0, 0);
+
+    return now >= slotDateTime;
+}
+
 export function PickupRequestDialog({
     open,
     onClose,
@@ -87,7 +103,8 @@ export function PickupRequestDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
+                    {/* ===== PICKUP DAY ===== */}
                     <div>
                         <Label>Pickup Day</Label>
                         <div className="flex gap-2 mt-2">
@@ -101,6 +118,7 @@ export function PickupRequestDialog({
                                     setPickupData((p) => ({
                                         ...p,
                                         pickup_date: todayStr,
+                                        pickup_time: "",
                                     }))
                                 }
                             >
@@ -117,6 +135,7 @@ export function PickupRequestDialog({
                                     setPickupData((p) => ({
                                         ...p,
                                         pickup_date: tomorrowStr,
+                                        pickup_time: "",
                                     }))
                                 }
                             >
@@ -125,30 +144,53 @@ export function PickupRequestDialog({
                         </div>
                     </div>
 
+                    {/* ===== PICKUP SLOT ===== */}
                     <div>
                         <Label>Pickup Slot</Label>
                         <div className="grid grid-cols-2 gap-2 mt-2">
-                            {PICKUP_SLOTS.map((slot) => (
-                                <Button
-                                    key={slot.value}
-                                    variant={
-                                        pickupData.pickup_time === slot.value
-                                            ? "default"
-                                            : "outline"
-                                    }
-                                    onClick={() =>
-                                        setPickupData((p) => ({
-                                            ...p,
-                                            pickup_time: slot.value,
-                                        }))
-                                    }
-                                >
-                                    {slot.label}
-                                </Button>
-                            ))}
+                            {PICKUP_SLOTS.map((slot) => {
+                                const disabled = isSlotDisabled(
+                                    slot.value,
+                                    pickupData.pickup_date,
+                                    todayStr,
+                                );
+
+                                return (
+                                    <Button
+                                        key={slot.value}
+                                        variant={
+                                            pickupData.pickup_time ===
+                                            slot.value
+                                                ? "default"
+                                                : "outline"
+                                        }
+                                        disabled={disabled}
+                                        onClick={() =>
+                                            setPickupData((p) => ({
+                                                ...p,
+                                                pickup_time: slot.value,
+                                            }))
+                                        }
+                                        className={
+                                            disabled
+                                                ? "opacity-50 cursor-not-allowed"
+                                                : ""
+                                        }
+                                    >
+                                        {slot.label}
+                                    </Button>
+                                );
+                            })}
                         </div>
+
+                        {pickupData.pickup_date === todayStr && (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Slots earlier than current time are disabled.
+                            </p>
+                        )}
                     </div>
 
+                    {/* ===== PACKAGE COUNT ===== */}
                     <div>
                         <Label>Expected Package Count</Label>
                         <Input
@@ -169,7 +211,14 @@ export function PickupRequestDialog({
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button disabled={loading} onClick={requestPickup}>
+                    <Button
+                        disabled={
+                            loading ||
+                            !pickupData.pickup_time ||
+                            !pickupData.expected_package_count
+                        }
+                        onClick={requestPickup}
+                    >
                         {loading ? "Requesting…" : "Request Pickup"}
                     </Button>
                 </div>
