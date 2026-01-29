@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -9,9 +11,11 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { useMemo, useState } from "react";
+
 import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
+import { TablePagination } from "../components/TablePagination";
+
 import { Order } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -43,10 +47,15 @@ function getRefundStatusColor(status?: string) {
    COMPONENT
    ========================================================= */
 export function CancelledTab({ orders, onView }: Props) {
-    /* 🔍 SEARCH STATE */
+    /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
 
+    /* ---------- PAGINATION ---------- */
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+
+    /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
@@ -57,19 +66,26 @@ export function CancelledTab({ orders, onView }: Props) {
                 return name.toLowerCase().includes(search.toLowerCase());
             }
 
-            if (filterBy === "amount") {
-                return String(order.totalAmount).includes(search);
-            }
-
-            return true;
+            return String(order.totalAmount).includes(search);
         });
     }, [orders, search, filterBy]);
 
+    /* ---------- RESET PAGE ---------- */
+    useEffect(() => {
+        setPage(1);
+    }, [search, filterBy, orders]);
+
+    /* ---------- PAGINATED DATA ---------- */
+    const paginatedOrders = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE;
+        return filteredOrders.slice(start, start + PAGE_SIZE);
+    }, [filteredOrders, page]);
+
     return (
-        <div className="rounded-lg border bg-red-50 p-4">
+        <div className="rounded-xl border bg-background p-6 shadow-sm">
             <h3 className="text-2xl font-semibold mb-4">Cancelled Orders</h3>
 
-            {/* 🔍 SEARCH BAR */}
+            {/* ================= SEARCH ================= */}
             <OrdersSearchBar
                 search={search}
                 onSearchChange={setSearch}
@@ -77,6 +93,7 @@ export function CancelledTab({ orders, onView }: Props) {
                 onFilterChange={setFilterBy}
             />
 
+            {/* ================= TABLE ================= */}
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -92,7 +109,7 @@ export function CancelledTab({ orders, onView }: Props) {
                 </TableHeader>
 
                 <TableBody>
-                    {filteredOrders.map((order) => (
+                    {paginatedOrders.map((order) => (
                         <TableRow key={order.id}>
                             <TableCell className="font-mono">
                                 {order.id.slice(-5)}
@@ -139,11 +156,11 @@ export function CancelledTab({ orders, onView }: Props) {
                         </TableRow>
                     ))}
 
-                    {!filteredOrders.length && (
+                    {!paginatedOrders.length && (
                         <TableRow>
                             <TableCell
                                 colSpan={8}
-                                className="text-center text-muted-foreground py-6"
+                                className="text-center text-muted-foreground py-8"
                             >
                                 No cancelled orders found.
                             </TableCell>
@@ -151,6 +168,14 @@ export function CancelledTab({ orders, onView }: Props) {
                     )}
                 </TableBody>
             </Table>
+
+            {/* ================= PAGINATION ================= */}
+            <TablePagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={filteredOrders.length}
+                onPageChange={setPage}
+            />
         </div>
     );
 }

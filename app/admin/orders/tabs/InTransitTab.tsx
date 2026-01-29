@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
 import { getNextValidPickup } from "@/lib/pickup/getNextValidPickup";
 import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
+import { TablePagination } from "../components/TablePagination";
+
 import { Order, PickupInfo } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -41,7 +43,7 @@ function getShipmentStatusColor(status?: string) {
         case "not picked":
             return "bg-orange-500";
         case "picked_up":
-        case "in_transit":
+        case "in transit":
             return "bg-blue-500";
         case "delivered":
             return "bg-green-500";
@@ -75,6 +77,11 @@ export function InTransitTab({
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
 
+    /* ---------- PAGINATION ---------- */
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+
+    /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
@@ -89,6 +96,17 @@ export function InTransitTab({
         });
     }, [orders, search, filterBy]);
 
+    /* ---------- RESET PAGE ON FILTER CHANGE ---------- */
+    useEffect(() => {
+        setPage(1);
+    }, [search, filterBy, orders]);
+
+    /* ---------- PAGINATED DATA ---------- */
+    const paginatedOrders = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE;
+        return filteredOrders.slice(start, start + PAGE_SIZE);
+    }, [filteredOrders, page]);
+
     /* ---------- PICKUP LOGIC ---------- */
     const nextPickup = useMemo(
         () => getNextValidPickup(pickupInfo),
@@ -96,9 +114,9 @@ export function InTransitTab({
     );
 
     return (
-        <div className="rounded-lg border bg-purple-50 p-4">
+        <div className="rounded-xl border bg-background p-6 shadow-sm">
             {/* ================= HEADER ================= */}
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 <h3 className="text-2xl font-semibold">In Transit</h3>
 
                 <div className="flex items-center gap-4">
@@ -107,7 +125,7 @@ export function InTransitTab({
                     </Button>
 
                     {nextPickup ? (
-                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <div className="text-sm text-muted-foreground">
                             ⏰ Scheduled on{" "}
                             <b>{formatPickupDate(nextPickup.pickupDate)}</b> at{" "}
                             <b>{nextPickup.pickupTime}</b>
@@ -144,7 +162,7 @@ export function InTransitTab({
                 </TableHeader>
 
                 <TableBody>
-                    {filteredOrders.map((order) => {
+                    {paginatedOrders.map((order) => {
                         const shipmentStatus = order.shipment?.status;
                         const waybill =
                             order.shipment?.waybill ||
@@ -219,11 +237,11 @@ export function InTransitTab({
                         );
                     })}
 
-                    {!filteredOrders.length && (
+                    {!paginatedOrders.length && (
                         <TableRow>
                             <TableCell
                                 colSpan={8}
-                                className="text-center text-muted-foreground py-6"
+                                className="text-center text-muted-foreground py-8"
                             >
                                 No in-transit shipments found.
                             </TableCell>
@@ -231,6 +249,14 @@ export function InTransitTab({
                     )}
                 </TableBody>
             </Table>
+
+            {/* ================= PAGINATION ================= */}
+            <TablePagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={filteredOrders.length}
+                onPageChange={setPage}
+            />
         </div>
     );
 }

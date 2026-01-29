@@ -68,10 +68,6 @@ export async function POST(req: NextRequest) {
         const trackingJson = await getDelhiveryTracking({
             waybill: shipment.waybill,
         });
-        console.log(
-            "[SHIPMENT SYNC] Delhivery tracking response:",
-            trackingJson,
-        );
 
         const shipmentData = trackingJson?.ShipmentData?.[0]?.Shipment;
         console.log(
@@ -81,6 +77,14 @@ export async function POST(req: NextRequest) {
         if (!shipmentData) {
             throw new Error("Invalid Delhivery tracking response");
         }
+        console.log(
+            "[SHIPMENT SYNC] Delhivery shipment scans:",
+            shipmentData.Scans,
+        );
+        console.log(
+            "[SHIPMENT SYNC] Delhivery shipment scans:",
+            shipmentData.Status,
+        );
 
         const delhiveryStatus =
             shipmentData?.Status?.Status?.toLowerCase() || "unknown";

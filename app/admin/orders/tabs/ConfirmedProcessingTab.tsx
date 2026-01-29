@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -9,9 +11,11 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { useMemo, useState } from "react";
+
 import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
+import { TablePagination } from "../components/TablePagination";
+
 import { Order } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -34,10 +38,15 @@ export function ConfirmedProcessingTab({
     onCreateShipment,
     onCancel,
 }: Props) {
-    /* 🔍 SEARCH STATE */
+    /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
 
+    /* ---------- PAGINATION ---------- */
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+
+    /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
@@ -48,22 +57,28 @@ export function ConfirmedProcessingTab({
                 return name.toLowerCase().includes(search.toLowerCase());
             }
 
-            if (filterBy === "amount") {
-                return String(order.totalAmount).includes(search);
-            }
-
-            return true;
+            return String(order.totalAmount).includes(search);
         });
     }, [orders, search, filterBy]);
 
+    /* ---------- RESET PAGE ---------- */
+    useEffect(() => {
+        setPage(1);
+    }, [search, filterBy, orders]);
+
+    /* ---------- PAGINATED DATA ---------- */
+    const paginatedOrders = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE;
+        return filteredOrders.slice(start, start + PAGE_SIZE);
+    }, [filteredOrders, page]);
+
     return (
         <div className="rounded-xl border bg-background p-6 shadow-sm">
-            {/* HEADER */}
             <h3 className="text-2xl font-semibold mb-4">
                 Confirmed & Processing
             </h3>
 
-            {/* 🔍 SEARCH BAR */}
+            {/* ================= SEARCH ================= */}
             <OrdersSearchBar
                 search={search}
                 onSearchChange={setSearch}
@@ -71,6 +86,7 @@ export function ConfirmedProcessingTab({
                 onFilterChange={setFilterBy}
             />
 
+            {/* ================= TABLE ================= */}
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -85,7 +101,7 @@ export function ConfirmedProcessingTab({
                 </TableHeader>
 
                 <TableBody>
-                    {filteredOrders.map((order) => (
+                    {paginatedOrders.map((order) => (
                         <TableRow key={order.id}>
                             {/* ORDER ID */}
                             <TableCell className="font-mono">
@@ -154,7 +170,7 @@ export function ConfirmedProcessingTab({
                         </TableRow>
                     ))}
 
-                    {!filteredOrders.length && (
+                    {!paginatedOrders.length && (
                         <TableRow>
                             <TableCell
                                 colSpan={7}
@@ -166,6 +182,14 @@ export function ConfirmedProcessingTab({
                     )}
                 </TableBody>
             </Table>
+
+            {/* ================= PAGINATION ================= */}
+            <TablePagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={filteredOrders.length}
+                onPageChange={setPage}
+            />
         </div>
     );
 }

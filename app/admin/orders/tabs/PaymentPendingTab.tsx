@@ -1,11 +1,14 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { OrdersTable } from "../components/OrdersTable";
+import { TablePagination } from "../components/TablePagination";
+
 import { Order } from "../types";
 import { exportPaymentPendingCSV } from "../utils/exportCsv";
 
@@ -21,10 +24,15 @@ interface Props {
    COMPONENT
    ========================================================= */
 export function PaymentPendingTab({ orders, onView }: Props) {
-    /* 🔍 SEARCH STATE */
+    /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
 
+    /* ---------- PAGINATION ---------- */
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+
+    /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
@@ -35,17 +43,24 @@ export function PaymentPendingTab({ orders, onView }: Props) {
                 return name.toLowerCase().includes(search.toLowerCase());
             }
 
-            if (filterBy === "amount") {
-                return String(order.totalAmount).includes(search);
-            }
-
-            return true;
+            return String(order.totalAmount).includes(search);
         });
     }, [orders, search, filterBy]);
 
+    /* ---------- RESET PAGE ---------- */
+    useEffect(() => {
+        setPage(1);
+    }, [search, filterBy, orders]);
+
+    /* ---------- PAGINATED DATA ---------- */
+    const paginatedOrders = useMemo(() => {
+        const start = (page - 1) * PAGE_SIZE;
+        return filteredOrders.slice(start, start + PAGE_SIZE);
+    }, [filteredOrders, page]);
+
     return (
         <div className="space-y-4">
-            {/* 🔍 SEARCH BAR */}
+            {/* ================= SEARCH ================= */}
             <OrdersSearchBar
                 search={search}
                 onSearchChange={setSearch}
@@ -53,10 +68,12 @@ export function PaymentPendingTab({ orders, onView }: Props) {
                 onFilterChange={setFilterBy}
             />
 
+            {/* ================= TABLE ================= */}
             <OrdersTable
                 title="Payment Pending"
-                orders={filteredOrders}
+                orders={paginatedOrders}
                 onView={onView}
+                statusType="order"
                 headerAction={
                     <Button
                         variant="outline"
@@ -67,7 +84,14 @@ export function PaymentPendingTab({ orders, onView }: Props) {
                         Export CSV
                     </Button>
                 }
-                statusType="order"
+            />
+
+            {/* ================= PAGINATION ================= */}
+            <TablePagination
+                page={page}
+                pageSize={PAGE_SIZE}
+                total={filteredOrders.length}
+                onPageChange={setPage}
             />
         </div>
     );
