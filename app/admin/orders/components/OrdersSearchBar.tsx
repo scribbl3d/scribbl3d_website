@@ -12,8 +12,8 @@ import {
 interface Props {
     search: string;
     onSearchChange(value: string): void;
-    filterBy: "customer" | "amount";
-    onFilterChange(value: "customer" | "amount"): void;
+    filterBy: "customer" | "amount" | "transaction";
+    onFilterChange(value: "customer" | "amount" | "transaction"): void;
 }
 
 export function OrdersSearchBar({
@@ -23,29 +23,24 @@ export function OrdersSearchBar({
     onFilterChange,
 }: Props) {
     return (
-        <div
-            className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4
-                rounded-lg "
-        >
-            <div className="flex gap-2 w-full sm:w-auto ">
-                <Select value={filterBy} onValueChange={onFilterChange}>
-                    <SelectTrigger className="w-[160px]">
-                        <SelectValue placeholder="Filter by" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="customer">Customer Name</SelectItem>
-                        <SelectItem value="amount">Total Amount</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Input
-                    placeholder={`Search by ${
-                        filterBy === "customer" ? "customer name" : "amount"
-                    }`}
-                    value={search}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    className="w-full sm:w-[260px]"
-                />
-            </div>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4 border rounded-lg p-3 bg-background">
+            <Input
+                placeholder="Search…"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="sm:max-w-sm"
+            />
+
+            <Select value={filterBy} onValueChange={onFilterChange}>
+                <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Search by" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="amount">Amount</SelectItem>
+                    <SelectItem value="transaction">Transaction ID</SelectItem>
+                </SelectContent>
+            </Select>
         </div>
     );
 }

@@ -28,6 +28,7 @@ export interface Order {
     paymentMethod?: string;
     paymentReference?: string;
     maskedPaymentId?: string;
+    transactionId?: string;
 
     refundStatus?: string;
     refundId?: string;

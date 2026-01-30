@@ -18,7 +18,6 @@ interface Props {
     open: boolean;
     onClose(): void;
 
-    // 🔥 IMPORTANT: keep status update flow
     onChangeStatus?(order: Order): void;
 }
 
@@ -29,7 +28,7 @@ export function ViewOrderDialog({
     onChangeStatus,
 }: Props) {
     if (!order) return null;
-
+    console.log("order transaction id", order.transactionId);
     const tracking = parseTracking(order.trackingInfo);
 
     return (
@@ -108,6 +107,12 @@ export function ViewOrderDialog({
                                     </p>
                                 </div>
 
+                                <div>
+                                    <strong>Transaction Id:</strong>
+                                    <p className="break-all">
+                                        {order.transactionId || "N/A"}
+                                    </p>
+                                </div>
                                 <div>
                                     <strong>Payment Reference:</strong>
                                     <p className="break-all">

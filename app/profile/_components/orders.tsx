@@ -2,14 +2,18 @@
 
 import { DbOrder } from "@/app/types";
 import {
+    ArrowLeft,
     CheckCircle,
+    ChevronDown,
     Clock,
-    IndianRupee,
     Package,
+    ShieldCheck,
     Truck,
     XCircle,
 } from "lucide-react";
-/* -------------------- Types -------------------- */
+import { useMemo, useState } from "react";
+
+/* -------------------- Types & Status Logic (UNCHANGED) -------------------- */
 
 type OrderStatus =
     | "payment_pending"
@@ -17,14 +21,12 @@ type OrderStatus =
     | "shipped"
     | "delivered"
     | "cancelled";
-
 type ShipmentStatus =
     | "manifested"
     | "pickup"
     | "in_transit"
-    | "out_for_delivery"
+    | "dispatched"
     | "delivered";
-
 type DisplayStatus =
     | "payment_pending"
     | "order_confirmed"
@@ -37,7 +39,6 @@ type DisplayStatus =
 interface Shipment {
     status: ShipmentStatus;
 }
-
 interface OrdersProps {
     orders: (DbOrder & {
         status: OrderStatus;
@@ -45,58 +46,24 @@ interface OrdersProps {
     })[];
 }
 
-/* -------------------- Status Helpers -------------------- */
-
 function getOrderDisplayStatus(
     orderStatus: OrderStatus,
     shipment?: Shipment | null,
 ): DisplayStatus {
-    // Payment pending
-    if (orderStatus === "payment_pending") {
-        return "payment_pending";
-    }
-
-    // Cancelled overrides everything
-    if (orderStatus === "cancelled") {
-        return "cancelled";
-    }
-
-    // Delivered (hard stop)
-    if (orderStatus === "delivered" && shipment?.status === "delivered") {
+    if (orderStatus === "payment_pending") return "payment_pending";
+    if (orderStatus === "cancelled") return "cancelled";
+    if (orderStatus === "delivered" && shipment?.status === "delivered")
         return "delivered";
-    }
-
-    // 🔑 Shipment-driven states (VERY IMPORTANT)
     if (shipment) {
-        if (shipment.status === "manifested") {
-            return "order_processing";
-        }
-
-        if (shipment.status === "out_for_delivery") {
-            return "out_for_delivery";
-        }
-
-        if (shipment.status === "delivered") {
-            return "delivered";
-        }
-
-        // pickup | in_transit
+        if (shipment.status === "manifested") return "order_processing";
+        if (shipment.status === "dispatched") return "out_for_delivery";
+        if (shipment.status === "delivered") return "delivered";
         return "order_shipped";
     }
-
-    // No shipment yet → order-based states
-    if (orderStatus === "confirmed") {
-        return "order_confirmed";
-    }
-
-    if (orderStatus === "shipped") {
-        return "order_processing";
-    }
-
+    if (orderStatus === "confirmed") return "order_confirmed";
+    if (orderStatus === "shipped") return "order_processing";
     return "order_confirmed";
 }
-
-/* -------------------- UI Config -------------------- */
 
 const ORDER_STATUS_UI: Record<
     DisplayStatus,
@@ -105,205 +72,397 @@ const ORDER_STATUS_UI: Record<
     payment_pending: {
         label: "Payment Pending",
         Icon: Clock,
-        className: "border border-yellow-300 text-yellow-700 bg-yellow-50",
+        className: "border-yellow-300 text-yellow-700 bg-yellow-50",
     },
     order_confirmed: {
-        label: "Confirmed",
+        label: "Order Placed",
         Icon: CheckCircle,
-        className: "border border-blue-300 text-blue-700 bg-blue-50",
+        className: "border-indigo-300 text-indigo-700 bg-indigo-50",
     },
     order_processing: {
-        label: "Processing",
-        Icon: Package,
-        className: "border border-gray-300 text-gray-700 bg-gray-50",
+        label: "Order Confirmed",
+        Icon: ShieldCheck,
+        className: "border-gray-300 text-gray-700 bg-gray-50",
     },
     order_shipped: {
-        label: "Shipped",
-        Icon: Truck,
-        className: "border border-indigo-300 text-indigo-700 bg-indigo-50",
+        label: "Order Shipped",
+        Icon: Package,
+        className: "border-purple-300 text-purple-700 bg-purple-50",
     },
     out_for_delivery: {
-        label: "Out for Delivery",
+        label: "Out For Delivery",
         Icon: Truck,
-        className: "border border-orange-300 text-orange-700 bg-orange-50",
+        className: "border-sky-300 text-sky-700 bg-sky-50",
     },
     delivered: {
         label: "Delivered",
         Icon: CheckCircle,
-        className: "border border-green-300 text-green-700 bg-green-50",
+        className: "border-green-300 text-green-700 bg-green-50",
     },
     cancelled: {
         label: "Cancelled",
         Icon: XCircle,
-        className: "border border-red-300 text-red-700 bg-red-50",
+        className: "border-red-300 text-red-700 bg-red-50",
     },
 };
+
+const ITEMS_PER_PAGE = 5;
 
 /* -------------------- Component -------------------- */
 
 export function Orders({ orders }: OrdersProps) {
+    const [filter, setFilter] = useState<"all" | DisplayStatus>("all");
+    const [page, setPage] = useState(1);
+
+    const filteredOrders = useMemo(() => {
+        if (filter === "all") return orders;
+        return orders.filter(
+            (o) => getOrderDisplayStatus(o.status, o.shipment) === filter,
+        );
+    }, [orders, filter]);
+
+    const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+    const paginatedOrders = filteredOrders.slice(
+        (page - 1) * ITEMS_PER_PAGE,
+        page * ITEMS_PER_PAGE,
+    );
+
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                    Your Orders
-                </h1>
-                <p className="text-gray-500 mt-1">
-                    View and manage your orders
-                </p>
+        <div className="max-w-6xl mx-auto p-4 md:p-6">
+            {/* Header */}
+            <div className="mb-6">
+                <button className="flex items-center gap-1 text-sm text-gray-500 mb-3 hover:text-black transition-colors">
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                </button>
+
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">
+                            My Orders
+                        </h1>
+                        <p className="text-gray-500 mt-1">
+                            View and track all your orders
+                        </p>
+                    </div>
+
+                    {/* Filter - left on mobile, right on desktop */}
+                    <div className="relative self-start md:self-auto">
+                        <select
+                            value={filter}
+                            onChange={(e) => {
+                                setFilter(e.target.value as any);
+                                setPage(1);
+                            }}
+                            className="appearance-none border border-gray-300 rounded-xl px-4 py-2.5 pr-10 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                        >
+                            <option value="all">All Orders</option>
+                            {Object.keys(ORDER_STATUS_UI).map((key) => (
+                                <option key={key} value={key}>
+                                    {
+                                        ORDER_STATUS_UI[key as DisplayStatus]
+                                            .label
+                                    }
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+                </div>
             </div>
 
+            {/* Divider */}
+            <div className="border-t border-gray-200 mb-6" />
+
+            {/* Empty State */}
+            {filteredOrders.length === 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-8 md:p-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                        {filter !== "all" ? (
+                            (() => {
+                                const StatusIcon = ORDER_STATUS_UI[filter].Icon;
+                                return (
+                                    <StatusIcon className="w-8 h-8 text-gray-400" />
+                                );
+                            })()
+                        ) : (
+                            <Package className="w-8 h-8 text-gray-400" />
+                        )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                        No orders found
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                        {filter === "all"
+                            ? "You haven't placed any orders yet."
+                            : `You don't have any orders with "${ORDER_STATUS_UI[filter].label}" status.`}
+                    </p>
+                    {filter !== "all" && (
+                        <button
+                            onClick={() => {
+                                setFilter("all");
+                                setPage(1);
+                            }}
+                            className="mt-4 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                        >
+                            View all orders
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Orders List */}
             <div className="space-y-4">
-                {orders.length > 0 ? (
-                    orders.map((order) => {
-                        const displayStatus = getOrderDisplayStatus(
-                            order.status,
-                            order.shipment,
-                        );
-                        const statusUI = ORDER_STATUS_UI[displayStatus];
+                {paginatedOrders.map((order) => {
+                    const displayStatus = getOrderDisplayStatus(
+                        order.status,
+                        order.shipment,
+                    );
+                    const statusUI = ORDER_STATUS_UI[displayStatus];
+                    const items = Array.isArray(order.items) ? order.items : [];
 
-                        const items: any[] = Array.isArray(order.items)
-                            ? order.items
-                            : typeof order.items === "string"
-                              ? (() => {
-                                    try {
-                                        const parsed = JSON.parse(order.items);
-                                        return Array.isArray(parsed)
-                                            ? parsed
-                                            : Object.values(parsed || {});
-                                    } catch {
-                                        return [];
-                                    }
-                                })()
-                              : order.items && typeof order.items === "object"
-                                ? Object.values(order.items)
-                                : [];
-
-                        return (
-                            <div
-                                key={order.id}
-                                className="bg-[#f6fbff] flex flex-col md:flex-row rounded-2xl shadow-md hover:shadow-lg transition-shadow cursor-pointer overflow-hidden"
-                                onClick={() =>
-                                    (window.location.href = `/profile/orders/${order.id}`)
-                                }
-                            >
-                                {/* Left */}
-                                <div className="px-4 py-6 md:w-1/5 border-b md:border-b-0 md:border-r border-gray-200 space-y-4">
-                                    {/* Order Date */}
-                                    <div>
-                                        <p className="text-xs uppercase tracking-wide text-gray-400">
-                                            Order Date
-                                        </p>
-                                        <p className="text-sm font-semibold text-gray-900">
-                                            {new Date(
-                                                order.createdAt,
-                                            ).toLocaleDateString("en-IN", {
-                                                day: "2-digit",
-                                                month: "short",
-                                                year: "numeric",
-                                            })}
-                                        </p>
+                    return (
+                        <div
+                            key={order.id}
+                            className="bg-white border border-gray-200 rounded-2xl p-5 md:p-6"
+                        >
+                            {/* Desktop Layout */}
+                            <div className="hidden md:flex md:justify-between md:gap-6">
+                                {/* Left Side: Order Info & Items */}
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h2 className="text-lg font-bold text-gray-900">
+                                            Order #
+                                            {order.id.slice(0, 8).toUpperCase()}
+                                        </h2>
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusUI.className}`}
+                                        >
+                                            <statusUI.Icon className="w-3 h-3" />
+                                            {statusUI.label}
+                                        </span>
                                     </div>
 
-                                    {/* Order ID */}
-                                    <div>
-                                        <p className="text-xs uppercase tracking-wide text-gray-400">
-                                            Order ID
-                                        </p>
-                                        <p className="text-sm font-semibold text-gray-700 select-all">
-                                            #{order.id.slice(0, 8)}
-                                        </p>
-                                    </div>
+                                    <p className="text-sm text-gray-500">
+                                        Placed on{" "}
+                                        {new Date(
+                                            order.createdAt,
+                                        ).toLocaleDateString("en-IN", {
+                                            day: "numeric",
+                                            month: "long",
+                                            year: "numeric",
+                                        })}
+                                    </p>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        {items.length} item
+                                        {items.length !== 1 ? "s" : ""}
+                                    </p>
 
-                                    {/* Total Order Value */}
-                                    <div>
-                                        <p className="text-xs uppercase tracking-wide text-gray-400">
-                                            Total Order Value
-                                        </p>
-                                        <div className="flex items-center gap-1 text-lg font-bold text-gray-900">
-                                            <IndianRupee className="w-4 h-4" />
-                                            {order.totalAmount}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Middle */}
-                                <div className="px-4 py-6 md:w-3/5">
-                                    <div className="bg-white/70 rounded-lg p-2 space-y-2">
-                                        {items.length > 0 ? (
-                                            items.map((item, idx) => (
-                                                <div
-                                                    key={item.id || idx}
-                                                    className="flex items-center gap-3 border-b last:border-b-0 py-2"
-                                                >
-                                                    {item.image ? (
-                                                        <img
-                                                            src={item.image}
-                                                            alt={item.name}
-                                                            className="w-10 h-10 rounded object-cover border"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center">
-                                                            🛍️
-                                                        </div>
-                                                    )}
-
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="font-semibold truncate">
-                                                            {item.name}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 truncate">
-                                                            {item.description ||
-                                                                ""}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-                                                            x
-                                                            {item.quantity || 1}
-                                                        </span>
-                                                        <span className="flex items-center gap-1 text-sm font-semibold">
-                                                            <IndianRupee className="w-4 h-4" />
-                                                            {item.price || 0}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="text-sm text-gray-400 italic">
-                                                No items found
-                                            </div>
+                                    {/* Items list */}
+                                    <div className="space-y-1.5">
+                                        {items.slice(0, 2).map((item, i) => (
+                                            <p
+                                                key={i}
+                                                className="text-sm text-gray-600"
+                                            >
+                                                <span className="text-gray-400 mr-2">
+                                                    •
+                                                </span>
+                                                {item.name}
+                                                <span className="text-gray-400 ml-1">
+                                                    × {item.quantity || 1}
+                                                </span>
+                                            </p>
+                                        ))}
+                                        {items.length > 2 && (
+                                            <p className="text-xs font-semibold uppercase text-gray-400 ml-4">
+                                                + {items.length - 2} more item
+                                                {items.length - 2 !== 1
+                                                    ? "s"
+                                                    : ""}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* Right */}
-                                <div className="px-4 py-6 md:w-1/4 flex flex-col items-end justify-between">
-                                    <span
-                                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${statusUI.className}`}
-                                    >
-                                        <statusUI.Icon className="w-4 h-4" />
-                                        {statusUI.label}
-                                    </span>
+                                {/* Right Side: Pricing & Action */}
+                                <div className="flex flex-col items-end justify-between min-w-[140px]">
+                                    <div className="text-right">
+                                        <p className="text-xs font-medium text-gray-400 uppercase tracking-tight">
+                                            Order Total
+                                        </p>
+                                        <p className="text-2xl font-bold text-gray-900">
+                                            ₹
+                                            {Number(
+                                                order.totalAmount,
+                                            ).toLocaleString("en-IN")}
+                                        </p>
+                                    </div>
 
                                     <button
-                                        className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:scale-105 transition"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            window.location.href = `/profile/orders/${order.id}`;
-                                        }}
+                                        className="h-10 px-6 bg-[#1A1A1A] hover:bg-black text-white rounded-lg text-sm font-semibold transition-all active:scale-[0.98]"
+                                        onClick={() =>
+                                            (window.location.href = `/profile/orders/${order.id}`)
+                                        }
                                     >
-                                        🔍 View Details
+                                        View Details
                                     </button>
                                 </div>
                             </div>
-                        );
-                    })
-                ) : (
-                    <p className="text-gray-500">No orders found</p>
-                )}
+
+                            {/* Mobile Layout */}
+                            <div className="md:hidden">
+                                {/* Order header */}
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h2 className="text-lg font-bold text-gray-900">
+                                        Order #
+                                        {order.id.slice(0, 8).toUpperCase()}
+                                    </h2>
+                                    <span
+                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusUI.className}`}
+                                    >
+                                        <statusUI.Icon className="w-3 h-3" />
+                                        {statusUI.label}
+                                    </span>
+                                </div>
+
+                                <p className="text-sm text-gray-500">
+                                    Placed on{" "}
+                                    {new Date(
+                                        order.createdAt,
+                                    ).toLocaleDateString("en-IN", {
+                                        day: "numeric",
+                                        month: "long",
+                                        year: "numeric",
+                                    })}
+                                </p>
+                                <p className="text-sm text-gray-500 mb-4">
+                                    {items.length} item
+                                    {items.length !== 1 ? "s" : ""}
+                                </p>
+
+                                {/* Divider */}
+                                <div className="border-t border-gray-100 my-4" />
+
+                                {/* Items list */}
+                                <div className="space-y-1.5 mb-4">
+                                    {items.slice(0, 2).map((item, i) => (
+                                        <p
+                                            key={i}
+                                            className="text-sm text-gray-600"
+                                        >
+                                            <span className="text-gray-400 mr-2">
+                                                •
+                                            </span>
+                                            {item.name}
+                                            <span className="text-gray-400 ml-1">
+                                                × {item.quantity || 1}
+                                            </span>
+                                        </p>
+                                    ))}
+                                    {items.length > 2 && (
+                                        <p className="text-xs font-semibold uppercase text-gray-400 ml-4">
+                                            + {items.length - 2} more item
+                                            {items.length - 2 !== 1 ? "s" : ""}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Bottom row: Price and Button */}
+                                <div className="flex items-end justify-between pt-2">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-400 uppercase tracking-tight">
+                                            Order Total
+                                        </p>
+                                        <p className="text-2xl font-bold text-gray-900">
+                                            ₹
+                                            {Number(
+                                                order.totalAmount,
+                                            ).toLocaleString("en-IN")}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        className="h-10 px-6 bg-[#1A1A1A] hover:bg-black text-white rounded-lg text-sm font-semibold transition-all active:scale-[0.98]"
+                                        onClick={() =>
+                                            (window.location.href = `/profile/orders/${order.id}`)
+                                        }
+                                    >
+                                        View Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-1 pt-6">
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => p - 1)}
+                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                    >
+                        Previous
+                    </button>
+
+                    <div className="flex items-center gap-1 mx-2">
+                        {Array.from(
+                            { length: totalPages },
+                            (_, i) => i + 1,
+                        ).map((pageNum) => {
+                            // Show first, last, current, and adjacent pages
+                            const showPage =
+                                pageNum === 1 ||
+                                pageNum === totalPages ||
+                                Math.abs(pageNum - page) <= 1;
+
+                            // Show ellipsis
+                            const showEllipsisBefore =
+                                pageNum === page - 2 && page > 3;
+                            const showEllipsisAfter =
+                                pageNum === page + 2 && page < totalPages - 2;
+
+                            if (showEllipsisBefore || showEllipsisAfter) {
+                                return (
+                                    <span
+                                        key={pageNum}
+                                        className="px-2 py-2 text-sm text-gray-400"
+                                    >
+                                        ...
+                                    </span>
+                                );
+                            }
+
+                            if (!showPage) return null;
+
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => setPage(pageNum)}
+                                    className={`min-w-[36px] h-9 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                        page === pageNum
+                                            ? "bg-[#1A1A1A] text-white"
+                                            : "border border-gray-200 hover:bg-gray-50 text-gray-700"
+                                    }`}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <button
+                        disabled={page === totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                        className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

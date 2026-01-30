@@ -33,7 +33,9 @@ interface Props {
 export function DeliveredTab({ orders, onView }: Props) {
     /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
-    const [filterBy, setFilterBy] = useState<"customer" | "amount">("customer");
+    const [filterBy, setFilterBy] = useState<
+        "customer" | "amount" | "transaction"
+    >("customer");
 
     /* ---------- PAGINATION ---------- */
     const PAGE_SIZE = 10;
@@ -43,14 +45,27 @@ export function DeliveredTab({ orders, onView }: Props) {
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
+        const q = search.toLowerCase();
+
         return orders.filter((order) => {
             if (filterBy === "customer") {
                 const name =
                     order.shippingAddress?.fullName || order.user?.name || "";
-                return name.toLowerCase().includes(search.toLowerCase());
+                return name.toLowerCase().includes(q);
             }
 
-            return String(order.totalAmount).includes(search);
+            if (filterBy === "amount") {
+                return String(order.totalAmount).includes(q);
+            }
+
+            if (filterBy === "transaction") {
+                return (
+                    order.transactionId &&
+                    order.transactionId.toLowerCase().includes(q)
+                );
+            }
+
+            return true;
         });
     }, [orders, search, filterBy]);
 
