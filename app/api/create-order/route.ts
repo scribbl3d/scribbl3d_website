@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 ========================= */
 export async function POST(req: Request) {
     try {
+        /* ---------- AUTH ---------- */
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json(
@@ -17,12 +18,18 @@ export async function POST(req: Request) {
             );
         }
 
+        /* ---------- REQUEST BODY ---------- */
         const {
             mode = "cart",
             items,
-            totalAmount,
 
-            shippingMode, // SURFACE | EXPRESS
+            subtotal,
+            discountAmount = 0,
+            discountCode = null,
+            shippingPrice = 0,
+
+            totalAmount,
+            shippingMode, // "Surface" | "Express"
 
             shippingAddress,
             billingAddress,
@@ -30,10 +37,33 @@ export async function POST(req: Request) {
             transactionId,
         } = await req.json();
 
+        /* ---------- PRICING VALIDATION ---------- */
+        if (subtotal == null || totalAmount == null) {
+            return NextResponse.json(
+                { error: "Pricing data missing" },
+                { status: 400 },
+            );
+        }
+
+        if (discountAmount < 0) {
+            return NextResponse.json(
+                { error: "Invalid discount amount" },
+                { status: 400 },
+            );
+        }
+
+        if (shippingPrice < 0) {
+            return NextResponse.json(
+                { error: "Invalid shipping price" },
+                { status: 400 },
+            );
+        }
+
+        /* ---------- MODE NORMALIZATION ---------- */
         const normalizedMode =
             mode === "buynow" || mode === "cart" ? mode : "cart";
 
-        /* ---------- VALIDATE SHIPPING MODE ---------- */
+        /* ---------- SHIPPING MODE VALIDATION ---------- */
         if (shippingMode !== "Surface" && shippingMode !== "Express") {
             return NextResponse.json(
                 { error: "Invalid shipping mode" },
@@ -57,7 +87,7 @@ export async function POST(req: Request) {
         let cartIdToClear: string | null = null;
 
         /* =====================================================
-           BUY NOW
+           BUY NOW FLOW
         ===================================================== */
         if (normalizedMode === "buynow") {
             if (!Array.isArray(items) || items.length !== 1) {
@@ -81,9 +111,10 @@ export async function POST(req: Request) {
                 },
             ];
         } else {
-            /* =====================================================
-               CART FLOW
-            ===================================================== */
+
+        /* =====================================================
+           CART FLOW
+        ===================================================== */
             const cart = await prisma.cart.findFirst({
                 where: { userId: session.user.id },
                 include: {
@@ -100,9 +131,7 @@ export async function POST(req: Request) {
                             resinWeight: true,
                             resinColour: {
                                 include: {
-                                    images: {
-                                        orderBy: { sortOrder: "asc" },
-                                    },
+                                    images: { orderBy: { sortOrder: "asc" } },
                                 },
                             },
                             productSize: true,
@@ -176,10 +205,9 @@ export async function POST(req: Request) {
             });
         }
 
-        /* ---------- BACKEND EXPRESS VALIDATION ---------- */
-        if (shippingMode === "EXPRESS") {
+        /* ---------- EXPRESS SHIPPING BACKEND CHECK ---------- */
+        if (shippingMode === "Express") {
             const expressCheck = calculateExpressShipping(orderItems);
-
             if (!expressCheck.allowed) {
                 return NextResponse.json(
                     { error: "Express shipping not allowed for this order" },
@@ -196,14 +224,20 @@ export async function POST(req: Request) {
         }
 
         /* =====================================================
-           CREATE ORDER
+           CREATE ORDER (FINAL)
         ===================================================== */
         const order = await prisma.order.create({
             data: {
                 userId: session.user.id,
-                items: orderItems,
-                totalAmount,
 
+                items: orderItems,
+
+                subtotal,
+                discountAmount,
+                discountCode,
+                shippingPrice,
+
+                totalAmount,
                 shippingMode,
 
                 shippingAddress,
