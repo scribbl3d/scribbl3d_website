@@ -44,6 +44,11 @@ export default function PhonePePayment({
             if (!items || items.length === 0) {
                 throw new Error("No checkout items found");
             }
+            const subtotal = state.pricing?.subtotal ?? amount;
+            const discountAmount = state.pricing?.discountAmount ?? 0;
+            const discountCode = state.pricing?.appliedDiscountCode ?? null;
+
+            const shippingPrice = state.selectedShipping?.price ?? 0;
 
             const transactionId = `TXN${Date.now()}${Math.random()
                 .toString(34)
@@ -53,10 +58,13 @@ export default function PhonePePayment({
                     ? "Express"
                     : "Surface";
 
-            // ✅ CREATE ORDER (CART OR BUY NOW)
             const orderResponse = await axios.post("/api/create-order", {
                 mode,
                 items,
+                subtotal,
+                discountAmount,
+                discountCode,
+                shippingPrice,
                 totalAmount: amount,
                 shippingMode,
                 shippingAddress: state.shippingDetails,
@@ -70,7 +78,6 @@ export default function PhonePePayment({
                 throw new Error("Failed to create order");
             }
 
-            // ✅ PHONEPE INIT
             const response = await axios.post("/api/order", {
                 name,
                 amount,

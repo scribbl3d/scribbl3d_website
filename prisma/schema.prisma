@@ -411,6 +411,10 @@ model Order {
   id                String    @id @default(cuid())
   userId            String
   items             Json
+    subtotal        Float?
+  discountAmount  Float?     @default(0)
+  discountCode    String?
+  shippingPrice   Float?     @default(0)
   totalAmount       Float
   status            String    @default("payment_pending")
 
@@ -420,6 +424,9 @@ model Order {
   paymentMethod       String?       // UPI | CREDIT_CARD | DEBIT_CARD | NET_BANKING | WALLET (from PhonePe)
   paymentReference  String?       // PhonePe ref / RRN
   maskedPaymentId   String?       // masked UPI or card
+  utrNumber          String?   // UPI only
+  brnNumber          String?   // Card only
+  cardNetwork        String?   // VISA / MASTERCARD / RUPAY
 
   transactionId     String?   @unique
   trackingInfo      Json?
@@ -438,7 +445,40 @@ model Order {
   @@index([userId])
 }
 
+model Discount {
+  id                  String   @id @default(uuid())
+  name                String
+  code                String   @unique
 
+  scope               DiscountScope
+  applicableItemType  ItemType?
+
+  valueType           DiscountValueType
+  value               Float
+
+  minCartValue        Float?
+  isActive            Boolean  @default(true)
+
+  createdAt           DateTime @default(now())
+}
+
+enum DiscountScope {
+  cart
+  item_type
+}
+
+enum DiscountValueType {
+  percentage
+  flat
+}
+
+enum ItemType {
+  product
+  prebuilt
+  printer
+  resin
+  unknown
+}
 
 model Shipment {
   id               String    @id @default(cuid())

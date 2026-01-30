@@ -2,10 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/components/ui/use-toast";
 import { useCheckout } from "@/providers/CheckoutProvider";
 import { AnimatePresence, motion } from "framer-motion";
 import { Lock } from "lucide-react";
@@ -20,8 +18,6 @@ type CheckoutItem = {
     price: number;
     quantity: number;
     images?: string[];
-    color?: string;
-    size?: string;
     customization?: any;
 };
 
@@ -37,38 +33,34 @@ export default function OrderSummary() {
     const [items, setItems] = useState<CheckoutItem[]>([]);
     const [loadingItems, setLoadingItems] = useState(true);
 
-    const [discountCode, setDiscountCode] = useState("");
-    const [appliedDiscount, setAppliedDiscount] = useState(0);
-
     useEffect(() => {
         setIsClient(true);
     }, []);
 
     /* =========================
-     LOAD CHECKOUT ITEMS
-  ========================= */
+       LOAD CHECKOUT ITEMS
+    ========================= */
     useEffect(() => {
         async function loadItems() {
             setLoadingItems(true);
 
             try {
-                // 🟢 BUY NOW
+                // BUY NOW
                 if (mode === "buynow" && productId && type) {
                     const res = await fetch(
-                        `/api/buynow?type=${type}&productId=${productId}`
+                        `/api/buynow?type=${type}&productId=${productId}`,
                     );
                     const item = await res.json();
                     setItems([{ ...item, quantity: 1 }]);
                 }
-
-                // 🟢 CART (mode is null OR explicitly cart)
+                // CART
                 else {
                     const res = await fetch("/api/cart");
                     const data = await res.json();
                     setItems(data.items || []);
                 }
-            } catch (error) {
-                console.error("Failed to load checkout items", error);
+            } catch (err) {
+                console.error("Failed to load checkout items", err);
                 setItems([]);
             } finally {
                 setLoadingItems(false);
@@ -83,37 +75,30 @@ export default function OrderSummary() {
     }
 
     /* =========================
-     PRICE CALCULATIONS
-  ========================= */
-    const subtotal = items.reduce(
+       PRICE CALCULATIONS
+    ========================= */
+
+    // Fallback subtotal (only if pricing not locked yet – eg buy now edge case)
+    const computedSubtotal = items.reduce(
         (sum, item) => sum + item.price * item.quantity,
-        0
+        0,
     );
+
+    const subtotal =
+        state.pricing?.subtotal !== undefined
+            ? state.pricing.subtotal
+            : computedSubtotal;
+
+    const discountAmount = state.pricing?.discountAmount ?? 0;
+    const appliedDiscountCode = state.pricing?.appliedDiscountCode;
 
     const shippingCost = state.selectedShipping?.price ?? 0;
 
     const gstRate = 0.18;
     const gstAmount = (subtotal * gstRate) / (1 + gstRate);
 
-    const discountAmount = subtotal * appliedDiscount;
     const total = subtotal + shippingCost - discountAmount;
-
-    const handleApplyDiscount = () => {
-        if (discountCode.toUpperCase() === "GET10OFF") {
-            setAppliedDiscount(0.1);
-            toast({
-                title: "Discount Applied",
-                description: "10% discount has been applied.",
-            });
-        } else {
-            toast({
-                title: "Invalid Code",
-                description: "The discount code is not valid.",
-                variant: "destructive",
-            });
-        }
-        setDiscountCode("");
-    };
+    console.log("💰 FINAL PRICING:", state.pricing);
 
     return (
         <Card className="bg-white border shadow-sm">
@@ -123,8 +108,8 @@ export default function OrderSummary() {
 
             <CardContent className="space-y-4">
                 {/* =========================
-            ITEMS
-        ========================= */}
+                    ITEMS
+                ========================= */}
                 <div className="space-y-2">
                     {items.map((item) => (
                         <div
@@ -167,35 +152,21 @@ export default function OrderSummary() {
                 </div>
 
                 {/* =========================
-            DISCOUNT
-        ========================= */}
-                <div className="flex space-x-2">
-                    <Input
-                        placeholder="Discount code"
-                        value={discountCode}
-                        onChange={(e) => setDiscountCode(e.target.value)}
-                    />
-                    <Button variant="secondary" onClick={handleApplyDiscount}>
-                        Apply
-                    </Button>
-                </div>
-
-                {/* =========================
-            COST BREAKDOWN
-        ========================= */}
-                <div className="space-y-2">
+                    COST BREAKDOWN
+                ========================= */}
+                <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                         <span>Subtotal</span>
                         <span>₹{subtotal.toFixed(2)}</span>
                     </div>
 
-                    {appliedDiscount > 0 && (
+                    {discountAmount > 0 && appliedDiscountCode && (
                         <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             className="flex justify-between text-green-600"
                         >
-                            <span>Discount</span>
+                            <span>Discount ({appliedDiscountCode})</span>
                             <span>-₹{discountAmount.toFixed(2)}</span>
                         </motion.div>
                     )}
@@ -218,16 +189,16 @@ export default function OrderSummary() {
                 <Separator />
 
                 {/* =========================
-            TOTAL
-        ========================= */}
+                    TOTAL
+                ========================= */}
                 <div className="flex justify-between font-medium text-lg">
                     <span>Total</span>
                     <span>₹{total.toFixed(2)}</span>
                 </div>
 
                 {/* =========================
-            PAYMENT
-        ========================= */}
+                    PAYMENT
+                ========================= */}
                 <AnimatePresence>
                     {state.step < 3 ? (
                         <motion.div

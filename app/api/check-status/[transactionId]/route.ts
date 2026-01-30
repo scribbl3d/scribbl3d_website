@@ -86,15 +86,21 @@ export async function GET(
 
                 let paymentMethod: string | null = null;
                 let maskedPaymentId: string | null = null;
+                let utrNumber: string | null = null;
+                let brnNumber: string | null = null;
+                let cardNetwork: string | null = null;
 
                 if (pi?.type === "UPI") {
                     paymentMethod = "UPI";
                     maskedPaymentId = pi.payerVpa ?? null;
+                    utrNumber = pi.utr ?? null;
                 }
 
                 if (pi?.type === "CARD") {
                     paymentMethod = pi.cardType ?? "CARD";
                     maskedPaymentId = pi.maskedCardNumber ?? null;
+                    brnNumber = pi.brn ?? null;
+                    cardNetwork = pi.cardNetwork ?? null;
                 }
 
                 const updatedOrder = await prisma.order.update({
@@ -103,8 +109,12 @@ export async function GET(
                         status: "confirmed",
 
                         paymentMethod,
-                        paymentReference: result.data.transactionId, // PhonePe dispute ref
+                        paymentReference: result.data.transactionId,
+
                         maskedPaymentId,
+                        utrNumber,
+                        brnNumber,
+                        cardNetwork,
                     },
                     include: { user: true },
                 });
@@ -120,17 +130,6 @@ export async function GET(
                 } catch (err) {
                     console.error("[Email] Failed:", err);
                 }
-
-                /* 🚚 Trigger shipment */
-                // try {
-                //     await fetch(`${APP_URL}/api/internal/create-shipment`, {
-                //         method: "POST",
-                //         headers: { "Content-Type": "application/json" },
-                //         body: JSON.stringify({ orderId: updatedOrder.id }),
-                //     });
-                // } catch (shipErr) {
-                //     console.error("[Shipment] Failed:", shipErr);
-                // }
             }
 
             return NextResponse.json({

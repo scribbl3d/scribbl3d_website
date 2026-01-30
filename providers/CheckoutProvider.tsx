@@ -16,12 +16,16 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 interface CheckoutContextType {
     state: CheckoutState;
+
     setShippingDetails: (details: ShippingDetails) => void;
     setShippingOption: (option: ShippingOption) => void;
+    setPricing: (pricing: CheckoutState["pricing"]) => void;
+
     nextStep: () => void;
     prevStep: () => void;
     goToStep: (step: number) => void;
     resetCheckout: () => void;
+
     expressShipping: {
         allowed: boolean;
         price: number;
@@ -50,10 +54,15 @@ const CheckoutContext = createContext<CheckoutContextType | undefined>(
     undefined,
 );
 
+/* =========================
+   INITIAL STATE
+========================= */
+
 const initialState: CheckoutState = {
     step: 1,
     shippingDetails: null,
     selectedShipping: null,
+    pricing: null,
 };
 
 /* =========================
@@ -74,7 +83,21 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
 
     const { cart } = useCart();
 
-    /* ---------- SET SHIPPING DETAILS ---------- */
+    /* =========================
+       SET PRICING (LOCKED FROM CART)
+    ========================= */
+
+    const setPricing = (pricing: CheckoutState["pricing"]) => {
+        setState((prev) => ({
+            ...prev,
+            pricing,
+        }));
+    };
+
+    /* =========================
+       SET SHIPPING DETAILS
+    ========================= */
+
     const setShippingDetails = (details: ShippingDetails) => {
         setState((prev) => ({
             ...prev,
@@ -82,7 +105,10 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         }));
     };
 
-    /* ---------- SET SHIPPING OPTION ---------- */
+    /* =========================
+       SET SHIPPING OPTION
+    ========================= */
+
     const setShippingOption = (option: ShippingOption) => {
         setState((prev) => ({
             ...prev,
@@ -90,7 +116,10 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         }));
     };
 
-    /* ---------- STEP CONTROLS ---------- */
+    /* =========================
+       STEP CONTROLS
+    ========================= */
+
     const nextStep = () => {
         setState((prev) => ({
             ...prev,
@@ -112,7 +141,10 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         }));
     };
 
-    /* ---------- RESET ---------- */
+    /* =========================
+       RESET CHECKOUT (ONLY MANUAL)
+    ========================= */
+
     const resetCheckout = () => {
         setState(initialState);
         setExpressShipping({
@@ -121,9 +153,12 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
-    /* ---------- EXPRESS SHIPPING CALCULATION ---------- */
+    /* =========================
+       EXPRESS SHIPPING LOGIC
+    ========================= */
+
     useEffect(() => {
-        if (!cart?.length) {
+        if (!cart || cart.length === 0) {
             setExpressShipping({
                 allowed: true,
                 price: 0,
@@ -134,7 +169,7 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         const result = calculateExpressShipping(cart);
         setExpressShipping(result);
 
-        // 🚫 Auto-fallback from premium → free if express becomes invalid
+        // Auto-fallback if premium becomes invalid
         if (!result.allowed && state.selectedShipping?.id === "premium") {
             setState((prev) => ({
                 ...prev,
@@ -143,13 +178,17 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         }
     }, [cart, state.selectedShipping]);
 
-    /* ---------- PROVIDER ---------- */
+    /* =========================
+       PROVIDER
+    ========================= */
+
     return (
         <CheckoutContext.Provider
             value={{
                 state,
                 setShippingDetails,
                 setShippingOption,
+                setPricing,
                 nextStep,
                 prevStep,
                 goToStep,

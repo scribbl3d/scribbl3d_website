@@ -90,6 +90,11 @@ export default function AdminPage() {
                         Manage Hero Images
                     </Button>
                 </Link>
+                <Link href="/admin/discounts" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Discounts
+                    </Button>
+                </Link>
             </nav>
         </div>
     );
