@@ -111,8 +111,7 @@ export async function POST(req: Request) {
                 },
             ];
         } else {
-
-        /* =====================================================
+            /* =====================================================
            CART FLOW
         ===================================================== */
             const cart = await prisma.cart.findFirst({
@@ -223,9 +222,6 @@ export async function POST(req: Request) {
             });
         }
 
-        /* =====================================================
-           CREATE ORDER (FINAL)
-        ===================================================== */
         const order = await prisma.order.create({
             data: {
                 userId: session.user.id,

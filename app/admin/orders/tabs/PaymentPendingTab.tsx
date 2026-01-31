@@ -1,14 +1,19 @@
 "use client";
 
-import { Download } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Download, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 
+import { toast } from "@/components/ui/use-toast";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { OrdersTable } from "../components/OrdersTable";
-import { TablePagination } from "../components/TablePagination";
-
 import { Order } from "../types";
 import { exportPaymentPendingCSV } from "../utils/exportCsv";
 
@@ -24,17 +29,16 @@ interface Props {
    COMPONENT
    ========================================================= */
 export function PaymentPendingTab({ orders, onView }: Props) {
-    /* ---------- SEARCH ---------- */
+    /* 🔍 SEARCH */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<
         "customer" | "amount" | "transaction"
     >("customer");
 
-    /* ---------- PAGINATION ---------- */
-    const PAGE_SIZE = 10;
-    const [page, setPage] = useState(1);
+    /* ❌ DELETE STATE */
+    const [deleteOrder, setDeleteOrder] = useState<Order | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
-    /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
@@ -62,20 +66,40 @@ export function PaymentPendingTab({ orders, onView }: Props) {
         });
     }, [orders, search, filterBy]);
 
-    /* ---------- RESET PAGE ---------- */
-    useEffect(() => {
-        setPage(1);
-    }, [search, filterBy, orders]);
+    async function handleDelete() {
+        if (!deleteOrder) return;
 
-    /* ---------- PAGINATED DATA ---------- */
-    const paginatedOrders = useMemo(() => {
-        const start = (page - 1) * PAGE_SIZE;
-        return filteredOrders.slice(start, start + PAGE_SIZE);
-    }, [filteredOrders, page]);
+        try {
+            setDeleting(true);
+
+            const res = await fetch(`/api/admin/orders/${deleteOrder.id}`, {
+                method: "DELETE",
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            toast({
+                title: "Order deleted",
+                description: "Payment pending order removed successfully",
+            });
+
+            setDeleteOrder(null);
+            location.reload(); // simplest + safe refresh
+        } catch (err: any) {
+            toast({
+                title: "Delete failed",
+                description: err.message,
+                variant: "destructive",
+            });
+        } finally {
+            setDeleting(false);
+        }
+    }
 
     return (
         <div className="space-y-4">
-            {/* ================= SEARCH ================= */}
+            {/* 🔍 SEARCH BAR */}
             <OrdersSearchBar
                 search={search}
                 onSearchChange={setSearch}
@@ -83,12 +107,10 @@ export function PaymentPendingTab({ orders, onView }: Props) {
                 onFilterChange={setFilterBy}
             />
 
-            {/* ================= TABLE ================= */}
             <OrdersTable
                 title="Payment Pending"
-                orders={paginatedOrders}
+                orders={filteredOrders}
                 onView={onView}
-                statusType="order"
                 headerAction={
                     <Button
                         variant="outline"
@@ -99,15 +121,52 @@ export function PaymentPendingTab({ orders, onView }: Props) {
                         Export CSV
                     </Button>
                 }
+                statusType="order"
+                rowActions={(order) => (
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        className="w-[95px] flex items-center justify-center gap-2"
+                        onClick={() => setDeleteOrder(order)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                    </Button>
+                )}
             />
 
-            {/* ================= PAGINATION ================= */}
-            <TablePagination
-                page={page}
-                pageSize={PAGE_SIZE}
-                total={filteredOrders.length}
-                onPageChange={setPage}
-            />
+            {/* ❌ DELETE CONFIRMATION */}
+            <Dialog
+                open={!!deleteOrder}
+                onOpenChange={() => setDeleteOrder(null)}
+            >
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Delete Order</DialogTitle>
+                        <DialogDescription>
+                            This will permanently delete this payment pending
+                            order. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex justify-end gap-2 mt-6">
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteOrder(null)}
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            variant="destructive"
+                            disabled={deleting}
+                            onClick={handleDelete}
+                        >
+                            {deleting ? "Deleting..." : "Delete Order"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

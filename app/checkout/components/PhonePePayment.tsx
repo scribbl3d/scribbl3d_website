@@ -6,8 +6,7 @@ import { formatPrice } from "@/lib/utils";
 import { useCheckout } from "@/providers/CheckoutProvider";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 interface PhonePePaymentProps {
     amount: number;
@@ -25,18 +24,13 @@ export default function PhonePePayment({
     mode,
 }: PhonePePaymentProps) {
     const [isLoading, setIsLoading] = useState(false);
-    const [paymentStatus, setPaymentStatus] = useState<
-        "idle" | "processing" | "success" | "error"
-    >("idle");
-
-    const router = useRouter();
-    const { resetCheckout, state } = useCheckout();
+    const { state } = useCheckout();
 
     const handlePayment = async () => {
         try {
             setIsLoading(true);
-            setPaymentStatus("processing");
 
+            // Validation
             if (!amount || amount <= 0) {
                 throw new Error("Invalid amount");
             }
@@ -44,20 +38,22 @@ export default function PhonePePayment({
             if (!items || items.length === 0) {
                 throw new Error("No checkout items found");
             }
+
+            // Prepare order data
             const subtotal = state.pricing?.subtotal ?? amount;
             const discountAmount = state.pricing?.discountAmount ?? 0;
             const discountCode = state.pricing?.appliedDiscountCode ?? null;
-
             const shippingPrice = state.selectedShipping?.price ?? 0;
 
             const transactionId = `TXN${Date.now()}${Math.random()
-                .toString(34)
-                .slice(2)}`;
+                .toString(36)
+                .slice(2, 8)}`;
             const shippingMode =
                 state.selectedShipping?.id === "premium"
                     ? "Express"
                     : "Surface";
 
+            // Step 1: Create order in database
             const orderResponse = await axios.post("/api/create-order", {
                 mode,
                 items,
@@ -78,92 +74,47 @@ export default function PhonePePayment({
                 throw new Error("Failed to create order");
             }
 
+            // Step 2: Initiate PhonePe payment
             const response = await axios.post("/api/order", {
                 name,
                 amount,
                 mobile,
                 transactionId,
                 orderId,
-                MUID: `MUID${Date.now()}${Math.random().toString(36).slice(2)}`,
+                MUID: `MUID${Date.now()}${Math.random().toString(36).slice(2, 8)}`,
             });
-            console.log("resposne from paytm after payment ", response);
+
             if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
+                // Store transaction details for status page
                 sessionStorage.setItem("phonepe_transaction_id", transactionId);
                 sessionStorage.setItem("phonepe_order_id", orderId);
                 sessionStorage.setItem("phonepe_amount", amount.toString());
 
+                // Redirect to PhonePe
                 window.location.href =
                     response.data.data.instrumentResponse.redirectInfo.url;
             } else {
                 throw new Error("Invalid PhonePe response");
             }
         } catch (error: any) {
-            setPaymentStatus("error");
+            console.error("[PhonePe Payment] Error:", error);
             toast({
                 title: "Payment Error",
                 description:
                     error.response?.data?.details ||
                     error.message ||
-                    "Payment failed",
+                    "Payment failed. Please try again.",
                 variant: "destructive",
             });
-        } finally {
             setIsLoading(false);
         }
     };
-
-    const checkPaymentStatus = useCallback(
-        async (transactionId: string, orderId: string) => {
-            try {
-                const response = await axios.get(
-                    `/api/check-status/${transactionId}`,
-                );
-
-                if (
-                    response.data.success &&
-                    response.data.code === "PAYMENT_SUCCESS"
-                ) {
-                    setPaymentStatus("success");
-                    resetCheckout();
-
-                    router.push(
-                        `/payment/success?txnId=${transactionId}&amount=${amount}&orderId=${orderId}`,
-                    );
-                } else if (response.data.code === "PAYMENT_PENDING") {
-                    setTimeout(
-                        () => checkPaymentStatus(transactionId, orderId),
-                        5000,
-                    );
-                } else {
-                    setPaymentStatus("error");
-                    router.push(
-                        `/payment/failure?txnId=${transactionId}&orderId=${orderId}`,
-                    );
-                }
-            } catch {
-                setPaymentStatus("error");
-                router.push(`/payment/failure`);
-            }
-        },
-        [router, amount, resetCheckout],
-    );
-
-    useEffect(() => {
-        const txnId = sessionStorage.getItem("phonepe_transaction_id");
-        const orderId = sessionStorage.getItem("phonepe_order_id");
-
-        if (txnId && orderId) {
-            checkPaymentStatus(txnId, orderId);
-            sessionStorage.removeItem("phonepe_transaction_id");
-            sessionStorage.removeItem("phonepe_order_id");
-        }
-    }, [checkPaymentStatus]);
 
     return (
         <Button
             onClick={handlePayment}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-            disabled={isLoading || paymentStatus === "processing"}
+            disabled={isLoading}
         >
             {isLoading ? (
                 <>

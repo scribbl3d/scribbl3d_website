@@ -19,6 +19,9 @@ interface Props {
     onView(order: Order): void;
     headerAction?: React.ReactNode;
     statusType?: "order" | "shipment";
+
+    /* ✅ NEW */
+    rowActions?: (order: Order) => React.ReactNode;
 }
 
 export function OrdersTable({
@@ -27,15 +30,17 @@ export function OrdersTable({
     onView,
     headerAction,
     statusType = "order",
+    rowActions,
 }: Props) {
     return (
         <div className="rounded-lg border bg-yellow-50 p-4">
-            {/* HEADER */}
-            <div className="flex justify-between items-center mb-4">
+            {/* ================= HEADER ================= */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4">
                 <h3 className="text-2xl font-semibold">{title}</h3>
                 {headerAction}
             </div>
 
+            {/* ================= TABLE ================= */}
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -58,20 +63,24 @@ export function OrdersTable({
 
                         return (
                             <TableRow key={order.id}>
+                                {/* ORDER ID */}
                                 <TableCell className="font-mono">
                                     {order.id.slice(-5)}
                                 </TableCell>
 
+                                {/* CUSTOMER */}
                                 <TableCell>
                                     {order.shippingAddress?.fullName ||
                                         order.user?.name ||
                                         "Anonymous"}
                                 </TableCell>
 
+                                {/* AMOUNT */}
                                 <TableCell>
                                     {formatRupees(order.totalAmount)}
                                 </TableCell>
 
+                                {/* STATUS */}
                                 <TableCell>
                                     <Badge className="bg-yellow-500 capitalize">
                                         {status?.replace(/_/g, " ") ||
@@ -79,21 +88,30 @@ export function OrdersTable({
                                     </Badge>
                                 </TableCell>
 
+                                {/* PAYMENT */}
                                 <TableCell>
                                     {order.paymentMethod || "—"}
                                 </TableCell>
 
+                                {/* DATE */}
                                 <TableCell>
                                     {formatDate(order.createdAt)}
                                 </TableCell>
 
+                                {/* ACTIONS */}
                                 <TableCell className="text-right">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => onView(order)}
-                                    >
-                                        View Details
-                                    </Button>
+                                    <div className="flex flex-col gap-2 items-end">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => onView(order)}
+                                        >
+                                            View Details
+                                        </Button>
+
+                                        {/* ✅ EXTRA ACTIONS (Delete, Refund, etc.) */}
+                                        {rowActions && rowActions(order)}
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         );

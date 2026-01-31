@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sgMail from "@sendgrid/mail";
+import { type NextRequest, NextResponse } from "next/server";
 import sendStatusEmail from "./send-email/sendStatusEmail";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY!;
@@ -9,27 +9,29 @@ const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL!;
 sgMail.setApiKey(SENDGRID_API_KEY);
 
 async function sendShippingEmail(order: any, trackingInfo: any) {
-  const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
+    const formatPrice = (amount: number) => `₹${amount.toFixed(2)}`;
 
-  let items;
-  try {
-    items =
-      typeof order.items === "string" ? JSON.parse(order.items) : order.items;
-  } catch (error) {
-    console.error("[Email] Error parsing order items:", error);
-    items = [];
-  }
+    let items;
+    try {
+        items =
+            typeof order.items === "string"
+                ? JSON.parse(order.items)
+                : order.items;
+    } catch (error) {
+        console.error("[Email] Error parsing order items:", error);
+        items = [];
+    }
 
-  const userEmail = order.user?.email;
-  if (!userEmail) {
-    throw new Error(`Invalid email address for order ${order.id}`);
-  }
+    const userEmail = order.user?.email;
+    if (!userEmail) {
+        throw new Error(`Invalid email address for order ${order.id}`);
+    }
 
-  const msg = {
-    to: userEmail,
-    from: SENDGRID_FROM_EMAIL,
-    subject: "Your Order Has Been Shipped! - Scribbl3D",
-    html: `
+    const msg = {
+        to: userEmail,
+        from: SENDGRID_FROM_EMAIL,
+        subject: "Your Order Has Been Shipped! - Scribbl3D",
+        html: `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -80,11 +82,11 @@ async function sendShippingEmail(order: any, trackingInfo: any) {
             <tr>
               <td class="label">Order Date:</td>
               <td class="value">${new Date(order.createdAt).toLocaleString(
-                "en-IN",
-                {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                }
+                  "en-IN",
+                  {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                  },
               )}</td>
             </tr>
             <tr>
@@ -96,47 +98,47 @@ async function sendShippingEmail(order: any, trackingInfo: any) {
         <div class="tracking-info">
           <h3>📦 Tracking Information</h3>
           ${
-            trackingInfo.trackingNumber
-              ? `<p><strong>Tracking Number:</strong> ${trackingInfo.trackingNumber}</p>`
-              : ""
+              trackingInfo.trackingNumber
+                  ? `<p><strong>Tracking Number:</strong> ${trackingInfo.trackingNumber}</p>`
+                  : ""
           }
           ${
-            trackingInfo.trackingLink
-              ? `<p><strong>Tracking Link:</strong> <a href="${trackingInfo.trackingLink}" class="tracking-link">Track Your Package</a></p>`
-              : ""
+              trackingInfo.trackingLink
+                  ? `<p><strong>Tracking Link:</strong> <a href="${trackingInfo.trackingLink}" class="tracking-link">Track Your Package</a></p>`
+                  : ""
           }
           ${
-            trackingInfo.carrier
-              ? `<p><strong>Carrier:</strong> ${trackingInfo.carrier}</p>`
-              : ""
+              trackingInfo.carrier
+                  ? `<p><strong>Carrier:</strong> ${trackingInfo.carrier}</p>`
+                  : ""
           }
         </div>
         <div class="items">
           <h2 style="color:#fc5c7d;">Items in Your Order</h2>
           ${
-            Array.isArray(items) && items.length > 0
-              ? items
-                  .map(
-                    (item) => `
+              Array.isArray(items) && items.length > 0
+                  ? items
+                        .map(
+                            (item) => `
             <div class="item-card">
               <img src="${
-                item.image || "https://placehold.co/56x56"
+                  item.image || "https://placehold.co/56x56"
               }" class="item-img" alt="${item.name}" />
               <div class="item-details">
                 <div class="item-name">${item.name}</div>
                 <div class="item-meta">
                   Quantity: ${item.quantity} &nbsp;|&nbsp; Price: ${formatPrice(
-                    item.price
+                      item.price,
                   )}
                   ${item.size ? `&nbsp;|&nbsp; Size: ${item.size}` : ""}
                   ${item.color ? `&nbsp;|&nbsp; Color: ${item.color}` : ""}
                 </div>
               </div>
             </div>
-          `
-                  )
-                  .join("")
-              : `<div style="color:#888;">No items found.</div>`
+          `,
+                        )
+                        .join("")
+                  : `<div style="color:#888;">No items found.</div>`
           }
         </div>
         <a href="https://scribbl3d.com/profile" class="cta">View Order Details</a>
@@ -149,71 +151,125 @@ async function sendShippingEmail(order: any, trackingInfo: any) {
     </body>
     </html>
     `,
-  };
+    };
 
-  try {
-    await sgMail.send(msg);
-    return true;
-  } catch (error: any) {
-    console.error("[Email] Failed to send shipping email:", {
-      error: error.message,
-      code: error.code,
-      response: error.response?.body,
-      orderId: order.id,
-      userEmail,
-    });
-    throw error;
-  }
+    try {
+        await sgMail.send(msg);
+        return true;
+    } catch (error: any) {
+        console.error("[Email] Failed to send shipping email:", {
+            error: error.message,
+            code: error.code,
+            response: error.response?.body,
+            orderId: order.id,
+            userEmail,
+        });
+        throw error;
+    }
 }
 
 export async function PATCH(
-  req: NextRequest,
-  context: { params: Promise<{ orderId: string }> }
+    req: NextRequest,
+    context: { params: Promise<{ orderId: string }> },
 ) {
-  try {
-    const { orderId } = await context.params;
-    const { status, trackingInfo, notifyCustomer } = await req.json();
+    try {
+        const { orderId } = await context.params;
+        const { status, trackingInfo, notifyCustomer } = await req.json();
 
-    // Update the order status and tracking info in the database
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        status,
-        trackingInfo: trackingInfo ? JSON.stringify(trackingInfo) : undefined,
-      },
-      include: {
-        user: {
-          select: {
-            email: true,
-            name: true,
-          },
-        },
-      },
-    });
+        // Update the order status and tracking info in the database
+        const updatedOrder = await prisma.order.update({
+            where: { id: orderId },
+            data: {
+                status,
+                trackingInfo: trackingInfo
+                    ? JSON.stringify(trackingInfo)
+                    : undefined,
+            },
+            include: {
+                user: {
+                    select: {
+                        email: true,
+                        name: true,
+                    },
+                },
+            },
+        });
 
-    // Only send email if notifyCustomer is true
-    if (notifyCustomer) {
-      if (status === "shipped" && trackingInfo) {
-        try {
-          await sendShippingEmail(updatedOrder, trackingInfo);
-        } catch (emailError) {
-          console.error("Failed to send shipping email:", emailError);
+        // Only send email if notifyCustomer is true
+        if (notifyCustomer) {
+            if (status === "shipped" && trackingInfo) {
+                try {
+                    await sendShippingEmail(updatedOrder, trackingInfo);
+                } catch (emailError) {
+                    console.error("Failed to send shipping email:", emailError);
+                }
+            } else if (status === "delivered") {
+                try {
+                    await sendStatusEmail(
+                        updatedOrder,
+                        "delivered",
+                        trackingInfo,
+                    );
+                } catch (emailError) {
+                    console.error(
+                        "Failed to send delivered email:",
+                        emailError,
+                    );
+                }
+            }
         }
-      } else if (status === "delivered") {
-        try {
-          await sendStatusEmail(updatedOrder, "delivered", trackingInfo);
-        } catch (emailError) {
-          console.error("Failed to send delivered email:", emailError);
-        }
-      }
+
+        return NextResponse.json(updatedOrder);
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        return NextResponse.json(
+            { error: "Internal Server Error" },
+            { status: 500 },
+        );
     }
+}
+export async function DELETE(
+    _req: Request,
+    { params }: { params: { orderId: string } },
+) {
+    try {
+        const { orderId } = params;
 
-    return NextResponse.json(updatedOrder);
-  } catch (error) {
-    console.error("Error updating order status:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
+        // Optional safety: allow delete only if payment pending
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+        });
+
+        if (!order) {
+            return NextResponse.json(
+                { error: "Order not found" },
+                { status: 404 },
+            );
+        }
+
+        if (order.status !== "payment_pending") {
+            return NextResponse.json(
+                { error: "Only payment pending orders can be deleted" },
+                { status: 400 },
+            );
+        }
+
+        // Delete shipment if exists (FK safety)
+        await prisma.shipment.deleteMany({
+            where: { orderId },
+        });
+
+        // Delete order
+        await prisma.order.delete({
+            where: { id: orderId },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (err) {
+        console.error("DELETE ORDER ERROR", err);
+        return NextResponse.json(
+            { error: "Failed to delete order" },
+            { status: 500 },
+        );
+    }
 }
