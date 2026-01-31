@@ -170,10 +170,10 @@ async function sendShippingEmail(order: any, trackingInfo: any) {
 
 export async function PATCH(
     req: NextRequest,
-    context: { params: Promise<{ orderId: string }> },
+    context: { params: { orderId: string } },
 ) {
     try {
-        const { orderId } = await context.params;
+        const { orderId } = context.params;
         const { status, trackingInfo, notifyCustomer } = await req.json();
 
         // Update the order status and tracking info in the database
@@ -228,14 +228,14 @@ export async function PATCH(
         );
     }
 }
+
 export async function DELETE(
-    _req: Request,
-    { params }: { params: { orderId: string } },
+    _req: NextRequest,
+    context: { params: { orderId: string } },
 ) {
     try {
-        const { orderId } = params;
+        const { orderId } = context.params;
 
-        // Optional safety: allow delete only if payment pending
         const order = await prisma.order.findUnique({
             where: { id: orderId },
         });
@@ -254,12 +254,10 @@ export async function DELETE(
             );
         }
 
-        // Delete shipment if exists (FK safety)
         await prisma.shipment.deleteMany({
             where: { orderId },
         });
 
-        // Delete order
         await prisma.order.delete({
             where: { id: orderId },
         });
