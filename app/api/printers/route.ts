@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         const volumeCategory = searchParams.getAll("volumeCategory");
         const materials = searchParams.getAll("material");
         const recyclingRatio = searchParams.getAll("recyclingRatio");
-        const atmosphereControl = searchParams.getAll("atmosphereControl");
+        const chamberType = searchParams.getAll("chamberType");
         const applications = searchParams.getAll("application");
         const experience = searchParams.getAll("experience");
         const connectivities = searchParams.getAll("connectivity");
@@ -93,12 +93,12 @@ export async function GET(request: NextRequest) {
                 },
             });
 
-        if (atmosphereControl.length > 0)
+        if (chamberType.length > 0)
             attributeConditions.push({
                 attributes: {
                     some: {
-                        attributeKey: "atmosphereControl",
-                        attributeValue: { in: atmosphereControl },
+                        attributeKey: "chamberType",
+                        attributeValue: { in: chamberType },
                     },
                 },
             });
@@ -152,14 +152,14 @@ export async function GET(request: NextRequest) {
             prisma.printer.count({ where }),
         ]);
 
-        /* ===================== AVAILABLE FILTERS (UNCHANGED) ===================== */
+        /* ===================== AVAILABLE FILTERS ===================== */
         const availableFilters = await getAvailableFilters({
             technology,
             brand,
             volumeCategory,
             materials,
             recyclingRatio,
-            atmosphereControl,
+            chamberType,
             minPrice,
             maxPrice,
             applications,
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
                     priceDisplay: `₹${(p.price / 100).toLocaleString("en-IN")}`,
                 };
             }),
-            filters: availableFilters, // ✅ RESTORED
+            filters: availableFilters,
             total,
             page,
             totalPages: Math.ceil(total / limit),
@@ -192,12 +192,12 @@ export async function GET(request: NextRequest) {
         console.error("Error fetching printers:", error);
         return NextResponse.json(
             { error: "Failed to fetch printers" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
 
-/* ===================== FILTER HELPER (UNCHANGED) ===================== */
+/* ===================== PROGRESSIVE FILTER HELPER WITH SKIP LOGIC ===================== */
 async function getAvailableFilters(currentFilters: any) {
     const filters: any = {
         technology: [],
@@ -205,48 +205,246 @@ async function getAvailableFilters(currentFilters: any) {
         volumeCategory: [],
         material: [],
         recyclingRatio: [],
-        atmosphereControl: [],
+        chamberType: [],
         priceRange: { min: 0, max: 0 },
         application: [],
         experience: [],
         connectivity: [],
     };
 
-    const technologies = await prisma.printer.findMany({
-        select: { technology: true },
-        distinct: ["technology"],
-    });
-    filters.technology = technologies.map((t) => t.technology);
+    try {
+        // Helper: Build cumulative where clause for printer-level filters
+        const buildPrinterWhere = () => {
+            const where: any = {};
+            if (currentFilters.technology?.length > 0) {
+                where.technology = { in: currentFilters.technology };
+            }
+            if (currentFilters.brand?.length > 0) {
+                where.brand = { in: currentFilters.brand };
+            }
+            if (currentFilters.volumeCategory?.length > 0) {
+                const volumeConditions: any[] = [];
+                if (currentFilters.volumeCategory.includes("Small (< 200mm)"))
+                    volumeConditions.push({ volumeMax: { lt: 200 } });
+                if (
+                    currentFilters.volumeCategory.includes("Medium (200-400mm)")
+                )
+                    volumeConditions.push({
+                        volumeMax: { gte: 200, lte: 400 },
+                    });
+                if (currentFilters.volumeCategory.includes("Large (> 400mm)"))
+                    volumeConditions.push({ volumeMax: { gt: 400 } });
+                if (volumeConditions.length > 0) {
+                    where.OR = volumeConditions;
+                }
+            }
+            return where;
+        };
 
-    if (currentFilters.technology.length > 0) {
+        // Helper: Get matching printer IDs based on current selections
+        const getMatchingPrinterIds = async () => {
+            const printerWhere = buildPrinterWhere();
+            const attributeConditions: any[] = [];
+
+            if (currentFilters.materials?.length > 0) {
+                attributeConditions.push({
+                    attributes: {
+                        some: {
+                            attributeKey: "material",
+                            attributeValue: { in: currentFilters.materials },
+                        },
+                    },
+                });
+            }
+
+            if (currentFilters.chamberType?.length > 0) {
+                attributeConditions.push({
+                    attributes: {
+                        some: {
+                            attributeKey: "chamberType",
+                            attributeValue: { in: currentFilters.chamberType },
+                        },
+                    },
+                });
+            }
+
+            if (currentFilters.connectivities?.length > 0) {
+                attributeConditions.push({
+                    attributes: {
+                        some: {
+                            attributeKey: "connectivity",
+                            attributeValue: {
+                                in: currentFilters.connectivities,
+                            },
+                        },
+                    },
+                });
+            }
+
+            const finalWhere =
+                attributeConditions.length > 0
+                    ? { ...printerWhere, AND: attributeConditions }
+                    : printerWhere;
+
+            const printers = await prisma.printer.findMany({
+                where: finalWhere,
+                select: { id: true, price: true, experience: true },
+            });
+
+            return printers;
+        };
+
+        // Helper: Get attribute values for given printer IDs
+        const getAttributeValues = async (
+            ids: string[],
+            attributeKey: string,
+        ) => {
+            if (ids.length === 0) return [];
+
+            const attributes = await prisma.printerAttribute.findMany({
+                where: {
+                    printerId: { in: ids },
+                    attributeKey: attributeKey,
+                },
+                select: { attributeValue: true },
+                distinct: ["attributeValue"],
+            });
+            return attributes.map((a) => a.attributeValue);
+        };
+
+        // 1. Technology - Always show all available
+        const technologies = await prisma.printer.findMany({
+            select: { technology: true },
+            distinct: ["technology"],
+        });
+        filters.technology = technologies.map((t) => t.technology);
+
+        // If no technology selected, stop here
+        if (!currentFilters.technology?.length) {
+            return filters;
+        }
+
+        // 2. Brand - Filter by selected technology
         const brands = await prisma.printer.findMany({
             where: { technology: { in: currentFilters.technology } },
             select: { brand: true },
             distinct: ["brand"],
         });
         filters.brand = brands.map((b) => b.brand);
-    }
 
-    if (currentFilters.brand.length > 0) {
-        const volumes = await prisma.printer.findMany({
-            where: {
+        // 3. Volume Category - Filter by technology + brand (if brand selected or empty)
+        const shouldShowVolume =
+            currentFilters.brand?.length > 0 || filters.brand.length === 0;
+        if (shouldShowVolume) {
+            const volumeWhere: any = {
                 technology: { in: currentFilters.technology },
-                brand: { in: currentFilters.brand },
-            },
-            select: { volumeMax: true },
-        });
-        filters.volumeCategory = Array.from(
-            new Set(volumes.map((v) => getVolumeCategory(v.volumeMax)))
-        );
-    }
+            };
+            if (currentFilters.brand?.length > 0) {
+                volumeWhere.brand = { in: currentFilters.brand };
+            }
 
-    if (currentFilters.volumeCategory.length > 0) {
-        const materials = await prisma.printerAttribute.findMany({
-            where: { attributeKey: "material" },
-            select: { attributeValue: true },
-            distinct: ["attributeValue"],
-        });
-        filters.material = materials.map((m) => m.attributeValue);
+            const volumes = await prisma.printer.findMany({
+                where: volumeWhere,
+                select: { volumeMax: true },
+            });
+            filters.volumeCategory = Array.from(
+                new Set(volumes.map((v) => getVolumeCategory(v.volumeMax))),
+            );
+        }
+
+        // 4. Material - Show when volume selected OR brand selected (if no volumes) OR brand empty
+        const brandSelected = currentFilters.brand?.length > 0;
+        const volumeSelected = currentFilters.volumeCategory?.length > 0;
+        const shouldShowMaterial =
+            volumeSelected ||
+            (brandSelected && filters.volumeCategory.length === 0) ||
+            (filters.brand.length === 0 && filters.volumeCategory.length === 0);
+
+        if (shouldShowMaterial) {
+            const printerWhere = buildPrinterWhere();
+            const matchingPrinters = await prisma.printer.findMany({
+                where:
+                    Object.keys(printerWhere).length > 0
+                        ? printerWhere
+                        : { technology: { in: currentFilters.technology } },
+                select: { id: true },
+            });
+            const ids = matchingPrinters.map((p) => p.id);
+            filters.material = await getAttributeValues(ids, "material");
+        }
+
+        // 5. Chamber Type - Show when material selected OR skipped to here
+        const materialSelected = currentFilters.materials?.length > 0;
+        const shouldShowChamber =
+            materialSelected ||
+            (shouldShowMaterial && filters.material.length === 0);
+
+        if (shouldShowChamber) {
+            const printers = await getMatchingPrinterIds();
+            const ids = printers.map((p) => p.id);
+            filters.chamberType = await getAttributeValues(ids, "chamberType");
+        }
+
+        // 6. Connectivity - Show when chamber selected OR skipped
+        const chamberSelected = currentFilters.chamberType?.length > 0;
+        const shouldShowConnectivity =
+            chamberSelected ||
+            (shouldShowChamber && filters.chamberType.length === 0);
+
+        if (shouldShowConnectivity) {
+            const printers = await getMatchingPrinterIds();
+            const ids = printers.map((p) => p.id);
+            filters.connectivity = await getAttributeValues(
+                ids,
+                "connectivity",
+            );
+        }
+
+        // 7. Final filters - Show when connectivity selected OR skipped
+        const connectivitySelected = currentFilters.connectivities?.length > 0;
+        const shouldShowFinal =
+            connectivitySelected ||
+            (shouldShowConnectivity && filters.connectivity.length === 0);
+
+        if (shouldShowFinal) {
+            const printers = await getMatchingPrinterIds();
+            const ids = printers.map((p) => p.id);
+
+            // Application
+            filters.application = await getAttributeValues(ids, "application");
+
+            // Recycling Ratio
+            filters.recyclingRatio = await getAttributeValues(
+                ids,
+                "recyclingRatio",
+            );
+
+            // Experience (from printer table)
+            filters.experience = Array.from(
+                new Set(printers.map((p) => p.experience).filter(Boolean)),
+            );
+
+            // Price Range
+            const prices = printers.map((p) => p.price);
+            if (prices.length > 0) {
+                filters.priceRange = {
+                    min: Math.min(...prices),
+                    max: Math.max(...prices),
+                };
+            }
+        }
+    } catch (error) {
+        console.error("Error in getAvailableFilters:", error);
+        // Return at least technologies even if there's an error
+        try {
+            const technologies = await prisma.printer.findMany({
+                select: { technology: true },
+                distinct: ["technology"],
+            });
+            filters.technology = technologies.map((t) => t.technology);
+        } catch (e) {
+            console.error("Failed to fetch technologies:", e);
+        }
     }
 
     return filters;

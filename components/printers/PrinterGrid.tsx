@@ -150,7 +150,7 @@ function PrinterCard({ printer }: { printer: any }) {
         const checkWishlist = async () => {
             try {
                 const res = await fetch(
-                    `/api/wishlist/check?printerId=${printer.id}`
+                    `/api/wishlist/check?printerId=${printer.id}`,
                 );
                 const data = await res.json();
                 if (data.isAuthenticated) {
@@ -165,7 +165,7 @@ function PrinterCard({ printer }: { printer: any }) {
     }, [printer.id]);
 
     const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>
+        e: React.MouseEvent<HTMLButtonElement>,
     ) => {
         e.preventDefault();
         e.stopPropagation();
@@ -193,7 +193,6 @@ function PrinterCard({ printer }: { printer: any }) {
 
         const wasInWishlist = isFavorite;
 
-        // ✅ Optimistic update
         setIsFavorite(!wasInWishlist);
 
         try {
@@ -214,7 +213,6 @@ function PrinterCard({ printer }: { printer: any }) {
                 } your wishlist.`,
             });
         } catch (err) {
-            // 🔁 rollback on failure
             setIsFavorite(wasInWishlist);
 
             toast({
@@ -228,14 +226,14 @@ function PrinterCard({ printer }: { printer: any }) {
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+        <div className="bg-white rounded-[10px] border-[0.62px] border-[#E5E7EB] overflow-hidden hover:shadow-lg transition flex flex-col h-full">
             {/* CARD LINK */}
             <Link
                 href={`/printers/${printer.slug}`}
-                className=" flex flex-col h-full"
+                className="flex flex-col h-full"
             >
-                {/* IMAGE */}
-                <div className="relative h-[260px] w-full bg-gray-100 overflow-hidden">
+                {/* IMAGE - Mobile: 270px, Desktop: 224px */}
+                <div className="relative h-[270px] md:h-[224px] w-full bg-[#F3F4F6] overflow-hidden">
                     {printer.images?.[0]?.url && (
                         <Image
                             src={
@@ -281,8 +279,8 @@ function PrinterCard({ printer }: { printer: any }) {
                         {printer.name}
                     </h3>
 
-                    {/* DESCRIPTION */}
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                    {/* DESCRIPTION - Font: Inter 14px, line-height: 22.75px, color: #4A5565 */}
+                    <p className="text-[14px] leading-[22.75px] tracking-[-0.15px] text-[#4A5565] mb-3 line-clamp-2">
                         {printer.shortDescription || printer.description}
                     </p>
 
@@ -290,10 +288,18 @@ function PrinterCard({ printer }: { printer: any }) {
                     <div className="text-sm text-gray-700 space-y-1">
                         <div>
                             <strong>Build Volume:</strong>{" "}
-                            {printer.volumeDisplay
-                                ?.split("×")
-                                .map((v) => `${v.trim()} mm`)
-                                .join(" × ")}
+                            {(() => {
+                                if (!printer.volumeDisplay) return "—";
+
+                                const dims = printer.volumeDisplay
+                                    .split("×")
+                                    .map((v) => v.trim())
+                                    .filter(Boolean);
+
+                                return dims.length === 3
+                                    ? `${dims.join(" × ")} mm³`
+                                    : "—";
+                            })()}
                         </div>
 
                         <div className="line-clamp-2">
@@ -309,56 +315,22 @@ function PrinterCard({ printer }: { printer: any }) {
                 <hr className="mb-4" />
 
                 {/* PRICE ROW */}
-                {/* PRICE ROW */}
                 <div className="flex items-center mt-1">
                     {/* FINAL PRICE */}
-                    <span
-                        className="
-      text-[16px]
-      leading-[24px]
-      font-semibold
-      text-[#101828]
-    "
-                    >
+                    <span className="text-[16px] leading-[24px] font-semibold text-[#101828]">
                         ₹{price.toLocaleString("en-IN")}
                     </span>
 
                     {/* ORIGINAL PRICE */}
                     {originalPrice && (
-                        <span
-                            className="
-        ml-5
-
-        text-[14px]
-        leading-[20px]
-        font-normal
-        line-through
-        text-[#99A1AF]
-      "
-                        >
+                        <span className="ml-5 text-[14px] leading-[20px] font-normal line-through text-[#99A1AF]">
                             ₹{originalPrice.toLocaleString("en-IN")}
                         </span>
                     )}
 
                     {/* DISCOUNT */}
                     {printer.discount && (
-                        <span
-                            className="
-        ml-6
-        h-[22px]
-        px-2
-        inline-flex
-        items-center
-        rounded-full
-        text-[12px]
-        leading-[16px]
-        font-medium
-        text-[#008236]
-        bg-[#F0FDF4]
-        border
-        border-[#B9F8CF]
-      "
-                        >
+                        <span className="ml-6 h-[22px] px-2 inline-flex items-center rounded-full text-[12px] leading-[16px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
                             {printer.discount}% OFF
                         </span>
                     )}

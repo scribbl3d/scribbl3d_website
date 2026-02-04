@@ -192,8 +192,8 @@ export default function PrinterFormPage() {
         volumeHeight: "",
         description: "",
         shortDescription: "",
-        warrantyYears: "1",
-        weight: "", // Initialize weight
+        warrantyYears: "",
+        weight: "",
         freeInstallation: true,
         images: [],
         specifications: isEdit ? [] : DEFAULT_SPECS,
@@ -275,8 +275,8 @@ export default function PrinterFormPage() {
         setLoading(true);
 
         try {
-            const priceInPaise = Math.round(parseFloat(formData.price));
-            const originalPriceInPaise = formData.originalPrice
+            const price = Math.round(parseFloat(formData.price));
+            const originalPrice = formData.originalPrice
                 ? Math.round(parseFloat(formData.originalPrice))
                 : null;
 
@@ -286,11 +286,9 @@ export default function PrinterFormPage() {
                 : 0;
 
             let discount = 0;
-            if (originalPriceInPaise && originalPriceInPaise > priceInPaise) {
+            if (originalPrice && originalPrice > price) {
                 discount = Math.round(
-                    ((originalPriceInPaise - priceInPaise) /
-                        originalPriceInPaise) *
-                        100,
+                    ((originalPrice - price) / originalPrice) * 100,
                 );
             }
             const volMax = Math.max(
@@ -306,9 +304,9 @@ export default function PrinterFormPage() {
             data.append("name", formData.name);
             data.append("slug", finalSlug);
             data.append("brand", formData.brand);
-            data.append("price", priceInPaise.toString());
-            if (originalPriceInPaise)
-                data.append("originalPrice", originalPriceInPaise.toString());
+            data.append("price", price.toString());
+            if (originalPrice)
+                data.append("originalPrice", originalPrice.toString());
             data.append("discount", discount.toString());
             data.append("technology", formData.technology);
             data.append("experience", formData.experience);
@@ -375,6 +373,7 @@ export default function PrinterFormPage() {
 
     /* ===================== HELPERS ===================== */
 
+    // Handle multi-select for Supported Materials - keep values exactly as they are in MATERIAL_OPTIONS
     const handleMultiSelectSpec = (index: number, option: string) => {
         const spec = formData.specifications[index];
         let values = spec.value ? spec.value.split(", ") : [];
@@ -383,6 +382,7 @@ export default function PrinterFormPage() {
         } else {
             values.push(option);
         }
+        // Join with ", " - no transformation, keep exact casing from MATERIAL_OPTIONS
         updateArrayItem("specifications", index, "value", values.join(", "));
     };
 
@@ -677,7 +677,6 @@ export default function PrinterFormPage() {
                                     <Cpu className="w-5 h-5" />,
                                 )}
 
-                                {/* ... (Rest of the component remains exactly same as existing code) ... */}
                                 {SPEC_CATEGORIES.map((cat) => (
                                     <div
                                         key={cat}
@@ -788,18 +787,11 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 2. Checkboxes for Materials & Connectivity
+                                                        // 2. Checkboxes for Supported Materials (ONLY for exact label match)
                                                         if (
                                                             spec.label ===
-                                                                "Supported Materials" ||
-                                                            spec.label ===
-                                                                "Connectivity"
+                                                            "Supported Materials"
                                                         ) {
-                                                            const options =
-                                                                spec.label ===
-                                                                "Connectivity"
-                                                                    ? CONNECTIVITY_OPTIONS
-                                                                    : MATERIAL_OPTIONS;
                                                             const currentVals =
                                                                 spec.value
                                                                     ? spec.value.split(
@@ -815,14 +807,12 @@ export default function PrinterFormPage() {
                                                                     className="space-y-2"
                                                                 >
                                                                     <label className="text-xs font-semibold text-gray-600 uppercase">
-                                                                        {
-                                                                            spec.label
-                                                                        }{" "}
-                                                                        {isStrictMandatory &&
-                                                                            "*"}
+                                                                        Supported
+                                                                        Materials
+                                                                        *
                                                                     </label>
                                                                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2 bg-white p-3 border rounded-md max-h-48 overflow-y-auto">
-                                                                        {options.map(
+                                                                        {MATERIAL_OPTIONS.map(
                                                                             (
                                                                                 opt,
                                                                             ) => (
@@ -863,7 +853,71 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 3. Machine Dimensions (Lmm x Wmm x Hmm)
+                                                        // 3. Checkboxes for Connectivity
+                                                        if (
+                                                            spec.label ===
+                                                            "Connectivity"
+                                                        ) {
+                                                            const currentVals =
+                                                                spec.value
+                                                                    ? spec.value.split(
+                                                                          ", ",
+                                                                      )
+                                                                    : [];
+
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        originalIndex
+                                                                    }
+                                                                    className="space-y-2"
+                                                                >
+                                                                    <label className="text-xs font-semibold text-gray-600 uppercase">
+                                                                        Connectivity
+                                                                    </label>
+                                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 bg-white p-3 border rounded-md max-h-48 overflow-y-auto">
+                                                                        {CONNECTIVITY_OPTIONS.map(
+                                                                            (
+                                                                                opt,
+                                                                            ) => (
+                                                                                <label
+                                                                                    key={
+                                                                                        opt
+                                                                                    }
+                                                                                    className="flex items-center space-x-2 text-xs cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                                                                >
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={currentVals.includes(
+                                                                                            opt,
+                                                                                        )}
+                                                                                        onChange={() =>
+                                                                                            handleMultiSelectSpec(
+                                                                                                originalIndex,
+                                                                                                opt,
+                                                                                            )
+                                                                                        }
+                                                                                        className="rounded border-gray-300 text-black focus:ring-black"
+                                                                                    />
+                                                                                    <span>
+                                                                                        {
+                                                                                            opt
+                                                                                        }
+                                                                                    </span>
+                                                                                </label>
+                                                                            ),
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-400">
+                                                                        Selected:{" "}
+                                                                        {spec.value ||
+                                                                            "None"}
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        // 4. Machine Dimensions (Lmm x Wmm x Hmm)
                                                         if (
                                                             spec.label ===
                                                             "Machine Dimensions"
@@ -969,7 +1023,7 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 4. Speed & Acceleration (Numeric Inputs with Units)
+                                                        // 5. Speed & Acceleration (Numeric Inputs with Units)
                                                         if (
                                                             spec.label ===
                                                                 "Print Speed" ||
@@ -1057,7 +1111,8 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 5. Default Text Inputs (Everything else)
+                                                        // 6. Default Text Inputs (Everything else - including custom rows in Material Compatibility)
+                                                        // These are NOT "Supported Materials" - they are custom specs like "Nozzle Temperature", "Bed Temperature"
                                                         return (
                                                             <div
                                                                 key={
@@ -1086,6 +1141,7 @@ export default function PrinterFormPage() {
                                                                                 .value,
                                                                         )
                                                                     }
+                                                                    placeholder="Spec Name"
                                                                     className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700 ${isStrictMandatory ? "bg-gray-100 cursor-not-allowed" : ""}`}
                                                                 />
                                                                 <input

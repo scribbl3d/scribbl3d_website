@@ -1,5 +1,7 @@
 "use client";
 
+import PriceRangeSlider from "./PriceRangeSlider";
+
 interface FilterPanelProps {
     filters: any;
     selectedFilters: any;
@@ -14,7 +16,7 @@ export default function FilterPanel({
     onReset,
 }: FilterPanelProps) {
     const hasAnyFilters = Object.values(selectedFilters).some((v) =>
-        Array.isArray(v) ? v.length > 0 : v !== null
+        Array.isArray(v) ? v.length > 0 : v !== null,
     );
 
     const handleArrayToggle = (key: string, value: string) => {
@@ -25,12 +27,109 @@ export default function FilterPanel({
         onFilterChange(key, updated);
     };
 
+    // Check if a filter step is unlocked (has selections)
     const isStepUnlocked = (key: string) =>
         selectedFilters[key] && selectedFilters[key].length > 0;
 
+    // Check if filter has available options from API
+    const hasOptions = (key: string) => filters[key] && filters[key].length > 0;
+
+    /* ===============================================================
+       SMART SKIP LOGIC: Determines if a filter should be shown
+       based on previous selections, skipping empty filters
+    =============================================================== */
+
+    // Level 1: Technology - always visible
+    const showTechnology = () => true;
+
+    // Level 2: Brand - after technology selected
+    const showBrand = () => isStepUnlocked("technology") && hasOptions("brand");
+
+    // Level 3: Volume - after brand selected (or skip brand if empty)
+    const showVolume = () => {
+        if (!isStepUnlocked("technology")) return false;
+
+        // If brand has options, need brand selection first
+        if (hasOptions("brand")) {
+            return isStepUnlocked("brand") && hasOptions("volumeCategory");
+        }
+        // Skip brand if no options, show volume directly
+        return hasOptions("volumeCategory");
+    };
+
+    // Level 4: Material - after volume selected (or skip volume if empty)
+    const showMaterial = () => {
+        if (!isStepUnlocked("technology")) return false;
+
+        // Check the chain with skips
+        const brandOk = !hasOptions("brand") || isStepUnlocked("brand");
+        const volumeOk =
+            !hasOptions("volumeCategory") || isStepUnlocked("volumeCategory");
+
+        return brandOk && volumeOk && hasOptions("material");
+    };
+
+    // Level 5: Chamber Type - after material selected (or skip if empty)
+    const showChamberType = () => {
+        if (!isStepUnlocked("technology")) return false;
+
+        const brandOk = !hasOptions("brand") || isStepUnlocked("brand");
+        const volumeOk =
+            !hasOptions("volumeCategory") || isStepUnlocked("volumeCategory");
+        const materialOk =
+            !hasOptions("material") || isStepUnlocked("material");
+
+        return brandOk && volumeOk && materialOk && hasOptions("chamberType");
+    };
+
+    // Level 6: Connectivity - after chamber type (or skip if empty)
+    const showConnectivity = () => {
+        if (!isStepUnlocked("technology")) return false;
+
+        const brandOk = !hasOptions("brand") || isStepUnlocked("brand");
+        const volumeOk =
+            !hasOptions("volumeCategory") || isStepUnlocked("volumeCategory");
+        const materialOk =
+            !hasOptions("material") || isStepUnlocked("material");
+        const chamberOk =
+            !hasOptions("chamberType") || isStepUnlocked("chamberType");
+
+        return (
+            brandOk &&
+            volumeOk &&
+            materialOk &&
+            chamberOk &&
+            hasOptions("connectivity")
+        );
+    };
+
+    // Level 7+: Final filters (Application, Recycling, Experience, Price)
+    const showFinalFilters = () => {
+        if (!isStepUnlocked("technology")) return false;
+
+        const brandOk = !hasOptions("brand") || isStepUnlocked("brand");
+        const volumeOk =
+            !hasOptions("volumeCategory") || isStepUnlocked("volumeCategory");
+        const materialOk =
+            !hasOptions("material") || isStepUnlocked("material");
+        const chamberOk =
+            !hasOptions("chamberType") || isStepUnlocked("chamberType");
+        const connectivityOk =
+            !hasOptions("connectivity") || isStepUnlocked("connectivity");
+
+        return brandOk && volumeOk && materialOk && chamberOk && connectivityOk;
+    };
+
+    const handlePriceChange = (
+        minPrice: number | null,
+        maxPrice: number | null,
+    ) => {
+        onFilterChange("minPrice", minPrice);
+        onFilterChange("maxPrice", maxPrice);
+    };
+
     const renderTechnologyButtons = () => {
         const technologies = filters?.technology || [];
-        // Show loading state if empty, or generic text
         if (technologies.length === 0)
             return (
                 <div className="text-sm text-gray-400 mb-8">
@@ -66,48 +165,34 @@ export default function FilterPanel({
         );
     };
 
-    // Robust Checkbox Renderer
     const renderCheckboxFilter = (
         key: string,
         displayName: string,
         options: string[],
-        disabled: boolean = false,
-        previousName: string = ""
     ) => {
-        // If options haven't loaded yet from API, don't render anything
         if (!options || options.length === 0) return null;
 
         return (
-            <div className={`mb-8 ${disabled ? "opacity-50" : ""}`}>
+            <div className="mb-8">
                 <h3 className="text-base font-semibold text-gray-900 mb-3">
                     {displayName}
-                    {disabled && (
-                        <span className="text-xs text-gray-400 font-normal ml-2">
-                            (Select {previousName} first)
-                        </span>
-                    )}
                 </h3>
                 <div className="space-y-3">
                     {options.map((option) => (
                         <label
                             key={option}
-                            className={`flex items-center cursor-pointer group ${disabled ? "cursor-not-allowed" : ""}`}
+                            className="flex items-center cursor-pointer group"
                         >
                             <input
                                 type="checkbox"
-                                disabled={disabled}
                                 checked={
                                     selectedFilters[key]?.includes(option) ||
                                     false
                                 }
-                                onChange={() =>
-                                    !disabled && handleArrayToggle(key, option)
-                                }
+                                onChange={() => handleArrayToggle(key, option)}
                                 className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                             />
-                            <span
-                                className={`ml-3 text-sm text-gray-700 ${!disabled && "group-hover:text-blue-600"}`}
-                            >
+                            <span className="ml-3 text-sm text-gray-700 group-hover:text-blue-600">
                                 {option}
                             </span>
                         </label>
@@ -132,109 +217,106 @@ export default function FilterPanel({
             </div>
 
             <div className="space-y-1">
-                {renderTechnologyButtons()}
+                {/* 1. Technology - Always visible */}
+                {showTechnology() && renderTechnologyButtons()}
 
-                {isStepUnlocked("technology") &&
-                    renderCheckboxFilter("brand", "Brand", filters.brand)}
-
-                {isStepUnlocked("brand")
-                    ? renderCheckboxFilter(
-                          "volumeCategory",
-                          "Build Volume",
-                          filters.volumeCategory
-                      )
-                    : isStepUnlocked("technology") &&
-                      renderCheckboxFilter(
-                          "volumeCategory",
-                          "Build Volume",
-                          ["Less than 300 mm", "300 – 500 mm", "Above 500 mm"],
-                          true,
-                          "Brand"
-                      )}
-
-                {isStepUnlocked("volumeCategory") &&
-                    renderCheckboxFilter(
-                        "material",
-                        "Material",
-                        filters.material
-                    )}
-
-                {/* Chamber Type: Shows after Material */}
-                {isStepUnlocked("material") &&
-                    renderCheckboxFilter(
-                        "atmosphereControl",
-                        "Chamber Type",
-                        filters.atmosphereControl
-                    )}
-
-                {/* Connectivity: Shows after Chamber Type */}
-                {isStepUnlocked("atmosphereControl") &&
-                    renderCheckboxFilter(
-                        "connectivity",
-                        "Connectivity",
-                        filters.connectivity
-                    )}
-
-                {/* Others: Show after Connectivity */}
-                {isStepUnlocked("connectivity") && (
+                {/* Instruction text or Progressive unlock message */}
+                {!isStepUnlocked("technology") ? (
+                    <p className="text-sm text-gray-400 text-center py-4">
+                        Select a printing technology to view compatible filters.
+                    </p>
+                ) : (
                     <>
-                        {renderCheckboxFilter(
-                            "application",
-                            "Application",
-                            filters.application
-                        )}
-                        {renderCheckboxFilter(
-                            "recyclingRatio",
-                            "Recycling Ratio",
-                            filters.recyclingRatio
-                        )}
-                        {renderCheckboxFilter(
-                            "experience",
-                            "Experience Level",
-                            filters.experience
-                        )}
-                    </>
-                )}
+                        {/* Progressive unlock info */}
+                        <div className="border-t border-gray-200 my-4" />
+                        <p className="text-sm text-gray-500 mb-4">
+                            Filters unlock progressively to ensure only
+                            compatible {selectedFilters.technology?.[0]}{" "}
+                            printers are shown.
+                        </p>
+                        <div className="border-t border-gray-200 my-4" />
 
-                {/* Price Range: Shows at the very end after all other filters */}
-                {isStepUnlocked("connectivity") && filters.priceRange && (
-                    <div className="mb-8">
-                        <h3 className="text-base font-semibold text-gray-900 mb-3">
-                            Price Range
-                        </h3>
-                        <div className="space-y-3">
-                            <div className="flex gap-3">
-                                <div className="flex-1">
-                                    <input
-                                        type="number"
-                                        placeholder="Min"
-                                        value={selectedFilters.minPrice || ""}
-                                        onChange={(e) =>
-                                            onFilterChange(
-                                                "minPrice",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <input
-                                        type="number"
-                                        placeholder="Max"
-                                        value={selectedFilters.maxPrice || ""}
-                                        onChange={(e) =>
-                                            onFilterChange(
-                                                "maxPrice",
-                                                e.target.value
-                                            )
-                                        }
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        {/* 2. Brand - After Technology */}
+                        {showBrand() &&
+                            renderCheckboxFilter(
+                                "brand",
+                                "Brand",
+                                filters.brand,
+                            )}
+
+                        {/* 3. Build Volume - After Brand (or skip if no brands) */}
+                        {showVolume() &&
+                            renderCheckboxFilter(
+                                "volumeCategory",
+                                "Build Volume",
+                                filters.volumeCategory,
+                            )}
+
+                        {/* 4. Material - After Volume (or skip if no volumes) */}
+                        {showMaterial() &&
+                            renderCheckboxFilter(
+                                "material",
+                                "Material",
+                                filters.material,
+                            )}
+
+                        {/* 5. Chamber Type - After Material (or skip if no materials) */}
+                        {showChamberType() &&
+                            renderCheckboxFilter(
+                                "chamberType",
+                                "Chamber Type",
+                                filters.chamberType,
+                            )}
+
+                        {/* 6. Connectivity - After Chamber Type (or skip if no chamber types) */}
+                        {showConnectivity() &&
+                            renderCheckboxFilter(
+                                "connectivity",
+                                "Connectivity",
+                                filters.connectivity,
+                            )}
+
+                        {/* 7. Application - Final filters */}
+                        {showFinalFilters() &&
+                            hasOptions("application") &&
+                            renderCheckboxFilter(
+                                "application",
+                                "Application",
+                                filters.application,
+                            )}
+
+                        {/* 8. Recycling Ratio */}
+                        {showFinalFilters() &&
+                            hasOptions("recyclingRatio") &&
+                            renderCheckboxFilter(
+                                "recyclingRatio",
+                                "Recycling Ratio",
+                                filters.recyclingRatio,
+                            )}
+
+                        {/* 9. Experience Level */}
+                        {showFinalFilters() &&
+                            hasOptions("experience") &&
+                            renderCheckboxFilter(
+                                "experience",
+                                "Experience Level",
+                                filters.experience,
+                            )}
+
+                        {/* 10. Price Range Slider */}
+                        {showFinalFilters() &&
+                            filters.priceRange &&
+                            (filters.priceRange.min > 0 ||
+                                filters.priceRange.max > 0) && (
+                                <PriceRangeSlider
+                                    min={filters.priceRange.min}
+                                    max={filters.priceRange.max}
+                                    minValue={selectedFilters.minPrice}
+                                    maxValue={selectedFilters.maxPrice}
+                                    onChange={handlePriceChange}
+                                />
+                            )}
+                    </>
                 )}
             </div>
         </div>

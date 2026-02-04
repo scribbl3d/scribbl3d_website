@@ -2,9 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 
-// =======================
-// GET: Fetch single printer
-// =======================
 export async function GET(
     req: Request,
     props: { params: Promise<{ id: string }> },
@@ -40,9 +37,6 @@ export async function GET(
     }
 }
 
-// =======================
-// PUT: Update existing printer
-// =======================
 export async function PUT(
     req: Request,
     props: { params: Promise<{ id: string }> },
@@ -52,7 +46,6 @@ export async function PUT(
     try {
         const formData = await req.formData();
 
-        // 1️⃣ Existing printer (slug fallback)
         const existingPrinter = await prisma.printer.findUnique({
             where: { id: params.id },
             select: { slug: true },
@@ -147,9 +140,7 @@ export async function PUT(
             });
         }
 
-        // 5️⃣ TRANSACTION (full rebuild)
         const [updatedPrinter] = await prisma.$transaction([
-            // Printer core update
             prisma.printer.update({
                 where: { id: params.id },
                 data: {
@@ -180,7 +171,7 @@ export async function PUT(
                     warrantyYears: parseInt(
                         formData.get("warrantyYears") as string,
                     ),
-                    // 👇 Added weight here. The frontend sends grams as a string, e.g. "15500"
+
                     weight: parseInt(formData.get("weight") as string) || 0,
                     freeInstallation:
                         formData.get("freeInstallation") === "true",
@@ -214,7 +205,7 @@ export async function PUT(
                 })),
             }),
 
-            // 🔥 Material Compatibility (SYNC)
+            // Material Compatibility (SYNC)
             prisma.printerAttribute.deleteMany({
                 where: {
                     printerId: params.id,

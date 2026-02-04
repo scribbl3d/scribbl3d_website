@@ -9,7 +9,8 @@ import PrinterHero from "@/components/printers/PrinterHero";
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useEffect, useState } from "react";
-const PAGE_LIMIT = 5;
+
+const PAGE_LIMIT = 9;
 
 export default function PrintersPage() {
     const isInitialLoading = useAutoImageLoader();
@@ -20,14 +21,14 @@ export default function PrintersPage() {
     /* ================= MOBILE FILTER SHEET STATE ================= */
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-    /* ================= FILTER OPTIONS ================= */
+    /* ================= FILTER OPTIONS (from API) ================= */
     const [filters, setFilters] = useState({
         technology: [],
         brand: [],
         volumeCategory: [],
         material: [],
         recyclingRatio: [],
-        atmosphereControl: [],
+        chamberType: [],
         priceRange: null,
         application: [],
         experience: [],
@@ -41,7 +42,7 @@ export default function PrintersPage() {
         volumeCategory: [],
         material: [],
         recyclingRatio: [],
-        atmosphereControl: [],
+        chamberType: [],
         minPrice: null,
         maxPrice: null,
         application: [],
@@ -77,7 +78,7 @@ export default function PrintersPage() {
                 "volumeCategory",
                 "material",
                 "recyclingRatio",
-                "atmosphereControl",
+                "chamberType",
                 "application",
                 "experience",
                 "connectivity",
@@ -135,7 +136,7 @@ export default function PrintersPage() {
             volumeCategory: [],
             material: [],
             recyclingRatio: [],
-            atmosphereControl: [],
+            chamberType: [],
             minPrice: null,
             maxPrice: null,
             application: [],
@@ -234,18 +235,18 @@ export default function PrintersPage() {
                                                 setSortBy(e.target.value)
                                             }
                                             className="
-                                        w-full
-                                        h-[38px]
-                                        bg-white
-                                        border border-[#D1D5DC]
-                                        rounded-[10px]
-                                        px-4 pr-10
-                                        text-sm
-                                        text-gray-700
-                                        focus:outline-none
-                                        appearance-none
-                                        cursor-pointer
-                                    "
+                                                w-full
+                                                h-[38px]
+                                                bg-white
+                                                border border-[#D1D5DC]
+                                                rounded-[10px]
+                                                px-4 pr-10
+                                                text-sm
+                                                text-gray-700
+                                                focus:outline-none
+                                                appearance-none
+                                                cursor-pointer
+                                            "
                                         >
                                             <option value="popularity">
                                                 Sort by: Popularity

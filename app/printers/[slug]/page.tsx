@@ -291,9 +291,10 @@ export default function PrinterDetailPage() {
 
             {/* Main Content */}
             <div className="container mx-auto px-4 py-8">
+                {/* Product Section with Sticky Scroll */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                    {/* Left Column - Images */}
-                    <div>
+                    {/* Left Column - Images (Sticky on desktop) */}
+                    <div className="lg:self-start lg:sticky lg:top-28">
                         {/* MAIN CAROUSEL */}
                         <div
                             className="bg-white rounded-lg border border-gray-200 p-4 mb-4"
@@ -387,12 +388,12 @@ export default function PrinterDetailPage() {
                         </div>
 
                         {/* THUMBNAILS */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center">
                             {printer.images?.map((image, index) => (
                                 <button
                                     key={image.id}
                                     onClick={() => setCurrent(index)}
-                                    className={`w-20 h-20 rounded-lg border-2 overflow-hidden transition ${
+                                    className={`w-20 h-20 rounded-lg border-2 overflow-hidden transition flex-shrink-0 ${
                                         current === index
                                             ? "border-blue-600"
                                             : "border-gray-300"
@@ -412,7 +413,7 @@ export default function PrinterDetailPage() {
                         </div>
                     </div>
 
-                    {/* Right Column - Product Info */}
+                    {/* Right Column - Product Info (Scrolls normally) */}
                     <div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
                             {/* Brand */}
@@ -595,7 +596,7 @@ export default function PrinterDetailPage() {
                                 <button
                                     className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                                     onClick={() => {
-                                        const message = `Hi, I’d like to request a custom quote for ${printer.name} based on my requirements.`;
+                                        const message = `Hi, I'd like to request a custom quote for ${printer.name} based on my requirements.`;
 
                                         const url = `https://wa.me/919599523434?text=${encodeURIComponent(message)}`;
                                         window.open(url, "_blank");
@@ -973,15 +974,15 @@ function PrinterDetailSkeleton() {
             <div className="container mx-auto px-4 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                     {/* Left Column - Images */}
-                    <div>
+                    <div className="lg:self-start lg:sticky lg:top-28">
                         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
                             <div className="w-full h-[400px] bg-gray-200 rounded-lg"></div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 justify-center">
                             {[1, 2, 3, 4].map((i) => (
                                 <div
                                     key={i}
-                                    className="w-20 h-20 bg-gray-200 rounded-lg"
+                                    className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0"
                                 ></div>
                             ))}
                         </div>

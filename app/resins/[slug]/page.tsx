@@ -287,7 +287,7 @@ export default function ResinDetailPage() {
 
         touchStartX.current = null;
     };
-    if (loading) return <div className="pt-24 text-center">Loading...</div>;
+    if (loading) return <ResinDetailSkeleton />;
     if (!resin) return null;
     return (
         <div className="min-h-screen bg-gray-50 pt-24">
@@ -307,8 +307,8 @@ export default function ResinDetailPage() {
             {/* Main */}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    {/* Images */}
-                    <div>
+                    {/* Images - Sticky on desktop */}
+                    <div className="lg:self-start lg:sticky lg:top-28">
                         {/* MAIN CAROUSEL */}
                         <div
                             className="bg-white border rounded-lg p-4 mb-4"
@@ -346,7 +346,7 @@ export default function ResinDetailPage() {
                                 </div>
 
                                 {/* LEFT ARROW */}
-                                {isHovering && (
+                                {isHovering && total > 1 && (
                                     <button
                                         onClick={prev}
                                         aria-label="Previous image"
@@ -369,7 +369,7 @@ export default function ResinDetailPage() {
                                 )}
 
                                 {/* RIGHT ARROW */}
-                                {isHovering && (
+                                {isHovering && total > 1 && (
                                     <button
                                         onClick={next}
                                         aria-label="Next image"
@@ -393,13 +393,13 @@ export default function ResinDetailPage() {
                             </div>
                         </div>
 
-                        {/* THUMBNAILS */}
-                        <div className="flex gap-2 overflow-x-auto">
+                        {/* THUMBNAILS - Centered */}
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center">
                             {images?.map((img, idx) => (
                                 <button
                                     key={img.id}
                                     onClick={() => setCurrent(idx)}
-                                    className={`w-20 h-20 rounded-lg border-2 transition ${
+                                    className={`w-20 h-20 rounded-lg border-2 transition flex-shrink-0 overflow-hidden ${
                                         current === idx
                                             ? "border-blue-600"
                                             : "border-gray-300"
@@ -410,14 +410,14 @@ export default function ResinDetailPage() {
                                         alt={img.altText || ""}
                                         width={80}
                                         height={80}
-                                        className="object-cover w-full h-full rounded-lg"
+                                        className="object-cover w-full h-full"
                                     />
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Info */}
+                    {/* Info - Scrolls normally */}
                     <div className="bg-white border rounded-lg p-6 relative">
                         <div className="flex justify-between items-start mb-2">
                             <p className="text-sm text-gray-600">
@@ -486,6 +486,7 @@ export default function ResinDetailPage() {
                                         onClick={() => {
                                             setSelectedColourIndex(idx);
                                             setSelectedImageIndex(0);
+                                            setCurrent(0);
                                         }}
                                         className={`w-8 h-8 rounded-full border-2 ${
                                             idx === selectedColourIndex
@@ -639,7 +640,7 @@ export default function ResinDetailPage() {
                             <button
                                 className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                                 onClick={() => {
-                                    const message = `Hi, I’d like to request a custom quote for ${resin.name} based on my requirements.`;
+                                    const message = `Hi, I'd like to request a custom quote for ${resin.name} based on my requirements.`;
 
                                     const url = `https://wa.me/919599523434?text=${encodeURIComponent(message)}`;
                                     window.open(url, "_blank");
@@ -676,39 +677,13 @@ export default function ResinDetailPage() {
 
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
-                                        Materials
-                                    </span>
-                                    <span className="font-medium text-gray-900 text-right max-w-[260px]">
-                                        {
-                                            resin.attributes?.find(
-                                                (attr: any) =>
-                                                    attr.label === "Material",
-                                            )?.value
-                                        }
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
-                                    <span className="text-gray-600">
                                         Resolution Optimization
                                     </span>
                                     <span className="font-medium text-gray-900 text-right max-w-[260px]">
                                         {resin.resolution?.join(", ")}
                                     </span>
                                 </div>
-                                <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
-                                    <span className="text-gray-600">
-                                        Washable
-                                    </span>
-                                    <span className="font-medium text-gray-900">
-                                        {
-                                            resin.attributes?.find(
-                                                (attr: any) =>
-                                                    attr.label === "Washable",
-                                            )?.value
-                                        }
-                                    </span>
-                                </div>
+
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
                                         Shore Hardness
@@ -1075,6 +1050,169 @@ function SafetyTab({ downloads }) {
                     </p>
                 </div>
             )}
+        </div>
+    );
+}
+
+function ResinDetailSkeleton() {
+    return (
+        <div className="min-h-screen bg-gray-50 pt-24 animate-pulse">
+            {/* Header */}
+            <div className="bg-white border-b">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="h-5 w-40 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto px-6 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    {/* Left Column - Images */}
+                    <div className="lg:self-start lg:sticky lg:top-28">
+                        <div className="bg-white border rounded-lg p-4 mb-4">
+                            <div className="w-full aspect-square bg-gray-200 rounded-lg"></div>
+                        </div>
+                        {/* Thumbnails */}
+                        <div className="flex gap-2 justify-center">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div
+                                    key={i}
+                                    className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0"
+                                ></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right Column - Product Info */}
+                    <div className="bg-white border rounded-lg p-6">
+                        {/* Brand */}
+                        <div className="h-4 w-24 bg-gray-200 rounded mb-4"></div>
+
+                        {/* Title */}
+                        <div className="h-8 w-3/4 bg-gray-200 rounded mb-3"></div>
+
+                        {/* Description */}
+                        <div className="space-y-2 mb-6">
+                            <div className="h-4 w-full bg-gray-200 rounded"></div>
+                            <div className="h-4 w-5/6 bg-gray-200 rounded"></div>
+                        </div>
+
+                        {/* Tags */}
+                        <div className="flex gap-2 mb-6">
+                            <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                            <div className="h-6 w-32 bg-gray-200 rounded-full"></div>
+                        </div>
+
+                        {/* Color selector */}
+                        <div className="mb-6">
+                            <div className="h-4 w-20 bg-gray-200 rounded mb-2"></div>
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="w-8 h-8 bg-gray-200 rounded-full"
+                                    ></div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Pack Size selector */}
+                        <div className="mb-6">
+                            <div className="h-4 w-20 bg-gray-200 rounded mb-2"></div>
+                            <div className="flex gap-2">
+                                {[1, 2, 3].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="h-10 w-20 bg-gray-200 rounded-lg"
+                                    ></div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Price */}
+                        <div className="mb-6">
+                            <div className="flex items-baseline gap-3 mb-1">
+                                <div className="h-5 w-20 bg-gray-200 rounded"></div>
+                                <div className="h-5 w-16 bg-gray-200 rounded"></div>
+                            </div>
+                            <div className="h-10 w-36 bg-gray-200 rounded mb-2"></div>
+                            <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                        </div>
+
+                        <hr className="mb-4" />
+
+                        {/* Compatibility line */}
+                        <div className="h-4 w-48 bg-gray-200 rounded mb-4"></div>
+
+                        {/* Quantity */}
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 bg-gray-200 rounded"></div>
+                            <div className="w-16 h-10 bg-gray-200 rounded"></div>
+                            <div className="w-10 h-10 bg-gray-200 rounded"></div>
+                        </div>
+
+                        {/* CTA Buttons */}
+                        <div className="space-y-3 mb-6">
+                            <div className="h-12 w-full bg-gray-200 rounded-lg"></div>
+                            <div className="h-12 w-full bg-gray-200 rounded-lg"></div>
+                        </div>
+
+                        {/* Quick Specifications */}
+                        <div className="border-t border-gray-200 pt-6">
+                            <div className="h-5 w-40 bg-gray-200 rounded mb-4"></div>
+                            <div className="space-y-3">
+                                {[1, 2, 3, 4, 5, 6].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="flex justify-between"
+                                    >
+                                        <div className="h-4 w-28 bg-gray-200 rounded"></div>
+                                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs Section Skeleton */}
+            <div className="bg-white rounded-lg border border-gray-200 mt-8">
+                <div className="border-b border-gray-200">
+                    <div className="flex gap-4 px-4 py-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div
+                                key={i}
+                                className="h-5 w-24 bg-gray-200 rounded"
+                            ></div>
+                        ))}
+                    </div>
+                </div>
+                <div className="p-6">
+                    <div className="space-y-4">
+                        <div className="h-5 w-40 bg-gray-200 rounded"></div>
+                        <div className="h-4 w-full bg-gray-200 rounded"></div>
+                        <div className="h-4 w-5/6 bg-gray-200 rounded"></div>
+                        <div className="h-4 w-4/6 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Similar Resins Skeleton */}
+            <div className="mt-12 px-6">
+                <div className="h-6 w-48 bg-gray-200 rounded mb-6"></div>
+                <div className="flex gap-4 overflow-hidden">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-64 flex-shrink-0">
+                            <div className="bg-white border rounded-lg p-4">
+                                <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
+                                <div className="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
+                                <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
         </div>
     );
 }
