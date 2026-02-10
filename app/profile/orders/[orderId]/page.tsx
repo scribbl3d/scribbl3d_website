@@ -687,7 +687,10 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                 {/* Order Placed / Confirmed → Cancel + Contact Support */}
                                 {showCancel && (
                                     <>
-                                        <CancelOrderButton orderId={order.id} />
+                                        <CancelOrderButton
+                                            orderId={order.id}
+                                            hasShipment={!!shipment}
+                                        />
                                         <Link
                                             href="/support"
                                             className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"

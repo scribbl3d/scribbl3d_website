@@ -6,9 +6,13 @@ import { useState } from "react";
 
 interface CancelOrderButtonProps {
     orderId: string;
+    hasShipment: boolean;
 }
 
-export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
+export function CancelOrderButton({
+    orderId,
+    hasShipment,
+}: CancelOrderButtonProps) {
     const [showModal, setShowModal] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -18,13 +22,32 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
         setCancelling(true);
         setError(null);
         try {
-            const res = await fetch(`/api/admin/orders/${orderId}/cancel`, {
-                method: "POST",
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.error || "Failed to cancel order");
+            // Step 1: Cancel Delhivery shipment if it exists
+            if (hasShipment) {
+                const shipmentRes = await fetch(
+                    `/api/internal/cancel-shipment`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ orderId }),
+                    },
+                );
+                if (!shipmentRes.ok) {
+                    const data = await shipmentRes.json();
+                    throw new Error(data.error || "Failed to cancel shipment");
+                }
             }
+
+            // Step 2: Initiate refund via existing admin cancel API
+            const refundRes = await fetch(
+                `/api/admin/orders/${orderId}/cancel`,
+                { method: "POST" },
+            );
+            const refundData = await refundRes.json();
+            if (!refundRes.ok) {
+                throw new Error(refundData.error || "Failed to cancel order");
+            }
+
             setShowModal(false);
             router.refresh();
         } catch (err: any) {
