@@ -18,7 +18,7 @@ import type { ShippingDetails } from "@/types/checkout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 
 const states = [
@@ -62,60 +62,109 @@ const states = [
     "Puducherry",
 ];
 
-const formSchema = z.object({
-    email: z
-        .string()
-        .email("Invalid email address")
-        .refine(
-            (val) =>
-                /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val),
-            {
-                message: "Enter a valid email address",
-            },
-        ),
-    phone: z
-        .string()
-        .regex(
-            /^[6-9]\d{9}$/,
-            "Enter a valid 10-digit Indian mobile number starting with 6-9",
-        ),
-    fullName: z
-        .string()
-        .min(2, "Full name must be at least 2 characters")
-        .max(50, "Full name must be at most 50 characters")
-        .regex(/^[a-zA-Z ]+$/, "Name should only contain letters and spaces"),
-    newsletter: z.boolean().default(false),
-    address: z
-        .string()
-        .min(5, "Address must be at least 5 characters")
-        .max(100, "Address must be at most 100 characters")
-        .regex(
-            /^[a-zA-Z0-9 ,#\-\/]+$/,
-            "Address should not contain special characters",
-        ),
-    landmark: z
-        .string()
-        .max(50, "Landmark must be at most 50 characters")
-        .optional(),
-    city: z
-        .string()
-        .min(2, "City must be at least 2 characters")
-        .max(50, "City must be at most 50 characters")
-        .regex(/^[a-zA-Z ]+$/, "City should only contain letters and spaces"),
-    state: z
-        .string()
-        .min(2, "Please select a state")
-        .refine((val) => states.includes(val), {
-            message: "Please select a valid state",
-        }),
-    pincode: z
-        .string()
-        .regex(
-            /^[1-9][0-9]{5}$/,
-            "PIN code must be a valid 6-digit Indian PIN code (not starting with 0)",
-        ),
-    saveInfo: z.boolean().default(false),
-});
+const formSchema = z
+    .object({
+        email: z
+            .string()
+            .email("Invalid email address")
+            .refine(
+                (val) =>
+                    /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+                        val,
+                    ),
+                {
+                    message: "Enter a valid email address",
+                },
+            ),
+        phone: z
+            .string()
+            .regex(
+                /^[6-9]\d{9}$/,
+                "Enter a valid 10-digit Indian mobile number starting with 6-9",
+            ),
+        fullName: z
+            .string()
+            .min(2, "Full name must be at least 2 characters")
+            .max(50, "Full name must be at most 50 characters")
+            .regex(
+                /^[a-zA-Z ]+$/,
+                "Name should only contain letters and spaces",
+            ),
+        newsletter: z.boolean().default(false),
+        address: z
+            .string()
+            .min(5, "Address must be at least 5 characters")
+            .max(100, "Address must be at most 100 characters")
+            .regex(
+                /^[a-zA-Z0-9 ,#\-\/]+$/,
+                "Address should not contain special characters",
+            ),
+        landmark: z
+            .string()
+            .max(50, "Landmark must be at most 50 characters")
+            .optional(),
+        city: z
+            .string()
+            .min(2, "City must be at least 2 characters")
+            .max(50, "City must be at most 50 characters")
+            .regex(
+                /^[a-zA-Z ]+$/,
+                "City should only contain letters and spaces",
+            ),
+        state: z
+            .string()
+            .min(2, "Please select a state")
+            .refine((val) => states.includes(val), {
+                message: "Please select a valid state",
+            }),
+        pincode: z
+            .string()
+            .regex(
+                /^[1-9][0-9]{5}$/,
+                "PIN code must be a valid 6-digit Indian PIN code (not starting with 0)",
+            ),
+        saveInfo: z.boolean().default(false),
+
+        // GSTIN fields
+        wantsGstInvoice: z.boolean().default(false),
+        gstin: z.string().optional(),
+        gstCompanyName: z.string().optional(),
+        gstAddress: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+        if (data.wantsGstInvoice) {
+            // Validate GSTIN format: 2-digit state code + 10-char PAN + 1 entity + 1 Z + 1 check
+            if (
+                !data.gstin ||
+                !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
+                    data.gstin,
+                )
+            ) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Enter a valid 15-character GSTIN",
+                    path: ["gstin"],
+                });
+            }
+
+            if (!data.gstCompanyName || data.gstCompanyName.trim().length < 2) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message:
+                        "Registered company name must be at least 2 characters",
+                    path: ["gstCompanyName"],
+                });
+            }
+
+            if (!data.gstAddress || data.gstAddress.trim().length < 5) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Registered address must be at least 5 characters",
+                    path: ["gstAddress"],
+                });
+            }
+        }
+    });
 
 export default function CheckoutForm() {
     const { data: session } = useSession();
@@ -133,8 +182,15 @@ export default function CheckoutForm() {
         defaultValues: {
             newsletter: false,
             saveInfo: false,
+            wantsGstInvoice: false,
+            gstin: "",
+            gstCompanyName: "",
+            gstAddress: "",
         },
     });
+
+    // Watch the GSTIN checkbox to conditionally show fields
+    const wantsGstInvoice = useWatch({ control, name: "wantsGstInvoice" });
 
     const hasHydratedRef = useRef(false);
     useEffect(() => {
@@ -161,6 +217,14 @@ export default function CheckoutForm() {
                 setValue("city", address.city || "");
                 setValue("state", address.state || "");
                 setValue("pincode", address.pincode || address.zipCode || "");
+
+                // Hydrate GSTIN details if previously saved
+                if (address.gstin) {
+                    setValue("wantsGstInvoice", true);
+                    setValue("gstin", address.gstin || "");
+                    setValue("gstCompanyName", address.gstCompanyName || "");
+                    setValue("gstAddress", address.gstAddress || "");
+                }
             })
             .finally(() => {
                 hasHydratedRef.current = true;
@@ -226,7 +290,6 @@ export default function CheckoutForm() {
                                     maxLength={50}
                                     {...register("fullName")}
                                     onInput={(e) => {
-                                        // Only allow letters and spaces
                                         const input =
                                             e.target as HTMLInputElement;
                                         input.value = input.value.replace(
@@ -252,7 +315,6 @@ export default function CheckoutForm() {
                                     inputMode="numeric"
                                     {...register("phone")}
                                     onInput={(e) => {
-                                        // Only allow numbers and max 10 digits
                                         const input =
                                             e.target as HTMLInputElement;
                                         input.value = input.value
@@ -296,7 +358,6 @@ export default function CheckoutForm() {
                                 maxLength={100}
                                 {...register("address")}
                                 onInput={(e) => {
-                                    // Only allow alphanumeric, space, comma, dash, slash, hash
                                     const input = e.target as HTMLInputElement;
                                     input.value = input.value.replace(
                                         /[^a-zA-Z0-9 ,#\-\/]/g,
@@ -321,7 +382,6 @@ export default function CheckoutForm() {
                                 maxLength={50}
                                 {...register("landmark")}
                                 onInput={(e) => {
-                                    // Only allow alphanumeric, space, comma, dash, slash, hash
                                     const input = e.target as HTMLInputElement;
                                     input.value = input.value.replace(
                                         /[^a-zA-Z0-9 ,#\-\/]/g,
@@ -342,7 +402,6 @@ export default function CheckoutForm() {
                                     inputMode="numeric"
                                     {...register("pincode")}
                                     onInput={(e) => {
-                                        // Only allow numbers and max 6 digits
                                         const input =
                                             e.target as HTMLInputElement;
                                         input.value = input.value
@@ -364,7 +423,6 @@ export default function CheckoutForm() {
                                     maxLength={50}
                                     {...register("city")}
                                     onInput={(e) => {
-                                        // Only allow letters and spaces
                                         const input =
                                             e.target as HTMLInputElement;
                                         input.value = input.value.replace(
@@ -421,6 +479,95 @@ export default function CheckoutForm() {
                                 </p>
                             )}
                         </div>
+                    </div>
+
+                    {/* GSTIN Invoice Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center space-x-2">
+                            <Controller
+                                name="wantsGstInvoice"
+                                control={control}
+                                render={({ field }) => (
+                                    <Checkbox
+                                        id="wantsGstInvoice"
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                )}
+                            />
+                            <Label
+                                htmlFor="wantsGstInvoice"
+                                className="text-sm font-medium"
+                            >
+                                I need a GST invoice for this order
+                            </Label>
+                        </div>
+
+                        {wantsGstInvoice && (
+                            <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+                                <h4 className="text-sm font-semibold text-gray-700">
+                                    GST Billing Details
+                                </h4>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="gstin">GSTIN</Label>
+                                    <Input
+                                        id="gstin"
+                                        placeholder="e.g. 29ABCDE1234F1Z5"
+                                        maxLength={15}
+                                        {...register("gstin")}
+                                        onInput={(e) => {
+                                            const input =
+                                                e.target as HTMLInputElement;
+                                            // Auto uppercase and remove invalid chars
+                                            input.value = input.value
+                                                .toUpperCase()
+                                                .replace(/[^A-Z0-9]/g, "")
+                                                .slice(0, 15);
+                                        }}
+                                    />
+                                    {errors.gstin && (
+                                        <p className="text-sm text-red-500">
+                                            {errors.gstin.message}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="gstCompanyName">
+                                        Registered Company Name
+                                    </Label>
+                                    <Input
+                                        id="gstCompanyName"
+                                        placeholder="Company name as per GST registration"
+                                        maxLength={100}
+                                        {...register("gstCompanyName")}
+                                    />
+                                    {errors.gstCompanyName && (
+                                        <p className="text-sm text-red-500">
+                                            {errors.gstCompanyName.message}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="gstAddress">
+                                        Registered Address
+                                    </Label>
+                                    <Input
+                                        id="gstAddress"
+                                        placeholder="Registered business address as per GST"
+                                        maxLength={200}
+                                        {...register("gstAddress")}
+                                    />
+                                    {errors.gstAddress && (
+                                        <p className="text-sm text-red-500">
+                                            {errors.gstAddress.message}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Additional Options */}

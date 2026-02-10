@@ -1,19 +1,67 @@
 "use client";
 
-import { Check, MessageSquarePlus, Package, Star, X } from "lucide-react";
+import { MessageSquarePlus, Package, Star, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
-const FEEDBACK_TAGS = [
-    "Product quality",
-    "Packaging quality",
+/* ────────────────────── Tag Config ────────────────────── */
+
+const GLOBAL_TAGS = [
     "Delivery experience",
+    "Packaging quality",
     "Pricing & value for money",
     "Payment experience",
     "Support / communication",
 ] as const;
 
-type FeedbackTag = (typeof FEEDBACK_TAGS)[number];
+const ITEM_TYPE_TAGS: Record<string, readonly string[]> = {
+    filament: [
+        "Print quality",
+        "Color accuracy",
+        "Spool winding",
+        "Material consistency",
+        "Moisture-free packaging",
+    ],
+    resin: [
+        "Print quality",
+        "Color accuracy",
+        "Curing performance",
+        "Low odor",
+        "Bottle seal quality",
+    ],
+    printer: [
+        "Print quality",
+        "Build quality",
+        "Ease of setup",
+        "Noise level",
+        "Speed performance",
+        "Software experience",
+    ],
+    product: [
+        "Product quality",
+        "Finish quality",
+        "Matches description",
+        "Build accuracy",
+    ],
+    prebuilt: [
+        "Product quality",
+        "Finish quality",
+        "Matches description",
+        "Build accuracy",
+    ],
+};
+
+function getTagsForItems(items: OrderItem[]): string[] {
+    const itemTypeTagsSet = new Set<string>();
+    for (const item of items) {
+        const type = item.itemType?.toLowerCase() || "product";
+        const tags = ITEM_TYPE_TAGS[type] || ITEM_TYPE_TAGS.product;
+        tags.forEach((tag) => itemTypeTagsSet.add(tag));
+    }
+    return [...GLOBAL_TAGS, ...Array.from(itemTypeTagsSet)];
+}
+
+/* ────────────────────── Types ────────────────────── */
 
 export interface OrderItem {
     name: string;
@@ -22,9 +70,52 @@ export interface OrderItem {
     quantity?: number;
     color?: string;
     pack?: string;
+    size?: string;
     itemType?: string;
     productId?: string;
 }
+
+interface ItemReview {
+    rating: number;
+    review: string;
+}
+
+/* ────────────────────── Star Rating ────────────────────── */
+
+function StarRating({
+    rating,
+    onChange,
+}: {
+    rating: number;
+    onChange: (r: number) => void;
+}) {
+    const [hovered, setHovered] = useState(0);
+
+    return (
+        <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                    key={star}
+                    type="button"
+                    onMouseEnter={() => setHovered(star)}
+                    onMouseLeave={() => setHovered(0)}
+                    onClick={() => onChange(star)}
+                    className="p-0.5 transition-transform hover:scale-110"
+                >
+                    <Star
+                        className={`w-6 h-6 transition-colors ${
+                            star <= (hovered || rating)
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "fill-none text-gray-300"
+                        }`}
+                    />
+                </button>
+            ))}
+        </div>
+    );
+}
+
+/* ────────────────────── Modal ────────────────────── */
 
 interface FeedbackModalProps {
     orderId: string;
@@ -33,60 +124,65 @@ interface FeedbackModalProps {
 }
 
 function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
-    const [selectedItems, setSelectedItems] = useState<Set<number>>(
-        () => new Set(items.map((_, i) => i)),
+    const allTags = getTagsForItems(items);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [itemReviews, setItemReviews] = useState<Record<number, ItemReview>>(
+        () => {
+            const init: Record<number, ItemReview> = {};
+            items.forEach((_, idx) => {
+                init[idx] = { rating: 0, review: "" };
+            });
+            return init;
+        },
     );
-    const [selectedTags, setSelectedTags] = useState<FeedbackTag[]>([]);
     const [comment, setComment] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
-    const allSelected = selectedItems.size === items.length;
-
-    const toggleItem = (idx: number) => {
-        setSelectedItems((prev) => {
-            const next = new Set(prev);
-            if (next.has(idx)) {
-                next.delete(idx);
-            } else {
-                next.add(idx);
-            }
-            return next;
-        });
-    };
-
-    const toggleAll = () => {
-        if (allSelected) {
-            setSelectedItems(new Set());
-        } else {
-            setSelectedItems(new Set(items.map((_, i) => i)));
-        }
-    };
-
-    const toggleTag = (tag: FeedbackTag) => {
+    const toggleTag = (tag: string) => {
         setSelectedTags((prev) =>
             prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
         );
     };
 
+    const updateItemRating = (idx: number, rating: number) => {
+        setItemReviews((prev) => ({
+            ...prev,
+            [idx]: { ...prev[idx], rating },
+        }));
+    };
+
+    const updateItemReview = (idx: number, review: string) => {
+        setItemReviews((prev) => ({
+            ...prev,
+            [idx]: { ...prev[idx], review: review.slice(0, 300) },
+        }));
+    };
+
+    const hasAnyRating = Object.values(itemReviews).some((r) => r.rating > 0);
+
     const handleSubmit = async () => {
-        if (selectedItems.size === 0 || selectedTags.length === 0) return;
+        if (!hasAnyRating) return;
         setSubmitting(true);
         try {
-            const feedbackItems = Array.from(selectedItems).map((idx) => ({
-                index: idx,
-                name: items[idx].name,
-                productId: items[idx].productId || null,
-                itemType: items[idx].itemType || null,
-            }));
+            const itemFeedbacks = Object.entries(itemReviews)
+                .filter(([, r]) => r.rating > 0)
+                .map(([idx, r]) => ({
+                    index: Number(idx),
+                    name: items[Number(idx)].name,
+                    productId: items[Number(idx)].productId || null,
+                    itemType: items[Number(idx)].itemType || null,
+                    rating: r.rating,
+                    review: r.review.trim() || null,
+                }));
 
             const res = await fetch("/api/order/feedback", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     orderId,
-                    items: feedbackItems,
                     tags: selectedTags,
+                    items: itemFeedbacks,
                     comment: comment.trim() || null,
                 }),
             });
@@ -101,6 +197,7 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
         }
     };
 
+    /* ── Success ── */
     if (submitted) {
         return (
             <div
@@ -112,7 +209,7 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-                        <Star className="w-7 h-7 text-green-600" />
+                        <Star className="w-7 h-7 text-green-600 fill-green-600" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">
                         Thank you!
@@ -125,6 +222,7 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
         );
     }
 
+    /* ── Main Modal ── */
     return (
         <div
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
@@ -135,7 +233,7 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-start justify-between p-5 pb-0">
+                <div className="flex items-start justify-between p-5 pb-0 sticky top-0 bg-white z-10">
                     <div>
                         <h3 className="text-lg font-bold text-gray-900">
                             Share your experience
@@ -154,113 +252,20 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
 
                 <div className="border-t border-gray-100 mt-4" />
 
-                {/* Item selection */}
-                <div className="p-5 pb-3">
-                    <p className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3">
-                        Select items to review
-                    </p>
-
-                    {items.length > 1 && (
-                        <button
-                            onClick={toggleAll}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border mb-2 transition-colors ${
-                                allSelected
-                                    ? "border-gray-900 bg-gray-50"
-                                    : "border-gray-200 hover:border-gray-300"
-                            }`}
-                        >
-                            <div
-                                className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
-                                    allSelected
-                                        ? "bg-gray-900"
-                                        : "border border-gray-300"
-                                }`}
-                            >
-                                {allSelected && (
-                                    <Check className="w-3.5 h-3.5 text-white" />
-                                )}
-                            </div>
-                            <span className="text-sm font-medium text-gray-900">
-                                All items ({items.length})
-                            </span>
-                        </button>
-                    )}
-
-                    <div className="space-y-1.5">
-                        {items.map((item, idx) => {
-                            const isSelected = selectedItems.has(idx);
-                            return (
-                                <button
-                                    key={idx}
-                                    onClick={() => toggleItem(idx)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors text-left ${
-                                        isSelected
-                                            ? "border-gray-900 bg-gray-50"
-                                            : "border-gray-200 hover:border-gray-300"
-                                    }`}
-                                >
-                                    <div
-                                        className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
-                                            isSelected
-                                                ? "bg-gray-900"
-                                                : "border border-gray-300"
-                                        }`}
-                                    >
-                                        {isSelected && (
-                                            <Check className="w-3.5 h-3.5 text-white" />
-                                        )}
-                                    </div>
-                                    <div className="w-8 h-8 rounded bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                                        {item.image ? (
-                                            <Image
-                                                src={item.image}
-                                                alt={item.name}
-                                                width={32}
-                                                height={32}
-                                                className="object-cover w-full h-full"
-                                            />
-                                        ) : (
-                                            <Package className="w-3.5 h-3.5 text-gray-300" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 truncate">
-                                            {item.name}
-                                        </p>
-                                        {(item.color || item.quantity) && (
-                                            <p className="text-xs text-gray-500">
-                                                {[
-                                                    item.color &&
-                                                        `${item.color}`,
-                                                    `Qty: ${item.quantity || 1}`,
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(" · ")}
-                                            </p>
-                                        )}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div className="border-t border-gray-100 mx-5" />
-
-                {/* Tags */}
+                {/* ── Section 1: What went well ── */}
                 <div className="p-5 pb-3">
                     <p className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3">
                         What went well? (Select all that apply)
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {FEEDBACK_TAGS.map((tag) => {
-                            const isTagSelected = selectedTags.includes(tag);
+                        {allTags.map((tag) => {
+                            const isSelected = selectedTags.includes(tag);
                             return (
                                 <button
                                     key={tag}
                                     onClick={() => toggleTag(tag)}
                                     className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                                        isTagSelected
+                                        isSelected
                                             ? "bg-gray-900 text-white border-gray-900"
                                             : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
                                     }`}
@@ -272,8 +277,93 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
                     </div>
                 </div>
 
-                {/* Comment */}
-                <div className="px-5 pb-2">
+                <div className="border-t border-gray-100 mx-5" />
+
+                {/* ── Section 2: Item-wise review ── */}
+                <div className="p-5 pb-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-700 mb-3">
+                        Rate your items
+                    </p>
+                    <div className="space-y-4">
+                        {items.map((item, idx) => (
+                            <div
+                                key={idx}
+                                className="rounded-lg border border-gray-200 p-3"
+                            >
+                                {/* Item header */}
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                                        {item.image ? (
+                                            <Image
+                                                src={item.image}
+                                                alt={item.name}
+                                                width={40}
+                                                height={40}
+                                                className="object-cover w-full h-full"
+                                            />
+                                        ) : (
+                                            <Package className="w-4 h-4 text-gray-300" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-900 truncate">
+                                            {item.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {[
+                                                item.color,
+                                                item.size,
+                                                `Qty: ${item.quantity || 1}`,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(" · ")}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Star rating */}
+                                <div className="mb-2">
+                                    <StarRating
+                                        rating={itemReviews[idx]?.rating || 0}
+                                        onChange={(r) =>
+                                            updateItemRating(idx, r)
+                                        }
+                                    />
+                                </div>
+
+                                {/* Review text (show after rating) */}
+                                {itemReviews[idx]?.rating > 0 && (
+                                    <div>
+                                        <textarea
+                                            value={
+                                                itemReviews[idx]?.review || ""
+                                            }
+                                            onChange={(e) =>
+                                                updateItemReview(
+                                                    idx,
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Write a short review (optional)..."
+                                            rows={2}
+                                            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 resize-none"
+                                        />
+                                        <p className="text-[11px] text-gray-400 text-right mt-0.5">
+                                            {itemReviews[idx]?.review?.length ||
+                                                0}
+                                            /300
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="border-t border-gray-100 mx-5" />
+
+                {/* ── Section 3: General comment ── */}
+                <div className="px-5 pt-4 pb-2">
                     <div className="flex items-baseline justify-between mb-2">
                         <p className="text-xs font-bold uppercase tracking-wider text-gray-700">
                             Anything else you&apos;d like to share?
@@ -295,14 +385,10 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="p-5 pt-2 flex items-center gap-3">
+                <div className="p-5 pt-2 flex items-center gap-3 sticky bottom-0 bg-white">
                     <button
                         onClick={handleSubmit}
-                        disabled={
-                            selectedItems.size === 0 ||
-                            selectedTags.length === 0 ||
-                            submitting
-                        }
+                        disabled={!hasAnyRating || submitting}
                         className="flex-1 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {submitting ? "Submitting..." : "Submit Feedback"}
@@ -319,7 +405,7 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
     );
 }
 
-/* ── Exported Button Wrapper ── */
+/* ── Exported Button ── */
 
 export function GiveFeedbackButton({
     orderId,

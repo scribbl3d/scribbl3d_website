@@ -31,6 +31,10 @@ export function ViewOrderDialog({
     console.log("order transaction id", order.transactionId);
     const tracking = parseTracking(order.trackingInfo);
 
+    // Parse GSTIN from billingAddress
+    const billing = order.billingAddress as Record<string, any> | null;
+    const hasGstin = billing?.wantsGstInvoice && billing?.gstin;
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -86,6 +90,46 @@ export function ViewOrderDialog({
                         </p>
                         <p>{order.shippingAddress?.country}</p>
                     </section>
+
+                    {/* ===================== GST BILLING ===================== */}
+                    {hasGstin && (
+                        <section>
+                            <h4 className="font-semibold mb-2">
+                                GST Billing Details
+                            </h4>
+
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                            GSTIN
+                                        </p>
+                                        <p className="font-mono font-semibold text-blue-900">
+                                            {billing.gstin}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                            Registered Company
+                                        </p>
+                                        <p className="font-medium text-gray-900">
+                                            {billing.gstCompanyName || "N/A"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                        Registered Address
+                                    </p>
+                                    <p className="text-gray-700">
+                                        {billing.gstAddress || "N/A"}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     {/* ===================== PAYMENT ===================== */}
                     {(order.paymentMethod ||

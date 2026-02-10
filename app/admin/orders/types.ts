@@ -26,6 +26,13 @@ export interface Order {
         isMaster?: boolean;
         packageCount?: number;
     };
+    billingAddress?: {
+        wantsGstInvoice?: boolean;
+        gstin?: string;
+        gstCompanyName?: string;
+        gstAddress?: string;
+        [key: string]: any; // allows other fields from shippingDetails
+    };
 
     // Multiple shipments (for MPS)
     shipments?: Array<{

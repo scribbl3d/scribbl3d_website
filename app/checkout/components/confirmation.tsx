@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import {
     AlertCircle,
     ArrowLeft,
+    Building2,
     Mail,
     MapPin,
     Phone,
@@ -135,6 +136,46 @@ export function Confirmation() {
             ],
         },
     ];
+
+    // Add GSTIN section if user requested GST invoice
+    if (shippingDetails.wantsGstInvoice && shippingDetails.gstin) {
+        sections.push({
+            title: "GST Billing Details",
+            icon: Building2,
+            content: [
+                {
+                    text: (
+                        <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                    GSTIN
+                                </span>
+                                <span className="font-mono font-semibold text-blue-900">
+                                    {shippingDetails.gstin}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                    Company
+                                </span>
+                                <p className="text-sm font-medium text-gray-800">
+                                    {shippingDetails.gstCompanyName}
+                                </p>
+                            </div>
+                            <div>
+                                <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                    Registered Address
+                                </span>
+                                <p className="text-sm text-gray-700">
+                                    {shippingDetails.gstAddress}
+                                </p>
+                            </div>
+                        </div>
+                    ),
+                },
+            ],
+        });
+    }
 
     const totalAmount = selectedShipping.price;
 

@@ -11,6 +11,12 @@ export interface ShippingDetails {
     pincode: string;
     newsletter: boolean;
     saveInfo: boolean;
+
+    // GSTIN Billing
+    wantsGstInvoice: boolean;
+    gstin?: string;
+    gstCompanyName?: string;
+    gstAddress?: string;
 }
 
 export interface ShippingOption {
