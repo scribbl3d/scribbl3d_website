@@ -25,8 +25,8 @@ model User {
   reviews          Review[]
   sessions         Session[]
   wishlist         Wishlist?
+  orderFeedback    OrderFeedback[]   // ← ADD THIS
 }
-
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -379,6 +379,11 @@ model Form3DResponse {
   additionalFile      String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  firstName    String?
+  lastName     String?
+  email        String?
+  phone        String?
+  company      String?
 }
 
 model Review {
@@ -411,36 +416,52 @@ model Order {
   id                String    @id @default(cuid())
   userId            String
   items             Json
-    subtotal        Float?
-  discountAmount  Float?     @default(0)
-  discountCode    String?
-  shippingPrice   Float?     @default(0)
+  subtotal          Float?
+  discountAmount    Float?    @default(0)
+  discountCode      String?
+  tax               Float? @default(0)
+  shippingPrice     Float?    @default(0)
   totalAmount       Float
   status            String    @default("payment_pending")
 
   shippingAddress   Json
   billingAddress    Json
 
-  paymentMethod       String?       // UPI | CREDIT_CARD | DEBIT_CARD | NET_BANKING | WALLET (from PhonePe)
-  paymentReference  String?       // PhonePe ref / RRN
-  maskedPaymentId   String?       // masked UPI or card
-  utrNumber          String?   // UPI only
-  brnNumber          String?   // Card only
-  cardNetwork        String?   // VISA / MASTERCARD / RUPAY
+  paymentMethod     String?
+  paymentReference  String?
+  maskedPaymentId   String?
+  utrNumber         String?
+  brnNumber         String?
+  cardNetwork       String?
 
   transactionId     String?   @unique
   trackingInfo      Json?
 
-  // Refund
-  refundStatus           String?  // initiated | success | failed
-  refundId               String?
-  refundInitiatedAt      DateTime?  @default(now())
-  refundCompletedAt      DateTime?   @default(now())
+  refundStatus      String?
+  refundId          String?
+  refundInitiatedAt DateTime? @default(now())
+  refundCompletedAt DateTime? @default(now())
   createdAt         DateTime  @default(now())
- shippingMode      String?
-  user              User      @relation(fields: [userId], references: [id])
-  shipment          Shipment?
+  shippingMode      String?
 
+  user              User      @relation(fields: [userId], references: [id])
+  shipments         Shipment[]
+  feedback          OrderFeedback?    // ← ADD THIS
+
+  @@index([userId])
+}
+model OrderFeedback {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  userId    String
+  items     Json                      // [{ index, name, productId, itemType }]
+  tags      String[]                  // ["Product quality", "Delivery experience"]
+  comment   String?                   // Optional, max 500 chars
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
@@ -482,24 +503,36 @@ enum ItemType {
 
 model Shipment {
   id               String    @id @default(cuid())
-  orderId          String    @unique
-  provider         String    @default("DEHIVERY_TEST")
-  waybill          String? // make optional if not available yet
+  orderId          String    // No @unique for MPS support
+  provider         String    @default("DELHIVERY_TEST")
+  waybill          String?   @unique
   status           String
   trackingUrl      String?
   rawResponse      Json?
   labelGenerated   Boolean   @default(false)
   labelGeneratedAt DateTime?
 
-  lastError String?
-  attempts  Int     @default(0)
-  lastSyncedAt  DateTime?
-  syncing       Boolean  @default(false)
- 
+  lastError      String?
+  attempts       Int       @default(0)
+  lastSyncedAt   DateTime?
+  syncing        Boolean   @default(false)
+
+  // MPS FIELDS
+  shipmentType   String    @default("SPS")
+  isMaster       Boolean   @default(true)
+  masterWaybill  String?
+  childWaybills  String[]  @default([])
+  packageCount   Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   order     Order    @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([masterWaybill])
 }
+
+
 model PickupRequest {
   id                  String   @id @default(cuid())
   pickupLocation       String

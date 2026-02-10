@@ -14,7 +14,6 @@ import Wishlist from "./_components/wishlist";
 import { shouldSyncShipment } from "@/lib/shipment/shouldSync";
 import { triggerShipmentSync } from "@/lib/shipment/triggerSync";
 
-/* ✅ LOCAL ORDER STATUS (ONLY HERE, NO GLOBAL BS) */
 type LocalOrderStatus =
     | "payment_pending"
     | "confirmed"
@@ -54,12 +53,15 @@ export default async function ProfilePage({ searchParams }: PageProps) {
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" },
         include: {
-            shipment: {
+            shipments: {
+                // ✅ Changed from 'shipment' to 'shipments'
                 select: {
                     waybill: true,
                     status: true,
                     syncing: true,
                     lastSyncedAt: true,
+                    isMaster: true, // Added for MPS support
+                    shipmentType: true, // Added for MPS support
                 },
             },
         },
@@ -68,24 +70,33 @@ export default async function ProfilePage({ searchParams }: PageProps) {
     /* 🔥 TEST LOG */
     console.log(
         "[PROFILE] Orders fetched:",
-        ordersFromDb.map((o) => ({
-            id: o.id,
-            hasShipment: !!o.shipment,
-            syncing: o.shipment?.syncing,
-            lastSyncedAt: o.shipment?.lastSyncedAt,
-            status: o.shipment?.status,
-        })),
+        ordersFromDb.map((o) => {
+            const masterShipment =
+                o.shipments?.find((s) => s.isMaster) || o.shipments?.[0];
+            return {
+                id: o.id,
+                hasShipment: o.shipments?.length > 0,
+                shipmentCount: o.shipments?.length || 0,
+                syncing: masterShipment?.syncing,
+                lastSyncedAt: masterShipment?.lastSyncedAt,
+                status: masterShipment?.status,
+            };
+        }),
     );
 
     for (const order of ordersFromDb) {
-        if (!order.shipment) continue;
+        // Get master shipment from array
+        const masterShipment =
+            order.shipments?.find((s) => s.isMaster) || order.shipments?.[0];
 
-        const shouldSync = shouldSyncShipment(order.shipment);
+        if (!masterShipment) continue;
+
+        const shouldSync = shouldSyncShipment(masterShipment);
 
         /* 🔥 TEST LOG */
         console.log(`[PROFILE] shouldSyncShipment?`, {
             orderId: order.id,
-            waybill: order.shipment.waybill,
+            waybill: masterShipment.waybill,
             shouldSync,
         });
 
@@ -99,11 +110,21 @@ export default async function ProfilePage({ searchParams }: PageProps) {
         }
     }
 
-    /* ✅ CAST STATUS LOCALLY */
-    const orders = ordersFromDb.map((order) => ({
-        ...order,
-        status: order.status as LocalOrderStatus,
-    }));
+    /* ✅ CAST STATUS LOCALLY & ADD BACKWARD COMPATIBLE shipment FIELD */
+    const orders = ordersFromDb.map((order) => {
+        // Get master shipment for backward compatibility
+        const masterShipment =
+            order.shipments?.find((s) => s.isMaster) ||
+            order.shipments?.[0] ||
+            null;
+
+        return {
+            ...order,
+            status: order.status as LocalOrderStatus,
+            // Add singular 'shipment' for backward compatibility with UI components
+            shipment: masterShipment,
+        };
+    });
 
     /* ---------- WISHLIST ---------- */
     const wishlist = await db.wishlist.findUnique({

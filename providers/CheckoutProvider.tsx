@@ -1,6 +1,9 @@
 "use client";
 
-import { calculateExpressShipping } from "@/app/checkout/components/expressShipping";
+import {
+    calculateExpressShipping,
+    calculateExpressShippingPrice,
+} from "@/app/checkout/components/expressShipping";
 import { useCart } from "@/providers/CartProvider";
 import type {
     CheckoutState,
@@ -30,6 +33,7 @@ interface CheckoutContextType {
         allowed: boolean;
         price: number;
         reason?: string;
+        loading?: boolean;
     };
 }
 
@@ -76,9 +80,11 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         allowed: boolean;
         price: number;
         reason?: string;
+        loading?: boolean;
     }>({
         allowed: true,
         price: 0,
+        loading: false,
     });
 
     const { cart } = useCart();
@@ -150,33 +156,101 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         setExpressShipping({
             allowed: true,
             price: 0,
+            loading: false,
         });
     };
 
     /* =========================
        EXPRESS SHIPPING LOGIC
+       - Estimate when no pincode
+       - Real API call when pincode available
     ========================= */
 
     useEffect(() => {
+        // No cart = reset
         if (!cart || cart.length === 0) {
             setExpressShipping({
                 allowed: true,
                 price: 0,
+                loading: false,
             });
             return;
         }
 
-        const result = calculateExpressShipping(cart);
-        setExpressShipping(result);
+        const pincode = state.shippingDetails?.pincode;
 
-        // Auto-fallback if premium becomes invalid
-        if (!result.allowed && state.selectedShipping?.id === "premium") {
+        // No pincode yet = use quick estimate
+        if (!pincode) {
+            const result = calculateExpressShipping(cart);
+            setExpressShipping({
+                ...result,
+                loading: false,
+            });
+
+            // Auto-fallback if premium becomes invalid
+            if (!result.allowed && state.selectedShipping?.id === "premium") {
+                setState((prev) => ({
+                    ...prev,
+                    selectedShipping: FREE_SHIPPING_OPTION,
+                }));
+            }
+            return;
+        }
+
+        // Has pincode = fetch real price from Delhivery API
+        const fetchRealPrice = async () => {
+            setExpressShipping((prev) => ({ ...prev, loading: true }));
+
+            try {
+                const result = await calculateExpressShippingPrice(
+                    cart,
+                    pincode,
+                );
+
+                setExpressShipping({
+                    allowed: result.allowed,
+                    price: result.price,
+                    reason: result.reason,
+                    loading: false,
+                });
+
+                // Auto-fallback if premium becomes invalid
+                if (
+                    !result.allowed &&
+                    state.selectedShipping?.id === "premium"
+                ) {
+                    setState((prev) => ({
+                        ...prev,
+                        selectedShipping: FREE_SHIPPING_OPTION,
+                    }));
+                }
+            } catch (error) {
+                console.error("Failed to fetch express shipping price:", error);
+
+                // Fallback to estimate on error
+                const estimate = calculateExpressShipping(cart);
+                setExpressShipping({
+                    ...estimate,
+                    loading: false,
+                });
+            }
+        };
+
+        fetchRealPrice();
+    }, [cart, state.shippingDetails?.pincode]);
+
+    // Separate effect for auto-fallback when selectedShipping changes
+    useEffect(() => {
+        if (
+            !expressShipping.allowed &&
+            state.selectedShipping?.id === "premium"
+        ) {
             setState((prev) => ({
                 ...prev,
                 selectedShipping: FREE_SHIPPING_OPTION,
             }));
         }
-    }, [cart, state.selectedShipping]);
+    }, [expressShipping.allowed, state.selectedShipping?.id]);
 
     /* =========================
        PROVIDER

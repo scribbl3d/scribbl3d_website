@@ -17,13 +17,35 @@ export interface Order {
         zipCode?: string;
     };
 
+    // Single shipment (backward compatibility / master shipment)
     shipment?: {
         status?: string;
         waybill?: string;
         provider?: string;
+        shipmentType?: string; // "SPS" | "MPS"
+        isMaster?: boolean;
+        packageCount?: number;
     };
 
-    trackingInfo?: any;
+    // Multiple shipments (for MPS)
+    shipments?: Array<{
+        status?: string;
+        waybill?: string;
+        provider?: string;
+        shipmentType?: string;
+        isMaster?: boolean;
+        masterWaybill?: string;
+    }>;
+
+    trackingInfo?: {
+        waybill?: string;
+        trackingUrl?: string;
+        provider?: string;
+        shipmentType?: string; // "SPS" | "MPS"
+        masterWaybill?: string;
+        childWaybills?: string[];
+        packageCount?: number;
+    };
 
     paymentMethod?: string;
     paymentReference?: string;
@@ -40,6 +62,7 @@ export interface Order {
         phone?: string;
     };
 }
+
 export interface PickupInfo {
     pickupDate: string;
     pickupTime: string;

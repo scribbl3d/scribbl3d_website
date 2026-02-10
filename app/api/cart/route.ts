@@ -144,6 +144,52 @@ export async function POST(req: Request) {
 }
 
 /* =========================
+   HELPER: Extract machine dimensions from printer specifications
+========================= */
+function extractMachineDimensions(specifications: any[]): {
+    length: number | null;
+    width: number | null;
+    height: number | null;
+} {
+    for (const spec of specifications || []) {
+        const label = (spec.label || "").trim();
+        const value = spec.value || "";
+
+        // Check if this is machine dimensions (case-insensitive)
+        const labelLower = label.toLowerCase();
+        if (
+            labelLower === "machine dimensions" ||
+            labelLower.includes("machine dimension") ||
+            labelLower === "dimensions" ||
+            labelLower === "printer dimensions" ||
+            labelLower === "outer dimensions"
+        ) {
+            // Parse formats like:
+            // "740mm x 735mm x 600mm"
+            // "440 × 410 × 465 mm"
+            // "740 x 735 x 600"
+            // Handle both × (multiplication sign) and x (letter)
+            // Handle mm/cm attached to numbers or at the end
+            const match = value.match(
+                /(\d+)\s*(?:mm|cm)?\s*[x×]\s*(\d+)\s*(?:mm|cm)?\s*[x×]\s*(\d+)/i,
+            );
+            if (match) {
+                const dims = {
+                    length: parseInt(match[1]),
+                    width: parseInt(match[2]),
+                    height: parseInt(match[3]),
+                };
+
+                return dims;
+            } else {
+            }
+        }
+    }
+
+    return { length: null, width: null, height: null };
+}
+
+/* =========================
    GET CART
 ========================= */
 export async function GET() {
@@ -163,9 +209,9 @@ export async function GET() {
                         product: true,
                         prebuiltProduct: true,
                         printer: {
-                            // By using 'include' without 'select', Prisma fetches all scalars (including weight)
                             include: {
                                 images: { orderBy: { sortOrder: "asc" } },
+                                specifications: true, // Include specifications for machine dimensions
                             },
                         },
                         resin: true,
@@ -203,6 +249,11 @@ export async function GET() {
 
             /* ---------- PRINTER ---------- */
             if (item.printer) {
+                // Extract machine dimensions from specifications
+                const machineDims = extractMachineDimensions(
+                    item.printer.specifications as any[],
+                );
+
                 return {
                     id: item.id,
                     itemType: "printer",
@@ -210,10 +261,15 @@ export async function GET() {
                     price: item.printer.price,
                     quantity: item.quantity,
                     images: item.printer.images.map((i) => i.url),
-                    // ✅ ADDED THIS LINE: Send weight to frontend
+                    // Weight - check if stored in grams or kg
+                    // If > 1000, assume grams. Otherwise assume kg and convert to grams string
                     weight: item.printer.weight
                         ? item.printer.weight.toString()
                         : null,
+                    // Machine dimensions for shipping (in mm)
+                    machineDimensionLength: machineDims.length,
+                    machineDimensionWidth: machineDims.width,
+                    machineDimensionHeight: machineDims.height,
                 };
             }
 
@@ -257,5 +313,37 @@ export async function GET() {
     } catch (error) {
         console.error("GET /api/cart error:", error);
         return NextResponse.json({ items: [] });
+    }
+}
+
+/* =========================
+   CLEAR CART
+========================= */
+export async function DELETE() {
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string; name?: string; email?: string };
+    } | null;
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    try {
+        const cart = await prisma.cart.findFirst({
+            where: { userId: session.user.id },
+        });
+
+        if (cart) {
+            await prisma.cartItem.deleteMany({
+                where: { cartId: cart.id },
+            });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("DELETE /api/cart error:", error);
+        return NextResponse.json(
+            { error: "Failed to clear cart" },
+            { status: 500 },
+        );
     }
 }

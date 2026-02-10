@@ -128,25 +128,28 @@ export function Orders({ orders }: OrdersProps) {
     );
 
     return (
-        <div className="max-w-6xl mx-auto p-4 md:p-6">
+        <div className="max-w-6xl mx-auto px-4 py-4 md:p-6">
             {/* Header */}
-            <div className="mb-6">
-                <button className="flex items-center gap-1 text-sm text-gray-500 mb-3 hover:text-black transition-colors">
+            <div className="mb-5 md:mb-6">
+                <button
+                    onClick={() => (window.location.href = "/profile")}
+                    className="flex items-center gap-1 text-sm text-gray-500 mb-3 hover:text-black transition-colors"
+                >
                     <ArrowLeft className="w-4 h-4" />
                     Back
                 </button>
 
-                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3 md:gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                             My Orders
                         </h1>
-                        <p className="text-gray-500 mt-1">
+                        <p className="text-sm text-gray-500 mt-0.5">
                             View and track all your orders
                         </p>
                     </div>
 
-                    {/* Filter - left on mobile, right on desktop */}
+                    {/* Filter */}
                     <div className="relative self-start md:self-auto">
                         <select
                             value={filter}
@@ -154,7 +157,7 @@ export function Orders({ orders }: OrdersProps) {
                                 setFilter(e.target.value as any);
                                 setPage(1);
                             }}
-                            className="appearance-none border border-gray-300 rounded-xl px-4 py-2.5 pr-10 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
+                            className="appearance-none border border-gray-300 rounded-full px-4 py-2 pr-9 text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-black/5"
                         >
                             <option value="all">All Orders</option>
                             {Object.keys(ORDER_STATUS_UI).map((key) => (
@@ -166,13 +169,13 @@ export function Orders({ orders }: OrdersProps) {
                                 </option>
                             ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-200 mb-6" />
+            <div className="border-t border-gray-200 mb-5 md:mb-6" />
 
             {/* Empty State */}
             {filteredOrders.length === 0 && (
@@ -224,10 +227,10 @@ export function Orders({ orders }: OrdersProps) {
                     return (
                         <div
                             key={order.id}
-                            className="bg-white border border-gray-200 rounded-2xl p-5 md:p-6"
+                            className={`bg-white border border-gray-200 rounded-2xl overflow-hidden`}
                         >
                             {/* Desktop Layout */}
-                            <div className="hidden md:flex md:justify-between md:gap-6">
+                            <div className="hidden md:flex md:justify-between md:gap-6 p-6">
                                 {/* Left Side: Order Info & Items */}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-1">
@@ -311,22 +314,23 @@ export function Orders({ orders }: OrdersProps) {
                             </div>
 
                             {/* Mobile Layout */}
-                            <div className="md:hidden">
-                                {/* Order header */}
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h2 className="text-lg font-bold text-gray-900">
+                            <div className="md:hidden p-4 pb-5">
+                                {/* Order header row */}
+                                <div className="flex items-start justify-between gap-2 mb-0.5">
+                                    <h2 className="text-base font-bold text-gray-900 leading-snug">
                                         Order #
                                         {order.id.slice(0, 8).toUpperCase()}
                                     </h2>
                                     <span
-                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusUI.className}`}
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap shrink-0 ${statusUI.className}`}
                                     >
                                         <statusUI.Icon className="w-3 h-3" />
                                         {statusUI.label}
                                     </span>
                                 </div>
 
-                                <p className="text-sm text-gray-500">
+                                {/* Date & item count */}
+                                <p className="text-[13px] text-gray-500 leading-relaxed">
                                     Placed on{" "}
                                     {new Date(
                                         order.createdAt,
@@ -336,22 +340,19 @@ export function Orders({ orders }: OrdersProps) {
                                         year: "numeric",
                                     })}
                                 </p>
-                                <p className="text-sm text-gray-500 mb-4">
+                                <p className="text-[13px] text-gray-500 mb-3">
                                     {items.length} item
                                     {items.length !== 1 ? "s" : ""}
                                 </p>
 
-                                {/* Divider */}
-                                <div className="border-t border-gray-100 my-4" />
-
                                 {/* Items list */}
-                                <div className="space-y-1.5 mb-4">
+                                <div className="space-y-1 mb-3">
                                     {items.slice(0, 2).map((item, i) => (
                                         <p
                                             key={i}
-                                            className="text-sm text-gray-600"
+                                            className="text-[13px] text-gray-700 leading-snug"
                                         >
-                                            <span className="text-gray-400 mr-2">
+                                            <span className="text-gray-400 mr-1.5">
                                                 •
                                             </span>
                                             {item.name}
@@ -361,7 +362,7 @@ export function Orders({ orders }: OrdersProps) {
                                         </p>
                                     ))}
                                     {items.length > 2 && (
-                                        <p className="text-xs font-semibold uppercase text-gray-400 ml-4">
+                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 pl-3">
                                             + {items.length - 2} more item
                                             {items.length - 2 !== 1 ? "s" : ""}
                                         </p>
@@ -369,12 +370,12 @@ export function Orders({ orders }: OrdersProps) {
                                 </div>
 
                                 {/* Bottom row: Price and Button */}
-                                <div className="flex items-end justify-between pt-2">
+                                <div className="flex items-end justify-between pt-1">
                                     <div>
-                                        <p className="text-xs font-medium text-gray-400 uppercase tracking-tight">
+                                        <p className="text-[11px] font-medium text-gray-400 tracking-tight mb-0.5">
                                             Order Total
                                         </p>
-                                        <p className="text-2xl font-bold text-gray-900">
+                                        <p className="text-xl font-bold text-gray-900 leading-none">
                                             ₹
                                             {Number(
                                                 order.totalAmount,
@@ -383,7 +384,7 @@ export function Orders({ orders }: OrdersProps) {
                                     </div>
 
                                     <button
-                                        className="h-10 px-6 bg-[#1A1A1A] hover:bg-black text-white rounded-lg text-sm font-semibold transition-all active:scale-[0.98]"
+                                        className="h-9 px-5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg text-[13px] font-semibold transition-all active:scale-[0.98]"
                                         onClick={() =>
                                             (window.location.href = `/profile/orders/${order.id}`)
                                         }
@@ -413,13 +414,11 @@ export function Orders({ orders }: OrdersProps) {
                             { length: totalPages },
                             (_, i) => i + 1,
                         ).map((pageNum) => {
-                            // Show first, last, current, and adjacent pages
                             const showPage =
                                 pageNum === 1 ||
                                 pageNum === totalPages ||
                                 Math.abs(pageNum - page) <= 1;
 
-                            // Show ellipsis
                             const showEllipsisBefore =
                                 pageNum === page - 2 && page > 3;
                             const showEllipsisAfter =

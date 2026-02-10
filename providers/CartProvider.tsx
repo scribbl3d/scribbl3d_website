@@ -28,6 +28,10 @@ export type CartItem = {
     prebuiltSize?: string | null;
     customization?: string | null;
     weight?: string | null;
+
+    machineDimensionLength?: number | null; // mm
+    machineDimensionWidth?: number | null; // mm
+    machineDimensionHeight?: number | null; // mm
 };
 
 export type AddToCartPayload = {

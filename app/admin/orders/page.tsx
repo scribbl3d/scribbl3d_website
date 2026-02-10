@@ -28,6 +28,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { PickupInfo } from "./types";
+
 const PICKUP_LOCATION = "Scribble3D Warehouse";
 
 export default function OrdersPage() {
@@ -96,13 +97,59 @@ export default function OrdersPage() {
         alert("No tracking information available");
     }
 
-    async function handleGenerateLabel(order: Order) {
-        const waybill = order.shipment?.waybill || order.trackingInfo?.waybill;
-        if (!waybill) return alert("Waybill not found");
+    /**
+     * Generate label - handles both SPS and MPS
+     */
+    async function handleGenerateLabel(order: Order, waybill?: string) {
+        try {
+            // If specific waybill provided, download that single label
+            if (waybill) {
+                await downloadSingleLabel(waybill);
+                return;
+            }
 
+            // Get master shipment
+            const masterShipment =
+                order.shipment || order.shipments?.find((s) => s.isMaster);
+
+            if (!masterShipment?.waybill && !order.trackingInfo?.waybill) {
+                return alert("Waybill not found");
+            }
+
+            // Check if MPS (multiple packages)
+            const isMPS =
+                masterShipment?.shipmentType === "MPS" ||
+                (order.shipments && order.shipments.length > 1) ||
+                order.trackingInfo?.shipmentType === "MPS";
+
+            if (isMPS) {
+                // MPS: Download all labels
+                await downloadAllLabels(order.id);
+            } else {
+                // SPS: Download single label
+                const singleWaybill =
+                    masterShipment?.waybill || order.trackingInfo?.waybill;
+                if (singleWaybill) {
+                    await downloadSingleLabel(singleWaybill);
+                }
+            }
+        } catch (err: any) {
+            alert(err.message || "Failed to generate label");
+        }
+    }
+
+    /**
+     * Download single label by waybill
+     */
+    async function downloadSingleLabel(waybill: string) {
         const res = await fetch(
             `/api/internal/generate-label?waybill=${waybill}`,
         );
+
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || "Failed to generate label");
+        }
 
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
@@ -113,6 +160,46 @@ export default function OrdersPage() {
         a.click();
 
         URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Download all labels for MPS order
+     */
+    async function downloadAllLabels(orderId: string) {
+        const res = await fetch(
+            `/api/internal/generate-label?orderId=${orderId}&all=true`,
+        );
+
+        if (!res.ok) {
+            const error = await res.json();
+            throw new Error(error.error || "Failed to generate labels");
+        }
+
+        const contentType = res.headers.get("content-type");
+
+        if (contentType?.includes("application/pdf")) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `labels-${orderId}.pdf`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+        } else {
+            // JSON response with multiple label links
+            const data = await res.json();
+
+            if (data.packages && data.packages.length > 0) {
+                // Download each label
+                for (const pkg of data.packages) {
+                    if (pkg.waybill) {
+                        await downloadSingleLabel(pkg.waybill);
+                    }
+                }
+            }
+        }
     }
 
     // ================= RENDER =================

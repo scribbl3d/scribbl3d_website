@@ -26,6 +26,7 @@ export async function POST(req: Request) {
 
         const md = shippingMode === "Surface" ? "S" : "E";
 
+        // ✅ USE PRODUCTION URL for Live API Token
         const res = await axios.get(
             "https://track.delhivery.com/api/kinko/v1/invoice/charges/.json",
             {
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
                 timeout: 8000,
             },
         );
+
         console.log("Shipping kharcha", res.data);
         const charge = Array.isArray(res.data) ? res.data[0] : res.data;
 

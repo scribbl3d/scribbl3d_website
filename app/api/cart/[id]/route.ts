@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -22,7 +22,7 @@ export async function GET(
         if (!cartItem) {
             return NextResponse.json(
                 { error: "Item not found" },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -31,14 +31,14 @@ export async function GET(
         console.error("GET cart item error:", error);
         return NextResponse.json(
             { error: "Failed to fetch cart item" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
 
 export async function PUT(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -54,7 +54,7 @@ export async function PUT(
         if (quantity === undefined && customization === undefined) {
             return NextResponse.json(
                 { error: "No update data provided" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -74,14 +74,14 @@ export async function PUT(
         console.error("PUT cart item error:", error);
         return NextResponse.json(
             { error: "Failed to update cart item" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -100,7 +100,7 @@ export async function DELETE(
         console.error("DELETE cart item error:", error);
         return NextResponse.json(
             { error: "Failed to remove cart item" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

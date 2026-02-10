@@ -5,6 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
     Table,
     TableBody,
     TableCell,
@@ -18,6 +24,7 @@ import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { TablePagination } from "../components/TablePagination";
 
+import { ChevronDown, Package } from "lucide-react";
 import { Order, PickupInfo } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -28,7 +35,7 @@ interface Props {
     orders: Order[];
     onView(order: Order): void;
     onTrack(order: Order): void;
-    onGenerateLabel(order: Order): void;
+    onGenerateLabel(order: Order, waybill?: string): void;
     onRequestPickup(): void;
     pickupInfo?: PickupInfo[] | null;
 }
@@ -60,6 +67,33 @@ function formatPickupDate(dateStr: string) {
         month: "short",
         year: "numeric",
     });
+}
+
+/**
+ * Check if order has MPS (multiple packages)
+ */
+function isMPSOrder(order: Order): boolean {
+    return (
+        order.shipment?.shipmentType === "MPS" ||
+        (order.shipments && order.shipments.length > 1) ||
+        order.trackingInfo?.shipmentType === "MPS"
+    );
+}
+
+/**
+ * Get package count for order
+ */
+function getPackageCount(order: Order): number {
+    if (order.shipments && order.shipments.length > 0) {
+        return order.shipments.length;
+    }
+    if (order.shipment?.packageCount) {
+        return order.shipment.packageCount;
+    }
+    if (order.trackingInfo?.packageCount) {
+        return order.trackingInfo.packageCount;
+    }
+    return 1;
 }
 
 /* =========================================================
@@ -178,11 +212,16 @@ export function InTransitTab({
 
                 <TableBody>
                     {paginatedOrders.map((order) => {
-                        const shipmentStatus = order.shipment?.status;
+                        const masterShipment =
+                            order.shipment ||
+                            order.shipments?.find((s) => s.isMaster);
+                        const shipmentStatus = masterShipment?.status;
                         const waybill =
-                            order.shipment?.waybill ||
-                            order.trackingInfo?.waybill ||
-                            order.trackingInfo?.trackingNumber;
+                            masterShipment?.waybill ||
+                            order.trackingInfo?.waybill;
+
+                        const isMPS = isMPSOrder(order);
+                        const packageCount = getPackageCount(order);
 
                         return (
                             <TableRow key={order.id}>
@@ -201,13 +240,24 @@ export function InTransitTab({
                                 </TableCell>
 
                                 <TableCell>
-                                    <Badge
-                                        className={`${getShipmentStatusColor(
-                                            shipmentStatus,
-                                        )} capitalize`}
-                                    >
-                                        {shipmentStatus || "unknown"}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Badge
+                                            className={`${getShipmentStatusColor(
+                                                shipmentStatus,
+                                            )} capitalize`}
+                                        >
+                                            {shipmentStatus || "unknown"}
+                                        </Badge>
+                                        {isMPS && (
+                                            <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                            >
+                                                <Package className="w-3 h-3 mr-1" />
+                                                {packageCount} pkgs
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </TableCell>
 
                                 <TableCell>
@@ -219,7 +269,14 @@ export function InTransitTab({
                                 </TableCell>
 
                                 <TableCell className="font-mono text-sm">
-                                    {waybill || "—"}
+                                    <div className="flex flex-col gap-1">
+                                        <span>{waybill || "—"}</span>
+                                        {isMPS && (
+                                            <span className="text-xs text-muted-foreground">
+                                                +{packageCount - 1} more
+                                            </span>
+                                        )}
+                                    </div>
                                 </TableCell>
 
                                 <TableCell className="text-right">
@@ -238,14 +295,115 @@ export function InTransitTab({
                                             Track Order
                                         </ActionButton>
 
-                                        <ActionButton
-                                            variant="outline"
-                                            onClick={() =>
-                                                onGenerateLabel(order)
-                                            }
-                                        >
-                                            Generate Label
-                                        </ActionButton>
+                                        {/* Label generation - different UI for MPS vs SPS */}
+                                        {isMPS ? (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                    >
+                                                        Generate Labels
+                                                        <ChevronDown className="w-4 h-4 ml-1" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            onGenerateLabel(
+                                                                order,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Package className="w-4 h-4 mr-2" />
+                                                        All Labels (
+                                                        {packageCount})
+                                                    </DropdownMenuItem>
+
+                                                    {/* Individual package labels */}
+                                                    {order.shipments?.map(
+                                                        (shipment, idx) => (
+                                                            <DropdownMenuItem
+                                                                key={
+                                                                    shipment.waybill ||
+                                                                    idx
+                                                                }
+                                                                onClick={() =>
+                                                                    shipment.waybill &&
+                                                                    onGenerateLabel(
+                                                                        order,
+                                                                        shipment.waybill,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    !shipment.waybill
+                                                                }
+                                                            >
+                                                                {shipment.isMaster
+                                                                    ? "📦 Master: "
+                                                                    : "📦 Package: "}
+                                                                {shipment.waybill?.slice(
+                                                                    -6,
+                                                                ) || "—"}
+                                                            </DropdownMenuItem>
+                                                        ),
+                                                    )}
+
+                                                    {/* Fallback if shipments not loaded but we know it's MPS */}
+                                                    {(!order.shipments ||
+                                                        order.shipments
+                                                            .length === 0) && (
+                                                        <>
+                                                            {waybill && (
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        onGenerateLabel(
+                                                                            order,
+                                                                            waybill,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    📦 Master:{" "}
+                                                                    {waybill.slice(
+                                                                        -6,
+                                                                    )}
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {order.trackingInfo?.childWaybills?.map(
+                                                                (
+                                                                    cw: string,
+                                                                ) => (
+                                                                    <DropdownMenuItem
+                                                                        key={cw}
+                                                                        onClick={() =>
+                                                                            onGenerateLabel(
+                                                                                order,
+                                                                                cw,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        📦
+                                                                        Package:{" "}
+                                                                        {cw.slice(
+                                                                            -6,
+                                                                        )}
+                                                                    </DropdownMenuItem>
+                                                                ),
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        ) : (
+                                            <ActionButton
+                                                variant="outline"
+                                                onClick={() =>
+                                                    onGenerateLabel(order)
+                                                }
+                                            >
+                                                Generate Label
+                                            </ActionButton>
+                                        )}
                                     </div>
                                 </TableCell>
                             </TableRow>

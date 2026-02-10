@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FormResponseViewer } from "../_components/FormResponseViewer";
@@ -32,6 +32,17 @@ type Column = {
     key: keyof PrototypingRequest;
     label: string;
     render?: (value: any, item?: PrototypingRequest) => React.ReactNode;
+};
+
+// Helper function to extract filename from Cloudinary URL
+const getFileNameFromUrl = (url: string): string => {
+    if (!url) return "";
+    try {
+        const parts = url.split("/");
+        return parts[parts.length - 1];
+    } catch {
+        return url;
+    }
 };
 
 export default function PrototypingRequestsPage() {
@@ -71,6 +82,26 @@ export default function PrototypingRequestsPage() {
         },
         { key: "email", label: "Email" },
         {
+            key: "designFile",
+            label: "Design File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <Download className="h-3 w-3" />
+                        <span className="truncate max-w-[100px]">
+                            {getFileNameFromUrl(value)}
+                        </span>
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file</span>
+                ),
+        },
+        {
             key: "createdAt",
             label: "Submitted",
             render: (value: string) => format(new Date(value), "PPp"),
@@ -86,7 +117,24 @@ export default function PrototypingRequestsPage() {
         { key: "filamentColor", label: "Filament Color" },
         { key: "resinColor", label: "Resin Color" },
         { key: "customMaterial", label: "Custom Material" },
-        { key: "designFile", label: "Design File" },
+        {
+            key: "designFile",
+            label: "Design File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                        {getFileNameFromUrl(value)}
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file uploaded</span>
+                ),
+        },
         { key: "specialRequirements", label: "Special Requirements" },
         { key: "bulkQuantity", label: "Bulk Quantity" },
         { key: "firstName", label: "First Name" },

@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCheckout } from "@/providers/CheckoutProvider";
 import type { ShippingOption } from "@/types/checkout";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Truck, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Truck, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ShippingOptions() {
@@ -49,6 +49,18 @@ export function ShippingOptions() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    /* ===================== UPDATE SHIPPING OPTION WHEN PRICE CHANGES ===================== */
+    useEffect(() => {
+        if (selectedOption === "premium" && !expressShipping.loading) {
+            const premiumOption = shippingOptions.find(
+                (opt) => opt.id === "premium",
+            );
+            if (premiumOption) {
+                setShippingOption(premiumOption);
+            }
+        }
+    }, [expressShipping.price, expressShipping.loading]);
+
     /* ===================== AUTO-FALLBACK IF EXPRESS DISABLED ===================== */
     useEffect(() => {
         if (!expressShipping.allowed && selectedOption === "premium") {
@@ -89,6 +101,8 @@ export function ShippingOptions() {
                         const isSelected = selectedOption === option.id;
                         const isPremiumDisabled =
                             option.id === "premium" && !expressShipping.allowed;
+                        const isPremiumLoading =
+                            option.id === "premium" && expressShipping.loading;
 
                         return (
                             <motion.div
@@ -155,15 +169,22 @@ export function ShippingOptions() {
                                             </div>
 
                                             <div className="text-right">
-                                                <p className="text-lg font-semibold">
-                                                    {option.price === 0 ? (
-                                                        <span className="text-green-600">
-                                                            Free
+                                                {option.price === 0 ? (
+                                                    <p className="text-lg font-semibold text-green-600">
+                                                        Free
+                                                    </p>
+                                                ) : isPremiumLoading ? (
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        <span className="text-sm">
+                                                            Calculating...
                                                         </span>
-                                                    ) : (
-                                                        <>₹{option.price}</>
-                                                    )}
-                                                </p>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-lg font-semibold">
+                                                        ₹{option.price}
+                                                    </p>
+                                                )}
                                                 <p className="text-sm text-muted-foreground">
                                                     Shipping in{" "}
                                                     {option.estimatedDays}
@@ -187,8 +208,10 @@ export function ShippingOptions() {
                     <Button
                         onClick={handleContinue}
                         disabled={
-                            selectedOption === "premium" &&
-                            !expressShipping.allowed
+                            (selectedOption === "premium" &&
+                                !expressShipping.allowed) ||
+                            (selectedOption === "premium" &&
+                                expressShipping.loading)
                         }
                     >
                         Continue to Review

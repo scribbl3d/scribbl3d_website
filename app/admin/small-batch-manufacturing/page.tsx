@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FormResponseViewer } from "../_components/FormResponseViewer";
@@ -14,17 +14,15 @@ interface SmallBatchRequest {
     email: string;
     phone: string;
     company: string;
-    productName: string;
     quantity: string;
+    requirements: string;
     technology: string;
     material: string;
     materialSubtype: string;
-    color: string;
+    productColor: string;
     filamentColor: string;
     resinColor: string;
-    customMaterial: string;
     designFile: string;
-    specialRequirements: string;
     createdAt: string;
 }
 
@@ -32,6 +30,17 @@ type Column = {
     key: keyof SmallBatchRequest;
     label: string;
     render?: (value: any, item?: SmallBatchRequest) => React.ReactNode;
+};
+
+// Helper function to extract filename from Cloudinary URL
+const getFileNameFromUrl = (url: string): string => {
+    if (!url) return "";
+    try {
+        const parts = url.split("/");
+        return parts[parts.length - 1];
+    } catch {
+        return url;
+    }
 };
 
 export default function SmallBatchManufacturingPage() {
@@ -60,7 +69,6 @@ export default function SmallBatchManufacturingPage() {
     };
 
     const columns: Column[] = [
-        { key: "productName", label: "Product Name" },
         { key: "quantity", label: "Quantity" },
         { key: "technology", label: "Technology" },
         { key: "material", label: "Material" },
@@ -72,6 +80,26 @@ export default function SmallBatchManufacturingPage() {
         },
         { key: "email", label: "Email" },
         {
+            key: "designFile",
+            label: "Design File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <Download className="h-3 w-3" />
+                        <span className="truncate max-w-[100px]">
+                            {getFileNameFromUrl(value)}
+                        </span>
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file</span>
+                ),
+        },
+        {
             key: "createdAt",
             label: "Submitted",
             render: (value: string) => format(new Date(value), "PPp"),
@@ -79,17 +107,32 @@ export default function SmallBatchManufacturingPage() {
     ];
 
     const detailsColumns: Column[] = [
-        { key: "productName", label: "Product Name" },
         { key: "quantity", label: "Quantity" },
+        { key: "requirements", label: "Requirements" },
         { key: "technology", label: "Technology" },
         { key: "material", label: "Material" },
         { key: "materialSubtype", label: "Material Subtype" },
-        { key: "color", label: "Color" },
+        { key: "productColor", label: "Product Color" },
         { key: "filamentColor", label: "Filament Color" },
         { key: "resinColor", label: "Resin Color" },
-        { key: "customMaterial", label: "Custom Material" },
-        { key: "designFile", label: "Design File" },
-        { key: "specialRequirements", label: "Special Requirements" },
+        {
+            key: "designFile",
+            label: "Design File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                        {getFileNameFromUrl(value)}
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file uploaded</span>
+                ),
+        },
         { key: "firstName", label: "First Name" },
         { key: "lastName", label: "Last Name" },
         { key: "phone", label: "Phone" },
