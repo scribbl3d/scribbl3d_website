@@ -77,12 +77,12 @@ const ORDER_STATUS_UI: Record<
     order_confirmed: {
         label: "Order Placed",
         Icon: CheckCircle,
-        className: "border-indigo-300 text-indigo-700 bg-indigo-50",
+        className: "border-[#93C5FD] text-[#1E40AF] bg-[#EFF6FF]",
     },
     order_processing: {
         label: "Order Confirmed",
         Icon: ShieldCheck,
-        className: "border-gray-300 text-gray-700 bg-gray-50",
+        className: "border-[#A3B3FF] text-[#372AAC] bg-[#EEF1FF]",
     },
     order_shipped: {
         label: "Order Shipped",

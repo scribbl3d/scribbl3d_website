@@ -8,7 +8,7 @@ import PrinterGrid from "@/components/printers/PrinterGrid";
 import PrinterHero from "@/components/printers/PrinterHero";
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const PAGE_LIMIT = 9;
 
@@ -54,6 +54,23 @@ export default function PrintersPage() {
     const [sortBy, setSortBy] = useState<string>("new");
     const [page, setPage] = useState<number>(1);
 
+    /* ================= CHECK IF ANY FILTERS ACTIVE ================= */
+    const hasActiveFilters = useMemo(() => {
+        return (
+            selectedFilters.technology.length > 0 ||
+            selectedFilters.brand.length > 0 ||
+            selectedFilters.volumeCategory.length > 0 ||
+            selectedFilters.material.length > 0 ||
+            selectedFilters.recyclingRatio.length > 0 ||
+            selectedFilters.chamberType.length > 0 ||
+            selectedFilters.application.length > 0 ||
+            selectedFilters.experience.length > 0 ||
+            selectedFilters.connectivity.length > 0 ||
+            selectedFilters.minPrice !== null ||
+            selectedFilters.maxPrice !== null
+        );
+    }, [selectedFilters]);
+
     /* ================= FETCH DATA ================= */
     useEffect(() => {
         fetchPrinters();
@@ -88,7 +105,7 @@ export default function PrintersPage() {
                 // @ts-ignore
                 if (selectedFilters[key]?.length > 0) {
                     // @ts-ignore
-                    selectedFilters[key].forEach((val) =>
+                    selectedFilters[key].forEach((val: string) =>
                         params.append(key, val),
                     );
                 }
@@ -180,16 +197,7 @@ export default function PrintersPage() {
                 <div className="min-h-screen bg-gray-50">
                     <PrinterHero />
 
-                    {/* Mobile Header with Filters & Sort - only visible on mobile */}
-                    <div className="lg:hidden sticky top-0 z-30 bg-white">
-                        <MobileFilterHeader
-                            onOpenFilters={() => setIsMobileFilterOpen(true)}
-                            sortBy={sortBy}
-                            onSortChange={setSortBy}
-                        />
-                    </div>
-
-                    {/* Mobile Filter Sheet */}
+                    {/* Mobile Filter Sheet (full-screen overlay) */}
                     <MobileFilterSheet
                         isOpen={isMobileFilterOpen}
                         onClose={() => setIsMobileFilterOpen(false)}
@@ -218,7 +226,7 @@ export default function PrintersPage() {
                                     onRemove={removeFilter}
                                 />
 
-                                {/* Top Bar - hidden on mobile since we have MobileFilterHeader */}
+                                {/* Top Bar - hidden on mobile since we have bottom bar */}
                                 <div className="hidden lg:flex mb-6 justify-between items-center">
                                     <p className="text-gray-600">
                                         Showing{" "}
@@ -305,18 +313,31 @@ export default function PrintersPage() {
                                         </p>
                                     </div>
                                 ) : (
-                                    <PrinterGrid
-                                        printers={printers}
-                                        page={page}
-                                        total={total}
-                                        limit={PAGE_LIMIT}
-                                        onPageChange={setPage}
-                                    />
+                                    /* Add bottom padding on mobile so content isn't hidden behind the sticky bar */
+                                    <div className="pb-16 lg:pb-0">
+                                        <PrinterGrid
+                                            printers={printers}
+                                            page={page}
+                                            total={total}
+                                            limit={PAGE_LIMIT}
+                                            onPageChange={setPage}
+                                        />
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* ============ MOBILE BOTTOM BAR — outside all scroll containers ============ */}
+            <div className="lg:hidden">
+                <MobileFilterHeader
+                    onOpenFilters={() => setIsMobileFilterOpen(true)}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                    hasActiveFilters={hasActiveFilters}
+                />
             </div>
         </main>
     );

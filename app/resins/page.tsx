@@ -6,7 +6,6 @@ import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 import Loader from "@/components/Loader";
 import MobileFilterBar from "@/components/resins/Mobilefilterbar";
 import MobileResinFilters from "@/components/resins/Mobileresinfilters";
-import MobileSortSheet from "@/components/resins/Mobilesortsheet";
 import ResinFilters from "@/components/resins/ResinFilters";
 import ResinGrid from "@/components/resins/ResinGrid";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
@@ -60,7 +59,6 @@ export default function ResinsPage() {
     /* ================= MOBILE MODALS ================= */
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [isSortOpen, setIsSortOpen] = useState(false);
 
     /* ================= SELECTED FILTERS (FOR BAR) ================= */
 
@@ -217,13 +215,6 @@ export default function ResinsPage() {
                     <PrinterHero />
 
                     <div className="container mx-auto px-4 py-8">
-                        {/* Mobile Filter Bar */}
-                        <MobileFilterBar
-                            onOpenFilters={() => setIsFilterOpen(true)}
-                            onOpenSort={() => setIsSortOpen(true)}
-                            activeFilterCount={activeFilterCount}
-                        />
-
                         <div className="flex flex-col lg:flex-row gap-8">
                             {/* Sidebar - Hidden on mobile */}
                             <div className="hidden lg:block lg:w-1/4">
@@ -240,7 +231,7 @@ export default function ResinsPage() {
                                     onRemove={removeFilter}
                                 />
 
-                                {/* Top Bar - Hidden sort on mobile */}
+                                {/* Top Bar */}
                                 <div className="mb-6 flex justify-between items-center">
                                     <p className="text-gray-600">
                                         Showing{" "}
@@ -258,18 +249,18 @@ export default function ResinsPage() {
                                                 setSortBy(e.target.value as any)
                                             }
                                             className="
-                                        w-full
-                                        h-[38px]
-                                        bg-white
-                                        border border-[#D1D5DC]
-                                        rounded-[10px]
-                                        px-4 pr-10
-                                        text-sm
-                                        text-gray-700
-                                        focus:outline-none
-                                        appearance-none
-                                        cursor-pointer
-                                    "
+                                                w-full
+                                                h-[38px]
+                                                bg-white
+                                                border border-[#D1D5DC]
+                                                rounded-[10px]
+                                                px-4 pr-10
+                                                text-sm
+                                                text-gray-700
+                                                focus:outline-none
+                                                appearance-none
+                                                cursor-pointer
+                                            "
                                         >
                                             <option value="new">
                                                 Sort by: New Arrivals
@@ -307,13 +298,16 @@ export default function ResinsPage() {
                                         </p>
                                     </div>
                                 ) : (
-                                    <ResinGrid
-                                        resins={resins}
-                                        page={page}
-                                        total={total}
-                                        limit={PAGE_LIMIT}
-                                        onPageChange={setPage}
-                                    />
+                                    /* Bottom padding on mobile for sticky bar */
+                                    <div className="pb-16 lg:pb-0">
+                                        <ResinGrid
+                                            resins={resins}
+                                            page={page}
+                                            total={total}
+                                            limit={PAGE_LIMIT}
+                                            onPageChange={setPage}
+                                        />
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -327,15 +321,17 @@ export default function ResinsPage() {
                         setFilters={setFilters}
                         onApply={() => {}}
                     />
-
-                    {/* Mobile Sort Sheet */}
-                    <MobileSortSheet
-                        isOpen={isSortOpen}
-                        onClose={() => setIsSortOpen(false)}
-                        sortBy={sortBy}
-                        setSortBy={setSortBy}
-                    />
                 </div>
+            </div>
+
+            {/* ============ MOBILE BOTTOM BAR — outside scroll containers ============ */}
+            <div className="lg:hidden">
+                <MobileFilterBar
+                    onOpenFilters={() => setIsFilterOpen(true)}
+                    activeFilterCount={activeFilterCount}
+                    sortBy={sortBy}
+                    onSortChange={setSortBy}
+                />
             </div>
         </main>
     );

@@ -1,20 +1,22 @@
 "use client";
 
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import { ArrowUpDown, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface MobileFilterHeaderProps {
     onOpenFilters: () => void;
     sortBy: string;
     onSortChange: (value: string) => void;
+    hasActiveFilters?: boolean;
 }
 
 export default function MobileFilterHeader({
     onOpenFilters,
     sortBy,
     onSortChange,
+    hasActiveFilters = false,
 }: MobileFilterHeaderProps) {
-    const [showSortMenu, setShowSortMenu] = useState(false);
+    const [showSortSheet, setShowSortSheet] = useState(false);
 
     const sortOptions = [
         { value: "popularity", label: "Popularity" },
@@ -25,61 +27,126 @@ export default function MobileFilterHeader({
         { value: "discount_desc", label: "Discount: High to Low" },
     ];
 
-    const currentSortLabel =
-        sortOptions.find((opt) => opt.value === sortBy)?.label || "Sort";
+    // Prevent body scroll when sort sheet is open
+    useEffect(() => {
+        if (showSortSheet) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [showSortSheet]);
 
     return (
-        <div className="flex gap-3 px-4 py-3 bg-white border-b border-gray-100">
-            {/* Filters Button */}
-            <button
-                onClick={onOpenFilters}
-                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-                <SlidersHorizontal size={18} />
-                <span>Filters</span>
-            </button>
-
-            {/* Sort Button */}
-            <div className="relative">
+        <>
+            {/* ============ STICKY BOTTOM BAR ============ */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex shadow-[0_-2px_10px_rgba(0,0,0,0.08)]">
+                {/* SORT BY Button */}
                 <button
-                    onClick={() => setShowSortMenu(!showSortMenu)}
-                    className="flex items-center justify-center gap-2 py-3 px-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors min-w-[100px]"
+                    onClick={() => setShowSortSheet(true)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-gray-900 active:bg-gray-100 transition-colors"
                 >
-                    <ChevronDown
-                        size={18}
-                        className={`transition-transform ${showSortMenu ? "rotate-180" : ""}`}
-                    />
-                    <span>Sort</span>
+                    <ArrowUpDown size={16} strokeWidth={2.5} />
+                    <span className="text-xs font-semibold tracking-wider uppercase">
+                        Sort By
+                    </span>
                 </button>
 
-                {/* Sort Dropdown */}
-                {showSortMenu && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setShowSortMenu(false)}
-                        />
-                        <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 min-w-[180px]">
-                            {sortOptions.map((option) => (
-                                <button
-                                    key={option.value}
-                                    onClick={() => {
-                                        onSortChange(option.value);
-                                        setShowSortMenu(false);
-                                    }}
-                                    className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
-                                        sortBy === option.value
-                                            ? "bg-blue-50 text-blue-600 font-medium"
-                                            : "text-gray-700 hover:bg-gray-50"
+                {/* Vertical Divider */}
+                <div className="w-px bg-gray-200 my-2" />
+
+                {/* FILTERS Button */}
+                <button
+                    onClick={onOpenFilters}
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 text-gray-900 active:bg-gray-100 transition-colors relative"
+                >
+                    <SlidersHorizontal size={16} strokeWidth={2.5} />
+                    <span className="text-xs font-semibold tracking-wider uppercase">
+                        Filters
+                    </span>
+                    {/* Green dot when filters are active */}
+                    {hasActiveFilters && (
+                        <span className="w-2 h-2 rounded-full bg-green-500 absolute top-2.5 right-[calc(50%-40px)]" />
+                    )}
+                </button>
+            </div>
+
+            {/* ============ SORT BOTTOM SHEET ============ */}
+            {/* Backdrop */}
+            <div
+                className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
+                    showSortSheet
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-0 pointer-events-none"
+                }`}
+                onClick={() => setShowSortSheet(false)}
+            />
+
+            {/* Sheet */}
+            <div
+                className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl transition-transform duration-300 ease-out ${
+                    showSortSheet ? "translate-y-0" : "translate-y-full"
+                }`}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <h3 className="text-base font-semibold text-gray-900">
+                        Sort By
+                    </h3>
+                    <button
+                        onClick={() => setShowSortSheet(false)}
+                        className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                    >
+                        <X size={20} className="text-gray-500" />
+                    </button>
+                </div>
+
+                {/* Sort Options */}
+                <div className="py-2 pb-8">
+                    {sortOptions.map((option) => {
+                        const isSelected = sortBy === option.value;
+                        return (
+                            <button
+                                key={option.value}
+                                onClick={() => {
+                                    onSortChange(option.value);
+                                    setShowSortSheet(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors ${
+                                    isSelected
+                                        ? "bg-blue-50"
+                                        : "hover:bg-gray-50 active:bg-gray-100"
+                                }`}
+                            >
+                                <span
+                                    className={`text-sm ${
+                                        isSelected
+                                            ? "text-blue-600 font-semibold"
+                                            : "text-gray-700"
                                     }`}
                                 >
                                     {option.label}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
+                                </span>
+
+                                {/* Radio indicator */}
+                                <span
+                                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                        isSelected
+                                            ? "border-blue-600"
+                                            : "border-gray-300"
+                                    }`}
+                                >
+                                    {isSelected && (
+                                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                                    )}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
-        </div>
+        </>
     );
 }
