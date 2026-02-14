@@ -128,7 +128,7 @@ function getRecommendationFilters(cartItems: CartItem[]): {
     excludeIds: string[];
 } {
     const itemTypes = new Set<string>();
-    const excludeIds = cartItems.map((i) => i.id);
+    const excludeIds = cartItems.map((i) => i.sourceId ?? i.id).filter(Boolean);
 
     for (const item of cartItems) {
         if (item.itemType) itemTypes.add(item.itemType.toLowerCase());
@@ -758,7 +758,20 @@ function CartItemCard({
 
     // Determine color and size display based on item type
     const displayColor = item.prebuiltColour ?? item.color ?? null;
-    const displaySize = item.prebuiltSize ?? item.size ?? null;
+    const displayColorHex = item.colorHex ?? null;
+
+    // Convert size: if it's in grams (e.g. "2000g", "1000g"), show as kg
+    const rawSize = item.prebuiltSize ?? item.size ?? null;
+    const displaySize = (() => {
+        if (!rawSize) return null;
+        const gramMatch = rawSize.match(/^(\d+)\s*g$/i);
+        if (gramMatch) {
+            const grams = parseInt(gramMatch[1]);
+            const kg = grams / 1000;
+            return kg % 1 === 0 ? `${kg} kg` : `${kg} kg`;
+        }
+        return rawSize;
+    })();
 
     return (
         <Card className="rounded-2xl border border-gray-100 shadow-none hover:shadow-sm transition-shadow">
@@ -791,6 +804,7 @@ function CartItemCard({
                                                 className="w-2.5 h-2.5 rounded-full border border-gray-200"
                                                 style={{
                                                     backgroundColor:
+                                                        displayColorHex ??
                                                         displayColor
                                                             .toLowerCase()
                                                             .replace(/\s/g, ""),
@@ -894,7 +908,15 @@ export default function ShoppingCart() {
     const { setPricing } = useCheckout();
 
     const [localCart, setLocalCart] = useState<CartItem[]>([]);
+    const [cartLoaded, setCartLoaded] = useState(false);
+    const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
     const [showCouponModal, setShowCouponModal] = useState(false);
+
+    // Track cart content changes with a stable key
+    const cartKey = localCart
+        .map((i) => i.id)
+        .sort()
+        .join(",");
     const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>(
         [],
     );
@@ -904,13 +926,15 @@ export default function ShoppingCart() {
     >([]);
     const [mobileExpanded, setMobileExpanded] = useState(false);
 
-    // --- Fetch cart
+    // --- Fetch cart (mark loaded when done)
     useEffect(() => {
-        fetchCart();
+        fetchCart().finally(() => setCartLoaded(true));
     }, [fetchCart]);
 
     useEffect(() => {
-        setLocalCart(cart ?? []);
+        if (cart !== undefined) {
+            setLocalCart(cart ?? []);
+        }
     }, [cart]);
 
     // --- Fetch available coupons
@@ -938,63 +962,72 @@ export default function ShoppingCart() {
         })();
     }, []);
 
-    // --- Fetch product suggestions ("You Might Also Need")
+    // --- Fetch suggestions (re-fetches whenever cart items change)
     useEffect(() => {
-        if (localCart.length === 0) return;
-        const filters = getRecommendationFilters(localCart);
+        if (!cartLoaded) return;
 
-        (async () => {
-            try {
-                const params = new URLSearchParams();
-                filters.itemTypes.forEach((t) => params.append("itemType", t));
-                if (filters.technologies) {
-                    filters.technologies.forEach((t) =>
-                        params.append("technology", t),
-                    );
-                }
-                filters.excludeIds.forEach((id) =>
-                    params.append("exclude", id),
-                );
-                params.set("limit", "6");
-
-                const res = await fetch(
-                    `/api/recommendations?${params.toString()}`,
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    setSuggestions(data);
-                }
-            } catch {
-                // silently fail
-            }
-        })();
-    }, [localCart]);
-
-    // --- Fetch suggestions for empty cart (wishlist / popular products)
-    useEffect(() => {
-        if (localCart.length > 0) return;
-
-        (async () => {
-            try {
-                const wishlistRes = await fetch("/api/wishlist");
-                if (wishlistRes.ok) {
-                    const wishlistData = await wishlistRes.json();
-                    if (wishlistData.length > 0) {
-                        setEmptySuggestions(wishlistData);
-                        return;
+        if (localCart.length === 0) {
+            // Empty cart: fetch wishlist or popular products
+            (async () => {
+                try {
+                    const wishlistRes = await fetch("/api/wishlist");
+                    if (wishlistRes.ok) {
+                        const wishlistData = await wishlistRes.json();
+                        if (wishlistData.length > 0) {
+                            setEmptySuggestions(wishlistData);
+                            setSuggestionsLoaded(true);
+                            return;
+                        }
                     }
+                    const res = await fetch("/api/recommendations?limit=6");
+                    if (res.ok) {
+                        const data = await res.json();
+                        setEmptySuggestions(data);
+                    }
+                } catch {
+                    // silently fail
+                } finally {
+                    setSuggestionsLoaded(true);
                 }
+            })();
+        } else {
+            // Filled cart: fetch based on cart item types
+            const filters = getRecommendationFilters(localCart);
+            (async () => {
+                try {
+                    const params = new URLSearchParams();
+                    filters.itemTypes.forEach((t) =>
+                        params.append("itemType", t),
+                    );
+                    if (filters.technologies) {
+                        filters.technologies.forEach((t) =>
+                            params.append("technology", t),
+                        );
+                    }
+                    filters.excludeIds.forEach((id) =>
+                        params.append("exclude", id),
+                    );
+                    params.set("limit", "6");
 
-                const res = await fetch("/api/recommendations?limit=6");
-                if (res.ok) {
-                    const data = await res.json();
-                    setEmptySuggestions(data);
+                    const res = await fetch(
+                        `/api/recommendations?${params.toString()}`,
+                    );
+                    if (res.ok) {
+                        const data = await res.json();
+                        setSuggestions(data);
+                    }
+                } catch {
+                    // silently fail
+                } finally {
+                    setSuggestionsLoaded(true);
                 }
-            } catch {
-                // silently fail
-            }
-        })();
-    }, [localCart.length]);
+            })();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cartLoaded, cartKey]);
+
+    // Shimmer until both cart and suggestions are ready
+    const isLoading = !cartLoaded || !suggestionsLoaded;
 
     /* =========================
        PRICE CALCULATIONS
@@ -1180,6 +1213,155 @@ export default function ShoppingCart() {
             });
         }
     };
+
+    /* =========================
+       LOADING SKELETON
+    ========================= */
+
+    if (isLoading) {
+        return (
+            <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
+                {/* Header shimmer */}
+                <div className="h-9 w-48 bg-gray-200 rounded-lg animate-pulse mb-6" />
+
+                <div className="grid lg:grid-cols-12 gap-6">
+                    {/* Cart items shimmer */}
+                    <div className="lg:col-span-8 space-y-3">
+                        {[1, 2, 3].map((i) => (
+                            <div
+                                key={i}
+                                className="rounded-2xl border border-gray-100 p-4 sm:p-5"
+                            >
+                                <div className="flex gap-4">
+                                    {/* Image */}
+                                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gray-200 animate-pulse flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1 pr-2">
+                                                {/* Name */}
+                                                <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
+                                                {/* Badges */}
+                                                <div className="flex gap-1.5 mt-2">
+                                                    <div className="h-5 w-16 bg-gray-100 rounded-md animate-pulse" />
+                                                    <div className="h-5 w-12 bg-gray-100 rounded-md animate-pulse" />
+                                                </div>
+                                            </div>
+                                            {/* Delete */}
+                                            <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
+                                        </div>
+                                        {/* Qty + Price */}
+                                        <div className="flex items-center justify-between mt-3">
+                                            <div className="h-9 w-28 bg-gray-100 rounded-xl animate-pulse" />
+                                            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* Recommendation shimmer */}
+                        <div className="mt-10 hidden lg:block">
+                            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+                            <div className="h-4 w-72 bg-gray-100 rounded animate-pulse mt-1.5" />
+                            <div className="flex gap-4 mt-4">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="w-[200px] flex-shrink-0 rounded-2xl border border-gray-100 overflow-hidden"
+                                    >
+                                        <div className="aspect-square bg-gray-200 animate-pulse" />
+                                        <div className="p-3 space-y-2">
+                                            <div className="h-4 w-16 bg-gray-100 rounded-md animate-pulse" />
+                                            <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+                                            <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse" />
+                                            <div className="h-5 w-20 bg-gray-200 rounded animate-pulse mt-1" />
+                                            <div className="h-9 w-full bg-gray-200 rounded-xl animate-pulse mt-2" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Order Summary shimmer (desktop) */}
+                    <div className="lg:col-span-4 hidden lg:block">
+                        <div className="rounded-2xl border border-gray-100 p-6 space-y-4">
+                            <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
+                            {/* Coupons box */}
+                            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+                                <div className="h-4 w-52 bg-gray-100 rounded animate-pulse" />
+                                <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse mt-2" />
+                            </div>
+                            <div className="h-px bg-gray-100" />
+                            {/* Price lines */}
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="flex justify-between">
+                                    <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                                </div>
+                            ))}
+                            <div className="h-px bg-gray-100" />
+                            {/* Grand Total */}
+                            <div className="flex justify-between">
+                                <div className="h-6 w-28 bg-gray-200 rounded animate-pulse" />
+                                <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+                            </div>
+                            {/* Checkout button */}
+                            <div className="h-14 w-full bg-gray-200 rounded-2xl animate-pulse" />
+                            <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mx-auto" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile recommendation shimmer */}
+                <div className="lg:hidden mt-6">
+                    <div className="h-6 w-44 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-64 bg-gray-100 rounded animate-pulse mt-1.5" />
+                    <div className="flex gap-4 mt-4 overflow-hidden">
+                        {[1, 2].map((i) => (
+                            <div
+                                key={i}
+                                className="w-[180px] flex-shrink-0 rounded-2xl border border-gray-100 overflow-hidden"
+                            >
+                                <div className="aspect-square bg-gray-200 animate-pulse" />
+                                <div className="p-3 space-y-2">
+                                    <div className="h-4 w-14 bg-gray-100 rounded-md animate-pulse" />
+                                    <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+                                    <div className="h-5 w-16 bg-gray-200 rounded animate-pulse" />
+                                    <div className="h-9 w-full bg-gray-200 rounded-xl animate-pulse" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Mobile Order Summary shimmer */}
+                <div className="lg:hidden mt-6">
+                    <div className="rounded-2xl border border-gray-100 p-5 space-y-4">
+                        <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
+                        <div className="bg-gray-50 rounded-xl p-4">
+                            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+                            <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse mt-3" />
+                        </div>
+                        <div className="h-px bg-gray-100" />
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="flex justify-between">
+                                <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                            </div>
+                        ))}
+                        <div className="h-px bg-gray-100" />
+                        <div className="flex justify-between">
+                            <div className="h-6 w-28 bg-gray-200 rounded animate-pulse" />
+                            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
+                        </div>
+                        <div className="h-14 w-full bg-gray-200 rounded-2xl animate-pulse" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     /* =========================
        EMPTY STATE

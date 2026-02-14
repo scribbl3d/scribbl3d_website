@@ -1,54 +1,67 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+/* =========================
+   GET DISCOUNT BY ID
+========================= */
 export async function GET(
     _req: Request,
-    { params }: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
 ) {
+    const { id } = await context.params;
+
     const discount = await prisma.discount.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: { itemTypes: true },
     });
 
     if (!discount) {
-        return NextResponse.json({ error: "Not found" }, { status: 404 });
+        return NextResponse.json(
+            { error: "Discount not found" },
+            { status: 404 },
+        );
     }
 
     return NextResponse.json(discount);
 }
 
+/* =========================
+   UPDATE DISCOUNT
+========================= */
 export async function PUT(
     req: Request,
-    { params }: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
 ) {
+    const { id } = await context.params;
     const body = await req.json();
 
-    // Build the update data — only include fields that are present in body
     const updateData: Record<string, any> = {};
 
     if (body.name !== undefined) updateData.name = body.name;
     if (body.code !== undefined) updateData.code = body.code.toUpperCase();
     if (body.scope !== undefined) updateData.scope = body.scope;
     if (body.valueType !== undefined) updateData.valueType = body.valueType;
-    if (body.value !== undefined) updateData.value = body.value;
+    if (body.value !== undefined) updateData.value = Number(body.value);
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
     if (body.isHidden !== undefined) updateData.isHidden = body.isHidden;
 
     if (body.minOrderValue !== undefined)
-        updateData.minOrderValue = body.minOrderValue;
+        updateData.minOrderValue =
+            body.minOrderValue === null ? null : Number(body.minOrderValue);
+
     if (body.maxDiscount !== undefined)
-        updateData.maxDiscount = body.maxDiscount;
+        updateData.maxDiscount =
+            body.maxDiscount === null ? null : Number(body.maxDiscount);
+
     if (body.expiresAt !== undefined)
         updateData.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
 
-    // Only touch itemTypes if explicitly provided in the request body
+    /* ---------- ITEM TYPES ---------- */
     if ("itemTypes" in body) {
-        // Delete existing item types first
         await prisma.discountItemType.deleteMany({
-            where: { discountId: params.id },
+            where: { discountId: id },
         });
 
-        // Recreate if scope is item_type and types are provided
         if (
             body.scope === "item_type" &&
             Array.isArray(body.itemTypes) &&
@@ -62,19 +75,27 @@ export async function PUT(
         }
     }
 
-    const discount = await prisma.discount.update({
-        where: { id: params.id },
+    const updated = await prisma.discount.update({
+        where: { id },
         data: updateData,
         include: { itemTypes: true },
     });
 
-    return NextResponse.json(discount);
+    return NextResponse.json(updated);
 }
 
+/* =========================
+   DELETE DISCOUNT
+========================= */
 export async function DELETE(
     _req: Request,
-    { params }: { params: { id: string } },
+    context: { params: Promise<{ id: string }> },
 ) {
-    await prisma.discount.delete({ where: { id: params.id } });
+    const { id } = await context.params;
+
+    await prisma.discount.delete({
+        where: { id },
+    });
+
     return NextResponse.json({ success: true });
 }

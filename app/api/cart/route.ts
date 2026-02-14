@@ -155,7 +155,6 @@ function extractMachineDimensions(specifications: any[]): {
         const label = (spec.label || "").trim();
         const value = spec.value || "";
 
-        // Check if this is machine dimensions (case-insensitive)
         const labelLower = label.toLowerCase();
         if (
             labelLower === "machine dimensions" ||
@@ -164,24 +163,15 @@ function extractMachineDimensions(specifications: any[]): {
             labelLower === "printer dimensions" ||
             labelLower === "outer dimensions"
         ) {
-            // Parse formats like:
-            // "740mm x 735mm x 600mm"
-            // "440 × 410 × 465 mm"
-            // "740 x 735 x 600"
-            // Handle both × (multiplication sign) and x (letter)
-            // Handle mm/cm attached to numbers or at the end
             const match = value.match(
                 /(\d+)\s*(?:mm|cm)?\s*[x×]\s*(\d+)\s*(?:mm|cm)?\s*[x×]\s*(\d+)/i,
             );
             if (match) {
-                const dims = {
+                return {
                     length: parseInt(match[1]),
                     width: parseInt(match[2]),
                     height: parseInt(match[3]),
                 };
-
-                return dims;
-            } else {
             }
         }
     }
@@ -211,7 +201,7 @@ export async function GET() {
                         printer: {
                             include: {
                                 images: { orderBy: { sortOrder: "asc" } },
-                                specifications: true, // Include specifications for machine dimensions
+                                specifications: true,
                             },
                         },
                         resin: true,
@@ -235,6 +225,7 @@ export async function GET() {
             if (item.resin) {
                 return {
                     id: item.id,
+                    sourceId: item.resin.id,
                     itemType: "resin",
                     name: item.resin.name,
                     price: item.resinWeight?.price ?? 0,
@@ -244,29 +235,27 @@ export async function GET() {
                         ? `${item.resinWeight.weightInGrams}g`
                         : null,
                     color: item.resinColour?.name ?? null,
+                    colorHex: item.resinColour?.hexCode ?? null,
                 };
             }
 
             /* ---------- PRINTER ---------- */
             if (item.printer) {
-                // Extract machine dimensions from specifications
                 const machineDims = extractMachineDimensions(
                     item.printer.specifications as any[],
                 );
 
                 return {
                     id: item.id,
+                    sourceId: item.printer.id,
                     itemType: "printer",
                     name: item.printer.name,
                     price: item.printer.price,
                     quantity: item.quantity,
                     images: item.printer.images.map((i) => i.url),
-                    // Weight - check if stored in grams or kg
-                    // If > 1000, assume grams. Otherwise assume kg and convert to grams string
                     weight: item.printer.weight
                         ? item.printer.weight.toString()
                         : null,
-                    // Machine dimensions for shipping (in mm)
                     machineDimensionLength: machineDims.length,
                     machineDimensionWidth: machineDims.width,
                     machineDimensionHeight: machineDims.height,
@@ -277,6 +266,7 @@ export async function GET() {
             if (item.prebuiltProduct) {
                 return {
                     id: item.id,
+                    sourceId: item.prebuiltProduct.id,
                     itemType: "prebuilt",
                     name: item.prebuiltProduct.name,
                     price: item.prebuiltProduct.price,
@@ -291,6 +281,7 @@ export async function GET() {
             if (item.product) {
                 return {
                     id: item.id,
+                    sourceId: item.product.id,
                     itemType: "product",
                     name: item.product.name,
                     price: item.product.price,

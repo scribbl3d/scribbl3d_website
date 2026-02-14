@@ -17,6 +17,7 @@ import React, {
 
 export type CartItem = {
     id: string;
+    sourceId?: string; // Original product/printer/resin/prebuilt ID
     itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
     name: string;
     price: number;
@@ -24,6 +25,7 @@ export type CartItem = {
     images: string[];
     size?: string | null;
     color?: string | null;
+    colorHex?: string | null;
     prebuiltColour?: string | null;
     prebuiltSize?: string | null;
     customization?: string | null;
