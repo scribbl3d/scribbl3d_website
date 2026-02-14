@@ -1,56 +1,47 @@
 import { Discount } from "@/app/admin/discounts/types";
 
-/**
- * Minimal shape required for discount calculation.
- * DO NOT use CartItem here to avoid tight coupling.
- */
-export type DiscountItem = {
-    price: number;
-    quantity: number;
-    itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
-};
-
 export function calculateDiscount(
-    items: DiscountItem[],
-    discount: Discount | null,
+    discount: Discount,
+    subtotal: number,
 ): number {
-    if (!discount || !discount.isActive) return 0;
+    // No applicable items
+    if (subtotal <= 0) return 0;
 
-    let amount = 0;
+    // Inactive
+    if (!discount.isActive) return 0;
 
-    // 🔹 CART LEVEL DISCOUNT
-    if (discount.scope === "cart") {
-        const subtotal = items.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0,
-        );
-
-        if (
-            discount.minCartValue !== undefined &&
-            subtotal < discount.minCartValue
-        ) {
-            return 0;
-        }
-
-        amount =
-            discount.valueType === "percentage"
-                ? (subtotal * discount.value) / 100
-                : discount.value;
+    // Expired
+    if (discount.expiresAt) {
+        const now = new Date();
+        if (new Date(discount.expiresAt) < now) return 0;
     }
 
-    // 🔹 ITEM TYPE DISCOUNT
-    if (discount.scope === "item_type") {
-        items.forEach((item) => {
-            if (item.itemType === discount.applicableItemType) {
-                const itemTotal = item.price * item.quantity;
-
-                amount +=
-                    discount.valueType === "percentage"
-                        ? (itemTotal * discount.value) / 100
-                        : discount.value * item.quantity;
-            }
-        });
+    // Minimum order value
+    if (
+        discount.minOrderValue !== null &&
+        discount.minOrderValue !== undefined &&
+        subtotal < discount.minOrderValue
+    ) {
+        return 0;
     }
 
-    return amount;
+    let discountAmount = 0;
+
+    if (discount.valueType === "percentage") {
+        discountAmount = (subtotal * discount.value) / 100;
+    }
+
+    if (discount.valueType === "flat") {
+        discountAmount = discount.value;
+    }
+
+    // Max cap
+    if (discount.maxDiscount !== null && discount.maxDiscount !== undefined) {
+        discountAmount = Math.min(discountAmount, discount.maxDiscount);
+    }
+
+    // Never discount more than the applicable subtotal
+    discountAmount = Math.min(discountAmount, subtotal);
+
+    return Math.max(0, Math.floor(discountAmount));
 }

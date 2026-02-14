@@ -3,6 +3,14 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
     const discounts = await prisma.discount.findMany({
+        where: {
+            isActive: true,
+            isHidden: false,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        include: {
+            itemTypes: true,
+        },
         orderBy: { createdAt: "desc" },
     });
 
@@ -15,13 +23,24 @@ export async function POST(req: Request) {
     const discount = await prisma.discount.create({
         data: {
             name: body.name,
-            code: body.code,
+            code: body.code.toUpperCase(),
             scope: body.scope,
-            applicableItemType: body.applicableItemType || null,
             valueType: body.valueType,
             value: body.value,
-            minCartValue: body.minCartValue ?? null,
-            isActive: true,
+            minOrderValue: body.minOrderValue ?? null,
+            maxDiscount: body.maxDiscount ?? null,
+            expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
+            isHidden: body.isHidden ?? false,
+            isActive: body.isActive ?? true,
+
+            itemTypes:
+                body.scope === "item_type"
+                    ? {
+                          create: body.itemTypes.map((t: string) => ({
+                              itemType: t,
+                          })),
+                      }
+                    : undefined,
         },
     });
 

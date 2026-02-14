@@ -36,6 +36,7 @@ export interface CheckoutState {
         subtotal: number;
         discountAmount: number;
         appliedDiscountCode?: string;
+        tax: number;
     } | null;
 }
 

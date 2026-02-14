@@ -465,22 +465,36 @@ model OrderFeedback {
 
   @@index([userId])
 }
-
 model Discount {
-  id                  String   @id @default(uuid())
-  name                String
-  code                String   @unique
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
 
-  scope               DiscountScope
-  applicableItemType  ItemType?
+  scope         DiscountScope
+  valueType     DiscountValueType
+  value         Float
 
-  valueType           DiscountValueType
-  value               Float
+  minOrderValue Float?
+  maxDiscount   Float?
 
-  minCartValue        Float?
-  isActive            Boolean  @default(true)
+  expiresAt     DateTime?
+  isHidden      Boolean  @default(false)
+  isActive      Boolean  @default(true)
 
-  createdAt           DateTime @default(now())
+  itemTypes     DiscountItemType[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DiscountItemType {
+  id         String   @id @default(cuid())
+  discountId String
+  itemType   ItemType
+
+  discount   Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+
+  @@unique([discountId, itemType])
 }
 
 enum DiscountScope {
@@ -498,8 +512,10 @@ enum ItemType {
   prebuilt
   printer
   resin
-  unknown
 }
+
+
+
 
 model Shipment {
   id               String    @id @default(cuid())

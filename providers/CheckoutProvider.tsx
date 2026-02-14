@@ -147,10 +147,6 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
         }));
     };
 
-    /* =========================
-       RESET CHECKOUT (ONLY MANUAL)
-    ========================= */
-
     const resetCheckout = () => {
         setState(initialState);
         setExpressShipping({
@@ -159,12 +155,6 @@ export function CheckoutProvider({ children }: { children: React.ReactNode }) {
             loading: false,
         });
     };
-
-    /* =========================
-       EXPRESS SHIPPING LOGIC
-       - Estimate when no pincode
-       - Real API call when pincode available
-    ========================= */
 
     useEffect(() => {
         // No cart = reset

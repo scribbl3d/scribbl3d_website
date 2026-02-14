@@ -1,19 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+const ITEM_TYPES = ["product", "prebuilt", "printer", "resin"];
 
 export default function NewDiscountPage() {
     const router = useRouter();
@@ -21,176 +15,311 @@ export default function NewDiscountPage() {
     const [data, setData] = useState({
         name: "",
         code: "",
-        scope: "cart",
-        applicableItemType: "",
-        valueType: "percentage",
-        value: 0,
-        minCartValue: undefined as number | undefined,
+        scope: "cart" as "cart" | "item_type",
+        valueType: "percentage" as "percentage" | "flat",
+        value: "",
+        minOrderValue: "",
+        maxDiscount: "",
+        expiresAt: "",
         isActive: true,
+        isHidden: false,
+        itemTypes: [] as string[],
     });
 
     async function saveDiscount() {
+        if (!data.name || !data.code || !data.value) {
+            alert("Name, Code and Discount Value are required");
+            return;
+        }
+
         await fetch("/api/discounts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+                name: data.name,
+                code: data.code,
+                scope: data.scope,
+                valueType: data.valueType,
+                value: Number(data.value),
+                minOrderValue: data.minOrderValue
+                    ? Number(data.minOrderValue)
+                    : null,
+                maxDiscount: data.maxDiscount ? Number(data.maxDiscount) : null,
+                expiresAt: data.expiresAt || null,
+                isActive: data.isActive,
+                isHidden: data.isHidden,
+                itemTypes: data.scope === "item_type" ? data.itemTypes : [],
+            }),
         });
 
         router.push("/admin/discounts");
     }
 
     return (
-        <div className="flex justify-center py-10 px-4">
-            <Card className="w-full max-w-xl">
-                <CardHeader>
-                    <CardTitle>Create Discount</CardTitle>
-                </CardHeader>
+        <div className="max-w-2xl mx-auto p-6">
+            {/* HEADER */}
+            <div className="flex items-center gap-4 mb-6">
+                <Button variant="outline" onClick={() => router.back()}>
+                    ← Back
+                </Button>
+                <h1 className="text-2xl font-semibold">Create Discount</h1>
+            </div>
 
-                <CardContent className="space-y-6">
-                    {/* BASIC INFO */}
-                    <div className="space-y-3">
-                        <div>
-                            <Label>Name</Label>
-                            <Input
-                                placeholder="e.g. Diwali Sale"
-                                value={data.name}
-                                onChange={(e) =>
-                                    setData({ ...data, name: e.target.value })
+            <Card className="p-6 space-y-6">
+                {/* NAME */}
+                <div>
+                    <Label>Name</Label>
+                    <Input
+                        placeholder="e.g. Diwali Sale"
+                        value={data.name}
+                        onChange={(e) =>
+                            setData({ ...data, name: e.target.value })
+                        }
+                    />
+                </div>
+
+                {/* CODE */}
+                <div>
+                    <Label>Coupon Code</Label>
+                    <Input
+                        placeholder="e.g. SAVE10"
+                        value={data.code}
+                        onChange={(e) =>
+                            setData({
+                                ...data,
+                                code: e.target.value.toUpperCase(),
+                            })
+                        }
+                    />
+                </div>
+
+                {/* SCOPE */}
+                <div>
+                    <Label>Discount applies to</Label>
+                    <div className="mt-2 space-y-2">
+                        <label className="flex gap-2 items-start">
+                            <input
+                                type="radio"
+                                checked={data.scope === "cart"}
+                                onChange={() =>
+                                    setData({ ...data, scope: "cart" })
                                 }
                             />
-                        </div>
-
-                        <div>
-                            <Label>Code</Label>
-                            <Input
-                                placeholder="e.g. DIWALI10"
-                                value={data.code}
-                                onChange={(e) =>
-                                    setData({ ...data, code: e.target.value })
-                                }
-                            />
-                        </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* DISCOUNT SCOPE */}
-                    <div className="space-y-3">
-                        <Label>Discount Applies To</Label>
-
-                        <Select
-                            value={data.scope}
-                            onValueChange={(v) =>
-                                setData({ ...data, scope: v })
-                            }
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="cart">
-                                    Entire Cart
-                                </SelectItem>
-                                <SelectItem value="item_type">
-                                    Specific Item Type
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        {data.scope === "item_type" && (
-                            <Select
-                                value={data.applicableItemType}
-                                onValueChange={(v) =>
-                                    setData({
-                                        ...data,
-                                        applicableItemType: v,
-                                    })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select item type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="product">
-                                        Product
-                                    </SelectItem>
-                                    <SelectItem value="prebuilt">
-                                        Prebuilt
-                                    </SelectItem>
-                                    <SelectItem value="printer">
-                                        Printer
-                                    </SelectItem>
-                                    <SelectItem value="resin">Resin</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        )}
-                    </div>
-
-                    <Separator />
-
-                    {/* VALUE */}
-                    <div className="space-y-3">
-                        <Label>Discount Type</Label>
-
-                        <Select
-                            value={data.valueType}
-                            onValueChange={(v) =>
-                                setData({ ...data, valueType: v })
-                            }
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="percentage">
-                                    Percentage (%)
-                                </SelectItem>
-                                <SelectItem value="flat">
-                                    Flat Amount (₹)
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-
-                        <div>
-                            <Label>Discount Value</Label>
-                            <Input
-                                type="number"
-                                placeholder="Enter value"
-                                value={data.value}
-                                onChange={(e) =>
-                                    setData({
-                                        ...data,
-                                        value: Number(e.target.value),
-                                    })
-                                }
-                            />
-                        </div>
-
-                        {data.scope === "cart" && (
                             <div>
-                                <Label>Minimum Cart Value (optional)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="e.g. 2000"
-                                    onChange={(e) =>
-                                        setData({
-                                            ...data,
-                                            minCartValue: Number(
-                                                e.target.value,
-                                            ),
-                                        })
-                                    }
-                                />
+                                <div className="font-medium">Entire Cart</div>
+                                <div className="text-sm text-muted-foreground">
+                                    Discount applies on total cart value
+                                </div>
                             </div>
-                        )}
+                        </label>
+
+                        <label className="flex gap-2 items-start">
+                            <input
+                                type="radio"
+                                checked={data.scope === "item_type"}
+                                onChange={() =>
+                                    setData({ ...data, scope: "item_type" })
+                                }
+                            />
+                            <div>
+                                <div className="font-medium">
+                                    Specific Item Types
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    Discount applies only to selected item
+                                    categories
+                                </div>
+                            </div>
+                        </label>
                     </div>
+                </div>
 
-                    <Separator />
+                {/* ITEM TYPES */}
+                {data.scope === "item_type" && (
+                    <div>
+                        <Label>Applicable Item Types</Label>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            {ITEM_TYPES.map((type) => (
+                                <label
+                                    key={type}
+                                    className="flex items-center gap-2 border rounded-md p-2"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={data.itemTypes.includes(type)}
+                                        onChange={(e) =>
+                                            setData({
+                                                ...data,
+                                                itemTypes: e.target.checked
+                                                    ? [...data.itemTypes, type]
+                                                    : data.itemTypes.filter(
+                                                          (t) => t !== type,
+                                                      ),
+                                            })
+                                        }
+                                    />
+                                    <span className="capitalize">{type}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
-                    <Button className="w-full h-11" onClick={saveDiscount}>
-                        Save Discount
+                {/* DISCOUNT TYPE */}
+                <div>
+                    <Label>Discount Type</Label>
+                    <div className="flex gap-2 mt-2">
+                        <Button
+                            type="button"
+                            variant={
+                                data.valueType === "percentage"
+                                    ? "default"
+                                    : "outline"
+                            }
+                            onClick={() =>
+                                setData({
+                                    ...data,
+                                    valueType: "percentage",
+                                })
+                            }
+                        >
+                            Percentage (%)
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={
+                                data.valueType === "flat"
+                                    ? "default"
+                                    : "outline"
+                            }
+                            onClick={() =>
+                                setData({ ...data, valueType: "flat" })
+                            }
+                        >
+                            Flat (₹)
+                        </Button>
+                    </div>
+                </div>
+
+                {/* VALUE */}
+                <div>
+                    <Label>
+                        {data.valueType === "percentage"
+                            ? "Discount Percentage"
+                            : "Discount Amount (₹)"}
+                    </Label>
+                    <Input
+                        type="number"
+                        placeholder={
+                            data.valueType === "percentage"
+                                ? "e.g. 10"
+                                : "e.g. 500"
+                        }
+                        value={data.value}
+                        onChange={(e) =>
+                            setData({ ...data, value: e.target.value })
+                        }
+                    />
+                </div>
+
+                {/* MIN ORDER */}
+                <div>
+                    <Label>Minimum Order Value (optional)</Label>
+                    <Input
+                        type="number"
+                        value={data.minOrderValue}
+                        onChange={(e) =>
+                            setData({
+                                ...data,
+                                minOrderValue: e.target.value,
+                            })
+                        }
+                    />
+                </div>
+
+                {/* MAX CAP */}
+                <div>
+                    <Label>Maximum Discount Cap (optional)</Label>
+                    <Input
+                        type="number"
+                        value={data.maxDiscount}
+                        onChange={(e) =>
+                            setData({
+                                ...data,
+                                maxDiscount: e.target.value,
+                            })
+                        }
+                    />
+                </div>
+
+                {/* EXPIRY */}
+                <div>
+                    <Label>Expiry Date (optional)</Label>
+                    <Input
+                        type="date"
+                        value={data.expiresAt}
+                        onChange={(e) =>
+                            setData({
+                                ...data,
+                                expiresAt: e.target.value,
+                            })
+                        }
+                    />
+                </div>
+
+                {/* VISIBILITY */}
+                <div className="border rounded-lg p-4 space-y-3">
+                    <Label>Visibility</Label>
+
+                    <label className="flex gap-2 items-start">
+                        <input
+                            type="checkbox"
+                            checked={data.isActive}
+                            onChange={(e) =>
+                                setData({
+                                    ...data,
+                                    isActive: e.target.checked,
+                                })
+                            }
+                        />
+                        <div>
+                            <div className="font-medium">Coupon is active</div>
+                            <div className="text-sm text-muted-foreground">
+                                Can be applied at checkout
+                            </div>
+                        </div>
+                    </label>
+
+                    <label className="flex gap-2 items-start">
+                        <input
+                            type="checkbox"
+                            checked={data.isHidden}
+                            onChange={(e) =>
+                                setData({
+                                    ...data,
+                                    isHidden: e.target.checked,
+                                })
+                            }
+                        />
+                        <div>
+                            <div className="font-medium">
+                                Hidden from customers
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Secret coupon — not shown in customer discount
+                                list
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                {/* ACTIONS */}
+                <div className="flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => router.back()}>
+                        Cancel
                     </Button>
-                </CardContent>
+                    <Button onClick={saveDiscount}>Save Discount</Button>
+                </div>
             </Card>
         </div>
     );

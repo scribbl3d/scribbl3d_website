@@ -1,10 +1,10 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
+
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import { Adapter, AdapterAccount, AdapterUser } from "next-auth/adapters";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Define the type for the user data
 interface CreateUserData {
@@ -26,7 +26,7 @@ export function CustomPrismaAdapter(): Adapter {
                     .toString("hex")}`;
                 const hashedPassword = await bcryptjs.hash(
                     placeholderPassword,
-                    10
+                    10,
                 );
 
                 const user = await prisma.user.create({
@@ -75,7 +75,7 @@ export function CustomPrismaAdapter(): Adapter {
             provider_providerAccountId: Pick<
                 AdapterAccount,
                 "provider" | "providerAccountId"
-            >
+            >,
         ): Promise<AdapterUser | null> => {
             try {
                 const account = await prisma.account.findUnique({

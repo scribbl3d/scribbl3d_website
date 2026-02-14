@@ -1,5 +1,5 @@
 import { CustomPrismaAdapter } from "@/lib/auth/prismaAdapter";
-import { PrismaClient } from "@prisma/client";
+
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import { NextAuthOptions } from "next-auth";
@@ -7,7 +7,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { z } from "zod";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const loginSchema = z.object({
     email: z.string().email("Invalid email address"),

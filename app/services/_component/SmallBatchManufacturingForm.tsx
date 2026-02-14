@@ -226,7 +226,6 @@ export function SmallBatchManufacturingForm({
             });
 
             if (response.ok) {
-                console.log("Form submitted successfully");
                 setIsSubmitted(true);
                 setTimeout(() => {
                     setStep(totalSteps - 1);

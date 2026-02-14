@@ -27,6 +27,7 @@ export async function POST(req: Request) {
             discountAmount = 0,
             discountCode = null,
             shippingPrice = 0,
+            tax = 0,
 
             totalAmount,
             shippingMode, // "Surface" | "Express"
@@ -55,6 +56,13 @@ export async function POST(req: Request) {
         if (shippingPrice < 0) {
             return NextResponse.json(
                 { error: "Invalid shipping price" },
+                { status: 400 },
+            );
+        }
+
+        if (tax < 0) {
+            return NextResponse.json(
+                { error: "Invalid tax amount" },
                 { status: 400 },
             );
         }
@@ -231,6 +239,7 @@ export async function POST(req: Request) {
                 subtotal,
                 discountAmount,
                 discountCode,
+                tax,
                 shippingPrice,
 
                 totalAmount,

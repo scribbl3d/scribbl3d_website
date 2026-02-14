@@ -93,18 +93,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
 
         const shouldSync = shouldSyncShipment(masterShipment);
 
-        /* 🔥 TEST LOG */
-        console.log(`[PROFILE] shouldSyncShipment?`, {
-            orderId: order.id,
-            waybill: masterShipment.waybill,
-            shouldSync,
-        });
-
         if (shouldSync) {
-            console.log(
-                `[PROFILE] Triggering shipment sync for order ${order.id}`,
-            );
-
             // 🚨 DO NOT await (important)
             triggerShipmentSync(order.id);
         }

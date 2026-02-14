@@ -28,7 +28,7 @@ export function ViewOrderDialog({
     onChangeStatus,
 }: Props) {
     if (!order) return null;
-    console.log("order transaction id", order.transactionId);
+
     const tracking = parseTracking(order.trackingInfo);
 
     // Parse GSTIN from billingAddress

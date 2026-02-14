@@ -1,17 +1,22 @@
-export type DiscountScope = "cart" | "item_type";
-export type DiscountValueType = "percentage" | "flat";
+export type DiscountItemType = {
+    id: string;
+    discountId: string;
+    itemType: "product" | "prebuilt" | "printer" | "resin";
+};
 
 export type Discount = {
     id: string;
     name: string;
     code: string;
-
-    scope: DiscountScope;
-    applicableItemType?: "product" | "prebuilt" | "printer" | "resin";
-
-    valueType: DiscountValueType;
+    scope: "cart" | "item_type";
+    valueType: "percentage" | "flat";
     value: number;
-
-    minCartValue?: number;
+    minOrderValue: number | null;
+    maxDiscount: number | null;
+    expiresAt: string | null;
+    isHidden: boolean;
     isActive: boolean;
+    itemTypes: DiscountItemType[];
+    createdAt: string;
+    updatedAt: string;
 };

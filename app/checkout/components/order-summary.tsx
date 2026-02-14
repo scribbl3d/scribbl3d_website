@@ -98,7 +98,6 @@ export default function OrderSummary() {
     const gstAmount = (subtotal * gstRate) / (1 + gstRate);
 
     const total = subtotal + shippingCost - discountAmount;
-    console.log("💰 FINAL PRICING:", state.pricing);
 
     return (
         <Card className="bg-white border shadow-sm">

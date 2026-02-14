@@ -47,12 +47,6 @@ export default function PaymentStatus() {
 
         transactionRef.current = { transactionId, orderId, amount };
 
-        console.log("[PaymentStatus] Initialized:", {
-            transactionId,
-            orderId,
-            amount,
-        });
-
         if (!transactionId) {
             console.error("[PaymentStatus] Missing transaction ID");
             setStatus("failed");
@@ -72,25 +66,17 @@ export default function PaymentStatus() {
         const checkPaymentStatus = async (attempt: number) => {
             // Prevent duplicate concurrent calls
             if (isCheckingRef.current || hasCompletedRef.current) {
-                console.log(
-                    "[PaymentStatus] Skipping - already checking or completed",
-                );
                 return;
             }
 
             isCheckingRef.current = true;
             setRetryCount(attempt);
-            console.log(
-                `[PaymentStatus] Attempt ${attempt + 1}/${MAX_RETRIES}`,
-            );
 
             try {
                 const response = await axios.get(
                     `/api/check-status/${transactionRef.current.transactionId}`,
                     { timeout: 15000 }, // 15 second timeout for API call
                 );
-
-                console.log("[PaymentStatus] Response:", response.data);
 
                 const { success, code, message } = response.data;
 
@@ -111,8 +97,6 @@ export default function PaymentStatus() {
             hasCompletedRef.current = true;
             isCheckingRef.current = false;
             setStatus("success");
-
-            console.log("[PaymentStatus] SUCCESS - clearing session");
 
             // Clear session storage
             sessionStorage.removeItem("phonepe_transaction_id");
@@ -142,9 +126,6 @@ export default function PaymentStatus() {
             isCheckingRef.current = false;
 
             if (attempt < MAX_RETRIES - 1) {
-                console.log(
-                    `[PaymentStatus] PENDING - retry ${attempt + 1}/${MAX_RETRIES}`,
-                );
                 timeoutRef.current = setTimeout(() => {
                     checkPaymentStatus(attempt + 1);
                 }, RETRY_INTERVAL);
@@ -158,8 +139,6 @@ export default function PaymentStatus() {
             isCheckingRef.current = false;
             setStatus("failed");
             setErrorMessage(message);
-
-            console.log("[PaymentStatus] FAILED:", message);
 
             sessionStorage.removeItem("phonepe_transaction_id");
             sessionStorage.removeItem("phonepe_order_id");
@@ -184,8 +163,6 @@ export default function PaymentStatus() {
             isCheckingRef.current = false;
             setStatus("timeout");
 
-            console.log("[PaymentStatus] TIMEOUT - max retries reached");
-
             toast({
                 title: "Verification Timeout",
                 description:
@@ -198,9 +175,6 @@ export default function PaymentStatus() {
 
             // Network error or timeout - retry
             if (attempt < MAX_RETRIES - 1) {
-                console.log(
-                    `[PaymentStatus] Error, retrying... (${attempt + 1}/${MAX_RETRIES})`,
-                );
                 timeoutRef.current = setTimeout(() => {
                     checkPaymentStatus(attempt + 1);
                 }, RETRY_INTERVAL);
@@ -214,7 +188,6 @@ export default function PaymentStatus() {
 
         // Cleanup
         return () => {
-            console.log("[PaymentStatus] Cleanup");
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }

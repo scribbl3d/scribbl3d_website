@@ -122,7 +122,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     ========================= */
 
     const applyDiscountCode = async (code: string) => {
-        const res = await fetch(`/api/discounts/${code}`);
+        const res = await fetch(
+            `/api/discounts/apply?code=${encodeURIComponent(code)}`,
+        );
 
         if (!res.ok) {
             throw new Error("Invalid discount code");
@@ -130,13 +132,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const discount: Discount = await res.json();
 
-        const discountItems = cart.map((item) => ({
-            price: item.price,
-            quantity: item.quantity,
-            itemType: item.itemType,
-        }));
+        // For scoped discounts (item_type), only calculate on matching items
+        // discount.itemTypes is an array of { itemType: "printer" | "product" | ... }
+        let applicableSubtotal: number;
 
-        const amount = calculateDiscount(discountItems, discount);
+        if (discount.scope === "item_type" && discount.itemTypes?.length > 0) {
+            const allowedTypes = discount.itemTypes.map(
+                (t: { itemType: string }) => t.itemType,
+            );
+            applicableSubtotal = cart
+                .filter((item) => allowedTypes.includes(item.itemType))
+                .reduce((sum, item) => sum + item.price * item.quantity, 0);
+        } else {
+            applicableSubtotal = cart.reduce(
+                (sum, item) => sum + item.price * item.quantity,
+                0,
+            );
+        }
+
+        const amount = calculateDiscount(discount, applicableSubtotal);
+
+        if (amount === 0) {
+            throw new Error("This coupon is not applicable to your order");
+        }
 
         setDiscountAmount(amount);
         setAppliedDiscountCode(discount.code);

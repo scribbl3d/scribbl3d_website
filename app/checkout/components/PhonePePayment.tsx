@@ -44,6 +44,7 @@ export default function PhonePePayment({
             const discountAmount = state.pricing?.discountAmount ?? 0;
             const discountCode = state.pricing?.appliedDiscountCode ?? null;
             const shippingPrice = state.selectedShipping?.price ?? 0;
+            const tax = state.pricing?.tax ?? 0;
 
             const transactionId = `TXN${Date.now()}${Math.random()
                 .toString(36)
@@ -62,6 +63,7 @@ export default function PhonePePayment({
                 discountCode,
                 shippingPrice,
                 totalAmount: amount,
+                tax,
                 shippingMode,
                 shippingAddress: state.shippingDetails,
                 billingAddress: state.shippingDetails,

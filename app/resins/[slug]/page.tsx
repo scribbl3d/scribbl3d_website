@@ -885,8 +885,6 @@ function SpecificationsTab({
 }
 
 function CompatibilityTab({ compatibility, technology }) {
-    console.log("compatibility:", compatibility);
-
     return (
         <div className="space-y-8">
             <div>

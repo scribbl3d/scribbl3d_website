@@ -224,7 +224,6 @@ export function PrototypingRequestForm({
             });
 
             if (response.ok) {
-                console.log("Form submitted successfully");
                 setIsSubmitted(true);
                 setStep(totalSteps - 1);
                 onSubmit?.();
