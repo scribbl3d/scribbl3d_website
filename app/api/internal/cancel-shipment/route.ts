@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
 const DELHIVERY_TOKEN = process.env.DELHIVERY_API_TOKEN!;
-const DELHIVERY_BASE_URL = "https://staging-express.delhivery.com";
+const DELHIVERY_BASE_URL = "https://track.delhivery.com";
 
 export async function POST(req: NextRequest) {
     const body = await req.json();

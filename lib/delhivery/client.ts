@@ -6,7 +6,7 @@ import {
     mapOrderToMPSShipments,
 } from "./mapOrderToPayload";
 
-const DELHIVERY_BASE_URL = "https://staging-express.delhivery.com";
+const DELHIVERY_BASE_URL = "https://track.delhivery.com";
 
 const DELHIVERY_CREATE_URL = `${DELHIVERY_BASE_URL}/api/cmu/create.json`;
 const DELHIVERY_WAYBILL_URL = `${DELHIVERY_BASE_URL}/waybill/api/bulk/json/`;

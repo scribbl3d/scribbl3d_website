@@ -264,5 +264,5 @@ async function handleMPSLabels(orderId: string) {
 }
 
 function getDelhiveryBaseUrl() {
-    return "https://staging-express.delhivery.com";
+    return "https://track.delhivery.com";
 }

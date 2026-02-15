@@ -1,8 +1,7 @@
 // lib/delhivery/generateLabel.ts
 import axios from "axios";
 
-const DELHIVERY_LABEL_URL =
-    "https://staging-express.delhivery.com/api/p/packing_slip";
+const DELHIVERY_LABEL_URL = "https://track.delhivery.com/api/p/packing_slip";
 
 export async function generateDelhiveryLabel(waybill: string) {
     return axios.get(DELHIVERY_LABEL_URL, {

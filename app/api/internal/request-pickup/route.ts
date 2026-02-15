@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
         /* ---------------- CALL DELHIVERY ---------------- */
         const delhiveryRes = await axios.post(
-            "https://staging-express.delhivery.com/fm/request/new/",
+            "https://track.delhivery.com/fm/request/new/",
             {
                 pickup_date,
                 pickup_time,

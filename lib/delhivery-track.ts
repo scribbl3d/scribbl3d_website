@@ -1,7 +1,7 @@
 // lib/delhivery-track.ts
 import axios from "axios";
 
-const WAYBILL_URL = process.env.DELHIVERY_WAYBILL_URL; // e.g. https://staging-express.delhivery.com/api/v1/packages/json/
+const WAYBILL_URL = process.env.DELHIVERY_WAYBILL_URL;
 const TOKEN = process.env.DELHIVERY_API_TOKEN;
 
 export async function fetchDelhiveryWaybill(waybill: string) {

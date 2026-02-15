@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const DELHIVERY_BASE_URL = "https://staging-express.delhivery.com/";
+const DELHIVERY_BASE_URL = "https://track.delhivery.com/";
 
 export const delhiveryClient = axios.create({
     baseURL: DELHIVERY_BASE_URL,
