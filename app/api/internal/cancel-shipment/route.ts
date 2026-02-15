@@ -5,7 +5,7 @@ import axios from "axios";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 
-const DELHIVERY_TOKEN = process.env.DELHIVERY_API_TOKEN!;
+const DELHIVERY_TOKEN = process.env.DELHIVERY_TOKEN!;
 const DELHIVERY_BASE_URL = "https://track.delhivery.com";
 
 export async function POST(req: NextRequest) {
