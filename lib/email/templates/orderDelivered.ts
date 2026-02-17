@@ -50,7 +50,7 @@ export function orderDeliveredTemplate(data: OrderEmailData): string {
         <div style="text-align:center;margin:24px 0;">
             <h3 style="margin:0 0 8px;font-size:18px;font-weight:600;color:#18181b;">How was your experience?</h3>
             <p style="margin:0 0 16px;font-size:14px;color:#71717a;">Your feedback helps us improve and serve you better.</p>
-            ${button("Leave Feedback", `${process.env.NEXT_PUBLIC_APP_URL || "https://scribbl3d.com"}/orders/${orderId}`)}
+            ${button("Leave Feedback", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/profile/orders/${orderId}`)}
         </div>
 
         ${paragraph("If there's any issue with your order, please don't hesitate to reach out. We're here to help!")}

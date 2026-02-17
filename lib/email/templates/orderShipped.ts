@@ -70,7 +70,7 @@ export function orderShippedTemplate(data: ShipmentEmailData): string {
         <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Delivering To</h3>
         ${paragraph(`${shippingAddress.name}<br/>${shippingAddress.line1}${shippingAddress.line2 ? `, ${shippingAddress.line2}` : ""}<br/>${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode}<br/>Phone: ${shippingAddress.phone}`)}
 
-        ${button("View Order Details", `${process.env.NEXT_PUBLIC_APP_URL || "https://scribbl3d.com"}/orders/${orderId}`)}
+        ${button("View Order Details", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/profile/orders/${orderId}`)}
 
         ${paragraph("You'll receive another email once your order is delivered. If you have any questions, just reply to this email.")}
     `;

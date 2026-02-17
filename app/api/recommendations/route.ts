@@ -19,6 +19,7 @@ import { NextResponse } from "next/server";
 type RecommendationResult = {
     id: string;
     name: string;
+    slug?: string;
     images: string[];
     price: number;
     mrp?: number;
@@ -184,6 +185,7 @@ async function fetchResins(
         select: {
             id: true,
             name: true,
+            slug: true,
             cardImageUrl: true,
             resolution: true,
             colours: {

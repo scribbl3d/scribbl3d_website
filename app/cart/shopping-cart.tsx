@@ -2,6 +2,7 @@
 
 import type { Discount } from "@/app/admin/discounts/types";
 import { calculateDiscount } from "@/app/cart/utils/calculateDiscount";
+import WishlistModal from "@/app/profile/_components/wishlist-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 interface ProductSuggestion {
     id: string;
     name: string;
+    slug?: string;
     images: string[];
     price: number;
     mrp?: number;
@@ -620,8 +622,17 @@ function ProductSuggestionCard({
                     className="w-full mt-3 h-9 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors"
                 >
                     <Plus className="w-4 h-4 mr-1" />
-                    <span className="sm:hidden">Add</span>
-                    <span className="hidden sm:inline">Add to Cart</span>
+                    {product.itemType?.toLowerCase() === "resin" ||
+                    product.itemType?.toLowerCase() === "prebuilt" ? (
+                        "Add to Cart"
+                    ) : (
+                        <>
+                            <span className="sm:hidden">Add</span>
+                            <span className="hidden sm:inline">
+                                Add to Cart
+                            </span>
+                        </>
+                    )}
                 </Button>
             </div>
         </div>
@@ -931,15 +942,9 @@ export default function ShoppingCart() {
     const { setPricing } = useCheckout();
 
     const [localCart, setLocalCart] = useState<CartItem[]>([]);
-    const [cartLoaded, setCartLoaded] = useState(false);
+    const [initialLoadDone, setInitialLoadDone] = useState(false);
     const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
     const [showCouponModal, setShowCouponModal] = useState(false);
-
-    // Track cart content changes with a stable key
-    const cartKey = localCart
-        .map((i) => i.id)
-        .sort()
-        .join(",");
     const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>(
         [],
     );
@@ -948,21 +953,29 @@ export default function ShoppingCart() {
         ProductSuggestion[]
     >([]);
     const [mobileExpanded, setMobileExpanded] = useState(false);
+    const [activeModalItem, setActiveModalItem] = useState<any>(null);
 
-    // --- Fetch cart (mark loaded when done)
+    // Track cart content changes with a stable key
+    const cartKey = localCart
+        .map((i) => i.id)
+        .sort()
+        .join(",");
+
+    // --- Fetch cart on mount, then sync from provider
+    const hasFetched = useRef(false);
     useEffect(() => {
-        fetchCart().finally(() => setCartLoaded(true));
+        if (hasFetched.current) return;
+        hasFetched.current = true;
+        fetchCart().then(() => {
+            // Small delay to let React propagate the cart state update
+            setTimeout(() => setInitialLoadDone(true), 50);
+        });
     }, [fetchCart]);
 
-    // Track if cart data has been received from API (not just initial [])
-    const [cartDataReceived, setCartDataReceived] = useState(false);
-
+    // Sync localCart from provider whenever cart changes
     useEffect(() => {
-        if (cart !== undefined && cartLoaded) {
-            setLocalCart(cart ?? []);
-            setCartDataReceived(true);
-        }
-    }, [cart, cartLoaded]);
+        setLocalCart(cart ?? []);
+    }, [cart]);
 
     // --- Fetch available coupons
     useEffect(() => {
@@ -989,9 +1002,9 @@ export default function ShoppingCart() {
         })();
     }, []);
 
-    // --- Fetch suggestions (only after cart data is received from API)
+    // --- Fetch suggestions (only after initial cart load is done)
     useEffect(() => {
-        if (!cartDataReceived) return;
+        if (!initialLoadDone) return;
 
         const controller = new AbortController();
 
@@ -1048,10 +1061,10 @@ export default function ShoppingCart() {
 
         return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cartDataReceived, cartKey]);
+    }, [initialLoadDone, cartKey]);
 
     // Shimmer until both cart and suggestions are ready
-    const isLoading = !cartDataReceived || !suggestionsLoaded;
+    const isLoading = !initialLoadDone || !suggestionsLoaded;
 
     /* =========================
        PRICE CALCULATIONS
@@ -1209,21 +1222,126 @@ export default function ShoppingCart() {
     };
 
     const handleAddSuggestion = async (product: ProductSuggestion) => {
+        const type = product.itemType?.toLowerCase();
+
+        // Resin & Prebuilt need options selection — open modal
+        if (type === "resin" || type === "prebuilt") {
+            try {
+                // Fetch full product data for the modal
+                if (type === "resin") {
+                    let slug = product.slug;
+
+                    // If slug is missing, fetch it by looking up the resin
+                    if (!slug) {
+                        try {
+                            const lookupRes = await fetch(`/api/resins`);
+                            if (lookupRes.ok) {
+                                const resinsResponse = await lookupRes.json();
+                                // Handle paginated response: { resins: [...] }
+                                const resinsList =
+                                    resinsResponse.resins ?? resinsResponse;
+                                const found = Array.isArray(resinsList)
+                                    ? resinsList.find(
+                                          (r: any) => r.id === product.id,
+                                      )
+                                    : null;
+                                slug = found?.slug;
+                            }
+                        } catch {
+                            // ignore
+                        }
+                    }
+
+                    if (!slug) {
+                        toast({
+                            title: "Unable to load options",
+                            description:
+                                "Please add this resin from the Resins page",
+                            variant: "destructive",
+                        });
+                        return;
+                    }
+
+                    const res = await fetch(`/api/resins/${slug}`);
+                    if (!res.ok) throw new Error("Resin not found");
+                    const resinData: any = await res.json();
+
+                    setActiveModalItem({
+                        id: resinData.id,
+                        itemType: "resin",
+                        title: resinData.name,
+                        image: resinData.cardImageUrl ?? product.images[0],
+                        badge: resinData.technology,
+                        price: resinData.weights?.[0]?.price ?? product.price,
+                        originalPrice:
+                            resinData.weights?.[0]?.originalPrice ?? null,
+                        requiresOptions: true,
+                        slug: resinData.slug,
+                        cartPayload: { resinId: resinData.id },
+                        resinColours:
+                            resinData.colours?.map((c: any) => ({
+                                id: c.id,
+                                name: c.name,
+                                hex: c.hexCode ?? null,
+                                image:
+                                    c.images?.find((i: any) => i.isMain)?.url ??
+                                    null,
+                            })) ?? [],
+                        resinWeights:
+                            resinData.weights?.map((w: any) => ({
+                                id: w.id,
+                                label: `${w.weightInGrams} g`,
+                                price: w.price,
+                                originalPrice: w.originalPrice,
+                            })) ?? [],
+                    });
+                } else {
+                    const res = await fetch(`/api/prebuilt/${product.id}`);
+                    if (!res.ok) throw new Error("Product not found");
+                    const prebuiltData: any = await res.json();
+
+                    setActiveModalItem({
+                        id: prebuiltData.id,
+                        itemType: "prebuilt",
+                        title: prebuiltData.name,
+                        image: prebuiltData.images?.[0] ?? product.images[0],
+                        badge: prebuiltData.category,
+                        price: prebuiltData.price ?? product.price,
+                        originalPrice: prebuiltData.originalPrice ?? null,
+                        requiresOptions: true,
+                        slug: prebuiltData.id,
+                        cartPayload: { prebuiltProductId: prebuiltData.id },
+                        prebuiltColours:
+                            prebuiltData.colors?.map((c: any) => ({
+                                id: c.id,
+                                name: c.name,
+                                hex: c.hexCode ?? null,
+                            })) ?? [],
+                        prebuiltSizes:
+                            prebuiltData.sizes?.map((s: any) => ({
+                                id: s.id,
+                                name: s.name,
+                                price: s.price,
+                                originalPrice: s.originalPrice,
+                            })) ?? [],
+                    });
+                }
+            } catch {
+                toast({
+                    title: "Failed to load options",
+                    variant: "destructive",
+                });
+            }
+            return;
+        }
+
+        // Printer & Product — direct add to cart
         try {
             const payload: Record<string, string | number> = { quantity: 1 };
-            switch (product.itemType?.toLowerCase()) {
-                case "printer":
-                    payload.printerId = product.id;
-                    break;
-                case "prebuilt":
-                    payload.prebuiltProductId = product.id;
-                    break;
-                case "resin":
-                    payload.resinId = product.id;
-                    break;
-                default:
-                    payload.productId = product.id;
-                    break;
+            if (type === "printer") {
+                payload.printerId = product.id;
+            } else {
+                payload.productId = product.id;
             }
 
             await addToCart(
@@ -1830,6 +1948,14 @@ export default function ShoppingCart() {
                 onApplyCoupon={handleApplyCoupon}
                 onCheckCode={handleCheckCode}
             />
+
+            {/* Options Modal (Resin/Prebuilt) */}
+            {activeModalItem && (
+                <WishlistModal
+                    item={activeModalItem}
+                    onClose={() => setActiveModalItem(null)}
+                />
+            )}
         </>
     );
 }

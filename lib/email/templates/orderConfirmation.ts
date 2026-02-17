@@ -40,7 +40,7 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
         .join("");
 
     const body = `
-        ${heading("Order Confirmed! 🎉")}
+        ${heading("Order Places! 🎉")}
         ${paragraph(`Hi ${customerName}, thank you for your order! We've received your order and are getting it ready.`)}
 
         <div style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px;">
@@ -119,7 +119,7 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
                 (paymentMethod ? infoRow("Payment", paymentMethod) : ""),
         )}
 
-        ${button("View Order", `${process.env.NEXT_PUBLIC_APP_URL || "https://scribbl3d.com"}/orders/${orderId}`)}
+        ${button("View Order", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/profile/orders/${orderId}`)}
 
         ${paragraph("We'll notify you once your order is shipped. If you have any questions, just reply to this email.")}
     `;
