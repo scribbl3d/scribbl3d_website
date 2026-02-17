@@ -1,5 +1,3 @@
-import { sendOrderConfirmation } from "@/lib/email/index";
-import { mapOrderToEmailData } from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import crypto from "crypto";
@@ -192,11 +190,4 @@ async function handlePaymentSuccess(transactionId: string, result: any) {
     });
 
     console.log("[CheckStatus] Order confirmed:", updatedOrder.id);
-
-    // Send order confirmation email (fire-and-forget)
-    if (updatedOrder.user?.email) {
-        sendOrderConfirmation(mapOrderToEmailData(updatedOrder)).catch((err) =>
-            console.error("[Email] Order confirmation failed:", err),
-        );
-    }
 }

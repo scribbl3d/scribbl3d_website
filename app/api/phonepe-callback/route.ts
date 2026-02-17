@@ -1,16 +1,11 @@
-import { PrismaClient } from "@prisma/client";
-import sgMail from "@sendgrid/mail";
+import { sendOrderConfirmation } from "@/lib/email/index";
+import { mapOrderToEmailData } from "@/lib/email/mapOrderToEmailData";
+import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
-
 const SALT_KEY = process.env.PHONEPE_SALT_KEY!;
 const SALT_INDEX = process.env.PHONEPE_SALT_INDEX!;
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY!;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL!;
-
-sgMail.setApiKey(SENDGRID_API_KEY);
 
 export async function POST(req: NextRequest) {
     try {
@@ -60,8 +55,6 @@ export async function POST(req: NextRequest) {
             console.warn(
                 "[PhonePe Callback] Checksum mismatch - proceeding anyway for now",
             );
-            // In production, you might want to be stricter:
-            // return NextResponse.json({ success: false }, { status: 401 });
         }
 
         // Decode response
@@ -120,8 +113,16 @@ export async function POST(req: NextRequest) {
 
             console.log("[PhonePe Callback] Order confirmed:", updatedOrder.id);
 
-            // Send email (non-blocking)
-            sendConfirmationEmail(updatedOrder).catch(console.error);
+            // Send order confirmation email (fire-and-forget)
+            if (updatedOrder.user?.email) {
+                sendOrderConfirmation(mapOrderToEmailData(updatedOrder)).catch(
+                    (err) =>
+                        console.error(
+                            "[Email] Order confirmation failed:",
+                            err,
+                        ),
+                );
+            }
 
             return NextResponse.json({ success: true });
         }
@@ -144,15 +145,4 @@ export async function POST(req: NextRequest) {
         console.error("[PhonePe Callback] Error:", error);
         return NextResponse.json({ success: false }, { status: 500 });
     }
-}
-
-async function sendConfirmationEmail(order: any) {
-    if (!order.user?.email) return;
-
-    await sgMail.send({
-        to: order.user.email,
-        from: SENDGRID_FROM_EMAIL,
-        subject: "Your Order is Confirmed! - Scribbl3D",
-        html: `<h2>Order Confirmed 🎉</h2><p>Order ID: ${order.id}</p>`,
-    });
 }
