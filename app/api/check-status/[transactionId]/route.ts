@@ -1,20 +1,14 @@
-import { PrismaClient } from "@prisma/client";
-import sgMail from "@sendgrid/mail";
+import { sendOrderConfirmation } from "@/lib/email/index";
+import { mapOrderToEmailData } from "@/lib/email/mapOrderToEmailData";
+import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import crypto from "crypto";
 import { type NextRequest, NextResponse } from "next/server";
-
-const prisma = new PrismaClient();
 
 const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID!;
 const SALT_KEY = process.env.PHONEPE_SALT_KEY!;
 const SALT_INDEX = process.env.PHONEPE_SALT_INDEX!;
 const ENV = process.env.PHONEPE_ENV === "prod" ? "prod" : "UAT";
-
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY!;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL!;
-
-sgMail.setApiKey(SENDGRID_API_KEY);
 
 export async function GET(
     req: NextRequest,
@@ -77,7 +71,7 @@ export async function GET(
                 "X-VERIFY": xVerify,
                 "X-MERCHANT-ID": MERCHANT_ID,
             },
-            timeout: 10000, // 10 second timeout
+            timeout: 10000,
         });
 
         const result = phonepeResponse.data;
@@ -124,7 +118,6 @@ export async function GET(
     } catch (error: any) {
         console.error("[CheckStatus] Error:", error.message);
 
-        // If PhonePe API times out, return PENDING so client retries
         if (
             error.code === "ECONNABORTED" ||
             error.message?.includes("timeout")
@@ -200,28 +193,10 @@ async function handlePaymentSuccess(transactionId: string, result: any) {
 
     console.log("[CheckStatus] Order confirmed:", updatedOrder.id);
 
-    // Send email (non-blocking)
-    sendOrderConfirmationEmail(updatedOrder).catch((err) => {
-        console.error("[CheckStatus] Email failed:", err);
-    });
-}
-
-async function sendOrderConfirmationEmail(order: any) {
-    const userEmail = order.user?.email;
-    if (!userEmail) return;
-
-    const msg = {
-        to: userEmail,
-        from: SENDGRID_FROM_EMAIL,
-        subject: "Your Order is Confirmed! - Scribbl3D",
-        html: `
-            <h2>Your order has been confirmed 🎉</h2>
-            <p>Order ID: ${order.id}</p>
-            <p>Amount: ₹${order.totalAmount}</p>
-            <p>Thank you for shopping with Scribbl3D!</p>
-        `,
-    };
-
-    await sgMail.send(msg);
-    console.log("[CheckStatus] Confirmation email sent to:", userEmail);
+    // Send order confirmation email (fire-and-forget)
+    if (updatedOrder.user?.email) {
+        sendOrderConfirmation(mapOrderToEmailData(updatedOrder)).catch((err) =>
+            console.error("[Email] Order confirmation failed:", err),
+        );
+    }
 }
