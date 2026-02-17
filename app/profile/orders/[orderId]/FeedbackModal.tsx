@@ -7,47 +7,41 @@ import { useState } from "react";
 /* ────────────────────── Tag Config ────────────────────── */
 
 const GLOBAL_TAGS = [
-    "Delivery experience",
-    "Packaging quality",
-    "Pricing & value for money",
-    "Payment experience",
-    "Support / communication",
+    "Fast delivery",
+    "Secure packaging",
+    "Great value",
+    "Responsive support",
 ] as const;
 
 const ITEM_TYPE_TAGS: Record<string, readonly string[]> = {
     filament: [
-        "Print quality",
-        "Color accuracy",
-        "Spool winding",
-        "Material consistency",
-        "Moisture-free packaging",
+        "Smooth extrusion",
+        "Strong adhesion",
+        "Vibrant color",
+        "Stringing issues",
     ],
-    resin: [
-        "Print quality",
-        "Color accuracy",
-        "Curing performance",
-        "Low odor",
-        "Bottle seal quality",
-    ],
+
+    resin: ["High detail", "Fast curing", "Low odor", "Brittle prints"],
+
     printer: [
-        "Print quality",
-        "Build quality",
-        "Ease of setup",
-        "Noise level",
-        "Speed performance",
-        "Software experience",
+        "Excellent print quality",
+        "Reliable performance",
+        "Easy setup",
+        "Noisy operation",
     ],
+
     product: [
-        "Product quality",
-        "Finish quality",
-        "Matches description",
-        "Build accuracy",
+        "Excellent detailing",
+        "Accurate sizing",
+        "Premium finish",
+        "Minor imperfections",
     ],
+
     prebuilt: [
-        "Product quality",
-        "Finish quality",
-        "Matches description",
-        "Build accuracy",
+        "Excellent detailing",
+        "Accurate sizing",
+        "Premium finish",
+        "Minor imperfections",
     ],
 };
 

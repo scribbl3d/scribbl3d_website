@@ -114,17 +114,24 @@ function formatExpiryDate(date: string | null | undefined): string | null {
 ================================================================= */
 
 /**
- * Determines which product types to recommend based on cart contents.
+ * Determines recommendation parameters based on cart contents.
  *
  * Logic:
- *  - PRINTER   → filaments, resins
- *  - PRODUCT   → printers (FDM/FFF), prebuilt products, other products
- *  - RESIN     → resin printers (SLA, DLP), other resins
- *  - PREBUILT  → other prebuilts (different categories), 1-2 printers
+ *  1. PREBUILT  → 2 filaments (PLA), 2 printers (random), 2 resins (random)
+ *  2. PRODUCT   → 3 printers (FDM), 3 filaments (random)
+ *  3. RESIN     → 3 printers (DLP/SLA), 3 resins (random)
+ *  4. PRINTER   → 2 printers (same tech), 2 filaments (random), 2 resins (random)
+ *
+ * When multiple item types are in cart, each type contributes its recommendations.
+ * Duplicates are handled by the API via the exclude list.
  */
-function getRecommendationFilters(cartItems: CartItem[]): {
-    itemTypes: string[];
-    technologies?: string[];
+function getRecommendationParams(cartItems: CartItem[]): {
+    groups: Array<{
+        itemType: string;
+        limit: number;
+        technology?: string;
+        category?: string;
+    }>;
     excludeIds: string[];
 } {
     const itemTypes = new Set<string>();
@@ -134,41 +141,57 @@ function getRecommendationFilters(cartItems: CartItem[]): {
         if (item.itemType) itemTypes.add(item.itemType.toLowerCase());
     }
 
-    const recTypes: string[] = [];
-    const recTechnologies: string[] = [];
+    const groups: Array<{
+        itemType: string;
+        limit: number;
+        technology?: string;
+        category?: string;
+    }> = [];
 
-    if (itemTypes.has("printer")) {
-        recTypes.push("product", "resin");
-    }
-    if (itemTypes.has("product")) {
-        recTypes.push("printer", "prebuilt", "product");
-        recTechnologies.push("FDM", "FFF");
-    }
-    if (itemTypes.has("resin")) {
-        recTypes.push("printer", "resin");
-        recTechnologies.push("SLA", "DLP");
-    }
+    // 1. PREBUILT → 2 filaments (PLA), 2 printers (random), 2 resins (random)
     if (itemTypes.has("prebuilt")) {
-        recTypes.push("prebuilt", "printer");
+        groups.push({ itemType: "product", limit: 2, category: "PLA" });
+        groups.push({ itemType: "printer", limit: 2 });
+        groups.push({ itemType: "resin", limit: 2 });
     }
 
-    // Fallback: if cart has unknown types, show a mix
-    if (recTypes.length === 0) {
-        recTypes.push("printer", "product", "resin", "prebuilt");
+    // 2. PRODUCT (filaments) → 3 printers (FDM / FFF), 3 filaments (random)
+    if (itemTypes.has("product")) {
+        groups.push({ itemType: "printer", limit: 3, technology: "FDM / FFF" });
+        groups.push({ itemType: "product", limit: 3 });
     }
 
-    // Deduplicate using Array.from to avoid TS2802
-    const uniqueTypes = Array.from(new Set(recTypes));
-    const uniqueTech =
-        recTechnologies.length > 0
-            ? Array.from(new Set(recTechnologies))
-            : undefined;
+    // 3. RESIN → 3 printers (SLA / DLP), 3 resins (random)
+    if (itemTypes.has("resin")) {
+        groups.push({ itemType: "printer", limit: 3, technology: "SLA / DLP" });
+        groups.push({ itemType: "resin", limit: 3 });
+    }
 
-    return {
-        itemTypes: uniqueTypes,
-        technologies: uniqueTech,
-        excludeIds,
-    };
+    // 4. PRINTER → 2 printers (same tech), 2 filaments (random), 2 resins (random)
+    if (itemTypes.has("printer")) {
+        // Find the technology of printers in cart (for "same technology")
+        // We'll pass this to the API
+        const printerTechs = Array.from(
+            new Set(
+                cartItems
+                    .filter((i) => i.itemType === "printer")
+                    .map(() => "SAME"), // placeholder, API will need cart printer tech
+            ),
+        );
+        groups.push({ itemType: "printer", limit: 2, technology: "SAME" });
+        groups.push({ itemType: "product", limit: 2 });
+        groups.push({ itemType: "resin", limit: 2 });
+    }
+
+    // Fallback: if empty cart or unknown types
+    if (groups.length === 0) {
+        groups.push({ itemType: "product", limit: 2 });
+        groups.push({ itemType: "printer", limit: 2 });
+        groups.push({ itemType: "resin", limit: 1 });
+        groups.push({ itemType: "prebuilt", limit: 1 });
+    }
+
+    return { groups, excludeIds };
 }
 
 /* =================================================================
@@ -931,11 +954,15 @@ export default function ShoppingCart() {
         fetchCart().finally(() => setCartLoaded(true));
     }, [fetchCart]);
 
+    // Track if cart data has been received from API (not just initial [])
+    const [cartDataReceived, setCartDataReceived] = useState(false);
+
     useEffect(() => {
-        if (cart !== undefined) {
+        if (cart !== undefined && cartLoaded) {
             setLocalCart(cart ?? []);
+            setCartDataReceived(true);
         }
-    }, [cart]);
+    }, [cart, cartLoaded]);
 
     // --- Fetch available coupons
     useEffect(() => {
@@ -962,15 +989,19 @@ export default function ShoppingCart() {
         })();
     }, []);
 
-    // --- Fetch suggestions (re-fetches whenever cart items change)
+    // --- Fetch suggestions (only after cart data is received from API)
     useEffect(() => {
-        if (!cartLoaded) return;
+        if (!cartDataReceived) return;
+
+        const controller = new AbortController();
 
         if (localCart.length === 0) {
             // Empty cart: fetch wishlist or popular products
             (async () => {
                 try {
-                    const wishlistRes = await fetch("/api/wishlist");
+                    const wishlistRes = await fetch("/api/wishlist", {
+                        signal: controller.signal,
+                    });
                     if (wishlistRes.ok) {
                         const wishlistData = await wishlistRes.json();
                         if (wishlistData.length > 0) {
@@ -979,55 +1010,48 @@ export default function ShoppingCart() {
                             return;
                         }
                     }
-                    const res = await fetch("/api/recommendations?limit=6");
+                    const res = await fetch("/api/recommendations?limit=6", {
+                        signal: controller.signal,
+                    });
                     if (res.ok) {
                         const data = await res.json();
                         setEmptySuggestions(data);
                     }
-                } catch {
-                    // silently fail
+                } catch (e: any) {
+                    if (e?.name === "AbortError") return;
                 } finally {
-                    setSuggestionsLoaded(true);
+                    if (!controller.signal.aborted) setSuggestionsLoaded(true);
                 }
             })();
         } else {
             // Filled cart: fetch based on cart item types
-            const filters = getRecommendationFilters(localCart);
+            const { groups, excludeIds } = getRecommendationParams(localCart);
             (async () => {
                 try {
-                    const params = new URLSearchParams();
-                    filters.itemTypes.forEach((t) =>
-                        params.append("itemType", t),
-                    );
-                    if (filters.technologies) {
-                        filters.technologies.forEach((t) =>
-                            params.append("technology", t),
-                        );
-                    }
-                    filters.excludeIds.forEach((id) =>
-                        params.append("exclude", id),
-                    );
-                    params.set("limit", "6");
-
-                    const res = await fetch(
-                        `/api/recommendations?${params.toString()}`,
-                    );
+                    const res = await fetch("/api/recommendations", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ groups, excludeIds }),
+                        signal: controller.signal,
+                    });
                     if (res.ok) {
                         const data = await res.json();
                         setSuggestions(data);
                     }
-                } catch {
-                    // silently fail
+                } catch (e: any) {
+                    if (e?.name === "AbortError") return;
                 } finally {
-                    setSuggestionsLoaded(true);
+                    if (!controller.signal.aborted) setSuggestionsLoaded(true);
                 }
             })();
         }
+
+        return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cartLoaded, cartKey]);
+    }, [cartDataReceived, cartKey]);
 
     // Shimmer until both cart and suggestions are ready
-    const isLoading = !cartLoaded || !suggestionsLoaded;
+    const isLoading = !cartDataReceived || !suggestionsLoaded;
 
     /* =========================
        PRICE CALCULATIONS

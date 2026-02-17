@@ -7,7 +7,6 @@ import {
     CreditCard,
     Download,
     Landmark,
-    MessageCircle,
     Package,
     Smartphone,
     Truck,
@@ -18,6 +17,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CancelOrderButton } from "./CancelOrderButton";
+import { ContactSupportButton } from "./ContactSupportModal";
 import { CopyButton } from "./CopyButton";
 import { GiveFeedbackButton } from "./FeedbackModal";
 import { StatusBanner } from "./StatusBanner";
@@ -237,6 +237,20 @@ export default async function OrderDetailsPage({ params }: PageProps) {
 
     // Always show order placed date
     const statusDateLabel = `Order placed on ${formatDate(order.createdAt)}`;
+
+    // Support context
+    const statusLabelMap: Record<string, string> = {
+        payment_pending: "Payment Pending",
+        order_confirmed: "Order Placed",
+        order_processing: "Order Confirmed",
+        order_shipped: "Order Shipped",
+        out_for_delivery: "Out for Delivery",
+        delivered: "Delivered",
+        cancelled: "Cancelled",
+    };
+    const statusLabel = statusLabelMap[displayStatus] || displayStatus;
+    const userEmail = session.user.email || "N/A";
+    const customerName = session.user.name || "N/A";
 
     /* ── Render ── */
     return (
@@ -675,13 +689,13 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                             <div className="space-y-2.5">
                                 {/* Payment Pending → Contact Support only */}
                                 {displayStatus === "payment_pending" && (
-                                    <Link
-                                        href="/support"
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <MessageCircle className="w-4 h-4" />
-                                        Contact Support
-                                    </Link>
+                                    <ContactSupportButton
+                                        orderId={order.id}
+                                        orderStatus={statusLabel}
+                                        userEmail={userEmail}
+                                        customerName={customerName}
+                                        transactionId={transactionId}
+                                    />
                                 )}
 
                                 {/* Order Placed / Confirmed → Cancel + Contact Support */}
@@ -691,13 +705,13 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                             orderId={order.id}
                                             hasShipment={!!shipment}
                                         />
-                                        <Link
-                                            href="/support"
-                                            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <MessageCircle className="w-4 h-4" />
-                                            Contact Support
-                                        </Link>
+                                        <ContactSupportButton
+                                            orderId={order.id}
+                                            orderStatus={statusLabel}
+                                            userEmail={userEmail}
+                                            customerName={customerName}
+                                            transactionId={transactionId}
+                                        />
                                     </>
                                 )}
 
@@ -725,13 +739,13 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                                 Track Order
                                             </a>
                                         )}
-                                        <Link
-                                            href="/support"
-                                            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <MessageCircle className="w-4 h-4" />
-                                            Contact Support
-                                        </Link>
+                                        <ContactSupportButton
+                                            orderId={order.id}
+                                            orderStatus={statusLabel}
+                                            userEmail={userEmail}
+                                            customerName={customerName}
+                                            transactionId={transactionId}
+                                        />
                                     </>
                                 )}
 
@@ -742,25 +756,25 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                             orderId={order.id}
                                             items={items}
                                         />
-                                        <Link
-                                            href="/support"
-                                            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <MessageCircle className="w-4 h-4" />
-                                            Contact Support
-                                        </Link>
+                                        <ContactSupportButton
+                                            orderId={order.id}
+                                            orderStatus={statusLabel}
+                                            userEmail={userEmail}
+                                            customerName={customerName}
+                                            transactionId={transactionId}
+                                        />
                                     </>
                                 )}
 
                                 {/* Cancelled → Contact Support only */}
                                 {isCancelled && (
-                                    <Link
-                                        href="/support"
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <MessageCircle className="w-4 h-4" />
-                                        Contact Support
-                                    </Link>
+                                    <ContactSupportButton
+                                        orderId={order.id}
+                                        orderStatus={statusLabel}
+                                        userEmail={userEmail}
+                                        customerName={customerName}
+                                        transactionId={transactionId}
+                                    />
                                 )}
                             </div>
                         </div>
