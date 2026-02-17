@@ -32,17 +32,16 @@ export function PaymentPendingTab({ orders, onView }: Props) {
     /* 🔍 SEARCH */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<
-        "customer" | "amount" | "transaction"
+        "customer" | "amount" | "transaction" | "orderId"
     >("customer");
 
-    /* ❌ DELETE STATE */
     const [deleteOrder, setDeleteOrder] = useState<Order | null>(null);
     const [deleting, setDeleting] = useState(false);
 
     const filteredOrders = useMemo(() => {
         if (!search) return orders;
 
-        const q = search.toLowerCase();
+        const q = search.toLowerCase().trim();
 
         return orders.filter((order) => {
             if (filterBy === "customer") {
@@ -53,6 +52,10 @@ export function PaymentPendingTab({ orders, onView }: Props) {
 
             if (filterBy === "amount") {
                 return String(order.totalAmount).includes(q);
+            }
+
+            if (filterBy === "orderId") {
+                return order.id.toLowerCase().includes(q);
             }
 
             if (filterBy === "transaction") {

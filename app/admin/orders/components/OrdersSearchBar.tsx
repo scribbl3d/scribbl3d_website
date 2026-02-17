@@ -12,8 +12,10 @@ import {
 interface Props {
     search: string;
     onSearchChange(value: string): void;
-    filterBy: "customer" | "amount" | "transaction";
-    onFilterChange(value: "customer" | "amount" | "transaction"): void;
+    filterBy: "customer" | "amount" | "transaction" | "orderId";
+    onFilterChange(
+        value: "customer" | "amount" | "transaction" | "orderId",
+    ): void;
 }
 
 export function OrdersSearchBar({
@@ -39,6 +41,7 @@ export function OrdersSearchBar({
                     <SelectItem value="customer">Customer</SelectItem>
                     <SelectItem value="amount">Amount</SelectItem>
                     <SelectItem value="transaction">Transaction ID</SelectItem>
+                    <SelectItem value="orderId">Order ID</SelectItem>
                 </SelectContent>
             </Select>
         </div>
