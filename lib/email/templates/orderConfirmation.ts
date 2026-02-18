@@ -40,7 +40,7 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
         .join("");
 
     const body = `
-        ${heading("Order Places! 🎉")}
+        ${heading("Order Placed! 🎉")}
         ${paragraph(`Hi ${customerName}, thank you for your order! We've received your order and are getting it ready.`)}
 
         <div style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px;">

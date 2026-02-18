@@ -53,7 +53,7 @@ export function mapOrderToDelhiveryShipment(input: any) {
 
         // Optional fields
         products_desc: productsDesc,
-        seller_name: "Scribble3D",
+        seller_name: "Scribbl3D",
     };
 }
 
@@ -152,7 +152,7 @@ export function mapOrderToMPSShipments(input: {
             waybill: waybill, // Pre-fetched waybill
 
             // Optional fields
-            seller_name: "Scribble3D",
+            seller_name: "Scribbl3D",
         };
     });
 }
