@@ -11,7 +11,7 @@ const DELHIVERY_BASE_URL = "https://track.delhivery.com";
 const DELHIVERY_CREATE_URL = `${DELHIVERY_BASE_URL}/api/cmu/create.json`;
 const DELHIVERY_WAYBILL_URL = `${DELHIVERY_BASE_URL}/waybill/api/bulk/json/`;
 
-const WAREHOUSE_NAME = "Scribbl3D Warehouse";
+const WAREHOUSE_NAME = "Scribbl3D";
 
 /**
  * Prefetch waybills from Delhivery

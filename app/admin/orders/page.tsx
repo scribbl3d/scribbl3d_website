@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { PickupInfo } from "./types";
 
-const PICKUP_LOCATION = "Scribbl3D Warehouse";
+const PICKUP_LOCATION = "Scribbl3D";
 
 export default function OrdersPage() {
     const { orders, fetchOrders } = useOrders();
