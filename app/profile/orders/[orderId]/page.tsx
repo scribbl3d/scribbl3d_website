@@ -715,7 +715,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                     </>
                                 )}
 
-                                {/* Shipped / Out for Delivery → Tracking + Track button + Contact Support */}
+                                {/* Shipped / Out for Delivery → Tracking + Track button + Contact Support + info */}
                                 {showTracking && (
                                     <>
                                         {waybill && (
@@ -746,6 +746,12 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                             customerName={customerName}
                                             transactionId={transactionId}
                                         />
+                                        <p className="text-xs text-gray-400 flex items-start gap-1.5 pt-1">
+                                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                                            Orders cannot be cancelled once
+                                            shipped. For any issues, please
+                                            contact support.
+                                        </p>
                                     </>
                                 )}
 

@@ -361,7 +361,15 @@ export default function OrdersPage() {
 
                                 await fetch(
                                     `/api/admin/orders/${cancelOrder.id}/cancel`,
-                                    { method: "POST" },
+                                    {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                            cancelledBy: "admin",
+                                        }),
+                                    },
                                 );
 
                                 setShowCancelDialog(false);

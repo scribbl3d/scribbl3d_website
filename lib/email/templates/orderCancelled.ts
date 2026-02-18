@@ -87,7 +87,7 @@ export function orderCancelledTemplate(data: CancelEmailData): string {
             </table>
         </div>
 
-        ${button("Browse Products", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/shop`)}
+        ${button("Browse Products", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/`)}
 
         ${paragraph("If you have any questions about your refund or need further assistance, just reply to this email.")}
     `;

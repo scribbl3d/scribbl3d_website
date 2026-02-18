@@ -1,17 +1,44 @@
 import { getDelhiveryTracking } from "@/lib/delhivery/getTracking";
+import { sendOrderDelivered, sendOrderShipped } from "@/lib/email/index";
+import {
+    mapOrderToEmailData,
+    mapOrderToShipmentEmailData,
+} from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+/**
+ * Statuses that indicate the order is in transit (past manifested)
+ */
+const IN_TRANSIT_STATUSES = [
+    "in transit",
+    "in_transit",
+    "dispatched",
+    "out for delivery",
+    "out_for_delivery",
+];
+const PRE_TRANSIT_STATUSES = ["manifested", "created", "pending", "unknown"];
+
+function isInTransit(status: string): boolean {
+    return IN_TRANSIT_STATUSES.includes(status.toLowerCase());
+}
+
+function isPreTransit(status: string): boolean {
+    return PRE_TRANSIT_STATUSES.includes(status.toLowerCase());
+}
+
 export async function POST() {
     try {
-        // 1. Get all active shipped shipments
+        // 1. Get all active shipped shipments with user info
         const shipments = await prisma.shipment.findMany({
             where: {
                 status: { not: "delivered" },
                 waybill: { not: null },
             },
             include: {
-                order: true,
+                order: {
+                    include: { user: true },
+                },
             },
         });
 
@@ -19,6 +46,8 @@ export async function POST() {
 
         for (const shipment of shipments) {
             try {
+                const previousStatus = shipment.status; // ← Track previous
+
                 const trackingJson = await getDelhiveryTracking({
                     waybill: shipment.waybill!,
                 });
@@ -45,12 +74,60 @@ export async function POST() {
                     },
                 });
 
-                // Update order ONLY if delivered
+                // Update order if delivered
                 if (isDelivered && shipment.order.status !== "delivered") {
                     await prisma.order.update({
                         where: { id: shipment.orderId },
                         data: { status: "delivered" },
                     });
+                }
+
+                // ── Email triggers (only on status transitions) ──
+
+                const userEmail = shipment.order.user?.email;
+
+                // Shipped email: pre-transit → in-transit
+                if (
+                    userEmail &&
+                    isPreTransit(previousStatus) &&
+                    isInTransit(delhiveryStatus)
+                ) {
+                    console.log(
+                        `[Email] Sending shipped email for order ${shipment.orderId}`,
+                    );
+                    sendOrderShipped(
+                        mapOrderToShipmentEmailData(shipment.order, {
+                            waybill: shipment.waybill!,
+                            trackingUrl:
+                                shipment.trackingUrl ||
+                                `https://www.delhivery.com/track/package/${shipment.waybill}`,
+                            provider: "Delhivery",
+                        }),
+                    ).catch((err) =>
+                        console.error(
+                            `[Email] Shipped email failed for ${shipment.orderId}:`,
+                            err,
+                        ),
+                    );
+                }
+
+                // Delivered email: not-delivered → delivered
+                if (
+                    userEmail &&
+                    previousStatus !== "delivered" &&
+                    isDelivered
+                ) {
+                    console.log(
+                        `[Email] Sending delivered email for order ${shipment.orderId}`,
+                    );
+                    sendOrderDelivered(
+                        mapOrderToEmailData(shipment.order),
+                    ).catch((err) =>
+                        console.error(
+                            `[Email] Delivered email failed for ${shipment.orderId}:`,
+                            err,
+                        ),
+                    );
                 }
 
                 synced++;
@@ -72,7 +149,7 @@ export async function POST() {
     } catch (err: any) {
         return NextResponse.json(
             { error: err.message || "Bulk sync failed" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

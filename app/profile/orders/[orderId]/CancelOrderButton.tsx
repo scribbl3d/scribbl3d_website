@@ -41,7 +41,11 @@ export function CancelOrderButton({
             // Step 2: Initiate refund via existing admin cancel API
             const refundRes = await fetch(
                 `/api/admin/orders/${orderId}/cancel`,
-                { method: "POST" },
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ cancelledBy: "customer" }),
+                },
             );
             const refundData = await refundRes.json();
             if (!refundRes.ok) {

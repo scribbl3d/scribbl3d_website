@@ -1,4 +1,9 @@
 import { getDelhiveryTracking } from "@/lib/delhivery/getTracking";
+import { sendOrderDelivered, sendOrderShipped } from "@/lib/email/index";
+import {
+    mapOrderToEmailData,
+    mapOrderToShipmentEmailData,
+} from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -18,6 +23,26 @@ function deriveOrderStatus(order: any, shipment: any) {
     return "shipped";
 }
 
+/**
+ * Statuses that indicate the order is in transit (past manifested)
+ */
+const IN_TRANSIT_STATUSES = [
+    "in transit",
+    "in_transit",
+    "dispatched",
+    "out for delivery",
+    "out_for_delivery",
+];
+const PRE_TRANSIT_STATUSES = ["manifested", "created", "pending", "unknown"];
+
+function isInTransit(status: string): boolean {
+    return IN_TRANSIT_STATUSES.includes(status.toLowerCase());
+}
+
+function isPreTransit(status: string): boolean {
+    return PRE_TRANSIT_STATUSES.includes(status.toLowerCase());
+}
+
 export async function POST(req: NextRequest) {
     let orderId: string | null = null;
     let shipmentId: string | null = null;
@@ -35,7 +60,6 @@ export async function POST(req: NextRequest) {
 
         /**
          * 0️⃣ Acquire DB lock (prevents duplicate syncs)
-         * Lock all shipments for this order
          */
         const lock = await prisma.shipment.updateMany({
             where: {
@@ -47,21 +71,23 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        // Someone else is already syncing
         if (lock.count === 0) {
             return NextResponse.json({ skipped: true });
         }
 
         /**
-         * 1️⃣ Fetch master shipment + order
-         * Use findFirst since orderId is no longer unique
+         * 1️⃣ Fetch master shipment + order + user
          */
         const shipment = await prisma.shipment.findFirst({
             where: {
                 orderId,
-                isMaster: true, // Get master shipment for MPS, or the only shipment for SPS
+                isMaster: true,
             },
-            include: { order: true },
+            include: {
+                order: {
+                    include: { user: true },
+                },
+            },
         });
 
         if (!shipment) {
@@ -69,6 +95,7 @@ export async function POST(req: NextRequest) {
         }
 
         shipmentId = shipment.id;
+        const previousStatus = shipment.status; // ← Track previous status
 
         if (!shipment.waybill) {
             throw new Error("Waybill not found");
@@ -103,20 +130,22 @@ export async function POST(req: NextRequest) {
         const delhiveryStatus =
             shipmentData?.Status?.Status?.toLowerCase() || "unknown";
 
-        console.log(`[SHIPMENT SYNC] ${shipment.waybill} → ${delhiveryStatus}`);
+        console.log(
+            `[SHIPMENT SYNC] ${shipment.waybill} → ${delhiveryStatus} (was: ${previousStatus})`,
+        );
 
         /**
-         * 3️⃣ Update Master Shipment (use id, not orderId)
+         * 3️⃣ Update Master Shipment
          */
         const updatedShipment = await prisma.shipment.update({
-            where: { id: shipment.id }, // ✅ Use id instead of orderId
+            where: { id: shipment.id },
             data: {
                 status: delhiveryStatus,
                 rawResponse: trackingJson,
                 attempts: { increment: 1 },
                 lastError: null,
                 lastSyncedAt: new Date(),
-                syncing: false, // Release lock here
+                syncing: false,
             },
         });
 
@@ -158,7 +187,6 @@ export async function POST(req: NextRequest) {
                         `[SHIPMENT SYNC] Failed to sync child ${childWaybill}:`,
                         childErr.message,
                     );
-                    // Continue with other children even if one fails
                 }
             }
         }
@@ -179,7 +207,44 @@ export async function POST(req: NextRequest) {
         }
 
         /**
-         * 5️⃣ Release lock on any remaining shipments
+         * 5️⃣ Send emails on status transitions
+         */
+        const userEmail = shipment.order.user?.email;
+
+        // Shipped email: when status transitions FROM pre-transit TO in-transit
+        if (
+            userEmail &&
+            isPreTransit(previousStatus) &&
+            isInTransit(delhiveryStatus)
+        ) {
+            console.log("[Email] Sending order shipped email...");
+            const emailData = mapOrderToShipmentEmailData(shipment.order, {
+                waybill: shipment.waybill,
+                trackingUrl:
+                    shipment.trackingUrl ||
+                    `https://www.delhivery.com/track/package/${shipment.waybill}`,
+                provider: "Delhivery",
+            });
+            sendOrderShipped(emailData).catch((err) =>
+                console.error("[Email] Order shipped email failed:", err),
+            );
+        }
+
+        // Delivered email: when status transitions TO delivered
+        if (
+            userEmail &&
+            previousStatus !== "delivered" &&
+            delhiveryStatus === "delivered"
+        ) {
+            console.log("[Email] Sending order delivered email...");
+            sendOrderDelivered(mapOrderToEmailData(shipment.order)).catch(
+                (err) =>
+                    console.error("[Email] Order delivered email failed:", err),
+            );
+        }
+
+        /**
+         * 6️⃣ Release lock on any remaining shipments
          */
         await prisma.shipment.updateMany({
             where: {
@@ -200,16 +265,12 @@ export async function POST(req: NextRequest) {
     } catch (err: any) {
         console.error("SYNC SHIPMENT ERROR", err);
 
-        /**
-         * Best-effort error logging + lock release
-         */
         if (orderId) {
-            // Release lock and log error on all shipments for this order
             await prisma.shipment.updateMany({
                 where: { orderId },
                 data: {
                     syncing: false,
-                    lastError: err.message?.slice(0, 500), // Truncate long errors
+                    lastError: err.message?.slice(0, 500),
                     attempts: { increment: 1 },
                 },
             });
