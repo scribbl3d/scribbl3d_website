@@ -5,7 +5,6 @@ import {
     AlertCircle,
     ChevronLeft,
     CreditCard,
-    Download,
     Landmark,
     Package,
     Smartphone,
@@ -19,6 +18,7 @@ import { notFound, redirect } from "next/navigation";
 import { CancelOrderButton } from "./CancelOrderButton";
 import { ContactSupportButton } from "./ContactSupportModal";
 import { CopyButton } from "./CopyButton";
+import { DownloadInvoiceButton } from "./DownloadInvoiceButton";
 import { GiveFeedbackButton } from "./FeedbackModal";
 import { StatusBanner } from "./StatusBanner";
 
@@ -675,10 +675,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                             )}
 
                             {/* Download Invoice */}
-                            <button className="w-full mt-4 flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                                <Download className="w-4 h-4" />
-                                Download Invoice
-                            </button>
+                            <DownloadInvoiceButton orderId={order.id} />
                         </div>
 
                         {/* ── Order Actions ── */}
