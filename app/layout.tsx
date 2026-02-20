@@ -72,7 +72,7 @@ export default async function RootLayout({
                 <Providers session={session}>{children}</Providers>
                 <WhatsAppSupportButton
                     phoneNumber="919599523434"
-                    message="Hi! I need help with my Scribbl3D order."
+                    message={`Hello Scribbl3d Support,\nI'm reaching out for assistance and more information about your products and services. Could you please help?\nThank you!`}
                 />
             </body>
         </html>
