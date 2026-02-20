@@ -243,7 +243,7 @@ function PrinterCard({ printer }: { printer: any }) {
                             alt={printer.name}
                             fill
                             priority
-                            className="object-cover"
+                            className="object-contains"
                         />
                     )}
 

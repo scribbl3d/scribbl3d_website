@@ -120,7 +120,7 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
                         alt={name}
                         fill
                         priority
-                        className="object-cover"
+                        className="object-contain"
                     />
 
                     {/* WISHLIST */}

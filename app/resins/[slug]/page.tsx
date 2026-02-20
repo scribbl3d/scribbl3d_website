@@ -338,7 +338,7 @@ export default function ResinDetailPage() {
                                                     "Resin image"
                                                 }
                                                 fill
-                                                className="object-cover"
+                                                className="object-contain"
                                                 priority
                                             />
                                         </div>
@@ -410,7 +410,7 @@ export default function ResinDetailPage() {
                                         alt={img.altText || ""}
                                         width={80}
                                         height={80}
-                                        className="object-cover w-full h-full"
+                                        className="object-contain w-full h-full"
                                     />
                                 </button>
                             ))}
