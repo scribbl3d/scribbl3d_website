@@ -25,6 +25,13 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
         paymentMethod,
     } = data;
 
+    const firstName = customerName.split(" ")[0] || "there";
+    const orderDate = new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    });
+
     const itemsHtml = items
         .map(
             (item) => `
@@ -40,31 +47,37 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
         .join("");
 
     const body = `
-        ${heading("Order Placed! 🎉")}
-        ${paragraph(`Hi ${customerName}, thank you for your order! We've received your order and are getting it ready.`)}
+        ${heading("Order Confirmed!")}
+        ${paragraph(`Hi ${firstName},`)}
+        ${paragraph("Thank you for your order with Scribbl3D. We've successfully received your payment, and your order is now confirmed.")}
 
+        <!-- Order Details -->
         <div style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px;">
-            <div style="display:flex;align-items:center;gap:8px;">
-                ${statusBadge("Confirmed", "green")}
-                <span style="font-size:14px;color:#166534;margin-left:8px;">Order #${orderId.slice(-8).toUpperCase()}</span>
-            </div>
+            ${statusBadge("Confirmed", "green")}
         </div>
 
-        <!-- Items -->
-        <div style="margin-bottom:24px;">
-            <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Items Ordered</h3>
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-                <tr style="border-bottom:2px solid #e4e4e7;">
-                    <td style="padding:8px 0;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Item</td>
-                    <td style="padding:8px 0;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;text-align:center;">Qty</td>
-                    <td style="padding:8px 0;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Amount</td>
-                </tr>
-                ${itemsHtml}
-            </table>
-        </div>
+        <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Order Details</h3>
+        ${infoTable(
+            infoRow("Order ID", `#${orderId.slice(-8).toUpperCase()}`) +
+                infoRow("Order Date", orderDate) +
+                (paymentMethod ? infoRow("Payment Method", paymentMethod) : ""),
+        )}
+
+        ${divider()}
+
+        <!-- Items Ordered -->
+        <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Items Ordered</h3>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr style="border-bottom:2px solid #e4e4e7;">
+                <td style="padding:8px 0;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;">Item</td>
+                <td style="padding:8px 0;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;text-align:center;">Qty</td>
+                <td style="padding:8px 0;font-size:13px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Amount</td>
+            </tr>
+            ${itemsHtml}
+        </table>
 
         <!-- Price breakdown -->
-        <div style="background-color:#fafafa;border-radius:8px;padding:16px;margin-bottom:24px;">
+        <div style="background-color:#fafafa;border-radius:8px;padding:16px;margin:20px 0 24px;">
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                     <td style="padding:4px 0;font-size:14px;color:#71717a;">Subtotal</td>
@@ -79,9 +92,9 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
                         : ""
                 }
                 ${
-                    tax && tax > 0
+                    tax !== undefined && tax !== null
                         ? `<tr>
-                    <td style="padding:4px 0;font-size:14px;color:#71717a;">Tax (GST)</td>
+                    <td style="padding:4px 0;font-size:14px;color:#71717a;">Taxes</td>
                     <td style="padding:4px 0;font-size:14px;color:#3f3f46;text-align:right;">₹${tax.toLocaleString("en-IN")}</td>
                 </tr>`
                         : ""
@@ -95,7 +108,7 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
                         : ""
                 }
                 <tr>
-                    <td style="padding:12px 0 4px;font-size:16px;font-weight:700;color:#18181b;border-top:1px solid #e4e4e7;">Total</td>
+                    <td style="padding:12px 0 4px;font-size:16px;font-weight:700;color:#18181b;border-top:1px solid #e4e4e7;">Total Paid</td>
                     <td style="padding:12px 0 4px;font-size:16px;font-weight:700;color:#18181b;text-align:right;border-top:1px solid #e4e4e7;">₹${totalAmount.toLocaleString("en-IN")}</td>
                 </tr>
             </table>
@@ -103,25 +116,45 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
 
         ${divider()}
 
-        <!-- Shipping address -->
+        <!-- Shipping Address -->
         <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Shipping Address</h3>
-        ${infoTable(
-            infoRow("Name", shippingAddress.name) +
-                infoRow(
-                    "Address",
-                    `${shippingAddress.line1}${shippingAddress.line2 ? `, ${shippingAddress.line2}` : ""}`,
-                ) +
-                infoRow(
-                    "City",
-                    `${shippingAddress.city}, ${shippingAddress.state} - ${shippingAddress.pincode}`,
-                ) +
-                infoRow("Phone", shippingAddress.phone) +
-                (paymentMethod ? infoRow("Payment", paymentMethod) : ""),
-        )}
+        ${paragraph(`${shippingAddress.name}<br/>${shippingAddress.line1}${shippingAddress.line2 ? `, ${shippingAddress.line2}` : ""}<br/>${shippingAddress.city}, ${shippingAddress.state} – ${shippingAddress.pincode}<br/>Phone: ${shippingAddress.phone}`)}
+
+        ${divider()}
+
+        ${paragraph("Your Tax Invoice is attached to this email for your records. If GST details were provided, they have been included accordingly.")}
+
+        <!-- Estimated Dispatch Timeline -->
+        <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Estimated Dispatch Timeline</h3>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;">
+            <tr>
+                <td style="padding:6px 0;font-size:14px;color:#3f3f46;">
+                    <span style="color:#71717a;">•</span>&nbsp; <strong>Filaments / Resin:</strong> 24–48 working hours
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;font-size:14px;color:#3f3f46;">
+                    <span style="color:#71717a;">•</span>&nbsp; <strong>Printers:</strong> 1–3 working days
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;font-size:14px;color:#3f3f46;">
+                    <span style="color:#71717a;">•</span>&nbsp; <strong>Custom / Prebuilt Products:</strong> As per product timeline
+                </td>
+            </tr>
+        </table>
+
+        ${paragraph("Tracking updates will be shared by our logistics partner once your order is dispatched.")}
 
         ${button("View Order", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/profile/orders/${orderId}`)}
 
-        ${paragraph("We'll notify you once your order is shipped. If you have any questions, just reply to this email.")}
+        ${paragraph("If you need any assistance, simply reply to this email — we're happy to help.")}
+        ${paragraph("Thank you for choosing Scribbl3D.")}
+
+        <p style="margin:24px 0 0;font-size:14px;color:#3f3f46;">
+            Warm regards,<br/>
+            <strong>Team Scribbl3D</strong>
+        </p>
     `;
 
     return emailLayout({
