@@ -9,6 +9,8 @@ import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 
+/* ────────────────────── Helpers ────────────────────── */
+
 function fmtINR(n: number): string {
     return `Rs ${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}`;
 }
@@ -93,9 +95,14 @@ function loadImageAsBase64(filePath: string): string | null {
     }
 }
 
+/* ────────────────────── Colors ────────────────────── */
+
+// Matching the original invoice blue
 const BLUE: [number, number, number] = [2, 136, 177]; // #0288B1
 const DARK: [number, number, number] = [16, 24, 40];
 const GRAY: [number, number, number] = [100, 100, 100];
+
+/* ────────────────────── Route ────────────────────── */
 
 export async function GET(
     req: NextRequest,
@@ -121,6 +128,7 @@ export async function GET(
             );
         }
 
+        // Parse order data
         const items: any[] =
             typeof order.items === "string"
                 ? JSON.parse(order.items)
@@ -154,6 +162,7 @@ export async function GET(
         const customerCountry = addr?.country || "India";
         const customerGstin = addr?.gstin || null;
 
+        // Invoice metadata
         const invoiceDate = new Date(order.createdAt);
         const dd = String(invoiceDate.getDate()).padStart(2, "0");
         const mm = String(invoiceDate.getMonth() + 1).padStart(2, "0");
@@ -167,14 +176,17 @@ export async function GET(
             .toUpperCase();
         const invoiceNo = `SCR-${yyyy}${mm}-${orderHash}`;
 
+        // Pricing from DB
         const subtotal = order.subtotal || 0;
         const discount = order.discountAmount || 0;
         const tax = order.tax || 0;
         const shippingCost = order.shippingPrice || 0;
         const grandTotal = order.totalAmount || 0;
 
+        // Place of supply is always Delhi (company location)
         const placeOfSupply = "07-Delhi";
 
+        // Customer state for determining SGST+CGST vs IGST
         const stateLower = customerState.toLowerCase().trim();
         const isIntraState =
             stateLower === "delhi" || stateLower === "new delhi";
@@ -182,6 +194,7 @@ export async function GET(
         const sgst = isIntraState ? tax / 2 : 0;
         const igst = isIntraState ? 0 : tax;
 
+        // Customer state code for display
         const STATE_CODES: Record<string, string> = {
             delhi: "07-Delhi",
             "new delhi": "07-Delhi",
@@ -204,9 +217,13 @@ export async function GET(
         };
         const customerStateCode = STATE_CODES[stateLower] || customerState;
 
+        // Load images
         const logoBase64 = loadImageAsBase64("invoice/Tax_Logo.png");
         const signBase64 = loadImageAsBase64("invoice/Tax_Sign.jpg.jpeg");
 
+        // ══════════════════════════════════════════
+        //  GENERATE PDF
+        // ══════════════════════════════════════════
         const doc = new jsPDF({
             orientation: "portrait",
             unit: "mm",
@@ -218,6 +235,9 @@ export async function GET(
         const rightEdge = pageW - mr;
         let y = 14;
 
+        // ── COMPANY HEADER ──
+
+        // Logo top-right (large and visible)
         if (logoBase64) {
             try {
                 doc.addImage(logoBase64, "PNG", rightEdge - 55, y - 4, 55, 22);
@@ -237,7 +257,7 @@ export async function GET(
             "Plot No- 685 Behind MCD Primary School, Saini Mohalla,",
             "Nangloi Delhi- 41",
             "Phone no. : 9599523434",
-            "Email : scribbl3dofficial@gmail.com",
+            "Email : Scribbl3dofficial@gmail.com",
             "GSTIN : 07BVCPJ4441C1Z1",
             "State: 07-Delhi",
         ];
@@ -246,12 +266,14 @@ export async function GET(
             y += 3.8;
         }
 
+        // Blue divider
         y += 3;
         doc.setDrawColor(...BLUE);
         doc.setLineWidth(1.2);
         doc.line(ml, y, rightEdge, y);
         y += 12;
 
+        // ── TAX INVOICE TITLE ──
         doc.setFont("helvetica", "bold");
         doc.setFontSize(22);
         doc.setTextColor(...BLUE);
@@ -260,6 +282,8 @@ export async function GET(
         doc.text(titleText, (pageW - titleW) / 2, y);
         y += 14;
 
+        // ── BILL TO + INVOICE DETAILS ──
+
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.setTextColor(...DARK);
@@ -267,12 +291,14 @@ export async function GET(
         doc.text("Invoice Details", rightEdge, y, { align: "right" });
         y += 6;
 
+        // Customer name (bold, uppercase like original)
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.setTextColor(...DARK);
         doc.text(customerName, ml, y);
-        y += 5;
+        y += 5; // ← advance past name
 
+        // Right column details (fixed positions, starting from name line)
         const rightDetailsY = y - 5;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8.5);
@@ -290,6 +316,7 @@ export async function GET(
             { align: "right" },
         );
 
+        // Left: Address lines (auto-wrapped)
         const addrMaxW = pageW / 2 - ml - 5;
         const addressParts = [
             customerStreet,
@@ -322,27 +349,22 @@ export async function GET(
         y += 6;
 
         // ── ITEMS TABLE ──
-        // GST proportionally from order.tax
-        const itemSubtotals = items.map(
-            (item: any) => (item.price || 0) * (item.quantity || 1),
-        );
-        const totalItemSubtotal = itemSubtotals.reduce(
-            (a: number, b: number) => a + b,
-            0,
-        );
+        // Price in DB is GST-inclusive. Reverse calculate base price and GST.
+        const GST_RATE = 18; // 18% GST
+        const gstMultiplier = GST_RATE / 100;
 
         const tableRows = items.map((item: any, idx: number) => {
             const qty = item.quantity || 1;
-            const price = item.price || 0;
-            const lineAmount = price * qty;
-            const itemGst =
-                totalItemSubtotal > 0
-                    ? Math.round((lineAmount / totalItemSubtotal) * tax * 100) /
-                      100
-                    : 0;
-            const gstPercent =
-                lineAmount > 0 ? Math.round((itemGst / lineAmount) * 100) : 0;
-            const totalWithGst = lineAmount + itemGst;
+            const inclusivePrice = item.price || 0; // price per unit (GST inclusive)
+            const inclusiveLineTotal = inclusivePrice * qty;
+
+            // Reverse: basePrice = inclusivePrice / (1 + gstRate)
+            const basePrice =
+                Math.round((inclusivePrice / (1 + gstMultiplier)) * 100) / 100;
+            const gstPerUnit =
+                Math.round((inclusivePrice - basePrice) * 100) / 100;
+            const lineGst = Math.round(gstPerUnit * qty * 100) / 100;
+            const lineBase = Math.round(basePrice * qty * 100) / 100;
 
             return {
                 data: [
@@ -350,13 +372,14 @@ export async function GET(
                     item.name || "Item",
                     item.hsn || "3916",
                     String(qty),
-                    item.unit || "Box",
-                    fmtINR(price),
-                    `${fmtINR(itemGst)}\n(${gstPercent}%)`,
-                    fmtINR(totalWithGst),
+                    "Box",
+                    fmtINR(basePrice),
+                    `${fmtINR(lineGst)}\n(${GST_RATE}%)`,
+                    fmtINR(inclusiveLineTotal),
                 ],
-                gst: itemGst,
-                total: totalWithGst,
+                basePrice: lineBase,
+                gst: lineGst,
+                total: inclusiveLineTotal,
                 qty,
             };
         });
@@ -396,48 +419,71 @@ export async function GET(
             headStyles: {
                 fillColor: BLUE,
                 textColor: [255, 255, 255],
-                fontSize: 8.5,
+                fontSize: 9,
                 fontStyle: "bold",
-                cellPadding: 3.5,
-                halign: "left",
+                cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
             },
             bodyStyles: {
-                fontSize: 8.5,
+                fontSize: 9,
                 textColor: DARK,
-                cellPadding: 3.5,
-                lineColor: [220, 220, 220],
+                cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
             },
             footStyles: {
-                fillColor: [245, 245, 245],
                 textColor: DARK,
-                fontSize: 8.5,
+                fontSize: 9,
                 fontStyle: "bold",
-                cellPadding: 3.5,
+                cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
             },
             columnStyles: {
-                0: { cellWidth: 10, halign: "center" },
-                1: { cellWidth: 42, halign: "left" },
-                2: { cellWidth: 17, halign: "center" },
-                3: { cellWidth: 22, halign: "center" },
-                4: { cellWidth: 15, halign: "center" },
-                5: { cellWidth: 24, halign: "right" },
-                6: { cellWidth: 25, halign: "right" },
-                7: { cellWidth: 24, halign: "right" },
+                0: { cellWidth: 12 },
+                1: { cellWidth: 48 },
+                2: { cellWidth: 20 },
+                3: { cellWidth: 22 },
+                4: { cellWidth: 16 },
+                5: { cellWidth: 22 },
+                6: { cellWidth: 22 },
+                7: { cellWidth: 20 },
             },
-            theme: "grid",
+            // Minimal theme like original: header bar, thin row borders, bold footer border
+            theme: "plain",
             styles: {
-                lineColor: [210, 210, 210],
-                lineWidth: 0.3,
                 overflow: "linebreak",
             },
             didParseCell: (data: any) => {
-                // Force center align for #, HSN, Quantity, Unit columns in all sections
-                if ([0, 2, 3, 4].includes(data.column.index)) {
-                    data.cell.styles.halign = "center";
+                const col = data.column.index;
+                // All cells center aligned
+                data.cell.styles.halign = "center";
+                // Item name left aligned
+                if (col === 1) data.cell.styles.halign = "left";
+
+                // Header: white text on blue
+                if (data.section === "head") {
+                    data.cell.styles.fillColor = BLUE;
+                    data.cell.styles.textColor = [255, 255, 255];
+                    data.cell.styles.fontStyle = "bold";
                 }
-                // Force right align for Price, GST, Amount
-                if ([5, 6, 7].includes(data.column.index)) {
-                    data.cell.styles.halign = "right";
+
+                // Body: thin bottom border
+                if (data.section === "body") {
+                    data.cell.styles.lineColor = [220, 220, 220];
+                    data.cell.styles.lineWidth = {
+                        bottom: 0.3,
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                    };
+                }
+
+                // Footer: bold top border, no fill
+                if (data.section === "foot") {
+                    data.cell.styles.fontStyle = "bold";
+                    data.cell.styles.lineColor = [60, 60, 60];
+                    data.cell.styles.lineWidth = {
+                        top: 0.5,
+                        bottom: 0.5,
+                        left: 0,
+                        right: 0,
+                    };
                 }
             },
         });
@@ -446,11 +492,16 @@ export async function GET(
 
         // ── BOTTOM SECTION ──
         const leftX = ml;
-        const sumX = pageW / 2 + 8;
+        const sumX = pageW / 2 + 5;
+        const sumRight = pageW - mr; // right edge within margin
         let leftY = y;
         let sY = y;
 
         // ─ Right: Pricing Summary ─
+        // Use reverse-calculated values from the table
+        const invoiceSubtotal = tableRows.reduce((s, i) => s + i.basePrice, 0);
+        const invoiceGst = totalGst;
+
         const drawRow = (
             label: string,
             value: string,
@@ -458,7 +509,7 @@ export async function GET(
         ) => {
             if (opts?.highlight) {
                 doc.setFillColor(...BLUE);
-                doc.rect(sumX - 2, sY - 3.5, rightEdge - sumX + 4, 7, "F");
+                doc.rect(sumX, sY - 3.5, sumRight - sumX, 7, "F");
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(9);
                 doc.setTextColor(255, 255, 255);
@@ -467,17 +518,17 @@ export async function GET(
                 doc.setFontSize(8.5);
                 doc.setTextColor(...GRAY);
             }
-            doc.text(label, sumX, sY);
-            doc.text(value, rightEdge, sY, { align: "right" });
+            doc.text(label, sumX + 2, sY);
+            doc.text(value, sumRight - 2, sY, { align: "right" });
             sY += opts?.highlight ? 8 : 6;
         };
 
-        drawRow("Sub Total", fmtINR(subtotal));
+        drawRow("Sub Total", fmtINR(invoiceSubtotal));
         if (isIntraState) {
-            drawRow("SGST@9%", fmtINR(sgst));
-            drawRow("CGST@9%", fmtINR(cgst));
+            drawRow("SGST@9%", fmtINR(invoiceGst / 2));
+            drawRow("CGST@9%", fmtINR(invoiceGst / 2));
         } else {
-            drawRow("IGST@18%", fmtINR(igst));
+            drawRow("IGST@18%", fmtINR(invoiceGst));
         }
         if (discount > 0) {
             drawRow(
@@ -496,7 +547,7 @@ export async function GET(
         // Thin line after balance
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
-        doc.line(sumX, sY - 3, rightEdge, sY - 3);
+        doc.line(sumX, sY - 3, sumRight, sY - 3);
 
         // ─ Left: Amount in Words ─
         doc.setFont("helvetica", "bold");
@@ -510,6 +561,7 @@ export async function GET(
         doc.text(amountInWords(grandTotal), leftX, leftY);
         leftY += 10;
 
+        // T&C
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.setTextColor(...DARK);
@@ -527,6 +579,7 @@ export async function GET(
             leftY += lines.length * spacing + 1;
         };
 
+        // General terms
         let termNum = 1;
         drawWrappedLine(
             `${termNum}) Taxes: Prices are subject to applicable taxes (SGST @9%, CGST @9% or IGST, as applicable).`,
@@ -561,6 +614,7 @@ export async function GET(
         );
         termNum++;
 
+        // Category-specific terms (continue numbering)
         const itemTypes = new Set(
             items.map((item: any) =>
                 (item.itemType || "product").toLowerCase(),
@@ -602,8 +656,9 @@ export async function GET(
         );
         doc.text(footerLines, leftX, leftY);
 
+        // ─ Signatory (right side, centered) ─
         const sigStartY = sY + 4;
-        const sigCenterX = sumX + (rightEdge - sumX) / 2;
+        const sigCenterX = sumX + (sumRight - sumX) / 2;
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
@@ -612,6 +667,7 @@ export async function GET(
         const forW = doc.getTextWidth(forText);
         doc.text(forText, sigCenterX - forW / 2, sigStartY);
 
+        // Signature image (centered)
         if (signBase64) {
             try {
                 const sigImgW = 35;
@@ -634,6 +690,7 @@ export async function GET(
         const authW = doc.getTextWidth(authText);
         doc.text(authText, sigCenterX - authW / 2, sigStartY + 25);
 
+        // ── Output ──
         const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
 
         return new NextResponse(pdfBuffer, {
