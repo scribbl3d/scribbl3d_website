@@ -25,7 +25,7 @@ export default function WhatsAppSupportButton({
           fixed bottom-5 right-5 z-50
           flex sm:hidden
           items-center justify-center
-          w-14 h-14 rounded-full
+          w-11 h-11 rounded-full
           bg-[#0d1b2a]
           border border-white/10
           shadow-[0_4px_20px_rgba(0,0,0,0.5)]
@@ -35,17 +35,18 @@ export default function WhatsAppSupportButton({
           active:scale-95
         "
             >
+                {/* Official WhatsApp icon */}
                 <img
                     src="https://cdn.simpleicons.org/whatsapp/25D366"
                     alt="WhatsApp"
-                    width={28}
-                    height={28}
+                    width={22}
+                    height={22}
                 />
 
                 {/* Live dot */}
-                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                <span className="absolute top-1 right-1 flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#25D366] opacity-60" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#25D366]" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#25D366]" />
                 </span>
             </span>
 
