@@ -155,6 +155,7 @@ model WishlistItem {
   // item types
   productId          String?
   prebuiltProductId  String?
+  prebuiltProductRiyaId String?  
   printerId          String?
   resinId            String?
 
@@ -174,6 +175,7 @@ model WishlistItem {
 
   product            Product?         @relation(fields: [productId], references: [id])
   prebuiltProduct    PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  prebuiltProductRiya PrebuiltProductRiya? @relation(fields: [prebuiltProductRiyaId], references: [id])
   printer            Printer?         @relation(fields: [printerId], references: [id])
   resin              Resin?           @relation(fields: [resinId], references: [id])
 }
@@ -192,6 +194,8 @@ model CartItem {
   cartId            String
   productId         String?
   prebuiltProductId String?
+   prebuiltProductRiyaId String?    // ✅ ADD
+  prebuiltVariantRiyaId String?    // ✅ ADD
   productSizeId     String?
   productColorId    String?
   quantity          Int
@@ -212,6 +216,8 @@ model CartItem {
   customization   String?
   cart            Cart             @relation(fields: [cartId], references: [id])
   prebuiltProduct PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  prebuiltProductRiya PrebuiltProductRiya? @relation(fields: [prebuiltProductRiyaId], references: [id])
+  prebuiltVariantRiya PrebuiltVariantRiya? @relation(fields: [prebuiltVariantRiyaId], references: [id])
 
   productColor ProductColor? @relation(fields: [productColorId], references: [id])
   product      Product?      @relation(fields: [productId], references: [id])
@@ -394,9 +400,11 @@ model Review {
   userId            String
   productId         String?
   prebuiltProductId String?
+  prebuiltProductRiyaId String?   // ✅ ADD
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  prebuiltProductRiya PrebuiltProductRiya? @relation(fields: [prebuiltProductRiyaId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id])
   user              User             @relation(fields: [userId], references: [id])
 
@@ -913,3 +921,80 @@ model ResinCompatibility {
   @@index([resinId, sortOrder])
 }
 
+
+model PrebuiltProductRiya {
+  id               String  @id @default(cuid())
+  name             String
+  shortDescription String
+  longDescription  String?
+  category         String
+  isCustomizable   Boolean @default(false)
+  highlighted      Boolean @default(false)
+
+  length  Float?
+  breadth Float?
+  height  Float?
+  weight  Float?
+
+  features String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images        PrebuiltImageRiya[]
+  attributes    PrebuiltAttributeRiya[]
+  variants      PrebuiltVariantRiya[]
+  cartItems     CartItem[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+}
+
+model PrebuiltImageRiya {
+  id       String  @id @default(cuid())
+  url      String
+  altText  String?
+  position Int     @default(0)
+
+  productId String
+  product   PrebuiltProductRiya @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // Optional: tied to a color so color-specific images show when color is selected
+  colorName String?
+}
+
+// Specs — e.g. Material: Aluminium, Warranty: 2 Years, Finish: Matte
+model PrebuiltAttributeRiya {
+  id    String @id @default(cuid())
+  label String // "Material"
+  value String // "Aluminium"
+
+  productId String
+  product   PrebuiltProductRiya @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, label])
+}
+
+// Every unique color + size combo = one row with its own price and stock
+model PrebuiltVariantRiya {
+  id            String  @id @default(cuid())
+  price         Int // in paise/cents
+  originalPrice Int     @default(0)
+  stockQuantity Int     @default(0)
+  isActive      Boolean @default(true)
+
+  colorName String? // "Midnight Black"
+  colorHex  String? // "#1a1a1a"
+
+  sizeName String? // "Large", "15 inch"
+  sizeCode String? // "L", "XL"
+
+  productId String
+  product   PrebuiltProductRiya @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  cartItems CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, colorName, sizeName])
+}
