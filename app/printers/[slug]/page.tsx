@@ -91,10 +91,10 @@ export default function PrinterDetailPage() {
         if (!slug) return;
         fetchPrinterDetails();
     }, [slug]);
+
     const handleAddToCart = async () => {
         if (!printer || isCartLoading) return;
 
-        // Same auth logic as other product pages
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -134,6 +134,7 @@ export default function PrinterDetailPage() {
             setIsCartLoading(false);
         }
     };
+
     useEffect(() => {
         if (!session || !printer?.id) return;
 
@@ -151,9 +152,10 @@ export default function PrinterDetailPage() {
 
         checkWishlist();
     }, [session, printer?.id]);
+
     useEffect(() => {
         if (!printer?.images || printer.images.length <= 1) return;
-        if (isHovering || isTouching) return; // pause on hover or swipe
+        if (isHovering || isTouching) return;
 
         const interval = setInterval(() => {
             setCurrent((prev) =>
@@ -163,6 +165,7 @@ export default function PrinterDetailPage() {
 
         return () => clearInterval(interval);
     }, [printer?.images, isHovering, isTouching]);
+
     const handleToggleWishlist = async (
         e: React.MouseEvent<HTMLButtonElement>,
     ) => {
@@ -191,7 +194,6 @@ export default function PrinterDetailPage() {
         setIsWishlistLoading(true);
         const wasInWishlist = isFavorite;
 
-        // ✅ Optimistic update
         setIsFavorite(!wasInWishlist);
 
         try {
@@ -212,7 +214,6 @@ export default function PrinterDetailPage() {
                 } your wishlist.`,
             });
         } catch (err) {
-            // 🔁 rollback on failure
             setIsFavorite(wasInWishlist);
 
             toast({
@@ -224,6 +225,7 @@ export default function PrinterDetailPage() {
             setIsWishlistLoading(false);
         }
     };
+
     const fetchPrinterDetails = async () => {
         setLoading(true);
         try {
@@ -265,7 +267,7 @@ export default function PrinterDetailPage() {
     }
 
     if (!printer) {
-        return null; // Safety check
+        return null;
     }
 
     const groupedSpecs = printer.specifications.reduce((acc, spec) => {
@@ -326,6 +328,7 @@ export default function PrinterDetailPage() {
                                                         }
                                                         fill
                                                         className="object-contain"
+                                                        sizes="(max-width: 768px) 100vw, 50vw"
                                                     />
                                                 </div>
                                             ))}
@@ -336,17 +339,7 @@ export default function PrinterDetailPage() {
                                             <button
                                                 onClick={prev}
                                                 aria-label="Previous image"
-                                                className="
-                                absolute left-4 top-1/2 -translate-y-1/2
-                                w-12 h-12
-                                bg-white
-                                rounded-full
-                                flex items-center justify-center
-                                shadow-[0_4px_20px_rgba(0,0,0,0.12)]
-                                transition-transform duration-300
-                                hover:scale-110
-                                group
-                            "
+                                                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:scale-110 group"
                                             >
                                                 <span className="text-black transition-transform duration-300 group-hover:scale-125">
                                                     <ArrowLefti />
@@ -359,17 +352,7 @@ export default function PrinterDetailPage() {
                                             <button
                                                 onClick={next}
                                                 aria-label="Next image"
-                                                className="
-                                absolute right-4 top-1/2 -translate-y-1/2
-                                w-12 h-12
-                                bg-white
-                                rounded-full
-                                flex items-center justify-center
-                                shadow-[0_4px_20px_rgba(0,0,0,0.12)]
-                                transition-transform duration-300
-                                hover:scale-110
-                                group
-                            "
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:scale-110 group"
                                             >
                                                 <span className="text-black transition-transform duration-300 group-hover:scale-125">
                                                     <ArrowRight />
@@ -444,9 +427,9 @@ export default function PrinterDetailPage() {
                                 {printer.name}
                             </h1>
 
-                            {/* Description */}
+                            {/* Short Description */}
                             <p className="text-gray-700 mb-4 break-words">
-                                {printer.description}
+                                {printer.shortDescription}
                             </p>
 
                             {/* Tags */}
@@ -454,7 +437,6 @@ export default function PrinterDetailPage() {
                                 <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
                                     {printer.technology}
                                 </span>
-
                                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
                                     High-Speed Printing
                                 </span>
@@ -494,24 +476,24 @@ export default function PrinterDetailPage() {
                                     calculated at checkout.
                                 </p>
                             </div>
+
                             {/* Quantity */}
                             <div className="mb-6">
                                 <p className="text-sm font-medium text-gray-700 mb-2">
                                     Quantity
                                 </p>
-
                                 <div className="flex items-center gap-3">
                                     {/* Minus */}
                                     <button
                                         className="
-        w-10 h-10
-        flex items-center justify-center
-        rounded-[10px]
-        border-2 border-[#D1D5DC]
-        text-xl text-gray-700
-        hover:bg-gray-100
-        disabled:opacity-50
-      "
+                                            w-10 h-10
+                                            flex items-center justify-center
+                                            rounded-[10px]
+                                            border-2 border-[#D1D5DC]
+                                            text-xl text-gray-700
+                                            hover:bg-gray-100
+                                            disabled:opacity-50
+                                        "
                                         onClick={() =>
                                             setQuantity((q) =>
                                                 Math.max(1, q - 1),
@@ -538,26 +520,26 @@ export default function PrinterDetailPage() {
                                             );
                                         }}
                                         className="
-    w-[80px] h-[40px]
-    border-2 border-[#D1D5DC]
-    rounded-[10px]
-    flex items-center justify-center
-    text-center
-    text-base font-medium text-gray-900
-    focus:outline-none
-  "
+                                            w-[80px] h-[40px]
+                                            border-2 border-[#D1D5DC]
+                                            rounded-[10px]
+                                            flex items-center justify-center
+                                            text-center
+                                            text-base font-medium text-gray-900
+                                            focus:outline-none
+                                        "
                                     />
 
                                     {/* Plus */}
                                     <button
                                         className="
-        w-10 h-10
-        flex items-center justify-center
-        rounded-[10px]
-        border-2 border-[#D1D5DC]
-        text-xl text-gray-700
-        hover:bg-gray-100
-      "
+                                            w-10 h-10
+                                            flex items-center justify-center
+                                            rounded-[10px]
+                                            border-2 border-[#D1D5DC]
+                                            text-xl text-gray-700
+                                            hover:bg-gray-100
+                                        "
                                         onClick={() =>
                                             setQuantity((q) => q + 1)
                                         }
@@ -574,7 +556,6 @@ export default function PrinterDetailPage() {
                                     onClick={handleAddToCart}
                                     disabled={isCartLoading}
                                 >
-                                    {/* Button text (kept for width) */}
                                     <span
                                         className={
                                             isCartLoading
@@ -584,8 +565,6 @@ export default function PrinterDetailPage() {
                                     >
                                         Add to Cart
                                     </span>
-
-                                    {/* Centered spinner */}
                                     {isCartLoading && (
                                         <span className="absolute inset-0 flex items-center justify-center">
                                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -597,7 +576,6 @@ export default function PrinterDetailPage() {
                                     className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                                     onClick={() => {
                                         const message = `Hi, I'd like to request a custom quote for ${printer.name} based on my requirements.`;
-
                                         const url = `https://wa.me/919599523434?text=${encodeURIComponent(message)}`;
                                         window.open(url, "_blank");
                                     }}
@@ -627,97 +605,59 @@ export default function PrinterDetailPage() {
                                     Quick Specifications
                                 </h3>
                                 <div className="space-y-3">
-                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
-                                        <span className="text-gray-600">
-                                            Technology
-                                        </span>
-                                        <span className="font-medium text-gray-900">
-                                            {printer.technology}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
-                                        <span className="text-gray-600">
-                                            Build Volume
-                                        </span>
-                                        <span className="font-medium text-gray-900">
-                                            {printer.volumeLength} mm{" × "}
-                                            {printer.volumeWidth} mm{" × "}
-                                            {printer.volumeHeight} mm
-                                        </span>
-                                    </div>
-                                    {printer.specifications.find(
-                                        (s) =>
-                                            s.label === "Supported Materials",
-                                    ) && (
-                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
-                                            <span className="text-gray-600">
-                                                Materials
-                                            </span>
-                                            <span className="font-medium text-gray-900 text-right">
-                                                {
-                                                    printer.specifications.find(
-                                                        (s) =>
-                                                            s.label ===
-                                                            "Supported Materials",
-                                                    ).value
-                                                }
-                                            </span>
-                                        </div>
-                                    )}
-                                    {printer.specifications.find(
-                                        (s) => s.label === "Print Speed",
-                                    ) && (
-                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
-                                            <span className="text-gray-600">
-                                                Print Speed
-                                            </span>
-                                            <span className="font-medium text-gray-900">
-                                                {
-                                                    printer.specifications.find(
-                                                        (s) =>
-                                                            s.label ===
-                                                            "Print Speed",
-                                                    ).value
-                                                }
-                                            </span>
-                                        </div>
-                                    )}
-                                    {printer.specifications.find(
-                                        (s) => s.label === "Extruder Type",
-                                    ) && (
-                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
-                                            <span className="text-gray-600">
-                                                Extruder Type
-                                            </span>
-                                            <span className="font-medium text-gray-900">
-                                                {
-                                                    printer.specifications.find(
-                                                        (s) =>
-                                                            s.label ===
-                                                            "Extruder Type",
-                                                    ).value
-                                                }
-                                            </span>
-                                        </div>
-                                    )}
-                                    {printer.specifications.find(
-                                        (s) => s.label === "Connectivity",
-                                    ) && (
-                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-4 text-sm">
-                                            <span className="text-gray-600">
-                                                Connectivity
-                                            </span>
-                                            <span className="font-medium text-gray-900">
-                                                {
-                                                    printer.specifications.find(
-                                                        (s) =>
-                                                            s.label ===
-                                                            "Connectivity",
-                                                    ).value
-                                                }
-                                            </span>
-                                        </div>
-                                    )}
+                                    {[
+                                        {
+                                            label: "Technology",
+                                            value: printer.technology,
+                                        },
+                                        {
+                                            label: "Build Volume",
+                                            value: `${printer.volumeLength} × ${printer.volumeWidth} × ${printer.volumeHeight} mm`,
+                                        },
+                                        {
+                                            label: "Materials",
+                                            value: printer.specifications.find(
+                                                (s) =>
+                                                    s.label ===
+                                                    "Supported Materials",
+                                            )?.value,
+                                        },
+                                        {
+                                            label: "Print Speed",
+                                            value: printer.specifications.find(
+                                                (s) =>
+                                                    s.label === "Print Speed",
+                                            )?.value,
+                                        },
+                                        {
+                                            label: "Extruder Type",
+                                            value: printer.specifications.find(
+                                                (s) =>
+                                                    s.label === "Extruder Type",
+                                            )?.value,
+                                        },
+                                        {
+                                            label: "Connectivity",
+                                            value: printer.specifications.find(
+                                                (s) =>
+                                                    s.label === "Connectivity",
+                                            )?.value,
+                                        },
+                                    ]
+                                        .filter((item) => item.value)
+                                        .map(({ label, value }) => (
+                                            <div
+                                                key={label}
+                                                className="flex justify-between items-start gap-4 py-2 border-b border-gray-100 last:border-0"
+                                            >
+                                                <span className="text-sm text-gray-500 shrink-0 max-w-[35%]">
+                                                    {label}
+                                                </span>
+                                                <span className="text-sm font-medium text-gray-900 text-right max-w-[60%] break-words">
+                                                    {value}
+                                                </span>
+                                            </div>
+                                        ))}
                                 </div>
                             </div>
                         </div>
@@ -732,13 +672,14 @@ export default function PrinterDetailPage() {
                             {[
                                 "specifications",
                                 "features",
+                                "description",
                                 "downloads",
                                 "support",
                             ].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
+                                    className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                                         activeTab === tab
                                             ? "border-blue-600 text-blue-600"
                                             : "border-transparent text-gray-600 hover:text-gray-900"
@@ -760,6 +701,105 @@ export default function PrinterDetailPage() {
                                 features={printer.features}
                                 applications={printer.applications}
                             />
+                        )}
+                        {activeTab === "description" && (
+                            <div>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                                    About {printer.name}
+                                </h3>
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                    {/* Description text - 2/3 width on desktop */}
+                                    <div className="lg:col-span-2 bg-gray-50 rounded-xl p-6 border border-gray-100">
+                                        <p className="text-gray-700 leading-relaxed text-[15px]">
+                                            {printer.description}
+                                        </p>
+                                    </div>
+
+                                    {/* Highlight cards */}
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-4 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+                                            <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                                <svg
+                                                    className="w-5 h-5 text-blue-600"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                                    />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-blue-500 uppercase tracking-wide">
+                                                    Technology
+                                                </p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {printer.technology}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 bg-green-50 rounded-xl px-4 py-3 border border-green-100">
+                                            <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                                                <svg
+                                                    className="w-5 h-5 text-green-600"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                                                    />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-green-500 uppercase tracking-wide">
+                                                    Build Volume
+                                                </p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {printer.volumeLength} ×{" "}
+                                                    {printer.volumeWidth} ×{" "}
+                                                    {printer.volumeHeight} mm
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+                                            <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                                                <svg
+                                                    className="w-5 h-5 text-purple-600"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                                                    />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide">
+                                                    Warranty
+                                                </p>
+                                                <p className="text-sm font-bold text-gray-900">
+                                                    {printer.warrantyYears}-Year
+                                                    Included
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         )}
                         {activeTab === "downloads" && (
                             <DownloadsTab downloads={printer.downloads} />
@@ -784,6 +824,7 @@ export default function PrinterDetailPage() {
         </div>
     );
 }
+
 type Specification = {
     id: string;
     label: string;
@@ -809,12 +850,12 @@ function SpecificationsTab({
                         {specs.map((spec) => (
                             <div
                                 key={spec.id}
-                                className="flex justify-between py-2 border-b border-gray-100"
+                                className="flex justify-between items-start gap-4 py-2 border-b border-gray-100"
                             >
-                                <span className="text-sm text-gray-600">
+                                <span className="text-sm text-gray-600 shrink-0 max-w-[45%]">
                                     {spec.label}
                                 </span>
-                                <span className="text-sm font-medium text-gray-900">
+                                <span className="text-sm font-medium text-gray-900 text-right max-w-[50%] break-words">
                                     {spec.value}
                                 </span>
                             </div>
@@ -866,6 +907,7 @@ function FeaturesTab({ features, applications }) {
         </div>
     );
 }
+
 function DownloadsTab({ downloads }) {
     return (
         <div className="space-y-4">

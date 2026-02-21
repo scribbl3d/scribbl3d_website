@@ -76,7 +76,7 @@ export default function SimilarPrintersCarousel({
     const fetchSimilarPrinters = async () => {
         try {
             const res = await fetch(
-                `/api/printers/similar?technology=${technology}&exclude=${currentPrinterId}`
+                `/api/printers/similar?technology=${technology}&exclude=${currentPrinterId}`,
             );
             const data = await res.json();
             setPrinters(data.printers || []);
@@ -214,7 +214,7 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
         }
     };
     const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>
+        e: React.MouseEvent<HTMLButtonElement>,
     ) => {
         e.preventDefault();
         e.stopPropagation();
@@ -286,7 +286,7 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                             src={printer.imageUrl || printer.images![0].url}
                             alt={printer.name}
                             fill
-                            className="object-contain "
+                            className="object-contain"
                         />
                     )}
 
