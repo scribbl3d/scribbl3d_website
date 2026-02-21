@@ -24,11 +24,11 @@ const payload = {
             end_date: "2025-12-31",
         },
     ],
-    pickup_location: { name: "Scribbl SURFACE", end_date: "2025-12-31" },
+    pickup_location: { name: "Scribbl3D", end_date: "2025-12-31" },
 };
 axios
     .post(
-        "https://staging-express.delhivery.com/api/cmu/create.json",
+        "https://track.delhivery.com/api/cmu/create.json",
         qs.stringify({ format: "json", data: JSON.stringify(payload) }),
         {
             headers: {
@@ -36,7 +36,7 @@ axios
                 "Content-Type": "application/x-www-form-urlencoded",
                 Accept: "application/json",
             },
-        }
+        },
     )
     .then((res) => console.log(res.data))
     .catch((err) => console.error(err.response?.data || err.message));

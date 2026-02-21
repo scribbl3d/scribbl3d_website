@@ -1,64 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 interface HeroImage {
-  id: string;
-  page: string;
-  imageUrl: string;
-  alt: string;
+    id: string;
+    page: string;
+    imageUrl: string;
+    alt: string;
 }
 
-export default function MakeItYourOwn() {
-  const [heroImage, setHeroImage] = useState<HeroImage | null>(null);
+type Props = {
+    onHeroVisible?: (visible: boolean) => void;
+};
 
-  useEffect(() => {
-    const fetchHeroImage = async () => {
-      try {
-        const response = await fetch("/api/admin/hero-images");
-        if (response.ok) {
-          const images: HeroImage[] = await response.json();
-          const landingImage = images.find((img) => img.page === "landing");
-          if (landingImage) {
-            setHeroImage(landingImage);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching hero image:", error);
-      }
-    };
+export default function MakeItYourOwn({ onHeroVisible }: Props) {
+    const [heroImage, setHeroImage] = useState<HeroImage | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    fetchHeroImage();
-  }, []);
+    useEffect(() => {
+        const fetchHeroImage = async () => {
+            try {
+                const res = await fetch("/api/hero-image?page=landing");
+                if (!res.ok) {
+                    onHeroVisible?.(false);
+                    return;
+                }
 
-  if (!heroImage) {
+                const data = await res.json();
+
+                if (data?.imageUrl) {
+                    setHeroImage(data);
+                    onHeroVisible?.(true);
+                } else {
+                    onHeroVisible?.(false);
+                }
+            } catch (error) {
+                console.error("Failed to load hero image", error);
+                onHeroVisible?.(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchHeroImage();
+    }, [onHeroVisible]);
+
+    // ✅ Skeleton matches final size → no jump
+    if (loading) {
+        return (
+            <div className="w-full aspect-[16/9] bg-gray-100 animate-pulse" />
+        );
+    }
+
+    if (!heroImage) return null;
+
     return (
-      <div className="w-full">
-        <Image
-          src="/3d_printer.png"
-          alt="3D Printer"
-          width={1920}
-          height={1080}
-          priority
-          className="w-full h-auto"
-          unoptimized={true} // Key prop
-        />
-      </div>
+        <div className="relative w-full aspect-[16/9] overflow-hidden">
+            <Image
+                src={heroImage.imageUrl}
+                alt={heroImage.alt}
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover"
+            />
+        </div>
     );
-  }
-
-  return (
-    <div className="w-full">
-      <Image
-        src={heroImage.imageUrl}
-        alt={heroImage.alt}
-        width={1920}
-        height={1080}
-        priority
-        className="w-full h-auto"
-        unoptimized={true} // Key prop
-      />
-    </div>
-  );
 }

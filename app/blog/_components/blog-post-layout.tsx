@@ -71,12 +71,9 @@ export default function BlogPostLayout({ blogId }: BlogPostLayoutProps) {
         blog.thumbnailImage?.trim() ||
         null;
 
-    const finalImageSrc = rawImage
-        ? "/" +
-          rawImage
-              .replace(/^\/+/, "") // remove leading slashes
-              .replace(/\/+$/, "") // remove trailing slashes
-        : null;
+    /* ✅ FINAL IMAGE SOURCE (CLOUDINARY-SAFE) */
+    const finalImageSrc =
+        blog.heroImage || blog.coverImage || blog.thumbnailImage || null;
 
     return (
         <div className="flex flex-col min-h-screen bg-background pt-[100px]">

@@ -1,244 +1,340 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
-import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { NextResponse } from "next/server";
 
+/* =========================
+   ADD TO CART
+========================= */
 export async function POST(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      console.log("Unauthorized request");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    let body;
     try {
-      body = await req.json();
-    } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
-    }
+        const session = (await getServerSession(authOptions as any)) as {
+            user?: { id?: string; name?: string; email?: string };
+        } | null;
+        if (!session?.user?.id) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 },
+            );
+        }
 
-    const { productId, quantity, isPrebuilt, productSizeId, productColorId } =
-      body;
+        const body = await req.json();
+        const {
+            productId,
+            prebuiltProductId,
+            printerId,
 
-    console.log("Received request to add product:", {
-      productId,
-      quantity,
-      isPrebuilt,
-      productSizeId,
-      productColorId,
-    });
+            resinId,
+            resinColourId,
+            resinWeightId,
 
-    if (
-      !productId ||
-      typeof quantity !== "number" ||
-      typeof isPrebuilt !== "boolean"
-    ) {
-      console.log("Invalid request payload:", {
-        productId,
-        quantity,
-        isPrebuilt,
-      });
-      return NextResponse.json(
-        {
-          error:
-            "Invalid request: productId, quantity, and isPrebuilt are required",
-        },
-        { status: 400 }
-      );
-    }
+            prebuiltColour,
+            prebuiltSize,
 
-    // Verify that the product exists
-    const product = isPrebuilt
-      ? await db.prebuiltProduct.findUnique({ where: { id: productId } })
-      : await db.product.findUnique({ where: { id: productId } });
+            quantity = 1,
+        } = body;
 
-    if (!product) {
-      console.log(
-        `${isPrebuilt ? "Prebuilt product" : "Product"} not found:`,
-        productId
-      );
-      return NextResponse.json(
-        { error: `${isPrebuilt ? "Prebuilt product" : "Product"} not found` },
-        { status: 404 }
-      );
-    }
+        if (!productId && !prebuiltProductId && !printerId && !resinId) {
+            return NextResponse.json(
+                { error: "Invalid cart item" },
+                { status: 400 },
+            );
+        }
+        if (prebuiltProductId) {
+            if (!prebuiltColour || !prebuiltSize) {
+                return NextResponse.json(
+                    { error: "Prebuilt colour & size required" },
+                    { status: 400 },
+                );
+            }
+        }
 
-    console.log(
-      `${isPrebuilt ? "Prebuilt product" : "Product"} found:`,
-      product
-    );
+        /* ---------- RESIN VALIDATION ---------- */
+        if (resinId) {
+            if (!resinColourId || !resinWeightId) {
+                return NextResponse.json(
+                    { error: "Resin colour & weight required" },
+                    { status: 400 },
+                );
+            }
 
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: { cart: true },
-    });
+            const weightExists = await prisma.resinWeight.findUnique({
+                where: { id: resinWeightId },
+                select: { id: true },
+            });
 
-    if (!user) {
-      console.log("User not found:", session.user.id);
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+            if (!weightExists) {
+                return NextResponse.json(
+                    { error: "Invalid resin weight" },
+                    { status: 400 },
+                );
+            }
+        }
 
-    let cart = user.cart;
-
-    if (!cart) {
-      console.log("Creating new cart for user:", session.user.id);
-      cart = await db.cart.create({
-        data: { userId: user.id },
-      });
-    }
-
-    try {
-      const existingCartItem = await db.cartItem.findFirst({
-        where: {
-          cartId: cart.id,
-          ...(isPrebuilt
-            ? { prebuiltProductId: productId }
-            : { productId: productId }),
-          productSizeId: productSizeId || null,
-          productColorId: productColorId || null,
-        },
-      });
-
-      if (existingCartItem) {
-        console.log("Updating existing cart item:", existingCartItem.id);
-        await db.cartItem.update({
-          where: { id: existingCartItem.id },
-          data: { quantity: existingCartItem.quantity + quantity },
+        /* ---------- GET OR CREATE CART ---------- */
+        let cart = await prisma.cart.findFirst({
+            where: { userId: session.user.id },
         });
-      } else {
-        console.log("Creating new cart item");
-        await db.cartItem.create({
-          data: {
+
+        if (!cart) {
+            cart = await prisma.cart.create({
+                data: { userId: session.user.id },
+            });
+        }
+
+        /* ---------- MERGE LOGIC ---------- */
+        const whereClause: any = {
             cartId: cart.id,
-            ...(isPrebuilt
-              ? { prebuiltProductId: productId }
-              : { productId: productId }),
-            quantity: quantity,
-            productSizeId: productSizeId || null,
-            productColorId: productColorId || null,
-          },
-        });
-      }
-
-      console.log("Successfully added/updated cart item");
-      return NextResponse.json({ success: true });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        console.error("Prisma error:", error.code, error.message);
-        if (error.code === "P2025") {
-          return NextResponse.json(
-            {
-              error: `${
-                isPrebuilt ? "Prebuilt product" : "Product"
-              } not found or invalid ID`,
-            },
-            { status: 404 }
-          );
-        }
-      }
-      throw error;
-    }
-  } catch (error) {
-    console.error("Error in POST /api/cart:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  try {
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        cart: {
-          include: {
-            items: {
-              include: {
-                product: true,
-                prebuiltProduct: true,
-                productSize: true,
-                productColor: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user?.cart) {
-      return NextResponse.json({ cart: [] });
-    }
-
-    const cartItems = user.cart.items
-      .map((item) => {
-        const product = item.product || item.prebuiltProduct;
-        if (!product) {
-          console.log("Warning: Cart item without associated product:", item);
-          return null;
-        }
-
-        return {
-          id: item.id,
-          productId: product.id,
-          name: product.name,
-          price: item.productSize?.price || product.price,
-          quantity: item.quantity,
-          images: product.images,
-          isPrebuilt: !!item.prebuiltProduct,
-          size: item.productSize?.name,
-          color: item.productColor?.name,
         };
-      })
-      .filter(Boolean); // Remove any null items
 
-    return NextResponse.json({ cart: cartItems });
-  } catch (error) {
-    console.error("Error fetching cart:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch cart" },
-      { status: 500 }
-    );
-  }
+        if (productId) whereClause.productId = productId;
+        if (prebuiltProductId) {
+            whereClause.prebuiltProductId = prebuiltProductId;
+            whereClause.prebuiltColour = prebuiltColour;
+            whereClause.prebuiltSize = prebuiltSize;
+        }
+
+        if (printerId) whereClause.printerId = printerId;
+
+        if (resinId) {
+            whereClause.resinId = resinId;
+            whereClause.resinColourId = resinColourId;
+            whereClause.resinWeightId = resinWeightId;
+        }
+
+        const existingItem = await prisma.cartItem.findFirst({
+            where: whereClause,
+        });
+
+        if (existingItem) {
+            await prisma.cartItem.update({
+                where: { id: existingItem.id },
+                data: {
+                    quantity: existingItem.quantity + quantity,
+                },
+            });
+        } else {
+            await prisma.cartItem.create({
+                data: {
+                    cartId: cart.id,
+                    quantity,
+
+                    productId,
+                    prebuiltProductId,
+                    printerId,
+
+                    resinId,
+                    resinColourId,
+                    resinWeightId,
+
+                    prebuiltColour,
+                    prebuiltSize,
+                },
+            });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("POST /api/cart error:", error);
+        return NextResponse.json(
+            { error: "Failed to add to cart" },
+            { status: 500 },
+        );
+    }
 }
 
+/* =========================
+   HELPER: Extract machine dimensions from printer specifications
+========================= */
+function extractMachineDimensions(specifications: any[]): {
+    length: number | null;
+    width: number | null;
+    height: number | null;
+} {
+    for (const spec of specifications || []) {
+        const label = (spec.label || "").trim();
+        const value = spec.value || "";
+
+        const labelLower = label.toLowerCase();
+        if (
+            labelLower === "machine dimensions" ||
+            labelLower.includes("machine dimension") ||
+            labelLower === "dimensions" ||
+            labelLower === "printer dimensions" ||
+            labelLower === "outer dimensions"
+        ) {
+            const match = value.match(
+                /(\d+)\s*(?:mm|cm)?\s*[x×]\s*(\d+)\s*(?:mm|cm)?\s*[x×]\s*(\d+)/i,
+            );
+            if (match) {
+                return {
+                    length: parseInt(match[1]),
+                    width: parseInt(match[2]),
+                    height: parseInt(match[3]),
+                };
+            }
+        }
+    }
+
+    return { length: null, width: null, height: null };
+}
+
+/* =========================
+   GET CART
+========================= */
+export async function GET() {
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string; name?: string; email?: string };
+    } | null;
+    if (!session?.user?.id) {
+        return NextResponse.json({ items: [] });
+    }
+
+    try {
+        const cart = await prisma.cart.findFirst({
+            where: { userId: session.user.id },
+            include: {
+                items: {
+                    include: {
+                        product: true,
+                        prebuiltProduct: true,
+                        printer: {
+                            include: {
+                                images: { orderBy: { sortOrder: "asc" } },
+                                specifications: true,
+                            },
+                        },
+                        resin: true,
+                        resinColour: {
+                            include: {
+                                images: { orderBy: { sortOrder: "asc" } },
+                            },
+                        },
+                        resinWeight: true,
+                    },
+                },
+            },
+        });
+
+        if (!cart) {
+            return NextResponse.json({ items: [] });
+        }
+
+        const items = cart.items.map((item) => {
+            /* ---------- RESIN ---------- */
+            if (item.resin) {
+                return {
+                    id: item.id,
+                    sourceId: item.resin.id,
+                    itemType: "resin",
+                    name: item.resin.name,
+                    price: item.resinWeight?.price ?? 0,
+                    quantity: item.quantity,
+                    images: item.resinColour?.images?.map((i) => i.url) ?? [],
+                    size: item.resinWeight
+                        ? `${item.resinWeight.weightInGrams}g`
+                        : null,
+                    color: item.resinColour?.name ?? null,
+                    colorHex: item.resinColour?.hexCode ?? null,
+                };
+            }
+
+            /* ---------- PRINTER ---------- */
+            if (item.printer) {
+                const machineDims = extractMachineDimensions(
+                    item.printer.specifications as any[],
+                );
+
+                return {
+                    id: item.id,
+                    sourceId: item.printer.id,
+                    itemType: "printer",
+                    name: item.printer.name,
+                    price: item.printer.price,
+                    quantity: item.quantity,
+                    images: item.printer.images.map((i) => i.url),
+                    weight: item.printer.weight
+                        ? item.printer.weight.toString()
+                        : null,
+                    machineDimensionLength: machineDims.length,
+                    machineDimensionWidth: machineDims.width,
+                    machineDimensionHeight: machineDims.height,
+                };
+            }
+
+            /* ---------- PREBUILT ---------- */
+            if (item.prebuiltProduct) {
+                return {
+                    id: item.id,
+                    sourceId: item.prebuiltProduct.id,
+                    itemType: "prebuilt",
+                    name: item.prebuiltProduct.name,
+                    price: item.prebuiltProduct.price,
+                    quantity: item.quantity,
+                    images: item.prebuiltProduct.images ?? [],
+                    size: item.prebuiltSize ?? null,
+                    color: item.prebuiltColour ?? null,
+                };
+            }
+
+            /* ---------- PRODUCT ---------- */
+            if (item.product) {
+                return {
+                    id: item.id,
+                    sourceId: item.product.id,
+                    itemType: "product",
+                    name: item.product.name,
+                    price: item.product.price,
+                    quantity: item.quantity,
+                    images: item.product.images ?? [],
+                };
+            }
+
+            return {
+                id: item.id,
+                itemType: "unknown",
+                name: "Unknown item",
+                price: 0,
+                quantity: item.quantity,
+                images: [],
+            };
+        });
+
+        return NextResponse.json({ items });
+    } catch (error) {
+        console.error("GET /api/cart error:", error);
+        return NextResponse.json({ items: [] });
+    }
+}
+
+/* =========================
+   CLEAR CART
+========================= */
 export async function DELETE() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string; name?: string; email?: string };
+    } | null;
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const cart = await db.cart.findFirst({
-      where: { userId: session.user.id },
-    });
+    try {
+        const cart = await prisma.cart.findFirst({
+            where: { userId: session.user.id },
+        });
 
-    if (!cart) {
-      return NextResponse.json({ success: true });
+        if (cart) {
+            await prisma.cartItem.deleteMany({
+                where: { cartId: cart.id },
+            });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("DELETE /api/cart error:", error);
+        return NextResponse.json(
+            { error: "Failed to clear cart" },
+            { status: 500 },
+        );
     }
-
-    await db.cartItem.deleteMany({
-      where: { cartId: cart.id },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error clearing cart:", error);
-    return NextResponse.json(
-      { error: "Failed to clear cart" },
-      { status: 500 }
-    );
-  }
 }

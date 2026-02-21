@@ -2,12 +2,15 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import RichTextEditor from "./RichTextEditor"; // add this at top
+import RichTextEditor from "./RichTextEditor";
 
 interface BlogFormProps {
     blogId?: string;
@@ -28,6 +31,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const isEdit = !!blogId;
 
     useEffect(() => {
         if (blogId) {
@@ -181,6 +185,37 @@ export default function BlogForm({ blogId }: BlogFormProps) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
+            <Dialog open={isSubmitting}>
+                <DialogContent
+                    className="sm:max-w-md"
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                >
+                    <VisuallyHidden>
+                        <DialogTitle>
+                            {isEdit
+                                ? "Updating Blog Post"
+                                : "Creating Blog Post"}
+                        </DialogTitle>
+                    </VisuallyHidden>
+
+                    <div className="flex flex-col items-center justify-center py-10 text-center gap-4">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+
+                        <h2 className="text-lg font-semibold">
+                            {isEdit
+                                ? "Updating Blog Post…"
+                                : "Creating Blog Post…"}
+                        </h2>
+
+                        <p className="text-sm text-muted-foreground">
+                            This may take a few moments. Please do not close
+                            this window.
+                        </p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {errors.form && (
                 <Alert variant="destructive">
                     <AlertDescription>{errors.form}</AlertDescription>

@@ -25,8 +25,8 @@ model User {
   reviews          Review[]
   sessions         Session[]
   wishlist         Wishlist?
+  orderFeedback    OrderFeedback[]   // ← ADD THIS
 }
-
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -149,16 +149,36 @@ model Wishlist {
 }
 
 model WishlistItem {
-  id                String           @id @default(cuid())
-  wishlistId        String
-  productId         String?
-  prebuiltProductId String?
-  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  product           Product?         @relation(fields: [productId], references: [id])
-  wishlist          Wishlist         @relation(fields: [wishlistId], references: [id])
+  id                 String   @id @default(cuid())
+  wishlistId         String
 
-  @@unique([wishlistId, productId, prebuiltProductId])
+  // item types
+  productId          String?
+  prebuiltProductId  String?
+  printerId          String?
+  resinId            String?
+
+  // variants (optional)
+  productSizeId      String?
+  productColorId     String?
+
+  resinColourId      String?
+  resinWeightId      String?
+
+  prebuiltColor      String?
+  prebuiltSize       String?
+
+  createdAt          DateTime @default(now())
+
+  wishlist           Wishlist @relation(fields: [wishlistId], references: [id])
+
+  product            Product?         @relation(fields: [productId], references: [id])
+  prebuiltProduct    PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+  printer            Printer?         @relation(fields: [printerId], references: [id])
+  resin              Resin?           @relation(fields: [resinId], references: [id])
 }
+
+
 
 model Cart {
   id     String     @id @default(cuid())
@@ -168,22 +188,36 @@ model Cart {
 }
 
 model CartItem {
-  id                String           @id @default(cuid())
+  id                String       @id @default(cuid())
   cartId            String
   productId         String?
   prebuiltProductId String?
   productSizeId     String?
   productColorId    String?
   quantity          Int
-  addedAt           DateTime         @default(now())
-  customization     String?
-  cart              Cart             @relation(fields: [cartId], references: [id])
-  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  productColor      ProductColor?    @relation(fields: [productColorId], references: [id])
-  product           Product?         @relation(fields: [productId], references: [id])
-  productSize       ProductSize?     @relation(fields: [productSizeId], references: [id])
+  printerId         String?
+  printer           Printer?     @relation(fields: [printerId], references: [id])
+   /* 🧱 PREBUILT (NEW) */
+  prebuiltColour    String?
+  prebuiltSize      String?
+  // Resin selection
+  resinId           String?
+  resin             Resin?       @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  resinColourId     String?
+  resinColour       ResinColour? @relation(fields: [resinColourId], references: [id])
+  resinWeightId     String?
+  resinWeight       ResinWeight? @relation(fields: [resinWeightId], references: [id])
 
-  @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId])
+  addedAt         DateTime         @default(now())
+  customization   String?
+  cart            Cart             @relation(fields: [cartId], references: [id])
+  prebuiltProduct PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
+
+  productColor ProductColor? @relation(fields: [productColorId], references: [id])
+  product      Product?      @relation(fields: [productId], references: [id])
+  productSize  ProductSize?  @relation(fields: [productSizeId], references: [id])
+
+  @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId, printerId])
 }
 
 model Address {
@@ -345,6 +379,11 @@ model Form3DResponse {
   additionalFile      String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  firstName    String?
+  lastName     String?
+  email        String?
+  phone        String?
+  company      String?
 }
 
 model Review {
@@ -374,40 +413,194 @@ model Announcement {
 }
 
 model Order {
-  id              String    @id @default(cuid())
-  userId          String
-  items           Json
-  totalAmount     Float
-  status          String    @default("payment_pending")
-  shippingAddress Json
-  billingAddress  Json
-  paymentMethod   String
-  transactionId   String?   @unique
-  trackingInfo    Json?
-  createdAt       DateTime  @default(now())
-  user            User      @relation(fields: [userId], references: [id])
-  shipment        Shipment?
+  id                String    @id @default(cuid())
+  userId            String
+
+  items             Json
+  subtotal          Float?
+  discountAmount    Float?    @default(0)
+  discountCode      String?
+  tax               Float?    @default(0)
+  shippingPrice     Float?    @default(0)
+  totalAmount       Float
+
+  status            String    @default("payment_pending")
+
+  shippingAddress   Json
+  billingAddress    Json
+
+  paymentMethod     String?
+  paymentReference  String?
+  maskedPaymentId   String?
+  utrNumber         String?
+  brnNumber         String?
+  cardNetwork       String?
+
+  transactionId     String?   @unique
+  trackingInfo      Json?
+
+  refundStatus      String?
+  refundId          String?
+  refundInitiatedAt DateTime?
+  refundCompletedAt DateTime?
+
+  shippingMode      String?
+  createdAt         DateTime  @default(now())
+
+  user              User      @relation(fields: [userId], references: [id])
+  shipments         Shipment[]
+  feedback          OrderFeedback?
+
+  invoice           Invoice?
 
   @@index([userId])
 }
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  orderId       String   @unique
+
+  issuedAt      DateTime @default(now())
+  subtotal      Float
+  tax           Float
+  total         Float
+
+  status        String   @default("issued")
+  // issued | adjusted | cancelled
+
+  order         Order    @relation(fields: [orderId], references: [id])
+  creditNotes   CreditNote[]
+
+  @@index([issuedAt])
+}
+model CreditNote {
+  id               String   @id @default(cuid())
+  creditNoteNumber String   @unique
+  invoiceId        String
+
+  amount           Float
+  reason           String
+  issuedAt         DateTime @default(now())
+
+  invoice          Invoice  @relation(fields: [invoiceId], references: [id])
+
+  @@index([issuedAt])
+}
+
+model DocumentCounter {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique   // "invoice" | "credit_note"
+  lastNo    Int
+  updatedAt DateTime @updatedAt
+}
+
+model OrderFeedback {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  userId    String
+  items     Json                      // [{ index, name, productId, itemType }]
+  tags      String[]                  // ["Product quality", "Delivery experience"]
+  comment   String?                   // Optional, max 500 chars
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+model Discount {
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
+
+  scope         DiscountScope
+  valueType     DiscountValueType
+  value         Float
+
+  minOrderValue Float?
+  maxDiscount   Float?
+
+  expiresAt     DateTime?
+  isHidden      Boolean  @default(false)
+  isActive      Boolean  @default(true)
+
+  itemTypes     DiscountItemType[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model DiscountItemType {
+  id         String   @id @default(cuid())
+  discountId String
+  itemType   ItemType
+
+  discount   Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+
+  @@unique([discountId, itemType])
+}
+
+enum DiscountScope {
+  cart
+  item_type
+}
+
+enum DiscountValueType {
+  percentage
+  flat
+}
+
+enum ItemType {
+  product
+  prebuilt
+  printer
+  resin
+}
 
 model Shipment {
-  id          String   @id @default(cuid())
-  orderId     String   @unique
-  provider    String   @default("DEHIVERY_TEST")
-  waybill     String?        // make optional if not available yet
-  status      String
-  trackingUrl String?
-  rawResponse Json?
-   labelGenerated Boolean  @default(false)
+  id               String    @id @default(cuid())
+  orderId          String    // No @unique for MPS support
+  provider         String    @default("DELHIVERY_TEST")
+  waybill          String?   @unique
+  status           String
+  trackingUrl      String?
+  rawResponse      Json?
+  labelGenerated   Boolean   @default(false)
   labelGeneratedAt DateTime?
 
-  lastError   String?
-  attempts    Int      @default(0)
+  lastError      String?
+  attempts       Int       @default(0)
+  lastSyncedAt   DateTime?
+  syncing        Boolean   @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  order       Order    @relation(fields: [orderId], references: [id])
+  // MPS FIELDS
+  shipmentType   String    @default("SPS")
+  isMaster       Boolean   @default(true)
+  masterWaybill  String?
+  childWaybills  String[]  @default([])
+  packageCount   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([masterWaybill])
+}
+
+
+model PickupRequest {
+  id                  String   @id @default(cuid())
+  pickupLocation       String
+  pickupDate           DateTime
+  pickupTime           String
+  expectedPackageCount Int
+  pickupId             Int
+  status               String   @default("scheduled")
+  createdAt            DateTime @default(now())
+
+  @@unique([pickupLocation, pickupDate])
 }
 
 
@@ -427,3 +620,296 @@ model HeroImage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Printer {
+  id    String @id @default(cuid())
+  name  String
+  slug  String @unique
+  brand String
+
+  // Pricing
+  price         Int // Current price in paise
+  originalPrice Int? // Original price (for discount calculation)
+  discount      Int? // Discount percentage
+
+  // Basic Info
+  technology       String
+  experience       String
+  description      String?
+  shortDescription String? // For card view
+
+  // Build Volume
+  volumeLength Int
+  volumeWidth  Int
+  volumeHeight Int
+  volumeMax    Int
+  weight     Int?
+
+  // Images
+  images PrinterImage[]
+
+  // Related Data
+  attributes     PrinterAttribute[]
+  specifications PrinterSpecification[]
+  features       PrinterFeature[]
+  applications   PrinterApplication[]
+  downloads      PrinterDownload[]
+
+  // SEO & Metadata
+  metaTitle        String?
+  metaDescription  String?
+  wishlistItems    WishlistItem[]
+  // Warranty & Support
+  warrantyYears    Int            @default(1)
+  freeInstallation Boolean        @default(true)
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  cartItems CartItem[]
+
+  @@index([technology])
+  @@index([brand])
+  @@index([volumeMax])
+  @@index([price])
+}
+
+
+model PrinterImage {
+  id        String  @id @default(cuid())
+  printerId String
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isMain    Boolean @default(false)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+
+model PrinterAttribute {
+  id             String @id @default(cuid())
+  printerId      String
+  attributeKey   String
+  attributeValue String
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId])
+  @@index([attributeKey, attributeValue])
+}
+
+
+model PrinterSpecification {
+  id        String @id @default(cuid())
+  printerId String
+  category  String // "Build Specifications", "Print Specifications", etc.
+  label     String // "Build Volume", "Nozzle Diameter", etc.
+  value     String // "300 × 300 × 300 mm", "0.4 mm", etc.
+  sortOrder Int    @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, category, sortOrder])
+}
+
+
+model PrinterFeature {
+  id          String  @id @default(cuid())
+  printerId   String
+  title       String
+  description String?
+  sortOrder   Int     @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+
+model PrinterApplication {
+  id        String @id @default(cuid())
+  printerId String
+  name      String // "Rapid Prototyping", "Functional Parts", etc.
+  sortOrder Int    @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+
+model PrinterDownload {
+  id          String  @id @default(cuid())
+  printerId   String
+  title       String // "Product Datasheet", "User Manual", etc.
+  description String? // Optional description
+  downloadUrl String? // Direct link to PDF (external URL or internal path)
+  sortOrder   Int     @default(0)
+
+  printer Printer @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@index([printerId, sortOrder])
+}
+
+
+model SupportContent {
+  id        String @id @default(cuid())
+  printerId String
+  section   String // "Warranty Information", "After-Sales Support", etc.
+  content   String @db.Text
+  sortOrder Int    @default(0)
+
+  @@index([printerId, sortOrder])
+}
+
+model Resin {
+  id    String @id @default(cuid())
+  name  String
+  slug  String @unique
+  brand String
+
+  technology String
+  resolution String[]
+
+  shortDescription String?
+  description      String?
+  cardImageUrl       String?
+  images ResinImage[]
+
+  colours        ResinColour[]
+  weights        ResinWeight[]
+  attributes     ResinAttribute[]
+  specifications ResinSpecification[]
+  features       ResinFeature[]
+  downloads      ResinDownload[]
+  applications ResinApplication[]
+  compatibilities ResinCompatibility[]
+  wishlistItems WishlistItem[]
+  cartItems     CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ResinColour {
+  id      String @id @default(cuid())
+  resinId String
+
+  name      String // "Grey", "Clear", "Black"
+  hexCode   String?
+  sortOrder Int     @default(0)
+
+  images ResinImage[]
+
+  resin    Resin      @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  CartItem CartItem[]
+
+  @@index([resinId])
+}
+
+model ResinImage {
+  id       String @id @default(cuid())
+  colourId String
+
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isMain    Boolean @default(false)
+
+  colour  ResinColour @relation(fields: [colourId], references: [id], onDelete: Cascade)
+  Resin   Resin?      @relation(fields: [resinId], references: [id])
+  resinId String?
+
+  @@index([colourId, sortOrder])
+}
+
+model ResinWeight {
+  id      String @id @default(cuid())
+  resinId String
+
+  weightInGrams Int // 500, 1000, 2000
+  price         Int // ₹ (integer)
+  originalPrice Int? // ₹ (integer)
+  discount      Int? // ₹ (integer)
+
+  sortOrder     Int @default(0)
+
+  resin    Resin      @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  CartItem CartItem[]
+
+  @@index([resinId])
+}
+
+
+model ResinAttribute {
+  id      String @id @default(cuid())
+  resinId String
+
+  label String // "Viscosity"
+  value String // "Low"
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([label, value])
+}
+
+model ResinSpecification {
+  id      String @id @default(cuid())
+  resinId String
+
+  category  String
+  label     String
+  value     String
+  sortOrder Int    @default(0)
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([resinId, category, sortOrder])
+}
+
+model ResinFeature {
+  id      String @id @default(cuid())
+  resinId String
+
+  title       String
+  description String?
+  sortOrder   Int     @default(0)
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+}
+
+model ResinDownload {
+  id      String @id @default(cuid())
+  resinId String
+
+  title       String
+  description String?
+  downloadUrl String?
+  sortOrder   Int     @default(0)
+
+  resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+}
+model ResinApplication {
+  id        String @id @default(cuid())
+ resinId String
+  name      String // "Rapid Prototyping", "Functional Parts", etc.
+  sortOrder Int    @default(0)
+
+ resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([resinId, sortOrder])
+}
+
+model ResinCompatibility {
+  id        String @id @default(cuid())
+ resinId String
+  name      String // "Rapid Prototyping", "Functional Parts", etc.
+  sortOrder Int    @default(0)
+
+ resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
+
+  @@index([resinId, sortOrder])
+}
+

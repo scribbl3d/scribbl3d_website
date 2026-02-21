@@ -1,224 +1,284 @@
 "use client";
 
-import type React from "react";
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import type { Discount } from "@/app/admin/discounts/types";
+import { calculateDiscount } from "@/app/cart/utils/calculateDiscount";
 import { useSession } from "next-auth/react";
+import React, {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
 
-type CartItem = {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  images: string[];
-  isPrebuilt: boolean;
-  color?: string;
-  size?: string;
-  productSizeId?: string;
-  productColorId?: string;
-  customization?: string;
+/* =========================
+   TYPES
+========================= */
+
+export type CartItem = {
+    id: string;
+    sourceId?: string; // Original product/printer/resin/prebuilt ID
+    itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
+    name: string;
+    price: number;
+    quantity: number;
+    images: string[];
+    size?: string | null;
+    color?: string | null;
+    colorHex?: string | null;
+    prebuiltColour?: string | null;
+    prebuiltSize?: string | null;
+    customization?: string | null;
+    weight?: string | null;
+
+    machineDimensionLength?: number | null; // mm
+    machineDimensionWidth?: number | null; // mm
+    machineDimensionHeight?: number | null; // mm
+};
+
+export type AddToCartPayload = {
+    productId?: string;
+    prebuiltProductId?: string;
+    printerId?: string;
+    resinId?: string;
+    resinColourId?: string;
+    resinWeightId?: string;
+    prebuiltColour?: string;
+    prebuiltSize?: string;
+    quantity?: number;
 };
 
 type CartContextType = {
-  cart: CartItem[];
-  addToCart: (
-    item: Omit<CartItem, "id"> & {
-      productSizeId?: string;
-      productColorId?: string;
-    }
-  ) => Promise<void>;
-  removeFromCart: (id: string) => Promise<void>;
-  updateQuantity: (id: string, quantity: number) => Promise<void>;
-  updateCustomization: (id: string, customization: string) => Promise<void>;
-  clearCart: () => Promise<void>;
-  fetchCart: () => Promise<void>;
-  applyDiscount: (code: string) => Promise<number>;
+    cart: CartItem[];
+
+    /* 🔒 PRICING */
+    discountAmount: number;
+    appliedDiscountCode?: string;
+
+    /* ACTIONS */
+    applyDiscountCode: (code: string) => Promise<void>;
+    clearDiscount: () => void;
+
+    addToCart: (payload: AddToCartPayload) => Promise<void>;
+    removeFromCart: (id: string) => Promise<void>;
+    updateQuantity: (id: string, quantity: number) => Promise<void>;
+    updateCustomization: (id: string, customization: string) => Promise<void>;
+    clearCart: () => Promise<void>;
+    fetchCart: () => Promise<void>;
 };
+
+/* =========================
+   CONTEXT
+========================= */
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
+    const ctx = useContext(CartContext);
+    if (!ctx) {
+        throw new Error("useCart must be used within CartProvider");
+    }
+    return ctx;
 };
 
+/* =========================
+   PROVIDER
+========================= */
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
+    children,
 }) => {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const { data: session } = useSession();
+    const [cart, setCart] = useState<CartItem[]>([]);
+    const [discountAmount, setDiscountAmount] = useState(0);
+    const [appliedDiscountCode, setAppliedDiscountCode] = useState<
+        string | undefined
+    >(undefined);
 
-  const fetchCart = useCallback(async () => {
-    if (session) {
-      try {
-        const response = await fetch("/api/cart");
-        if (response.ok) {
-          const data = await response.json();
-          setCart(
-            data.cart.map((item: any) => ({
-              ...item,
-              size: item.size || null,
-              color: item.color || null,
-              customization: item.customization || null,
-            }))
-          );
+    const { data: session } = useSession();
+
+    /* =========================
+       FETCH CART
+    ========================= */
+
+    const fetchCart = useCallback(async () => {
+        if (!session) return;
+
+        try {
+            const res = await fetch("/api/cart");
+            if (!res.ok) return;
+
+            const data = await res.json();
+            setCart(data.items ?? []);
+        } catch (err) {
+            console.error("Failed to fetch cart:", err);
+            setCart([]);
         }
-      } catch (error) {
-        console.error("Failed to fetch cart:", error);
-      }
-    }
-  }, [session]);
+    }, [session]);
 
-  useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+    useEffect(() => {
+        fetchCart();
+    }, [fetchCart]);
 
-  const addToCart = async (
-    item: Omit<CartItem, "id"> & {
-      productSizeId?: string;
-      productColorId?: string;
-    }
-  ) => {
-    try {
-      console.log("Adding item to cart:", item);
-      const response = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-      });
-      if (response.ok) {
-        console.log("Item added to cart successfully");
+    /* =========================
+       APPLY DISCOUNT
+    ========================= */
+
+    const applyDiscountCode = async (code: string) => {
+        const res = await fetch(
+            `/api/discounts/apply?code=${encodeURIComponent(code)}`,
+        );
+
+        if (!res.ok) {
+            throw new Error("Invalid discount code");
+        }
+
+        const discount: Discount = await res.json();
+
+        // For scoped discounts (item_type), only calculate on matching items
+        // discount.itemTypes is an array of { itemType: "printer" | "product" | ... }
+        let applicableSubtotal: number;
+
+        if (discount.scope === "item_type" && discount.itemTypes?.length > 0) {
+            const allowedTypes = discount.itemTypes.map(
+                (t: { itemType: string }) => t.itemType,
+            );
+            applicableSubtotal = cart
+                .filter((item) => allowedTypes.includes(item.itemType))
+                .reduce((sum, item) => sum + item.price * item.quantity, 0);
+        } else {
+            applicableSubtotal = cart.reduce(
+                (sum, item) => sum + item.price * item.quantity,
+                0,
+            );
+        }
+
+        const amount = calculateDiscount(discount, applicableSubtotal);
+
+        if (amount === 0) {
+            throw new Error("This coupon is not applicable to your order");
+        }
+
+        setDiscountAmount(amount);
+        setAppliedDiscountCode(discount.code);
+    };
+
+    const clearDiscount = () => {
+        setDiscountAmount(0);
+        setAppliedDiscountCode(undefined);
+    };
+
+    /* =========================
+       RESET DISCOUNT ON CART CHANGE
+    ========================= */
+
+    useEffect(() => {
+        if (!cart.length) {
+            clearDiscount();
+        }
+    }, [cart]);
+
+    /* =========================
+       ADD TO CART
+    ========================= */
+
+    const addToCart = async (payload: AddToCartPayload) => {
+        const res = await fetch("/api/cart", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                ...payload,
+                quantity: payload.quantity ?? 1,
+            }),
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Add to cart failed");
+        }
+
         await fetchCart();
-      } else {
-        const errorData = await response.json();
-        console.error("Failed to add item to cart:", errorData);
-        throw new Error(errorData.message || "Failed to add item to cart");
-      }
-    } catch (error) {
-      console.error("Error adding item to cart:", error);
-      throw error;
-    }
-  };
+    };
 
-  const removeFromCart = async (id: string) => {
-    try {
-      const response = await fetch(`/api/cart/${id}`, { method: "DELETE" });
-      if (response.ok) {
-        setCart((prevCart) => prevCart.filter((item) => item.id !== id));
-      }
-    } catch (error) {
-      console.error("Failed to remove item from cart:", error);
-    }
-  };
+    /* =========================
+       REMOVE ITEM
+    ========================= */
 
-  const updateQuantity = async (id: string, quantity: number) => {
-    try {
-      console.log(
-        `Sending API request to update quantity for item ${id} to ${quantity}`
-      );
-      const response = await fetch(`/api/cart/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity }),
-      });
-      if (response.ok) {
-        console.log(`Successfully updated quantity for item ${id}`);
-        setCart((prevCart) =>
-          prevCart.map((item) =>
-            item.id === id ? { ...item, quantity } : item
-          )
-        );
-      } else {
-        console.error(
-          `Failed to update quantity for item ${id}. Status: ${response.status}`
-        );
-      }
-    } catch (error) {
-      console.error("Failed to update item quantity:", error);
-    }
-  };
+    const removeFromCart = async (id: string) => {
+        const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            setCart((prev) => prev.filter((i) => i.id !== id));
+        }
+    };
 
-  const updateCustomization = async (id: string, customization: string) => {
-    try {
-      console.log(`Sending API request to update customization for item ${id}`);
-      const response = await fetch(`/api/cart/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customization }),
-      });
-      if (response.ok) {
-        const updatedItem = await response.json();
-        console.log(`Successfully updated customization for item ${id}`);
-        setCart((prevCart) =>
-          prevCart.map((item) =>
-            item.id === id
-              ? { ...item, customization: updatedItem.item.customization }
-              : item
-          )
-        );
-      } else {
-        console.error(
-          `Failed to update customization for item ${id}. Status: ${response.status}`
-        );
-      }
-    } catch (error) {
-      console.error("Failed to update item customization:", error);
-    }
-  };
+    /* =========================
+       UPDATE QTY
+    ========================= */
 
-  const clearCart = async () => {
-    try {
-      const response = await fetch("/api/cart", { method: "DELETE" });
-      if (response.ok) {
-        setCart([]);
-      }
-    } catch (error) {
-      console.error("Failed to clear cart:", error);
-    }
-  };
+    const updateQuantity = async (id: string, quantity: number) => {
+        const res = await fetch(`/api/cart/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ quantity }),
+        });
 
-  const applyDiscount = async (code: string): Promise<number> => {
-    try {
-      const response = await fetch("/api/apply-discount", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return data.discount;
-      } else {
-        throw new Error("Invalid discount code");
-      }
-    } catch (error) {
-      console.error("Error applying discount:", error);
-      throw error;
-    }
-  };
+        if (res.ok) {
+            setCart((prev) =>
+                prev.map((i) => (i.id === id ? { ...i, quantity } : i)),
+            );
+        }
+    };
 
-  return (
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        updateCustomization,
-        clearCart,
-        fetchCart,
-        applyDiscount,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+    /* =========================
+       UPDATE CUSTOMIZATION
+    ========================= */
+
+    const updateCustomization = async (id: string, customization: string) => {
+        const res = await fetch(`/api/cart/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customization }),
+        });
+
+        if (res.ok) {
+            setCart((prev) =>
+                prev.map((i) => (i.id === id ? { ...i, customization } : i)),
+            );
+        }
+    };
+
+    /* =========================
+       CLEAR CART
+    ========================= */
+
+    const clearCart = async () => {
+        const res = await fetch("/api/cart", { method: "DELETE" });
+        if (res.ok) {
+            setCart([]);
+            clearDiscount();
+        }
+    };
+
+    /* =========================
+       PROVIDER
+    ========================= */
+
+    return (
+        <CartContext.Provider
+            value={{
+                cart,
+                discountAmount,
+                appliedDiscountCode,
+                applyDiscountCode,
+                clearDiscount,
+                addToCart,
+                removeFromCart,
+                updateQuantity,
+                updateCustomization,
+                clearCart,
+                fetchCart,
+            }}
+        >
+            {children}
+        </CartContext.Provider>
+    );
 };

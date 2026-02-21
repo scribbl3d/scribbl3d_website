@@ -1,57 +1,55 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
+export async function GET(req: Request) {
+    const session = await getServerSession(authOptions);
 
-export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return NextResponse.json({
+            isInWishlist: false,
+            isAuthenticated: false,
+        });
+    }
 
-  if (!session?.user?.email) {
-    return NextResponse.json({ isInWishlist: false, isAuthenticated: false });
-  }
+    const { searchParams } = new URL(req.url);
 
-  const { searchParams } = new URL(request.url);
-  const productId = searchParams.get("productId");
-  const isPrebuilt = searchParams.get("isPrebuilt") === "true";
+    const productId = searchParams.get("productId");
+    const prebuiltProductId = searchParams.get("prebuiltProductId");
+    const printerId = searchParams.get("printerId");
+    const resinId = searchParams.get("resinId");
 
-  if (!productId) {
-    return NextResponse.json(
-      { error: "Product ID is required" },
-      { status: 400 }
-    );
-  }
+    if (!productId && !prebuiltProductId && !printerId && !resinId) {
+        return NextResponse.json({ error: "Invalid params" }, { status: 400 });
+    }
 
-  try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        wishlist: {
-          include: {
-            items: {
-              where: {
-                OR: [
-                  { productId: isPrebuilt ? undefined : productId },
-                  { prebuiltProductId: isPrebuilt ? productId : undefined },
-                ],
-              },
-            },
-          },
-        },
-      },
+    const wishlist = await prisma.wishlist.findFirst({
+        where: { userId: session.user.id },
     });
 
-    const isInWishlist = (user?.wishlist?.items ?? []).length > 0;
+    if (!wishlist) {
+        return NextResponse.json({
+            isInWishlist: false,
+            isAuthenticated: true,
+        });
+    }
 
-    return NextResponse.json({ isInWishlist, isAuthenticated: true });
-  } catch (error) {
-    console.error("Error checking wishlist status:", error);
-    return NextResponse.json(
-      { error: "Failed to check wishlist status", isAuthenticated: true },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
+    const item = await prisma.wishlistItem.findFirst({
+        where: {
+            wishlistId: wishlist.id,
+            OR: [
+                productId ? { productId } : undefined,
+                prebuiltProductId ? { prebuiltProductId } : undefined,
+                printerId ? { printerId } : undefined,
+                resinId ? { resinId } : undefined,
+            ].filter(Boolean) as any[],
+        },
+    });
+
+    return NextResponse.json({
+        isInWishlist: Boolean(item),
+        isAuthenticated: true,
+        wishlistItemId: item?.id ?? null,
+    });
 }

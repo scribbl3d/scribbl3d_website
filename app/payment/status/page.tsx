@@ -1,114 +1,320 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { useCheckout } from "@/providers/CheckoutProvider";
-import { useCart } from "@/providers/CartProvider";
-import axios from "axios";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { useCart } from "@/providers/CartProvider";
+import { useCheckout } from "@/providers/CheckoutProvider";
+import axios from "axios";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export default function PaymentStatus() {
-  const router = useRouter();
-  const searchParams = useSearchParams()!;
-  const { resetCheckout } = useCheckout();
-  const { clearCart } = useCart();
-  const [hasRedirected, setHasRedirected] = useState(false);
+    const router = useRouter();
+    const searchParams = useSearchParams()!;
+    const { resetCheckout } = useCheckout();
+    const { clearCart } = useCart();
 
-  useEffect(() => {
-    const checkPaymentStatus = async () => {
-      console.log("Payment status page loaded");
+    const [status, setStatus] = useState<
+        "checking" | "pending" | "success" | "failed" | "timeout"
+    >("checking");
+    const [retryCount, setRetryCount] = useState(0);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-      // Get transaction ID from URL params first, then session storage
-      const transactionId =
-        searchParams.get("transactionId") ||
-        sessionStorage.getItem("phonepe_transaction_id");
-      const amount = sessionStorage.getItem("phonepe_amount");
+    // Refs to prevent race conditions
+    const isCheckingRef = useRef(false);
+    const hasCompletedRef = useRef(false);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const transactionRef = useRef<{
+        transactionId: string | null;
+        orderId: string | null;
+        amount: string | null;
+    }>({ transactionId: null, orderId: null, amount: null });
 
-      console.log("Transaction details:", { transactionId, amount });
+    const MAX_RETRIES = 12; // 60 seconds total (12 × 5s)
+    const RETRY_INTERVAL = 5000; // 5 seconds
 
-      if (!transactionId) {
-        console.error("Missing transaction ID");
-        toast({
-          title: "Error",
-          description: "Could not verify payment - missing transaction ID",
-          variant: "destructive",
-        });
-        router.push("/checkout");
-        return;
-      }
+    useEffect(() => {
+        // Prevent running if already completed
+        if (hasCompletedRef.current) return;
 
-      try {
-        const response = await axios.get(`/api/check-status/${transactionId}`);
-        console.log("Payment status response:", response.data);
+        // Get transaction details once and store in ref
+        const transactionId =
+            searchParams.get("transactionId") ||
+            sessionStorage.getItem("phonepe_transaction_id");
+        const orderId = sessionStorage.getItem("phonepe_order_id");
+        const amount = sessionStorage.getItem("phonepe_amount");
 
-        if (response.data.success && response.data.code === "PAYMENT_SUCCESS") {
-          console.log(
-            "Payment successful, clearing cart and resetting checkout"
-          );
-          await clearCart();
-          resetCheckout();
+        transactionRef.current = { transactionId, orderId, amount };
 
-          // Store success state in session to prevent loops
-          if (!hasRedirected) {
-            setHasRedirected(true);
-            sessionStorage.setItem("payment_success", "true");
-            console.log("Redirecting to success page with params:", {
-              transactionId,
-              amount,
+        if (!transactionId) {
+            console.error("[PaymentStatus] Missing transaction ID");
+            setStatus("failed");
+            setErrorMessage(
+                "Could not verify payment - missing transaction ID",
+            );
+            toast({
+                title: "Error",
+                description:
+                    "Could not verify payment - missing transaction ID",
+                variant: "destructive",
             });
+            setTimeout(() => router.replace("/checkout"), 2000);
+            return;
+        }
 
-            // Clear storage after storing success state
+        const checkPaymentStatus = async (attempt: number) => {
+            // Prevent duplicate concurrent calls
+            if (isCheckingRef.current || hasCompletedRef.current) {
+                return;
+            }
+
+            isCheckingRef.current = true;
+            setRetryCount(attempt);
+
+            try {
+                const response = await axios.get(
+                    `/api/check-status/${transactionRef.current.transactionId}`,
+                    { timeout: 15000 }, // 15 second timeout for API call
+                );
+
+                const { success, code, message } = response.data;
+
+                if (success && code === "PAYMENT_SUCCESS") {
+                    handleSuccess();
+                } else if (code === "PAYMENT_PENDING") {
+                    handlePending(attempt);
+                } else {
+                    handleFailure(message || "Payment failed");
+                }
+            } catch (error: any) {
+                console.error("[PaymentStatus] Error:", error);
+                handleError(attempt, error);
+            }
+        };
+
+        const handleSuccess = async () => {
+            hasCompletedRef.current = true;
+            isCheckingRef.current = false;
+            setStatus("success");
+
+            // Clear session storage
             sessionStorage.removeItem("phonepe_transaction_id");
+            sessionStorage.removeItem("phonepe_order_id");
             sessionStorage.removeItem("phonepe_amount");
 
-            // Use replace instead of push to prevent back navigation
-            router.replace(
-              `/payment/success?txnId=${transactionId}&amount=${amount}`
-            );
-          }
-        } else if (response.data.code === "PAYMENT_PENDING") {
-          console.log("Payment pending, retrying in 5 seconds");
-          toast({
-            title: "Payment Pending",
-            description: "Your payment is still being processed. Please wait.",
-          });
-          setTimeout(() => checkPaymentStatus(), 5000);
-        } else {
-          console.log("Payment failed");
-          toast({
-            title: "Payment Failed",
-            description: response.data.message || "Payment verification failed",
-            variant: "destructive",
-          });
-          router.replace(`/payment/failure?txnId=${transactionId}`);
-        }
-      } catch (error: any) {
-        console.error("Error checking payment status:", error);
-        toast({
-          title: "Error",
-          description: "Failed to verify payment status",
-          variant: "destructive",
-        });
-        router.replace("/payment/failure");
-      }
+            // Clear cart and reset checkout
+            try {
+                await clearCart();
+                resetCheckout();
+            } catch (e) {
+                console.error("[PaymentStatus] Error clearing cart:", e);
+            }
+
+            // Redirect after brief delay
+            setTimeout(() => {
+                const { transactionId, orderId, amount } =
+                    transactionRef.current;
+                router.replace(
+                    `/payment/success?txnId=${transactionId}&amount=${amount}&orderId=${orderId}`,
+                );
+            }, 1000);
+        };
+
+        const handlePending = (attempt: number) => {
+            setStatus("pending");
+            isCheckingRef.current = false;
+
+            if (attempt < MAX_RETRIES - 1) {
+                timeoutRef.current = setTimeout(() => {
+                    checkPaymentStatus(attempt + 1);
+                }, RETRY_INTERVAL);
+            } else {
+                handleTimeout();
+            }
+        };
+
+        const handleFailure = (message: string) => {
+            hasCompletedRef.current = true;
+            isCheckingRef.current = false;
+            setStatus("failed");
+            setErrorMessage(message);
+
+            sessionStorage.removeItem("phonepe_transaction_id");
+            sessionStorage.removeItem("phonepe_order_id");
+            sessionStorage.removeItem("phonepe_amount");
+
+            toast({
+                title: "Payment Failed",
+                description: message,
+                variant: "destructive",
+            });
+
+            setTimeout(() => {
+                const { transactionId, orderId } = transactionRef.current;
+                router.replace(
+                    `/payment/failure?txnId=${transactionId}&orderId=${orderId}`,
+                );
+            }, 2000);
+        };
+
+        const handleTimeout = () => {
+            hasCompletedRef.current = true;
+            isCheckingRef.current = false;
+            setStatus("timeout");
+
+            toast({
+                title: "Verification Timeout",
+                description:
+                    "Payment verification is taking longer than expected.",
+            });
+        };
+
+        const handleError = (attempt: number, error: any) => {
+            isCheckingRef.current = false;
+
+            // Network error or timeout - retry
+            if (attempt < MAX_RETRIES - 1) {
+                timeoutRef.current = setTimeout(() => {
+                    checkPaymentStatus(attempt + 1);
+                }, RETRY_INTERVAL);
+            } else {
+                handleTimeout();
+            }
+        };
+
+        // Start checking
+        checkPaymentStatus(0);
+
+        // Cleanup
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []); // Empty dependency - run once on mount
+
+    const handleManualRetry = () => {
+        hasCompletedRef.current = false;
+        isCheckingRef.current = false;
+        setStatus("checking");
+        setRetryCount(0);
+
+        // Re-trigger the effect by forcing a re-render
+        window.location.reload();
     };
 
-    // Only check payment status if we haven't already succeeded
-    if (!sessionStorage.getItem("payment_success")) {
-      checkPaymentStatus();
-    }
-  }, [router, searchParams, clearCart, resetCheckout, hasRedirected]);
+    const handleContactSupport = () => {
+        const { transactionId, orderId } = transactionRef.current;
+        router.push(`/support?txnId=${transactionId}&orderId=${orderId}`);
+    };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-600" />
-        <h2 className="text-xl font-semibold mb-2">Verifying Payment</h2>
-        <p className="text-gray-500">
-          Please wait while we confirm your payment status...
-        </p>
-      </div>
-    </div>
-  );
+    const handleGoToOrders = () => {
+        router.push("/account/orders");
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center p-8 max-w-md">
+                {/* Checking / Pending State */}
+                {(status === "checking" || status === "pending") && (
+                    <>
+                        <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-purple-600" />
+                        <h2 className="text-xl font-semibold mb-2">
+                            Verifying Payment
+                        </h2>
+                        <p className="text-gray-500 mb-4">
+                            Please wait while we confirm your payment status...
+                        </p>
+                        {retryCount > 0 && (
+                            <p className="text-sm text-gray-400">
+                                Checking... ({retryCount + 1}/{MAX_RETRIES})
+                            </p>
+                        )}
+                    </>
+                )}
+
+                {/* Success State */}
+                {status === "success" && (
+                    <>
+                        <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                            <svg
+                                className="h-6 w-6 text-green-600"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                />
+                            </svg>
+                        </div>
+                        <h2 className="text-xl font-semibold mb-2 text-green-600">
+                            Payment Successful!
+                        </h2>
+                        <p className="text-gray-500">
+                            Redirecting to order confirmation...
+                        </p>
+                    </>
+                )}
+
+                {/* Failed State */}
+                {status === "failed" && (
+                    <>
+                        <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle className="h-6 w-6 text-red-600" />
+                        </div>
+                        <h2 className="text-xl font-semibold mb-2 text-red-600">
+                            Payment Failed
+                        </h2>
+                        <p className="text-gray-500 mb-4">
+                            {errorMessage || "Redirecting..."}
+                        </p>
+                    </>
+                )}
+
+                {/* Timeout State */}
+                {status === "timeout" && (
+                    <>
+                        <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <h2 className="text-xl font-semibold mb-2 text-amber-600">
+                            Verification Timeout
+                        </h2>
+                        <p className="text-gray-500 mb-6">
+                            Payment verification is taking longer than expected.
+                            If money was deducted, your order will be confirmed
+                            automatically.
+                        </p>
+                        <div className="space-y-3">
+                            <Button
+                                onClick={handleManualRetry}
+                                className="w-full"
+                            >
+                                Try Again
+                            </Button>
+                            <Button
+                                onClick={handleGoToOrders}
+                                variant="outline"
+                                className="w-full"
+                            >
+                                Check My Orders
+                            </Button>
+                            <Button
+                                onClick={handleContactSupport}
+                                variant="ghost"
+                                className="w-full"
+                            >
+                                Contact Support
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
 }

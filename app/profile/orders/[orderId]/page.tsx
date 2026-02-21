@@ -1,15 +1,77 @@
 // app/profile/orders/[orderId]/page.tsx
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { db } from "@/lib/db";
-import { IndianRupee } from "lucide-react";
+import {
+    AlertCircle,
+    ChevronLeft,
+    CreditCard,
+    Landmark,
+    Package,
+    Smartphone,
+    Truck,
+    Wallet,
+} from "lucide-react";
 import { getServerSession } from "next-auth/next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { CancelOrderButton } from "./CancelOrderButton";
+import { ContactSupportButton } from "./ContactSupportModal";
+import { CopyButton } from "./CopyButton";
+import { DownloadInvoiceButton } from "./DownloadInvoiceButton";
+import { GiveFeedbackButton } from "./FeedbackModal";
+import { StatusBanner } from "./StatusBanner";
 
-type PageProps = {
-    params: Promise<{ orderId: string }>;
-    searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+/* ────────────────────── Types ────────────────────── */
+
+type OrderStatus =
+    | "payment_pending"
+    | "confirmed"
+    | "shipped"
+    | "delivered"
+    | "cancelled";
+
+type ShipmentStatus =
+    | "manifested"
+    | "pickup"
+    | "in_transit"
+    | "dispatched"
+    | "delivered";
+
+type DisplayStatus =
+    | "payment_pending"
+    | "order_confirmed"
+    | "order_processing"
+    | "order_shipped"
+    | "out_for_delivery"
+    | "delivered"
+    | "cancelled";
+
+/* ────────────────────── Status Logic ────────────────────── */
+
+function getOrderDisplayStatus(
+    orderStatus: OrderStatus,
+    shipmentStatus?: ShipmentStatus | null,
+): DisplayStatus {
+    if (orderStatus === "payment_pending") return "payment_pending";
+    if (orderStatus === "cancelled") return "cancelled";
+    if (orderStatus === "delivered" && shipmentStatus === "delivered")
+        return "delivered";
+
+    if (shipmentStatus) {
+        if (shipmentStatus === "manifested") return "order_processing";
+        if (shipmentStatus === "dispatched") return "out_for_delivery";
+        if (shipmentStatus === "delivered") return "delivered";
+        // pickup | in_transit
+        return "order_shipped";
+    }
+
+    if (orderStatus === "confirmed") return "order_confirmed";
+    if (orderStatus === "shipped") return "order_processing";
+    return "order_confirmed";
+}
+
+/* ────────────────────── Helpers ────────────────────── */
 
 function safeParseJson(x: any) {
     if (x == null) return null;
@@ -24,284 +86,706 @@ function safeParseJson(x: any) {
     return null;
 }
 
-export default async function OrderDetailsPage({
-    params,
-    searchParams,
-}: PageProps) {
-    const [{ orderId }] = await Promise.all([params, searchParams]);
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-        redirect("/login");
+function formatPrice(amount: number): string {
+    return new Intl.NumberFormat("en-IN").format(amount);
+}
+
+function formatDate(date: Date | string): string {
+    return new Date(date).toLocaleDateString("en-IN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+}
+
+function formatSize(size: string | number | null | undefined): string | null {
+    if (size == null || size === "") return null;
+    const str = String(size).trim();
+
+    // Already has unit like "1 kg", "500ml", "10x10x5 cm" → show as-is
+    if (/[a-zA-Z]/.test(str)) {
+        // Check if it's in grams and should be converted to kg
+        const gramsMatch = str.match(/^(\d+(?:\.\d+)?)\s*g$/i);
+        if (gramsMatch) {
+            const grams = parseFloat(gramsMatch[1]);
+            if (grams >= 1000) {
+                return `${(grams / 1000).toFixed(grams % 1000 === 0 ? 0 : 1)} kg`;
+            }
+            return `${grams}g`;
+        }
+        return str;
     }
+
+    // Pure number → assume grams
+    const num = parseFloat(str);
+    if (isNaN(num)) return str;
+    if (num >= 1000) {
+        return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)} kg`;
+    }
+    return `${num}g`;
+}
+
+function formatDateTime(date: Date | string): string {
+    return new Date(date).toLocaleDateString("en-IN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
+}
+
+/* ────────────────────── Page ────────────────────── */
+
+type PageProps = {
+    params: Promise<{ orderId: string }>;
+};
+
+export default async function OrderDetailsPage({ params }: PageProps) {
+    const { orderId } = await params;
+
+    const session = await getServerSession(authOptions);
+    if (!session?.user) redirect("/login");
 
     const order = await db.order.findUnique({
         where: { id: orderId },
+        include: { shipments: true },
     });
 
-    if (!order || order.userId !== session.user.id) {
-        notFound();
-    }
+    if (!order || order.userId !== session.user.id) notFound();
 
-    // Parse items and addresses if stored as JSON strings
-    let items: any[] = [];
-    try {
-        items =
-            typeof order.items === "string"
-                ? JSON.parse(order.items)
-                : order.items || [];
-    } catch {
-        items = [];
-    }
+    /* ── Parse data ── */
+    const shipment =
+        order.shipments?.find((s) => s.isMaster) ||
+        order.shipments?.[0] ||
+        null;
 
-    let shippingAddress: any = order.shippingAddress;
-    try {
-        shippingAddress =
-            typeof order.shippingAddress === "string"
-                ? JSON.parse(order.shippingAddress)
-                : order.shippingAddress;
-    } catch {
-        shippingAddress = order.shippingAddress;
-    }
+    const items =
+        typeof order.items === "string"
+            ? JSON.parse(order.items)
+            : order.items || [];
 
-    // --- Fetch correct images for each item ---
-    const productIds = items
-        .filter((item: any) => item.productId)
-        .map((item: any) => item.productId);
-    const prebuiltProductIds = items
-        .filter((item: any) => item.prebuiltProductId)
-        .map((item: any) => item.prebuiltProductId);
+    const shippingAddress =
+        typeof order.shippingAddress === "string"
+            ? JSON.parse(order.shippingAddress)
+            : order.shippingAddress;
 
-    const [products, prebuiltProducts] = await Promise.all([
-        productIds.length > 0
-            ? db.product.findMany({ where: { id: { in: productIds } } })
-            : Promise.resolve([]),
-        prebuiltProductIds.length > 0
-            ? db.prebuiltProduct.findMany({
-                  where: { id: { in: prebuiltProductIds } },
-              })
-            : Promise.resolve([]),
-    ]);
-
-    const productImageMap = Object.fromEntries(
-        products.map((p: any) => [
-            p.id,
-            Array.isArray(p.images)
-                ? p.images[0]
-                : typeof p.images === "string"
-                  ? p.images
-                  : null,
-        ])
-    );
-    const prebuiltProductImageMap = Object.fromEntries(
-        prebuiltProducts.map((p: any) => [
-            p.id,
-            Array.isArray(p.images)
-                ? p.images[0]
-                : typeof p.images === "string"
-                  ? p.images
-                  : null,
-        ])
-    );
-
-    function getItemImage(item: any) {
-        if (item.productId && productImageMap[item.productId])
-            return productImageMap[item.productId];
-        if (
-            item.prebuiltProductId &&
-            prebuiltProductImageMap[item.prebuiltProductId]
-        )
-            return prebuiltProductImageMap[item.prebuiltProductId];
-        return null;
-    }
-
-    // Safe parse trackingInfo (may be stringified or object)
-    const trackingInfoRaw = order.trackingInfo ?? null;
-    const trackingInfo = safeParseJson(trackingInfoRaw) || {};
+    const trackingInfo = safeParseJson(order.trackingInfo) || {};
 
     const waybill =
+        shipment?.waybill ||
         trackingInfo.waybill ||
         trackingInfo.trackingNumber ||
-        trackingInfo.tracking_number ||
-        trackingInfo.awb ||
         null;
 
-    const explicitTrackingUrl =
+    const trackingUrl =
         trackingInfo.trackingUrl ||
-        trackingInfo.tracking_link ||
-        trackingInfo.tracking_link_url ||
-        null;
+        (waybill ? `https://delhivery.com/track/package/${waybill}` : null);
 
-    const baseWaybillUrl =
-        process.env.NEXT_PUBLIC_DELHIVERY_WAYBILL_URL ||
-        "https://delhivery.com/track/package";
+    const displayStatus = getOrderDisplayStatus(
+        order.status as OrderStatus,
+        shipment?.status as ShipmentStatus | undefined,
+    );
 
-    const fallbackWaybillUrl = waybill
-        ? `${baseWaybillUrl}${baseWaybillUrl.endsWith("/") ? "" : "/"}${waybill}`
-        : null;
+    const isPaid = displayStatus !== "payment_pending";
+    const isDelivered = displayStatus === "delivered";
+    const isCancelled = displayStatus === "cancelled";
+    const showTracking =
+        displayStatus === "order_shipped" ||
+        displayStatus === "out_for_delivery";
+    const showCancel =
+        displayStatus === "order_confirmed" ||
+        displayStatus === "order_processing";
 
-    const finalTrackingUrl = explicitTrackingUrl || fallbackWaybillUrl || null;
+    // Payment — direct DB fields from Order model
+    const rawPaymentMethod = order.paymentMethod; // "UPI" | "CREDIT_CARD" | "DEBIT_CARD" | "NET_BANKING" | "WALLET"
+    const maskedPaymentId = order.maskedPaymentId; // "dh***@okaxis" for UPI, "****1234" for card
+    const paymentUtr = order.utrNumber; // UPI reference (UTR)
+    const paymentBnr = order.brnNumber; // Bank reference number (card)
+    const paymentCardNetwork = order.cardNetwork; // "Visa", "Mastercard"
+    const transactionId = order.transactionId;
 
-    const formatPrice = (amount: number) =>
-        `₹${amount?.toLocaleString?.("en-IN") ?? amount}`;
+    // Normalize payment method for display
+    const isUpi = rawPaymentMethod?.toUpperCase() === "UPI";
+    const isCard =
+        rawPaymentMethod?.toUpperCase() === "CREDIT_CARD" ||
+        rawPaymentMethod?.toUpperCase() === "DEBIT_CARD";
+    const isNetBanking = rawPaymentMethod?.toUpperCase() === "NET_BANKING";
+    const isWallet = rawPaymentMethod?.toUpperCase() === "WALLET";
+    const hasPaymentMethod = !!rawPaymentMethod;
 
+    const paymentMethodLabel = isUpi
+        ? "UPI"
+        : isCard
+          ? rawPaymentMethod?.toUpperCase() === "CREDIT_CARD"
+              ? "Credit Card"
+              : "Debit Card"
+          : isNetBanking
+            ? "Net Banking"
+            : isWallet
+              ? "Wallet"
+              : rawPaymentMethod || null;
+
+    // Pricing — direct DB fields from Order model
+    const subtotal = order.subtotal || 0;
+    const discount = order.discountAmount || 0;
+    const couponCode = order.discountCode;
+    const tax = order.tax || 0;
+    const shippingCost = order.shippingPrice || 0;
+    const grandTotal = order.totalAmount || 0;
+
+    // Always show order placed date
+    const statusDateLabel = `Order placed on ${formatDate(order.createdAt)}`;
+
+    // Support context
+    const statusLabelMap: Record<string, string> = {
+        payment_pending: "Payment Pending",
+        order_confirmed: "Order Placed",
+        order_processing: "Order Confirmed",
+        order_shipped: "Order Shipped",
+        out_for_delivery: "Out for Delivery",
+        delivered: "Delivered",
+        cancelled: "Cancelled",
+    };
+    const statusLabel = statusLabelMap[displayStatus] || displayStatus;
+    const userEmail = session.user.email || "N/A";
+    const customerName = session.user.name || "N/A";
+
+    /* ── Render ── */
     return (
-        <div className="max-w-4xl mx-auto py-12 px-6 bg-white/80 rounded-lg shadow-sm mt-10">
-            <div className="flex items-center gap-2 mb-6">
-                <Link
-                    href="/profile?tab=orders"
-                    className="text-blue-600 hover:underline font-medium flex items-center gap-1"
-                >
-                    <span className="text-lg">←</span>
-                    Back to Orders
-                </Link>
-                <span className="mx-2 text-gray-400">/</span>
-                <Link href="/profile" className="text-gray-500 hover:underline">
-                    Profile
-                </Link>
-                <span className="mx-2 text-gray-400">/</span>
-                <Link
-                    href="/profile?tab=orders"
-                    className="text-gray-500 hover:underline"
-                >
-                    Orders
-                </Link>
-                <span className="mx-2 text-gray-400">/</span>
-                <span className="text-gray-700 font-semibold">
-                    Order Details
-                </span>
-            </div>
-
-            <h1 className="text-3xl font-bold mb-4">Order Details</h1>
-
-            <div className="mb-4">
-                <div className="text-gray-600 text-sm">
-                    Order ID: <span className="select-all">{order.id}</span>
-                </div>
-                <div className="text-gray-600 text-sm">
-                    Placed on: {new Date(order.createdAt).toLocaleString()}
-                </div>
-                <div className="text-gray-600 text-sm mb-2">
-                    Status:{" "}
-                    <span className="font-semibold">{order.status}</span>
+        <div className="min-h-screen bg-gray-50">
+            <div className="max-w-6xl mx-auto pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+                {/* ── Header ── */}
+                <div className="mb-6">
+                    <Link
+                        href="/profile?tab=orders"
+                        className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors mb-3"
+                    >
+                        <ChevronLeft className="w-4 h-4" />
+                        Back to Orders
+                    </Link>
+                    <h1 className="text-[30px] leading-[36px] tracking-[0.4px] font-normal text-[#101828]">
+                        Order Details
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                        Order ID: #{order.id}
+                    </p>
                 </div>
 
-                {/* WAYBILL text directly below status */}
-                {waybill ? (
-                    <div className="text-gray-700 text-sm mb-3">
-                        Waybill: <span className="font-medium">{waybill}</span>
-                    </div>
-                ) : null}
+                {/* ── Main Grid ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
+                    {/* ════════ LEFT COLUMN ════════ */}
+                    <div className="lg:col-span-2 space-y-4">
+                        {/* ── Status Banner ── */}
+                        <StatusBanner
+                            displayStatus={displayStatus}
+                            dateLabel={statusDateLabel}
+                            isPaid={isPaid}
+                            refundStatus={order.refundStatus}
+                        />
 
-                {/* Track Order button appears after the waybill (or directly after status if no waybill) */}
-                {order.status === "shipped" && finalTrackingUrl ? (
-                    <div>
-                        <a
-                            href={finalTrackingUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                        >
-                            Track Order
-                        </a>
-                    </div>
-                ) : order.status === "shipped" ? (
-                    <div className="text-sm text-gray-600 italic">
-                        Shipment created — tracking pending.
-                    </div>
-                ) : null}
-            </div>
+                        {/* ── Items ── */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-5 lg:max-h-[500px] lg:flex lg:flex-col">
+                            <h3 className="text-base font-semibold text-gray-900 mb-4 flex-shrink-0">
+                                Items in this order
+                            </h3>
+                            <div className="divide-y divide-gray-200 overflow-y-auto lg:pr-1">
+                                {items.map((item: any, idx: number) => {
+                                    const lineTotal =
+                                        (item.price || 0) *
+                                        (item.quantity || 1);
+                                    const sizeFormatted = formatSize(item.size);
+                                    const variantParts = [
+                                        item.color && `Color: ${item.color}`,
+                                        item.pack && `Pack: ${item.pack}`,
+                                        sizeFormatted &&
+                                            `Size: ${sizeFormatted}`,
+                                    ].filter(Boolean);
+                                    const qtyLabel = `Qty: ${item.quantity || 1}`;
+                                    const isSingle = items.length === 1;
 
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">Items</h2>
-                {Array.isArray(items) && items.length > 0 ? (
-                    <ul className="divide-y divide-gray-200">
-                        {items.map((item: any, idx: number) => {
-                            const image = getItemImage(item);
-                            return (
-                                <li
-                                    key={idx}
-                                    className="py-3 flex items-center gap-4"
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className={
+                                                isSingle
+                                                    ? "py-3 first:pt-0 last:pb-0 lg:py-5"
+                                                    : "py-3 first:pt-0 last:pb-0"
+                                            }
+                                        >
+                                            <div
+                                                className={
+                                                    isSingle
+                                                        ? "flex gap-4 lg:gap-6"
+                                                        : "flex gap-4"
+                                                }
+                                            >
+                                                {/* Thumbnail */}
+                                                <div
+                                                    className={
+                                                        isSingle
+                                                            ? "w-14 h-14 sm:w-16 sm:h-16 lg:w-24 lg:h-24 rounded-[10px] bg-gray-100 border border-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center"
+                                                            : "w-14 h-14 sm:w-16 sm:h-16 rounded-[10px] bg-gray-100 border border-gray-200 flex-shrink-0 overflow-hidden flex items-center justify-center"
+                                                    }
+                                                >
+                                                    {item.image ? (
+                                                        <Image
+                                                            src={item.image}
+                                                            alt={item.name}
+                                                            width={
+                                                                isSingle
+                                                                    ? 96
+                                                                    : 64
+                                                            }
+                                                            height={
+                                                                isSingle
+                                                                    ? 96
+                                                                    : 64
+                                                            }
+                                                            className="object-cover w-full h-full"
+                                                        />
+                                                    ) : (
+                                                        <Package
+                                                            className={
+                                                                isSingle
+                                                                    ? "w-8 h-8 text-gray-300"
+                                                                    : "w-5 h-5 text-gray-300"
+                                                            }
+                                                        />
+                                                    )}
+                                                </div>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <h4
+                                                            className={
+                                                                isSingle
+                                                                    ? "font-medium text-gray-900 text-sm lg:text-base"
+                                                                    : "font-medium text-gray-900 text-sm"
+                                                            }
+                                                        >
+                                                            {item.name}
+                                                        </h4>
+                                                        <div className="text-right flex-shrink-0">
+                                                            <p
+                                                                className={
+                                                                    isSingle
+                                                                        ? "font-semibold text-gray-900 text-sm lg:text-base"
+                                                                        : "font-semibold text-gray-900 text-sm"
+                                                                }
+                                                            >
+                                                                ₹
+                                                                {formatPrice(
+                                                                    item.price ||
+                                                                        0,
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                per item
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <p
+                                                        className={
+                                                            isSingle
+                                                                ? "text-xs text-gray-500 mt-0.5 lg:mt-1.5 lg:text-sm"
+                                                                : "text-xs text-gray-500 mt-0.5"
+                                                        }
+                                                    >
+                                                        {variantParts.length > 0
+                                                            ? `${variantParts.join("    ")}    ${qtyLabel}`
+                                                            : qtyLabel}
+                                                    </p>
+
+                                                    <div
+                                                        className={
+                                                            isSingle
+                                                                ? "flex items-center justify-between mt-2 pt-2 lg:mt-4 lg:pt-3 border-t border-gray-200"
+                                                                : "flex items-center justify-between mt-2 pt-2 border-t border-gray-200"
+                                                        }
+                                                    >
+                                                        <span className="text-xs text-gray-500">
+                                                            Line Total
+                                                        </span>
+                                                        <span
+                                                            className={
+                                                                isSingle
+                                                                    ? "text-sm lg:text-base font-semibold text-gray-900"
+                                                                    : "text-sm font-semibold text-gray-900"
+                                                            }
+                                                        >
+                                                            ₹
+                                                            {formatPrice(
+                                                                lineTotal,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* ── Delivery Address ── */}
+                        {shippingAddress && (
+                            <div className="bg-white rounded-xl border border-gray-200 p-5">
+                                <h3 className="text-base font-semibold text-gray-900 mb-3">
+                                    Delivery Address
+                                </h3>
+                                <div className="text-sm text-gray-700 space-y-0.5">
+                                    {(shippingAddress.fullName ||
+                                        shippingAddress.name) && (
+                                        <p className="font-medium text-gray-900">
+                                            {shippingAddress.fullName ||
+                                                shippingAddress.name}
+                                        </p>
+                                    )}
+                                    {shippingAddress.phone && (
+                                        <p>
+                                            {Array.isArray(
+                                                shippingAddress.phone,
+                                            )
+                                                ? shippingAddress.phone.join(
+                                                      ", ",
+                                                  )
+                                                : shippingAddress.phone}
+                                        </p>
+                                    )}
+                                    {(shippingAddress.address ||
+                                        shippingAddress.street) && (
+                                        <p>
+                                            {shippingAddress.address ||
+                                                shippingAddress.street}
+                                        </p>
+                                    )}
+                                    {shippingAddress.street2 && (
+                                        <p>{shippingAddress.street2}</p>
+                                    )}
+                                    {(shippingAddress.city ||
+                                        shippingAddress.state) && (
+                                        <p>
+                                            {[
+                                                shippingAddress.city,
+                                                shippingAddress.state,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(", ")}
+                                            {(shippingAddress.pincode ||
+                                                shippingAddress.zipCode) &&
+                                                ` - ${shippingAddress.pincode || shippingAddress.zipCode}`}
+                                        </p>
+                                    )}
+                                    {shippingAddress.country && (
+                                        <p>{shippingAddress.country}</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ════════ RIGHT COLUMN ════════ */}
+                    <div className="space-y-4">
+                        {/* ── Pricing Summary ── */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <h3 className="text-base font-semibold text-gray-900 mb-4">
+                                Pricing Summary
+                            </h3>
+                            <div className="space-y-2.5 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                        Subtotal
+                                    </span>
+                                    <span className="text-gray-900">
+                                        ₹{formatPrice(subtotal)}
+                                    </span>
+                                </div>
+
+                                {discount > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">
+                                            Coupon Discount
+                                            {couponCode && ` (${couponCode})`}
+                                        </span>
+                                        <span className="text-green-600 font-medium">
+                                            -₹{formatPrice(discount)}
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                        Tax (GST)
+                                    </span>
+                                    <span className="text-gray-900">
+                                        ₹{formatPrice(tax)}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">
+                                        Shipping
+                                    </span>
+                                    <span className="text-gray-900">
+                                        {shippingCost > 0
+                                            ? `₹${formatPrice(shippingCost)}`
+                                            : "Free"}
+                                    </span>
+                                </div>
+
+                                <div className="border-t border-gray-200 pt-3 mt-3 flex justify-between">
+                                    <span className="font-semibold text-gray-900">
+                                        Grand Total
+                                    </span>
+                                    <span className="text-lg font-bold text-gray-900">
+                                        ₹{formatPrice(grandTotal)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ── Payment Details ── */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-base font-semibold text-gray-900">
+                                    Payment Details
+                                </h3>
+                                <span
+                                    className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded ${
+                                        isPaid
+                                            ? "text-green-700 bg-green-50"
+                                            : "text-gray-600 bg-gray-100"
+                                    }`}
                                 >
-                                    {image ? (
-                                        <img
-                                            src={image}
-                                            alt={item.name}
-                                            className="w-12 h-12 rounded object-cover border"
-                                        />
-                                    ) : (
-                                        <div className="w-12 h-12 rounded bg-gray-200 flex items-center justify-center text-gray-400 border">
-                                            <span className="text-2xl">🛍️</span>
+                                    {isPaid ? "Successful" : "Pending"}
+                                </span>
+                            </div>
+
+                            {/* ── Paid: show method details (if available) ── */}
+                            {isPaid && hasPaymentMethod && (
+                                <div className="mb-4">
+                                    {/* Payment method row */}
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500">
+                                            {isUpi ? (
+                                                <Smartphone className="w-5 h-5" />
+                                            ) : isCard ? (
+                                                <CreditCard className="w-5 h-5" />
+                                            ) : isNetBanking ? (
+                                                <Landmark className="w-5 h-5" />
+                                            ) : (
+                                                <Wallet className="w-5 h-5" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900">
+                                                {paymentMethodLabel}
+                                                {maskedPaymentId && (
+                                                    <span className="text-gray-400 font-normal">
+                                                        {" "}
+                                                        · {maskedPaymentId}
+                                                    </span>
+                                                )}
+                                            </p>
+                                            {paymentCardNetwork && isCard && (
+                                                <p className="text-xs text-gray-500">
+                                                    {paymentCardNetwork}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* UPI → show UTR */}
+                                    {isUpi && paymentUtr && (
+                                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                            <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">
+                                                UPI Reference (UTR)
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-semibold text-gray-900 font-mono">
+                                                    {paymentUtr}
+                                                </p>
+                                                <CopyButton text={paymentUtr} />
+                                            </div>
                                         </div>
                                     )}
-                                    <div className="flex-1 min-w-0">
-                                        <div className="font-semibold text-base text-gray-900 truncate">
-                                            {item.name}
-                                        </div>
-                                        <div className="text-xs text-gray-500 truncate">
-                                            {item.description || ""}
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <span className="text-sm">
-                                            Qty: {item.quantity || 1}
-                                        </span>
-                                        <span className="flex items-center gap-1 text-gray-700 font-semibold text-sm">
-                                            <IndianRupee className="w-4 h-4" />
-                                            {item.price || 0}
-                                        </span>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                ) : (
-                    <div className="text-gray-400 text-sm italic">
-                        No items found
-                    </div>
-                )}
-            </div>
 
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2">Shipping Address</h2>
-                {shippingAddress &&
-                typeof shippingAddress === "object" &&
-                !Array.isArray(shippingAddress) ? (
-                    <div className="text-gray-700 text-sm">
-                        <div>
-                            {typeof shippingAddress.name === "string"
-                                ? shippingAddress.name
-                                : typeof shippingAddress.fullName === "string"
-                                  ? shippingAddress.fullName
-                                  : ""}
+                                    {/* Card → show BRN */}
+                                    {isCard && paymentBnr && (
+                                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                            <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">
+                                                Bank Reference (BRN)
+                                            </p>
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-semibold text-gray-900 font-mono">
+                                                    {paymentBnr}
+                                                </p>
+                                                <CopyButton text={paymentBnr} />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Transaction ID — only when no UTR/BRN */}
+                                    {!paymentUtr &&
+                                        !paymentBnr &&
+                                        transactionId && (
+                                            <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 mt-3">
+                                                <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">
+                                                    Transaction ID
+                                                </p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-sm font-semibold text-gray-900 font-mono break-all">
+                                                        {transactionId}
+                                                    </p>
+                                                    <CopyButton
+                                                        text={transactionId}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                </div>
+                            )}
+
+                            {/* ── Pending: show transaction ID ── */}
+                            {!isPaid && transactionId && (
+                                <div>
+                                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 mb-3">
+                                        <p className="text-[11px] uppercase tracking-wider text-gray-500 mb-1">
+                                            Transaction ID
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-gray-900 font-mono">
+                                                {transactionId}
+                                            </p>
+                                            <CopyButton text={transactionId} />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-400 flex items-start gap-1.5">
+                                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                        This transaction ID is generated before
+                                        payment confirmation. If the payment
+                                        fails, this reference helps us verify
+                                        whether any amount was received.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Download Invoice — hide for payment_pending and cancelled */}
+                            {!isCancelled &&
+                                displayStatus !== "payment_pending" && (
+                                    <DownloadInvoiceButton orderId={order.id} />
+                                )}
                         </div>
-                        <div>
-                            {typeof shippingAddress.street === "string"
-                                ? shippingAddress.street
-                                : ""}
-                        </div>
-                        <div>
-                            {typeof shippingAddress.city === "string"
-                                ? shippingAddress.city
-                                : ""}
-                            ,{" "}
-                            {typeof shippingAddress.state === "string"
-                                ? shippingAddress.state
-                                : ""}{" "}
-                            {typeof shippingAddress.zipCode === "string"
-                                ? shippingAddress.zipCode
-                                : ""}
-                        </div>
-                        <div>
-                            {typeof shippingAddress.country === "string"
-                                ? shippingAddress.country
-                                : ""}
+
+                        {/* ── Order Actions ── */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-5">
+                            <h3 className="text-base font-semibold text-gray-900 mb-4">
+                                Order Actions
+                            </h3>
+                            <div className="space-y-2.5">
+                                {/* Payment Pending → Contact Support only */}
+                                {displayStatus === "payment_pending" && (
+                                    <ContactSupportButton
+                                        orderId={order.id}
+                                        orderStatus={statusLabel}
+                                        userEmail={userEmail}
+                                        customerName={customerName}
+                                        transactionId={transactionId}
+                                    />
+                                )}
+
+                                {/* Order Placed / Confirmed → Cancel + Contact Support */}
+                                {showCancel && (
+                                    <>
+                                        <CancelOrderButton
+                                            orderId={order.id}
+                                            hasShipment={!!shipment}
+                                        />
+                                        <ContactSupportButton
+                                            orderId={order.id}
+                                            orderStatus={statusLabel}
+                                            userEmail={userEmail}
+                                            customerName={customerName}
+                                            transactionId={transactionId}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Shipped / Out for Delivery → Tracking + Track button + Contact Support + info */}
+                                {showTracking && (
+                                    <>
+                                        {waybill && (
+                                            <div className="mb-2">
+                                                <p className="text-xs text-gray-500 mb-1">
+                                                    Tracking ID
+                                                </p>
+                                                <p className="text-sm font-semibold text-gray-900 font-mono">
+                                                    {waybill}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {trackingUrl && (
+                                            <a
+                                                href={trackingUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                                            >
+                                                <Truck className="w-4 h-4" />
+                                                Track Order
+                                            </a>
+                                        )}
+                                        <ContactSupportButton
+                                            orderId={order.id}
+                                            orderStatus={statusLabel}
+                                            userEmail={userEmail}
+                                            customerName={customerName}
+                                            transactionId={transactionId}
+                                        />
+                                        <p className="text-xs text-gray-400 flex items-start gap-1.5 pt-1">
+                                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                                            Orders cannot be cancelled once
+                                            shipped. For any issues, please
+                                            contact support.
+                                        </p>
+                                    </>
+                                )}
+
+                                {/* Delivered → Give Feedback + Contact Support */}
+                                {isDelivered && (
+                                    <>
+                                        <GiveFeedbackButton
+                                            orderId={order.id}
+                                            items={items}
+                                        />
+                                        <ContactSupportButton
+                                            orderId={order.id}
+                                            orderStatus={statusLabel}
+                                            userEmail={userEmail}
+                                            customerName={customerName}
+                                            transactionId={transactionId}
+                                        />
+                                    </>
+                                )}
+
+                                {/* Cancelled → Contact Support only */}
+                                {isCancelled && (
+                                    <ContactSupportButton
+                                        orderId={order.id}
+                                        orderStatus={statusLabel}
+                                        userEmail={userEmail}
+                                        customerName={customerName}
+                                        transactionId={transactionId}
+                                    />
+                                )}
+                            </div>
                         </div>
                     </div>
-                ) : (
-                    <div className="text-gray-400 text-sm italic">
-                        No shipping address
-                    </div>
-                )}
+                </div>
             </div>
         </div>
     );

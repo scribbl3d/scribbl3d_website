@@ -1,120 +1,153 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { CarouselItemForm } from "./CarouselItemForm";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Loader2, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CarouselItemForm } from "./CarouselItemForm";
 
 interface CarouselItem {
-  id: string;
-  type: string;
-  src: string;
-  duration: number;
+    id: string;
+    type: "image" | "video";
+    src: string;
+    duration: number;
 }
 
 export function CarouselManager() {
-  const [items, setItems] = useState<CarouselItem[]>([]);
-  const [editingItem, setEditingItem] = useState<CarouselItem | null>(null);
+    const [items, setItems] = useState<CarouselItem[]>([]);
+    const [editingItem, setEditingItem] = useState<CarouselItem | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    fetchCarouselItems();
-  }, []);
+    useEffect(() => {
+        fetchItems();
+    }, []);
 
-  const fetchCarouselItems = async () => {
-    try {
-      const response = await fetch("/api/admin/carousel");
-      if (response.ok) {
-        const data = await response.json();
+    const fetchItems = async () => {
+        const res = await fetch("/api/admin/carousel");
+        const data = await res.json();
         setItems(data);
-      } else {
-        console.error("Failed to fetch carousel items");
-      }
-    } catch (error) {
-      console.error("Error fetching carousel items:", error);
-    }
-  };
+    };
 
-  const handleSave = async (item: CarouselItem) => {
-    try {
-      const url = item.id
-        ? `/api/admin/carousel/${item.id}`
-        : "/api/admin/carousel";
-      const method = item.id ? "PUT" : "POST";
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-      });
-      if (response.ok) {
-        fetchCarouselItems();
-        setEditingItem(null);
-      } else {
-        console.error("Failed to save carousel item");
-      }
-    } catch (error) {
-      console.error("Error saving carousel item:", error);
-    }
-  };
+    const handleSave = async (formData: FormData, id?: string) => {
+        setIsSaving(true);
 
-  const handleDelete = async (id: string) => {
-    try {
-      const response = await fetch(`/api/admin/carousel/${id}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        fetchCarouselItems();
-      } else {
-        console.error("Failed to delete carousel item");
-      }
-    } catch (error) {
-      console.error("Error deleting carousel item:", error);
-    }
-  };
+        const url = id ? `/api/admin/carousel/${id}` : "/api/admin/carousel";
 
-  return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-4">Carousel Items</h2>
-      <div className="space-y-4">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center justify-between p-4 border rounded"
-          >
-            <div>
-              <p>
-                <strong>Type:</strong> {item.type}
-              </p>
-              <p>
-                <strong>Source:</strong> {item.src}
-              </p>
-              <p>
-                <strong>Duration:</strong> {item.duration} seconds
-              </p>
+        const method = id ? "PUT" : "POST";
+
+        try {
+            const res = await fetch(url, {
+                method,
+                body: formData,
+            });
+
+            if (!res.ok) {
+                throw new Error("Save failed");
+            }
+
+            await fetchItems();
+            setEditingItem(null); // close AFTER save finishes
+        } catch {
+            alert("Failed to save carousel item");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        await fetch(`/api/admin/carousel/${id}`, { method: "DELETE" });
+        fetchItems();
+    };
+
+    return (
+        <div>
+            {/* 🔒 GLOBAL BLOCKING LOADER */}
+            <Dialog open={isSaving}>
+                <DialogContent
+                    className="sm:max-w-md"
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                >
+                    <VisuallyHidden>
+                        <DialogTitle>
+                            {editingItem
+                                ? "Updating Carousel Item"
+                                : "Uploading Carousel Item"}
+                        </DialogTitle>
+                    </VisuallyHidden>
+
+                    <div className="flex flex-col items-center justify-center py-10 text-center gap-4">
+                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+
+                        <h2 className="text-lg font-semibold">
+                            {editingItem ? "Updating" : "Uploading"}{" "}
+                            {editingItem?.type === "video" ? "Video" : "Image"}…
+                        </h2>
+
+                        <p className="text-sm text-muted-foreground">
+                            Please wait while the file is being processed.
+                            <br />
+                            Do not close this window.
+                        </p>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <h2 className="text-2xl font-semibold mb-4">Carousel Items</h2>
+
+            <div className="space-y-4">
+                {items.map((item) => (
+                    <div
+                        key={item.id}
+                        className="flex items-center justify-between p-4 border rounded"
+                    >
+                        <div>
+                            <p>
+                                <b>Type:</b> {item.type}
+                            </p>
+                            <p className="truncate max-w-md">
+                                <b>Source:</b> {item.src}
+                            </p>
+                            <p>
+                                <b>Duration:</b> {item.duration}s
+                            </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <Button onClick={() => setEditingItem(item)}>
+                                Edit
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => handleDelete(item.id)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                ))}
             </div>
-            <div>
-              <Button onClick={() => setEditingItem(item)} className="mr-2">
-                Edit
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => handleDelete(item.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+
+            <div className="mt-6">
+                <h3 className="text-xl font-semibold mb-2">
+                    {editingItem
+                        ? "Edit Carousel Item"
+                        : "Add New Carousel Item"}
+                </h3>
+
+                <CarouselItemForm
+                    item={
+                        editingItem || {
+                            id: "",
+                            type: "image",
+                            duration: 5,
+                        }
+                    }
+                    onSave={handleSave}
+                    onCancel={() => setEditingItem(null)}
+                />
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6">
-        <h3 className="text-xl font-semibold mb-2">
-          {editingItem ? "Edit Carousel Item" : "Add New Carousel Item"}
-        </h3>
-        <CarouselItemForm
-          item={editingItem || { id: "", type: "", src: "", duration: 5 }}
-          onSave={handleSave}
-          onCancel={() => setEditingItem(null)}
-        />
-      </div>
-    </div>
-  );
+        </div>
+    );
 }

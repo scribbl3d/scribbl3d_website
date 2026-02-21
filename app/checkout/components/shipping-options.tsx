@@ -1,153 +1,224 @@
 "use client";
 
-import { useCheckout } from "@/providers/CheckoutProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Truck, Zap, ArrowLeft, ArrowRight } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useCheckout } from "@/providers/CheckoutProvider";
 import type { ShippingOption } from "@/types/checkout";
-
-const shippingOptions: ShippingOption[] = [
-  {
-    id: "free",
-    name: "Free Shipping",
-    description: "5-7 business days",
-    price: 0,
-    estimatedDays: "5-7 days",
-    icon: Truck,
-  },
-  {
-    id: "premium",
-    name: "Premium Shipping",
-    description: "1-2 business days",
-    price: 200,
-    estimatedDays: "1-2 days",
-    icon: Zap,
-  },
-];
+import { motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, Loader2, Truck, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function ShippingOptions() {
-  const { setShippingOption, nextStep, prevStep } = useCheckout();
-  const [selectedOption, setSelectedOption] = useState<string>("free");
-  const [isHovered, setIsHovered] = useState<string | null>(null);
+    const { setShippingOption, nextStep, prevStep, expressShipping, state } =
+        useCheckout();
 
-  const handleOptionChange = (value: string) => {
-    setSelectedOption(value);
-    const option = shippingOptions.find((opt) => opt.id === value);
-    if (option) {
-      setShippingOption(option);
-    }
-  };
+    const [selectedOption, setSelectedOption] = useState<"free" | "premium">(
+        "free",
+    );
+    const [isHovered, setIsHovered] = useState<string | null>(null);
 
-  const handleContinue = () => {
-    nextStep();
-  };
+    /* ===================== SHIPPING OPTIONS ===================== */
+    const shippingOptions: ShippingOption[] = [
+        {
+            id: "free",
+            name: "Free Shipping",
+            description: "5–7 business days",
+            price: 0,
+            estimatedDays: "5–7 days",
+            icon: Truck,
+        },
+        {
+            id: "premium",
+            name: "Premium Shipping",
+            description: "1–2 business days",
+            price: expressShipping.price,
+            estimatedDays: "1–2 days",
+            icon: Zap,
+        },
+    ];
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Choose Your Shipping Method</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <RadioGroup
-          value={selectedOption}
-          onValueChange={handleOptionChange}
-          className="space-y-3"
-        >
-          {shippingOptions.map((option) => {
-            const Icon = option.icon;
-            return (
-              <motion.div
-                key={option.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                onHoverStart={() => setIsHovered(option.id)}
-                onHoverEnd={() => setIsHovered(null)}
-              >
-                <div
-                  className={`
-                    relative overflow-hidden rounded-lg border-2 transition-all duration-200
+    /* ===================== SYNC DEFAULT ===================== */
+    useEffect(() => {
+        const defaultOption =
+            shippingOptions.find((opt) => opt.id === selectedOption) ??
+            shippingOptions[0];
+
+        setShippingOption(defaultOption);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    /* ===================== UPDATE SHIPPING OPTION WHEN PRICE CHANGES ===================== */
+    useEffect(() => {
+        if (selectedOption === "premium" && !expressShipping.loading) {
+            const premiumOption = shippingOptions.find(
+                (opt) => opt.id === "premium",
+            );
+            if (premiumOption) {
+                setShippingOption(premiumOption);
+            }
+        }
+    }, [expressShipping.price, expressShipping.loading]);
+
+    /* ===================== AUTO-FALLBACK IF EXPRESS DISABLED ===================== */
+    useEffect(() => {
+        if (!expressShipping.allowed && selectedOption === "premium") {
+            setSelectedOption("free");
+            setShippingOption(shippingOptions[0]);
+        }
+    }, [expressShipping.allowed]);
+
+    /* ===================== HANDLERS ===================== */
+    const handleOptionChange = (value: "free" | "premium") => {
+        setSelectedOption(value);
+
+        const option = shippingOptions.find((opt) => opt.id === value);
+        if (option) {
+            setShippingOption(option);
+        }
+    };
+
+    const handleContinue = () => {
+        nextStep();
+    };
+
+    /* ===================== UI ===================== */
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Choose Your Shipping Method</CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+                <RadioGroup
+                    value={selectedOption}
+                    onValueChange={handleOptionChange}
+                    className="space-y-3"
+                >
+                    {shippingOptions.map((option) => {
+                        const Icon = option.icon;
+                        const isSelected = selectedOption === option.id;
+                        const isPremiumDisabled =
+                            option.id === "premium" && !expressShipping.allowed;
+                        const isPremiumLoading =
+                            option.id === "premium" && expressShipping.loading;
+
+                        return (
+                            <motion.div
+                                key={option.id}
+                                initial={{ opacity: 0, y: 14 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.25 }}
+                                onHoverStart={() => setIsHovered(option.id)}
+                                onHoverEnd={() => setIsHovered(null)}
+                            >
+                                <div
+                                    className={`
+                    relative rounded-lg border-2 transition-all
                     ${
-                      selectedOption === option.id
-                        ? "border-primary bg-primary/5"
-                        : "border-gray-200"
+                        isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-gray-200"
                     }
                     ${isHovered === option.id ? "border-primary/50" : ""}
+                    ${isPremiumDisabled ? "opacity-50 cursor-not-allowed" : ""}
                   `}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-opacity duration-200" />
-                  <div className="relative p-4">
-                    <RadioGroupItem
-                      value={option.id}
-                      id={option.id}
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor={option.id}
-                      className="flex items-center justify-between cursor-pointer"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div
-                          className={`
-                          p-3 rounded-full 
-                          ${
-                            selectedOption === option.id
-                              ? "bg-primary text-white"
-                              : "bg-gray-100 text-gray-500"
-                          }
-                          transition-colors duration-200
-                        `}
-                        >
-                          <Icon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-lg">
-                            {option.name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {option.description}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-semibold">
-                          {option.price === 0 ? (
-                            <span className="text-green-600">Free</span>
-                          ) : (
-                            <span>₹{option.price}</span>
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Shipping in {option.estimatedDays}
-                        </div>
-                      </div>
-                    </Label>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </RadioGroup>
+                                >
+                                    <div className="p-4">
+                                        <RadioGroupItem
+                                            value={option.id}
+                                            id={option.id}
+                                            disabled={isPremiumDisabled}
+                                            className="peer sr-only"
+                                        />
 
-        <div className="flex justify-between pt-4">
-          <Button
-            variant="outline"
-            onClick={prevStep}
-            className="flex items-center"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Details
-          </Button>
-          <Button onClick={handleContinue} className="flex items-center">
-            Continue to Review
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+                                        <Label
+                                            htmlFor={option.id}
+                                            className="flex justify-between items-center cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div
+                                                    className={`
+                            p-3 rounded-full transition-colors
+                            ${
+                                isSelected
+                                    ? "bg-primary text-white"
+                                    : "bg-gray-100 text-gray-500"
+                            }
+                          `}
+                                                >
+                                                    <Icon className="w-5 h-5" />
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-medium text-lg">
+                                                        {option.name}
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {option.description}
+                                                    </p>
+                                                    {isPremiumDisabled && (
+                                                        <p className="text-xs text-red-500 mt-1">
+                                                            {
+                                                                expressShipping.reason
+                                                            }
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="text-right">
+                                                {option.price === 0 ? (
+                                                    <p className="text-lg font-semibold text-green-600">
+                                                        Free
+                                                    </p>
+                                                ) : isPremiumLoading ? (
+                                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                        <span className="text-sm">
+                                                            Calculating...
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-lg font-semibold">
+                                                        ₹{option.price}
+                                                    </p>
+                                                )}
+                                                <p className="text-sm text-muted-foreground">
+                                                    Shipping in{" "}
+                                                    {option.estimatedDays}
+                                                </p>
+                                            </div>
+                                        </Label>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </RadioGroup>
+
+                {/* ===================== ACTIONS ===================== */}
+                <div className="flex justify-between pt-4">
+                    <Button variant="outline" onClick={prevStep}>
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to Details
+                    </Button>
+
+                    <Button
+                        onClick={handleContinue}
+                        disabled={
+                            (selectedOption === "premium" &&
+                                !expressShipping.allowed) ||
+                            (selectedOption === "premium" &&
+                                expressShipping.loading)
+                        }
+                    >
+                        Continue to Review
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
 }

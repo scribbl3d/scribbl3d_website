@@ -1,13 +1,8 @@
-import {
-    ASSET_PATHS,
-    URL_PATHS,
-    ensureAssetDirectory,
-} from "@/lib/asset-paths";
+import cloudinary from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { writeFile } from "fs/promises";
 import { NextResponse } from "next/server";
-import path from "path";
+
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -51,9 +46,17 @@ export async function GET(request: Request) {
         const sortBy = searchParams.get("sortBy");
         const order = searchParams.get("order") === "desc" ? "desc" : "asc";
 
-        const page = Number(searchParams.get("page") || 1);
-        const limit = Number(searchParams.get("limit") || 10);
-        const skip = (page - 1) * limit;
+       const pageParam = searchParams.get("page");
+const limitParam = searchParams.get("limit");
+
+const page = pageParam ? Number(pageParam) : null;
+const limit = limitParam ? Number(limitParam) : null;
+
+const skip =
+    page && limit
+        ? (page - 1) * limit
+        : undefined;
+
 
         // SEARCH LOGIC
         let fieldFilter: Prisma.PrebuiltProductWhereInput = {};
@@ -102,29 +105,41 @@ export async function GET(request: Request) {
             orderByClause = [{ name: "asc" }];
         }
 
-        const [products, totalCount] = await Promise.all([
-            prisma.product.findMany({
-                where: whereConditions,
-                orderBy: orderByClause,
-                skip,
-                take: limit,
-                include: {
-                    reviews: {
-                        include: {
-                            user: { select: { name: true } },
-                        },
-                    },
-                },
-            }),
-            prisma.product.count({ where: whereConditions }),
-        ]);
+const [products] = await Promise.all([
+  prisma.product.findMany({
+    where: whereConditions,
+    orderBy: orderByClause,
+    ...(skip !== undefined && skip !== null && { skip }),
+    ...(limit !== undefined && limit !== null && { take: limit }),
+    include: {
+      reviews: {
+        include: {
+          user: { select: { name: true } },
+        },
+      },
+    },
+  }),
+]);
 
-        return NextResponse.json({
-            products,
-            totalItems: totalCount,
-            totalPages: Math.ceil(totalCount / limit),
-            currentPage: page,
-        });
+const totalCount =
+    page && limit
+        ? await prisma.product.count({ where: whereConditions })
+        : null;
+
+
+      return NextResponse.json(
+    page && limit
+        ? {
+              products,
+              totalItems: totalCount,
+              totalPages: Math.ceil(totalCount! / limit),
+              currentPage: page,
+          }
+        : {
+              products,
+          }
+);
+
     } catch (error) {
         console.error("Database query failed:", error);
         return NextResponse.json(
@@ -187,24 +202,27 @@ export async function POST(request: Request) {
         );
         if (discount < 1) discount = 1;
 
-        const imagePaths = keepImages ? [...keepImages] : [];
-        await ensureAssetDirectory(ASSET_PATHS.PRODUCT_IMAGES);
+        const imageUrls: string[] = keepImages ? [...keepImages] : [];
 
         for (const file of files) {
-            if (!(file as any)?.name) continue;
-            const buffer = await streamToBuffer((file as any).stream());
-            const filename =
-                Date.now() + "-" + (file as any).name.replace(/\s/g, "-");
+            if (!(file as any)?.arrayBuffer) continue;
 
-            const filepath = path.join(ASSET_PATHS.PRODUCT_IMAGES, filename);
-            await writeFile(filepath, buffer);
+            const buffer = Buffer.from(await (file as any).arrayBuffer());
 
-            imagePaths.push(URL_PATHS.PRODUCT_IMAGES + "/" + filename);
+            const uploadResult = await cloudinary.uploader.upload(
+                `data:${(file as any).type};base64,${buffer.toString("base64")}`,
+                {
+                    folder: "product-images",
+                    resource_type: "image",
+                }
+            );
+
+            imageUrls.push(uploadResult.secure_url);
         }
 
         const validatedData = productSchema.parse({
             ...productData,
-            images: imagePaths,
+            images: imageUrls,
             discount,
         });
 

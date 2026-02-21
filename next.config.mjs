@@ -4,6 +4,10 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    compiler: {
+        // This is the specific patch for Next.js production builds
+        styledComponents: true,
+    },
 
     images: {
         remotePatterns: [
@@ -24,6 +28,10 @@ const nextConfig = {
             {
                 protocol: "https",
                 hostname: "picsum.photos",
+            },
+            {
+                protocol: "https",
+                hostname: "res.cloudinary.com",
             },
         ],
         dangerouslyAllowSVG: true,

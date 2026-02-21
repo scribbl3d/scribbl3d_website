@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FormResponseViewer } from "../_components/FormResponseViewer";
@@ -24,13 +24,29 @@ interface Form3DResponse {
     filamentColor: string;
     resinColor: string;
     additionalFile: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    company: string;
     createdAt: string;
 }
 
 type Column = {
     key: keyof Form3DResponse;
     label: string;
-    render?: (value: any) => React.ReactNode;
+    render?: (value: any, item?: Form3DResponse) => React.ReactNode;
+};
+
+// Helper function to extract filename from Cloudinary URL
+const getFileNameFromUrl = (url: string): string => {
+    if (!url) return "";
+    try {
+        const parts = url.split("/");
+        return parts[parts.length - 1];
+    } catch {
+        return url;
+    }
 };
 
 export default function Form3DResponsesPage() {
@@ -60,9 +76,35 @@ export default function Form3DResponsesPage() {
 
     const columns: Column[] = [
         { key: "service", label: "Service" },
-        { key: "prototype", label: "Prototype" },
+        {
+            key: "firstName",
+            label: "Name",
+            render: (value: string, item?: Form3DResponse) =>
+                item ? `${value} ${item.lastName}` : value,
+        },
+        { key: "email", label: "Email" },
         { key: "printingTechnology", label: "Technology" },
         { key: "material", label: "Material" },
+        {
+            key: "fileReference",
+            label: "Reference File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <Download className="h-3 w-3" />
+                        <span className="truncate max-w-[100px]">
+                            {getFileNameFromUrl(value)}
+                        </span>
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file</span>
+                ),
+        },
         {
             key: "createdAt",
             label: "Submitted",
@@ -73,7 +115,24 @@ export default function Form3DResponsesPage() {
     const detailsColumns: Column[] = [
         { key: "service", label: "Service" },
         { key: "requirement", label: "Requirements" },
-        { key: "fileReference", label: "Reference File" },
+        {
+            key: "fileReference",
+            label: "Reference File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                        {getFileNameFromUrl(value)}
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file uploaded</span>
+                ),
+        },
         { key: "fileExtension", label: "File Extension" },
         { key: "prototype", label: "Prototype" },
         { key: "prototypeOption", label: "Prototype Option" },
@@ -85,7 +144,29 @@ export default function Form3DResponsesPage() {
         { key: "productColor", label: "Product Color" },
         { key: "filamentColor", label: "Filament Color" },
         { key: "resinColor", label: "Resin Color" },
-        { key: "additionalFile", label: "Additional File" },
+        {
+            key: "additionalFile",
+            label: "Additional File",
+            render: (value: string) =>
+                value ? (
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                        {getFileNameFromUrl(value)}
+                    </a>
+                ) : (
+                    <span className="text-gray-400">No file uploaded</span>
+                ),
+        },
+        { key: "firstName", label: "First Name" },
+        { key: "lastName", label: "Last Name" },
+        { key: "email", label: "Email" },
+        { key: "phone", label: "Phone" },
+        { key: "company", label: "Company" },
         {
             key: "createdAt",
             label: "Submitted At",

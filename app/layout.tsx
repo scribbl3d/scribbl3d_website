@@ -8,7 +8,8 @@ import { authOptions } from "./api/auth/[...nextauth]/options";
 import { gilroy } from "./fonts";
 import "./globals.css";
 
-import type React from "react"; // Import React
+import WhatsAppSupportButton from "@/components/WhatsAppSupportButton";
+import type React from "react";
 import { Providers } from "./providers";
 
 const geistSans = localFont({
@@ -69,6 +70,10 @@ export default async function RootLayout({
                 className={`bg-background text-foreground ${geistSans.variable} ${geistMono.variable} ${gilroy.variable}  ${manrope.variable} ${mplus1.variable} ${lato.variable} ${aboreto.variable} antialiased`}
             >
                 <Providers session={session}>{children}</Providers>
+                <WhatsAppSupportButton
+                    phoneNumber="919599523434"
+                    message={`Hello Scribbl3d Support,\nI'm reaching out for assistance and more information about your products and services. Could you please help?\nThank you!`}
+                />
             </body>
         </html>
     );
