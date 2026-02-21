@@ -415,13 +415,15 @@ model Announcement {
 model Order {
   id                String    @id @default(cuid())
   userId            String
+
   items             Json
   subtotal          Float?
   discountAmount    Float?    @default(0)
   discountCode      String?
-  tax               Float? @default(0)
+  tax               Float?    @default(0)
   shippingPrice     Float?    @default(0)
   totalAmount       Float
+
   status            String    @default("payment_pending")
 
   shippingAddress   Json
@@ -439,17 +441,59 @@ model Order {
 
   refundStatus      String?
   refundId          String?
-  refundInitiatedAt DateTime? @default(now())
-  refundCompletedAt DateTime? @default(now())
-  createdAt         DateTime  @default(now())
+  refundInitiatedAt DateTime?
+  refundCompletedAt DateTime?
+
   shippingMode      String?
+  createdAt         DateTime  @default(now())
 
   user              User      @relation(fields: [userId], references: [id])
   shipments         Shipment[]
-  feedback          OrderFeedback?    // ← ADD THIS
+  feedback          OrderFeedback?
+
+  invoice           Invoice?
 
   @@index([userId])
 }
+model Invoice {
+  id            String   @id @default(cuid())
+  invoiceNumber String   @unique
+  orderId       String   @unique
+
+  issuedAt      DateTime @default(now())
+  subtotal      Float
+  tax           Float
+  total         Float
+
+  status        String   @default("issued")
+  // issued | adjusted | cancelled
+
+  order         Order    @relation(fields: [orderId], references: [id])
+  creditNotes   CreditNote[]
+
+  @@index([issuedAt])
+}
+model CreditNote {
+  id               String   @id @default(cuid())
+  creditNoteNumber String   @unique
+  invoiceId        String
+
+  amount           Float
+  reason           String
+  issuedAt         DateTime @default(now())
+
+  invoice          Invoice  @relation(fields: [invoiceId], references: [id])
+
+  @@index([issuedAt])
+}
+
+model DocumentCounter {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique   // "invoice" | "credit_note"
+  lastNo    Int
+  updatedAt DateTime @updatedAt
+}
+
 model OrderFeedback {
   id        String   @id @default(cuid())
   orderId   String   @unique
@@ -513,9 +557,6 @@ enum ItemType {
   printer
   resin
 }
-
-
-
 
 model Shipment {
   id               String    @id @default(cuid())

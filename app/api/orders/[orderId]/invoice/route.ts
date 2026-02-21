@@ -1,7 +1,5 @@
-// app/api/orders/[orderId]/invoice/route.ts
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { db } from "@/lib/db";
-import crypto from "crypto";
 import fs from "fs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -12,10 +10,13 @@ import path from "path";
 /* ────────────────────── Helpers ────────────────────── */
 
 function fmtINR(n: number): string {
-    return `Rs ${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}`;
+    return `Rs ${new Intl.NumberFormat("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(n)}`;
 }
 
-function amountInWords(amount: number): string {
+function amountInWords(amount: number) {
     const ones = [
         "",
         "One",
@@ -51,22 +52,21 @@ function amountInWords(amount: number): string {
         "Ninety",
     ];
 
-    function twoDigits(n: number): string {
-        if (n < 20) return ones[n];
-        return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
-    }
-    function threeDigits(n: number): string {
-        if (n >= 100)
-            return (
-                ones[Math.floor(n / 100)] +
-                " Hundred" +
-                (n % 100 ? " " + twoDigits(n % 100) : "")
-            );
-        return twoDigits(n);
-    }
+    const twoDigits = (n: number) =>
+        n < 20
+            ? ones[n]
+            : tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+
+    const threeDigits = (n: number) =>
+        n >= 100
+            ? ones[Math.floor(n / 100)] +
+              " Hundred" +
+              (n % 100 ? " " + twoDigits(n % 100) : "")
+            : twoDigits(n);
 
     let n = Math.round(amount);
     if (n === 0) return "Zero Rupees only";
+
     const parts: string[] = [];
     if (n >= 10000000) {
         parts.push(twoDigits(Math.floor(n / 10000000)) + " Crore");
@@ -81,6 +81,7 @@ function amountInWords(amount: number): string {
         n %= 1000;
     }
     if (n > 0) parts.push(threeDigits(n));
+
     return parts.join(" ") + " Rupees only";
 }
 
@@ -95,10 +96,30 @@ function loadImageAsBase64(filePath: string): string | null {
     }
 }
 
+/* ─────────── Invoice Number Helpers ─────────── */
+
+function getFinancialYear() {
+    const now = new Date();
+    const year =
+        now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+    return `${year}-${String(year + 1).slice(-2)}`;
+}
+
+async function generateInvoiceNumber(tx: any) {
+    const fy = getFinancialYear();
+
+    const counter = await tx.documentCounter.upsert({
+        where: { key: "invoice" },
+        update: { lastNo: { increment: 1 } },
+        create: { key: "invoice", lastNo: 1 },
+    });
+
+    return `SCR/${fy}/${String(counter.lastNo).padStart(6, "0")}`;
+}
+
 /* ────────────────────── Colors ────────────────────── */
 
-// Matching the original invoice blue
-const BLUE: [number, number, number] = [2, 136, 177]; // #0288B1
+const BLUE: [number, number, number] = [2, 136, 177];
 const DARK: [number, number, number] = [16, 24, 40];
 const GRAY: [number, number, number] = [100, 100, 100];
 
@@ -128,7 +149,38 @@ export async function GET(
             );
         }
 
-        // Parse order data
+        /* ─────────── ENSURE INVOICE EXISTS ─────────── */
+
+        let invoice = await db.invoice.findUnique({
+            where: { orderId: order.id },
+        });
+
+        if (!invoice) {
+            invoice = await db.$transaction(async (tx) => {
+                const invoiceNumber = await generateInvoiceNumber(tx);
+                return tx.invoice.create({
+                    data: {
+                        orderId: order.id,
+                        invoiceNumber,
+                        subtotal: order.subtotal || 0,
+                        tax: order.tax || 0,
+                        total: order.totalAmount,
+                    },
+                });
+            });
+        }
+
+        const invoiceNo = invoice.invoiceNumber;
+
+        // Invoice date = order's createdAt (as per requirement)
+        const invoiceDate = new Date(order.createdAt);
+        const dd = String(invoiceDate.getDate()).padStart(2, "0");
+        const mm = String(invoiceDate.getMonth() + 1).padStart(2, "0");
+        const yyyy = String(invoiceDate.getFullYear());
+        const invoiceDateStr = `${dd}-${mm}-${yyyy}`;
+
+        /* ─────────── Parse Order Data ─────────── */
+
         const items: any[] =
             typeof order.items === "string"
                 ? JSON.parse(order.items)
@@ -162,21 +214,8 @@ export async function GET(
         const customerCountry = addr?.country || "India";
         const customerGstin = addr?.gstin || null;
 
-        // Invoice metadata
-        const invoiceDate = new Date(order.createdAt);
-        const dd = String(invoiceDate.getDate()).padStart(2, "0");
-        const mm = String(invoiceDate.getMonth() + 1).padStart(2, "0");
-        const yyyy = String(invoiceDate.getFullYear());
-        const invoiceDateStr = `${dd}-${mm}-${yyyy}`;
-        const orderHash = crypto
-            .createHash("md5")
-            .update(order.id)
-            .digest("hex")
-            .slice(0, 4)
-            .toUpperCase();
-        const invoiceNo = `SCR-${yyyy}${mm}-${orderHash}`;
+        /* ─────────── Pricing ─────────── */
 
-        // Pricing from DB
         const subtotal = order.subtotal || 0;
         const discount = order.discountAmount || 0;
         const tax = order.tax || 0;
@@ -186,7 +225,7 @@ export async function GET(
         // Place of supply is always Delhi (company location)
         const placeOfSupply = "07-Delhi";
 
-        // Customer state for determining SGST+CGST vs IGST
+        // Determine SGST+CGST vs IGST based on customer state
         const stateLower = customerState.toLowerCase().trim();
         const isIntraState =
             stateLower === "delhi" || stateLower === "new delhi";
@@ -194,7 +233,6 @@ export async function GET(
         const sgst = isIntraState ? tax / 2 : 0;
         const igst = isIntraState ? 0 : tax;
 
-        // Customer state code for display
         const STATE_CODES: Record<string, string> = {
             delhi: "07-Delhi",
             "new delhi": "07-Delhi",
@@ -217,7 +255,8 @@ export async function GET(
         };
         const customerStateCode = STATE_CODES[stateLower] || customerState;
 
-        // Load images
+        /* ─────────── Load Images ─────────── */
+
         const logoBase64 = loadImageAsBase64("invoice/Tax_Logo.png");
         const signBase64 = loadImageAsBase64("invoice/Tax_Sign.jpg.jpeg");
 
@@ -237,10 +276,9 @@ export async function GET(
 
         // ── COMPANY HEADER ──
 
-        // Logo top-right (large and visible)
         if (logoBase64) {
             try {
-                doc.addImage(logoBase64, "PNG", rightEdge - 55, y - 4, 55, 22);
+                doc.addImage(logoBase64, "PNG", rightEdge - 42, y - 2, 42, 17);
             } catch {}
         }
 
@@ -291,15 +329,14 @@ export async function GET(
         doc.text("Invoice Details", rightEdge, y, { align: "right" });
         y += 6;
 
-        // Customer name (bold, uppercase like original)
+        // Customer name
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
         doc.setTextColor(...DARK);
         doc.text(customerName, ml, y);
-        y += 5; // ← advance past name
 
-        // Right column details (fixed positions, starting from name line)
-        const rightDetailsY = y - 5;
+        // Right column details
+        const rightDetailsY = y;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8.5);
         doc.setTextColor(...GRAY);
@@ -316,7 +353,9 @@ export async function GET(
             { align: "right" },
         );
 
-        // Left: Address lines (auto-wrapped)
+        y += 5;
+
+        // Left: Address lines
         const addrMaxW = pageW / 2 - ml - 5;
         const addressParts = [
             customerStreet,
@@ -344,21 +383,19 @@ export async function GET(
             y += 4.5;
         }
 
-        // Ensure y is below the right column details too
+        // Ensure y clears the right column details
         y = Math.max(y, rightDetailsY + 16);
         y += 6;
 
         // ── ITEMS TABLE ──
-        // Price in DB is GST-inclusive. Reverse calculate base price and GST.
-        const GST_RATE = 18; // 18% GST
+        const GST_RATE = 18;
         const gstMultiplier = GST_RATE / 100;
 
         const tableRows = items.map((item: any, idx: number) => {
             const qty = item.quantity || 1;
-            const inclusivePrice = item.price || 0; // price per unit (GST inclusive)
+            const inclusivePrice = item.price || 0;
             const inclusiveLineTotal = inclusivePrice * qty;
 
-            // Reverse: basePrice = inclusivePrice / (1 + gstRate)
             const basePrice =
                 Math.round((inclusivePrice / (1 + gstMultiplier)) * 100) / 100;
             const gstPerUnit =
@@ -435,35 +472,30 @@ export async function GET(
                 cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
             },
             columnStyles: {
-                0: { cellWidth: 12 },
-                1: { cellWidth: 48 },
-                2: { cellWidth: 20 },
-                3: { cellWidth: 22 },
-                4: { cellWidth: 16 },
-                5: { cellWidth: 22 },
-                6: { cellWidth: 22 },
-                7: { cellWidth: 20 },
+                0: { cellWidth: 10 },
+                1: { cellWidth: 40 },
+                2: { cellWidth: 16 },
+                3: { cellWidth: 20 },
+                4: { cellWidth: 14 },
+                5: { cellWidth: 26 },
+                6: { cellWidth: 28 },
+                7: { cellWidth: 28 },
             },
-            // Minimal theme like original: header bar, thin row borders, bold footer border
             theme: "plain",
             styles: {
                 overflow: "linebreak",
             },
             didParseCell: (data: any) => {
                 const col = data.column.index;
-                // All cells center aligned
                 data.cell.styles.halign = "center";
-                // Item name left aligned
                 if (col === 1) data.cell.styles.halign = "left";
 
-                // Header: white text on blue
                 if (data.section === "head") {
                     data.cell.styles.fillColor = BLUE;
                     data.cell.styles.textColor = [255, 255, 255];
                     data.cell.styles.fontStyle = "bold";
                 }
 
-                // Body: thin bottom border
                 if (data.section === "body") {
                     data.cell.styles.lineColor = [220, 220, 220];
                     data.cell.styles.lineWidth = {
@@ -474,7 +506,6 @@ export async function GET(
                     };
                 }
 
-                // Footer: bold top border, no fill
                 if (data.section === "foot") {
                     data.cell.styles.fontStyle = "bold";
                     data.cell.styles.lineColor = [60, 60, 60];
@@ -493,12 +524,11 @@ export async function GET(
         // ── BOTTOM SECTION ──
         const leftX = ml;
         const sumX = pageW / 2 + 5;
-        const sumRight = pageW - mr; // right edge within margin
+        const sumRight = pageW - mr;
         let leftY = y;
         let sY = y;
 
         // ─ Right: Pricing Summary ─
-        // Use reverse-calculated values from the table
         const invoiceSubtotal = tableRows.reduce((s, i) => s + i.basePrice, 0);
         const invoiceGst = totalGst;
 
@@ -544,7 +574,6 @@ export async function GET(
         drawRow("Received", fmtINR(grandTotal));
         drawRow("Balance", fmtINR(0));
 
-        // Thin line after balance
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
         doc.line(sumX, sY - 3, sumRight, sY - 3);
@@ -579,7 +608,6 @@ export async function GET(
             leftY += lines.length * spacing + 1;
         };
 
-        // General terms
         let termNum = 1;
         drawWrappedLine(
             `${termNum}) Taxes: Prices are subject to applicable taxes (SGST @9%, CGST @9% or IGST, as applicable).`,
@@ -614,7 +642,6 @@ export async function GET(
         );
         termNum++;
 
-        // Category-specific terms (continue numbering)
         const itemTypes = new Set(
             items.map((item: any) =>
                 (item.itemType || "product").toLowerCase(),
@@ -646,7 +673,6 @@ export async function GET(
             termNum++;
         }
 
-        // Footer disclaimer
         leftY += 3;
         doc.setFontSize(6.5);
         doc.setTextColor(130, 130, 130);
@@ -656,18 +682,10 @@ export async function GET(
         );
         doc.text(footerLines, leftX, leftY);
 
-        // ─ Signatory (right side, centered) ─
+        // ─ Signatory ─
         const sigStartY = sY + 4;
         const sigCenterX = sumX + (sumRight - sumX) / 2;
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(...DARK);
-        const forText = "For :SCRIBBL3D";
-        const forW = doc.getTextWidth(forText);
-        doc.text(forText, sigCenterX - forW / 2, sigStartY);
-
-        // Signature image (centered)
         if (signBase64) {
             try {
                 const sigImgW = 35;
@@ -676,7 +694,7 @@ export async function GET(
                     signBase64,
                     "JPEG",
                     sigCenterX - sigImgW / 2,
-                    sigStartY + 3,
+                    sigStartY,
                     sigImgW,
                     sigImgH,
                 );
@@ -688,7 +706,7 @@ export async function GET(
         doc.setTextColor(...DARK);
         const authText = "Authorized Signatory";
         const authW = doc.getTextWidth(authText);
-        doc.text(authText, sigCenterX - authW / 2, sigStartY + 25);
+        doc.text(authText, sigCenterX - authW / 2, sigStartY + 21);
 
         // ── Output ──
         const pdfBuffer = Buffer.from(doc.output("arraybuffer"));

@@ -62,6 +62,13 @@ export interface Order {
     refundStatus?: string;
     refundId?: string;
     refundInitiatedAt?: string;
+    invoice?: {
+        id: string;
+        creditNotes?: {
+            id: string;
+            creditNoteNumber: string;
+        }[];
+    };
 
     user?: {
         name?: string;

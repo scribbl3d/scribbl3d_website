@@ -674,8 +674,11 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                 </div>
                             )}
 
-                            {/* Download Invoice */}
-                            <DownloadInvoiceButton orderId={order.id} />
+                            {/* Download Invoice — hide for payment_pending and cancelled */}
+                            {!isCancelled &&
+                                displayStatus !== "payment_pending" && (
+                                    <DownloadInvoiceButton orderId={order.id} />
+                                )}
                         </div>
 
                         {/* ── Order Actions ── */}

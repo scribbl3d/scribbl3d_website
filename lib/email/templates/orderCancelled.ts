@@ -32,7 +32,7 @@ export function orderCancelledTemplate(data: CancelEmailData): string {
 
         ${paragraph("Thank you for your understanding.")}
 
-        ${button("Browse Products", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/shop`)}
+        ${button("Browse Products", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/`)}
 
         <p style="margin:24px 0 0;font-size:14px;color:#3f3f46;">
             Best regards,<br/>

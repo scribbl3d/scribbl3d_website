@@ -38,6 +38,7 @@ interface Props {
     onGenerateLabel(order: Order, waybill?: string): void;
     onRequestPickup(): void;
     pickupInfo?: PickupInfo[] | null;
+    onDownloadInvoice(order: Order): Promise<void>; // ← new
 }
 
 /* =========================================================
@@ -69,9 +70,6 @@ function formatPickupDate(dateStr: string) {
     });
 }
 
-/**
- * Check if order has MPS (multiple packages)
- */
 function isMPSOrder(order: Order): boolean {
     return (
         order.shipment?.shipmentType === "MPS" ||
@@ -80,19 +78,12 @@ function isMPSOrder(order: Order): boolean {
     );
 }
 
-/**
- * Get package count for order
- */
 function getPackageCount(order: Order): number {
-    if (order.shipments && order.shipments.length > 0) {
+    if (order.shipments && order.shipments.length > 0)
         return order.shipments.length;
-    }
-    if (order.shipment?.packageCount) {
-        return order.shipment.packageCount;
-    }
-    if (order.trackingInfo?.packageCount) {
+    if (order.shipment?.packageCount) return order.shipment.packageCount;
+    if (order.trackingInfo?.packageCount)
         return order.trackingInfo.packageCount;
-    }
     return 1;
 }
 
@@ -106,6 +97,7 @@ export function InTransitTab({
     onGenerateLabel,
     onRequestPickup,
     pickupInfo,
+    onDownloadInvoice,
 }: Props) {
     /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
@@ -116,6 +108,9 @@ export function InTransitTab({
     /* ---------- PAGINATION ---------- */
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
+
+    /* ---------- PER-ROW LOADING STATE ---------- */
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
@@ -129,27 +124,21 @@ export function InTransitTab({
                     order.shippingAddress?.fullName || order.user?.name || "";
                 return name.toLowerCase().includes(q);
             }
-
-            if (filterBy === "amount") {
+            if (filterBy === "amount")
                 return String(order.totalAmount).includes(q);
-            }
-
-            if (filterBy === "orderId") {
+            if (filterBy === "orderId")
                 return order.id.toLowerCase().includes(q);
-            }
-
             if (filterBy === "transaction") {
                 return (
                     order.transactionId &&
                     order.transactionId.toLowerCase().includes(q)
                 );
             }
-
             return true;
         });
     }, [orders, search, filterBy]);
 
-    /* ---------- RESET PAGE ON FILTER CHANGE ---------- */
+    /* ---------- RESET PAGE ---------- */
     useEffect(() => {
         setPage(1);
     }, [search, filterBy, orders]);
@@ -165,6 +154,17 @@ export function InTransitTab({
         () => getNextValidPickup(pickupInfo),
         [pickupInfo],
     );
+
+    /* ---------- DOWNLOAD HANDLER ---------- */
+    async function handleInvoiceClick(order: Order) {
+        if (downloadingId) return;
+        setDownloadingId(order.id);
+        try {
+            await onDownloadInvoice(order);
+        } finally {
+            setDownloadingId(null);
+        }
+    }
 
     return (
         <div className="rounded-xl border bg-background p-6 shadow-sm">
@@ -246,9 +246,7 @@ export function InTransitTab({
                                 <TableCell>
                                     <div className="flex items-center gap-2">
                                         <Badge
-                                            className={`${getShipmentStatusColor(
-                                                shipmentStatus,
-                                            )} capitalize`}
+                                            className={`${getShipmentStatusColor(shipmentStatus)} capitalize`}
                                         >
                                             {shipmentStatus || "unknown"}
                                         </Badge>
@@ -299,7 +297,7 @@ export function InTransitTab({
                                             Track Order
                                         </ActionButton>
 
-                                        {/* Label generation - different UI for MPS vs SPS */}
+                                        {/* Label generation */}
                                         {isMPS ? (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -324,7 +322,6 @@ export function InTransitTab({
                                                         {packageCount})
                                                     </DropdownMenuItem>
 
-                                                    {/* Individual package labels */}
                                                     {order.shipments?.map(
                                                         (shipment, idx) => (
                                                             <DropdownMenuItem
@@ -353,7 +350,6 @@ export function InTransitTab({
                                                         ),
                                                     )}
 
-                                                    {/* Fallback if shipments not loaded but we know it's MPS */}
                                                     {(!order.shipments ||
                                                         order.shipments
                                                             .length === 0) && (
@@ -408,6 +404,21 @@ export function InTransitTab({
                                                 Generate Label
                                             </ActionButton>
                                         )}
+
+                                        {/* ── TAX INVOICE ── */}
+                                        <ActionButton
+                                            variant="outline"
+                                            disabled={
+                                                downloadingId === order.id
+                                            }
+                                            onClick={() =>
+                                                handleInvoiceClick(order)
+                                            }
+                                        >
+                                            {downloadingId === order.id
+                                                ? "Generating…"
+                                                : "Tax Invoice"}
+                                        </ActionButton>
                                     </div>
                                 </TableCell>
                             </TableRow>

@@ -27,6 +27,7 @@ interface Props {
     onView(order: Order): void;
     onCreateShipment(order: Order): void;
     onCancel(order: Order): void;
+    onDownloadInvoice(order: Order): Promise<void>; // ← new prop
 }
 
 /* =========================================================
@@ -37,16 +38,21 @@ export function ConfirmedProcessingTab({
     onView,
     onCreateShipment,
     onCancel,
+    onDownloadInvoice,
 }: Props) {
-    /* ---------- SEARCH ---------- */
-    const [search, setSearch] = useState("");
-    const [filterBy, setFilterBy] = useState<
-        "customer" | "amount" | "transaction" | "orderId"
-    >("customer");
+/* ---------- SEARCH ---------- */
+const [search, setSearch] = useState("");
+const [filterBy, setFilterBy] = useState<
+    "customer" | "amount" | "transaction" | "orderId"
+>("customer");
 
     /* ---------- PAGINATION ---------- */
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
+
+    /* ---------- PER-ROW LOADING STATE ---------- */
+    // Tracks which orderId is currently downloading (null = none)
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
@@ -60,22 +66,18 @@ export function ConfirmedProcessingTab({
                     order.shippingAddress?.fullName || order.user?.name || "";
                 return name.toLowerCase().includes(q);
             }
-
             if (filterBy === "amount") {
                 return String(order.totalAmount).includes(q);
             }
-
             if (filterBy === "orderId") {
                 return order.id.toLowerCase().includes(q);
             }
-
             if (filterBy === "transaction") {
                 return (
                     order.transactionId &&
                     order.transactionId.toLowerCase().includes(q)
                 );
             }
-
             return true;
         });
     }, [orders, search, filterBy]);
@@ -90,6 +92,17 @@ export function ConfirmedProcessingTab({
         const start = (page - 1) * PAGE_SIZE;
         return filteredOrders.slice(start, start + PAGE_SIZE);
     }, [filteredOrders, page]);
+
+    /* ---------- DOWNLOAD HANDLER ---------- */
+    async function handleInvoiceClick(order: Order) {
+        if (downloadingId) return; // prevent concurrent downloads
+        setDownloadingId(order.id);
+        try {
+            await onDownloadInvoice(order);
+        } finally {
+            setDownloadingId(null);
+        }
+    }
 
     return (
         <div className="rounded-xl border bg-background p-6 shadow-sm">
@@ -183,6 +196,19 @@ export function ConfirmedProcessingTab({
                                         onClick={() => onCancel(order)}
                                     >
                                         Cancel Order
+                                    </ActionButton>
+
+                                    {/* ── TAX INVOICE ── */}
+                                    <ActionButton
+                                        variant="outline"
+                                        disabled={downloadingId === order.id}
+                                        onClick={() =>
+                                            handleInvoiceClick(order)
+                                        }
+                                    >
+                                        {downloadingId === order.id
+                                            ? "Generating…"
+                                            : "Tax Invoice"}
                                     </ActionButton>
                                 </div>
                             </TableCell>

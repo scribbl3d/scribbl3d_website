@@ -202,6 +202,30 @@ export default function OrdersPage() {
         }
     }
 
+    async function handleDownloadInvoice(order: Order) {
+        try {
+            const res = await fetch(`/api/orders/${order.id}/invoice`);
+            if (!res.ok) throw new Error("Failed to download invoice");
+
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+
+            const disposition = res.headers.get("Content-Disposition");
+            const match = disposition?.match(/filename="(.+)"/);
+            a.download = match?.[1] || `Invoice_${order.id}.pdf`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Invoice download failed:", err);
+            alert("Failed to download invoice. Please try again.");
+        }
+    }
+
     // ================= RENDER =================
     return (
         <div className="px-6 py-6 space-y-6">
@@ -261,6 +285,7 @@ export default function OrdersPage() {
                                     setCancelOrder(order);
                                     setShowCancelDialog(true);
                                 }}
+                                onDownloadInvoice={handleDownloadInvoice}
                             />
                         </TabsContent>
 
@@ -272,6 +297,7 @@ export default function OrdersPage() {
                                 onGenerateLabel={handleGenerateLabel}
                                 onRequestPickup={() => setPickupOpen(true)}
                                 pickupInfo={pickupInfo}
+                                onDownloadInvoice={handleDownloadInvoice}
                             />
                         </TabsContent>
 
@@ -279,6 +305,7 @@ export default function OrdersPage() {
                             <DeliveredTab
                                 orders={orders.filter(filters.delivered)}
                                 onView={setActiveOrder}
+                                onDownloadInvoice={handleDownloadInvoice}
                             />
                         </TabsContent>
 
@@ -286,6 +313,7 @@ export default function OrdersPage() {
                             <CancelledTab
                                 orders={orders.filter(filters.cancelled)}
                                 onView={setActiveOrder}
+                                onDownloadInvoice={handleDownloadInvoice}
                             />
                         </TabsContent>
                     </div>

@@ -25,12 +25,13 @@ import { formatDate, formatRupees } from "../utils/formatters";
 interface Props {
     orders: Order[];
     onView(order: Order): void;
+    onDownloadInvoice(order: Order): Promise<void>; // ← new
 }
 
 /* =========================================================
    COMPONENT
    ========================================================= */
-export function DeliveredTab({ orders, onView }: Props) {
+export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
     /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<
@@ -40,6 +41,9 @@ export function DeliveredTab({ orders, onView }: Props) {
     /* ---------- PAGINATION ---------- */
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
+
+    /* ---------- PER-ROW LOADING STATE ---------- */
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     /* ---------- FILTER ---------- */
     const filteredOrders = useMemo(() => {
@@ -53,22 +57,18 @@ export function DeliveredTab({ orders, onView }: Props) {
                     order.shippingAddress?.fullName || order.user?.name || "";
                 return name.toLowerCase().includes(q);
             }
-
             if (filterBy === "amount") {
                 return String(order.totalAmount).includes(q);
             }
-
             if (filterBy === "orderId") {
                 return order.id.toLowerCase().includes(q);
             }
-
             if (filterBy === "transaction") {
                 return (
                     order.transactionId &&
                     order.transactionId.toLowerCase().includes(q)
                 );
             }
-
             return true;
         });
     }, [orders, search, filterBy]);
@@ -83,6 +83,17 @@ export function DeliveredTab({ orders, onView }: Props) {
         const start = (page - 1) * PAGE_SIZE;
         return filteredOrders.slice(start, start + PAGE_SIZE);
     }, [filteredOrders, page]);
+
+    /* ---------- DOWNLOAD HANDLER ---------- */
+    async function handleInvoiceClick(order: Order) {
+        if (downloadingId) return;
+        setDownloadingId(order.id);
+        try {
+            await onDownloadInvoice(order);
+        } finally {
+            setDownloadingId(null);
+        }
+    }
 
     return (
         <div className="rounded-lg border bg-green-50 p-4">
@@ -138,12 +149,27 @@ export function DeliveredTab({ orders, onView }: Props) {
                             <TableCell>{formatDate(order.createdAt)}</TableCell>
 
                             <TableCell className="text-right">
-                                <ActionButton
-                                    variant="outline"
-                                    onClick={() => onView(order)}
-                                >
-                                    View Details
-                                </ActionButton>
+                                <div className="flex flex-col gap-2 items-end">
+                                    <ActionButton
+                                        variant="outline"
+                                        onClick={() => onView(order)}
+                                    >
+                                        View Details
+                                    </ActionButton>
+
+                                    {/* ── TAX INVOICE ── */}
+                                    <ActionButton
+                                        variant="outline"
+                                        disabled={downloadingId === order.id}
+                                        onClick={() =>
+                                            handleInvoiceClick(order)
+                                        }
+                                    >
+                                        {downloadingId === order.id
+                                            ? "Generating…"
+                                            : "Tax Invoice"}
+                                    </ActionButton>
+                                </div>
                             </TableCell>
                         </TableRow>
                     ))}
