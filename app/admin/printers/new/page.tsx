@@ -69,7 +69,6 @@ const SPEC_CATEGORIES = [
     "Physical Specifications",
 ];
 
-// Only these specific specs are strictly required and cannot be deleted
 const MANDATORY_SPECS = ["Supported Materials", "Chamber Type"];
 
 const DEFAULT_SPECS = [
@@ -158,7 +157,7 @@ type PrinterFormData = {
     description: string;
     shortDescription: string;
     warrantyYears: string;
-    weight: string; // Added weight field
+    weight: string;
     freeInstallation: boolean;
     images: ImageItem[];
     specifications: Specification[];
@@ -178,7 +177,6 @@ export default function PrinterFormPage() {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
 
-    // Initial State
     const [formData, setFormData] = useState<PrinterFormData>({
         name: "",
         slug: "",
@@ -210,7 +208,6 @@ export default function PrinterFormPage() {
             .replace(/[\s_-]+/g, "-")
             .replace(/^-+|-+$/g, "");
 
-    // FETCH DATA
     useEffect(() => {
         if (isEdit) {
             setFetching(true);
@@ -227,7 +224,6 @@ export default function PrinterFormPage() {
                         originalPrice: data.originalPrice
                             ? data.originalPrice.toString()
                             : "",
-                        // Convert grams from DB to Kg for UI
                         weight: data.weight
                             ? (data.weight / 1000).toString()
                             : "",
@@ -280,7 +276,6 @@ export default function PrinterFormPage() {
                 ? Math.round(parseFloat(formData.originalPrice))
                 : null;
 
-            // Convert UI Weight (Kg) to Grams for DB
             const weightInGrams = formData.weight
                 ? Math.round(parseFloat(formData.weight) * 1000)
                 : 0;
@@ -291,43 +286,76 @@ export default function PrinterFormPage() {
                     ((originalPrice - price) / originalPrice) * 100,
                 );
             }
+
             const volMax = Math.max(
                 Number(formData.volumeLength) || 0,
                 Number(formData.volumeWidth) || 0,
                 Number(formData.volumeHeight) || 0,
             );
 
-            const data = new FormData();
-            const finalSlug =
-                formData.slug || generateSlug(formData.name) || "printer";
+            // Helper to trim strings safely
+            const trimmed = (val: string) => val?.trim() ?? "";
 
-            data.append("name", formData.name);
+            const finalSlug =
+                trimmed(formData.slug) ||
+                generateSlug(formData.name) ||
+                "printer";
+
+            // Trim nested arrays + filter out empty ghost rows
+            const trimmedSpecs = formData.specifications
+                .map((s) => ({
+                    ...s,
+                    label: s.label.trim(),
+                    value: s.value.trim(),
+                }))
+                .filter((s) => s.label !== "" && s.value !== "");
+
+            const trimmedFeatures = formData.features
+                .map((f) => ({
+                    ...f,
+                    title: f.title.trim(),
+                }))
+                .filter((f) => f.title !== "");
+
+            const trimmedApplications = formData.applications
+                .map((a) => ({
+                    ...a,
+                    name: a.name.trim(),
+                }))
+                .filter((a) => a.name !== "");
+
+            const trimmedDownloads = formData.downloads.map((d) => ({
+                ...d,
+                title: d.title.trim(),
+                description: d.description.trim(),
+                downloadUrl: d.downloadUrl.trim(),
+            }));
+
+            const data = new FormData();
+
+            data.append("name", trimmed(formData.name));
             data.append("slug", finalSlug);
-            data.append("brand", formData.brand);
+            data.append("brand", trimmed(formData.brand));
             data.append("price", price.toString());
             if (originalPrice)
                 data.append("originalPrice", originalPrice.toString());
             data.append("discount", discount.toString());
-            data.append("technology", formData.technology);
-            data.append("experience", formData.experience);
-            data.append("description", formData.description);
-            data.append("shortDescription", formData.shortDescription);
-            data.append("volumeLength", formData.volumeLength);
-            data.append("volumeWidth", formData.volumeWidth);
-            data.append("volumeHeight", formData.volumeHeight);
+            data.append("technology", trimmed(formData.technology));
+            data.append("experience", trimmed(formData.experience));
+            data.append("description", trimmed(formData.description));
+            data.append("shortDescription", trimmed(formData.shortDescription));
+            data.append("volumeLength", trimmed(formData.volumeLength));
+            data.append("volumeWidth", trimmed(formData.volumeWidth));
+            data.append("volumeHeight", trimmed(formData.volumeHeight));
             data.append("volumeMax", volMax.toString());
-            data.append("warrantyYears", formData.warrantyYears);
-            // Append the weight in grams
+            data.append("warrantyYears", trimmed(formData.warrantyYears));
             data.append("weight", weightInGrams.toString());
             data.append("freeInstallation", String(formData.freeInstallation));
 
-            data.append(
-                "specifications",
-                JSON.stringify(formData.specifications),
-            );
-            data.append("features", JSON.stringify(formData.features));
-            data.append("applications", JSON.stringify(formData.applications));
-            data.append("downloads", JSON.stringify(formData.downloads));
+            data.append("specifications", JSON.stringify(trimmedSpecs));
+            data.append("features", JSON.stringify(trimmedFeatures));
+            data.append("applications", JSON.stringify(trimmedApplications));
+            data.append("downloads", JSON.stringify(trimmedDownloads));
 
             const existingImages = formData.images
                 .filter((img) => !img.file)
@@ -373,28 +401,33 @@ export default function PrinterFormPage() {
 
     /* ===================== HELPERS ===================== */
 
-    // Handle multi-select for Supported Materials - keep values exactly as they are in MATERIAL_OPTIONS
+    // Strictly only fires for "Supported Materials" and "Connectivity" labels
     const handleMultiSelectSpec = (index: number, option: string) => {
         const spec = formData.specifications[index];
+
+        // Safety guard: only allow multi-select for these exact labels
+        if (
+            spec.label !== "Supported Materials" &&
+            spec.label !== "Connectivity"
+        ) {
+            return;
+        }
+
         let values = spec.value ? spec.value.split(", ") : [];
         if (values.includes(option)) {
             values = values.filter((v) => v !== option);
         } else {
             values.push(option);
         }
-        // Join with ", " - no transformation, keep exact casing from MATERIAL_OPTIONS
         updateArrayItem("specifications", index, "value", values.join(", "));
     };
 
-    // Helper to format dimensions as "450mm x 450mm x 500mm"
     const handleMachineDimensions = (
         index: number,
         axis: "L" | "W" | "H",
         val: string,
     ) => {
         const spec = formData.specifications[index];
-        // Clean current string to get raw numbers.
-        // Expected format in DB: "300mm x 300mm x 400mm"
         const parts = spec.value
             .split(" x ")
             .map((p) => p.replace("mm", "").trim());
@@ -403,16 +436,11 @@ export default function PrinterFormPage() {
         const W = axis === "W" ? val : parts[1] || "";
         const H = axis === "H" ? val : parts[2] || "";
 
-        // Only add 'mm' if there is a value
         const newValue = `${L}mm x ${W}mm x ${H}mm`;
         updateArrayItem("specifications", index, "value", newValue);
     };
 
-    // Helper to handle unit suffix for Speed/Accel
-    // Stores in DB: "600 mm/s"
-    // Shows in UI: 600
     const handleUnitInput = (index: number, val: string, unit: string) => {
-        // Just append the unit to the value
         const newValue = val ? `${val} ${unit}` : "";
         updateArrayItem("specifications", index, "value", newValue);
     };
@@ -478,9 +506,9 @@ export default function PrinterFormPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <form onSubmit={handleSubmit}>
-                {/* Header */}
                 <LoadingModal open={loading} isEdit={isEdit} />
 
+                {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                         <div className="flex items-center gap-4">
@@ -670,7 +698,7 @@ export default function PrinterFormPage() {
                                 </div>
                             </div>
 
-                            {/* 2. Technical Specs (Dynamic UI) */}
+                            {/* 2. Technical Specs */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 {renderSectionHeader(
                                     "Detailed Specifications",
@@ -717,13 +745,10 @@ export default function PrinterFormPage() {
                                                         spec,
                                                         originalIndex,
                                                     }) => {
-                                                        // Only "Supported Materials" and "Chamber Type" are strict Mandatory
                                                         const isStrictMandatory =
                                                             MANDATORY_SPECS.includes(
                                                                 spec.label,
                                                             );
-
-                                                        /* --- RENDER LOGIC BASED ON LABEL --- */
 
                                                         // 1. Dropdown for Chamber Type
                                                         if (
@@ -787,7 +812,7 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 2. Checkboxes for Supported Materials (ONLY for exact label match)
+                                                        // 2. Checkboxes for Supported Materials (EXACT label match only)
                                                         if (
                                                             spec.label ===
                                                             "Supported Materials"
@@ -853,7 +878,7 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 3. Checkboxes for Connectivity
+                                                        // 3. Checkboxes for Connectivity (EXACT label match only)
                                                         if (
                                                             spec.label ===
                                                             "Connectivity"
@@ -917,12 +942,11 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 4. Machine Dimensions (Lmm x Wmm x Hmm)
+                                                        // 4. Machine Dimensions
                                                         if (
                                                             spec.label ===
                                                             "Machine Dimensions"
                                                         ) {
-                                                            // Parse existing format: "300mm x 300mm x 400mm" -> ["300", "300", "400"]
                                                             const parts =
                                                                 spec.value
                                                                     .split(
@@ -1023,7 +1047,7 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 5. Speed & Acceleration (Numeric Inputs with Units)
+                                                        // 5. Speed & Acceleration
                                                         if (
                                                             spec.label ===
                                                                 "Print Speed" ||
@@ -1035,7 +1059,6 @@ export default function PrinterFormPage() {
                                                                 "Print Speed"
                                                                     ? "mm/s"
                                                                     : "mm/s²";
-                                                            // Strip unit for input value: "600 mm/s" -> "600"
                                                             const numericValue =
                                                                 spec.value.replace(
                                                                     ` ${unit}`,
@@ -1054,7 +1077,6 @@ export default function PrinterFormPage() {
                                                                         value={
                                                                             spec.label
                                                                         }
-                                                                        // User can rename "Print Speed" if they really want, but usually won't
                                                                         onChange={(
                                                                             e,
                                                                         ) =>
@@ -1111,8 +1133,7 @@ export default function PrinterFormPage() {
                                                             );
                                                         }
 
-                                                        // 6. Default Text Inputs (Everything else - including custom rows in Material Compatibility)
-                                                        // These are NOT "Supported Materials" - they are custom specs like "Nozzle Temperature", "Bed Temperature"
+                                                        // 6. Default Text Inputs (all other specs including custom rows)
                                                         return (
                                                             <div
                                                                 key={
@@ -1142,7 +1163,11 @@ export default function PrinterFormPage() {
                                                                         )
                                                                     }
                                                                     placeholder="Spec Name"
-                                                                    className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700 ${isStrictMandatory ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                                                                    className={`flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md font-medium text-gray-700 ${
+                                                                        isStrictMandatory
+                                                                            ? "bg-gray-100 cursor-not-allowed"
+                                                                            : ""
+                                                                    }`}
                                                                 />
                                                                 <input
                                                                     type="text"
@@ -1164,8 +1189,6 @@ export default function PrinterFormPage() {
                                                                     }
                                                                     className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md"
                                                                 />
-
-                                                                {/* User can delete anything except the strictly mandatory ones */}
                                                                 {!isStrictMandatory && (
                                                                     <button
                                                                         type="button"
@@ -1192,7 +1215,6 @@ export default function PrinterFormPage() {
                             {/* Features & Applications */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                                 <div className="grid md:grid-cols-2 gap-8">
-                                    {/* Features */}
                                     <div>
                                         <div className="flex justify-between items-center mb-3">
                                             <label className="text-sm font-medium text-gray-700">
@@ -1248,7 +1270,6 @@ export default function PrinterFormPage() {
                                             )}
                                         </div>
                                     </div>
-                                    {/* Applications */}
                                     <div>
                                         <div className="flex justify-between items-center mb-3">
                                             <label className="text-sm font-medium text-gray-700">
@@ -1540,7 +1561,11 @@ export default function PrinterFormPage() {
                                     {formData.images.map((img, idx) => (
                                         <div
                                             key={idx}
-                                            className={`relative group aspect-square rounded-lg border-2 overflow-hidden ${img.isMain ? "border-blue-500" : "border-gray-200"}`}
+                                            className={`relative group aspect-square rounded-lg border-2 overflow-hidden ${
+                                                img.isMain
+                                                    ? "border-blue-500"
+                                                    : "border-gray-200"
+                                            }`}
                                         >
                                             <Image
                                                 src={img.url}
@@ -1561,21 +1586,15 @@ export default function PrinterFormPage() {
                                                             const newImages = [
                                                                 ...formData.images,
                                                             ];
-
-                                                            // take clicked image out
                                                             const [selected] =
                                                                 newImages.splice(
                                                                     idx,
                                                                     1,
                                                                 );
-
-                                                            // insert it at index 0
                                                             newImages.unshift({
                                                                 ...selected,
                                                                 isMain: true,
                                                             });
-
-                                                            // fix isMain + sortOrder for all
                                                             const normalizedImages =
                                                                 newImages.map(
                                                                     (
@@ -1590,7 +1609,6 @@ export default function PrinterFormPage() {
                                                                             i,
                                                                     }),
                                                                 );
-
                                                             setFormData({
                                                                 ...formData,
                                                                 images: normalizedImages,
@@ -1680,23 +1698,19 @@ export default function PrinterFormPage() {
         </div>
     );
 }
+
 function LoadingModal({ open, isEdit }: { open: boolean; isEdit: boolean }) {
     if (!open) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-xl shadow-lg px-8 py-6 w-[360px] text-center">
-                {/* Spinner */}
                 <div className="flex justify-center mb-4">
                     <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
                 </div>
-
-                {/* Title */}
                 <h2 className="text-lg font-semibold mb-2">
                     {isEdit ? "Editing Product…" : "Adding Product…"}
                 </h2>
-
-                {/* Subtitle */}
                 <p className="text-sm text-gray-600">
                     This may take up to a few minutes. Please do not close this
                     window.
