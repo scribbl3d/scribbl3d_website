@@ -44,15 +44,13 @@ function getRefundStatusColor(status?: string) {
     }
 }
 
-/* =========================================================
-   COMPONENT
-   ========================================================= */
 export function CancelledTab({ orders, onView, onDownloadInvoice }: Props) {
     /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
-    const [filterBy, setFilterBy] = useState<"customer" | "amount" | "transaction" | "orderId">("customer");
+    const [filterBy, setFilterBy] = useState<
+        "customer" | "amount" | "transaction" | "orderId"
+    >("customer");
 
-    /* ---------- PAGINATION ---------- */
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
 
