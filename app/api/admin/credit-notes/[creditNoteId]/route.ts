@@ -152,31 +152,29 @@ const COL_WIDTHS = {
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { creditNoteId: string } },
+    { params }: { params: Promise<{ creditNoteId: string }> },
 ) {
+    // ← await params first (Next.js 15 requirement)
+    const { creditNoteId } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     try {
-        /* ── Step 1: Load the invoice by the creditNoteId param ──
-           The param could be either an actual creditNote.id OR an invoiceId
-           depending on how your frontend calls this route.
-           We handle both cases gracefully.                            */
+        /* ── Step 1: Resolve creditNote / invoice / order ── */
 
-        // Try direct creditNote lookup first
         let existingCreditNote = await db.creditNote.findUnique({
-            where: { id: params.creditNoteId },
+            where: { id: creditNoteId },
             include: {
                 invoice: { include: { order: { include: { user: true } } } },
             },
         });
 
-        // Fallback: maybe the param is an invoiceId
         if (!existingCreditNote) {
             existingCreditNote = await db.creditNote.findFirst({
-                where: { invoiceId: params.creditNoteId },
+                where: { invoiceId: creditNoteId },
                 include: {
                     invoice: {
                         include: { order: { include: { user: true } } },
@@ -185,17 +183,15 @@ export async function GET(
             });
         }
 
-        // If still not found, maybe param is an orderId — find via invoice
-        let invoice;
-        let order;
+        let invoice: any;
+        let order: any;
 
         if (existingCreditNote) {
             invoice = existingCreditNote.invoice;
             order = invoice.order;
         } else {
-            // Last resort: treat param as orderId
             const foundInvoice = await db.invoice.findFirst({
-                where: { orderId: params.creditNoteId },
+                where: { orderId: creditNoteId },
                 include: { order: { include: { user: true } } },
             });
             if (!foundInvoice) {
@@ -216,16 +212,14 @@ export async function GET(
             );
         }
 
-        /* ── Step 2: Idempotent credit note upsert ──
-           ONE invoice → ONE credit note, guaranteed.
-           findFirst on invoiceId, create only if missing.            */
+        /* ── Step 2: Idempotent credit note upsert ── */
+
         let creditNote = await db.creditNote.findFirst({
             where: { invoiceId: invoice.id },
         });
 
         if (!creditNote) {
             creditNote = await db.$transaction(async (tx) => {
-                // Double-check inside transaction to avoid race condition
                 const existing = await tx.creditNote.findFirst({
                     where: { invoiceId: invoice.id },
                 });
@@ -290,7 +284,7 @@ export async function GET(
 
         const stateLower = customerState.toLowerCase().trim();
         const customerStateCode = STATE_CODES[stateLower] || customerState;
-        const placeOfSupply = "07-Delhi"; // always Delhi
+        const placeOfSupply = "07-Delhi";
 
         /* ───────── Parse Items ───────── */
 
@@ -350,10 +344,10 @@ export async function GET(
         ══════════════════════════════════════ */
 
         const doc = new jsPDF({ unit: "mm", format: "a4" });
-        const pageW = doc.internal.pageSize.getWidth(); // 210mm
+        const pageW = doc.internal.pageSize.getWidth();
         const ml = 14;
         const mr = 14;
-        const right = pageW - mr; // 196mm
+        const right = pageW - mr;
         let y = 14;
 
         /* ── Company Header ── */
@@ -475,7 +469,7 @@ export async function GET(
         autoTable(doc, {
             startY: y,
             margin: { left: ml, right: mr },
-            tableWidth: pageW - ml - mr, // explicit 182mm
+            tableWidth: pageW - ml - mr,
             head: [
                 [
                     "#",
