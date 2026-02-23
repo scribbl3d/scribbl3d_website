@@ -4,21 +4,32 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditPageClient from "./EditPageClient";
 
-type Props = { params: { id: string } };
+export async function generateMetadata({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
 
-export async function generateMetadata({ params }: Props) {
     const product = await prisma.prebuiltProductRiya.findUnique({
-        where: { id: params.id },
+        where: { id },
         select: { name: true },
     });
+
     return {
         title: product ? `Edit: ${product.name} | Admin` : "Not Found | Admin",
     };
 }
 
-export default async function EditPrebuiltProductPage({ params }: Props) {
+export default async function EditPrebuiltProductPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
+
     const product = await prisma.prebuiltProductRiya.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
             images: { orderBy: { position: "asc" } },
             attributes: true,
@@ -28,7 +39,6 @@ export default async function EditPrebuiltProductPage({ params }: Props) {
 
     if (!product) notFound();
 
-    // Shape DB data into form defaults
     const defaultValues = {
         id: product.id,
         name: product.name,
@@ -42,21 +52,23 @@ export default async function EditPrebuiltProductPage({ params }: Props) {
         height: product.height ?? undefined,
         weight: product.weight ?? undefined,
         features: product.features,
+
         attributes: product.attributes.map((a) => ({
             label: a.label,
             value: a.value,
         })),
+
+        // ✅ EXACTLY matches PrebuiltVariantRiya
         variants: product.variants.map((v) => ({
             id: v.id,
             price: v.price,
             originalPrice: v.originalPrice,
-            stockQuantity: v.stockQuantity,
             isActive: v.isActive,
             colorName: v.colorName ?? "",
             colorHex: v.colorHex ?? "",
             sizeName: v.sizeName ?? "",
-            sizeCode: v.sizeCode ?? "",
         })),
+
         images: product.images.map((img) => ({
             id: img.id,
             url: img.url,

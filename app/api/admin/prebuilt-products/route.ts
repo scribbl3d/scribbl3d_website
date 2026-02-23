@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
             ...p,
             primaryImage: p.images[0]?.url || null,
             primaryVariant: p.variants[0] || null,
-            totalStock: p.variants.reduce((s, v) => s + v.stockQuantity, 0),
         }));
 
         return NextResponse.json({

@@ -13,7 +13,7 @@ export type VariantInput = {
     id?: string;
     price: number; // stored in paise
     originalPrice: number;
-    stockQuantity: number;
+
     isActive: boolean;
     colorName?: string;
     colorHex?: string;
@@ -62,7 +62,7 @@ const CATEGORIES = ["FDM", "Resin", "SLA", "SLS", "MSLA", "DLP", "Other"];
 const emptyVariant = (): VariantInput => ({
     price: 0,
     originalPrice: 0,
-    stockQuantity: 0,
+
     isActive: true,
     colorName: "",
     colorHex: "",
