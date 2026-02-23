@@ -16,7 +16,7 @@ import Image from "next/image";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { Form3D } from "./Form3d";
-import { PrototypingRequestForm } from "./PrototypingRequestForm";
+import PrototypingRequestForm from "./PrototypingRequestForm";
 import { SmallBatchManufacturingForm } from "./SmallBatchManufacturingForm";
 
 const TestSection: React.FC = () => {

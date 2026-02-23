@@ -35,6 +35,11 @@ export default function AdminPage() {
                         Filaments
                     </Button>
                 </Link>
+                <Link href="/admin/prebuilt-products-old" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Prebuilt Products Old
+                    </Button>
+                </Link>
                 <Link href="/admin/prebuilt-products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Prebuilt Products

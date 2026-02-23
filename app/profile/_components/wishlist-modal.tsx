@@ -125,10 +125,10 @@ export default function WishlistModal({
     ===================== */
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-            <div className="bg-white rounded-2xl w-[420px] overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 {/* HEADER */}
-                <div className="flex gap-4 p-6 relative">
+                <div className="flex gap-4 p-5 relative">
                     <Image
                         src={item.image || "/placeholder.svg"}
                         alt={item.title}
@@ -138,7 +138,9 @@ export default function WishlistModal({
                     />
 
                     <div className="flex-1">
-                        <h2 className="text-lg font-semibold">{item.title}</h2>
+                        <h2 className="text-lg font-semibold pr-6">
+                            {item.title}
+                        </h2>
 
                         {item.badge && (
                             <span className="inline-block mt-1 px-3 py-1 text-xs rounded-full bg-blue-50 text-blue-600">
@@ -157,7 +159,7 @@ export default function WishlistModal({
 
                 <div className="h-px bg-gray-200" />
 
-                <div className="p-6">
+                <div className="p-5 pb-8">
                     {/* PRICE */}
                     <div className="text-xl font-semibold">
                         ₹{displayPrice}{" "}
@@ -177,7 +179,7 @@ export default function WishlistModal({
                         <>
                             {/* COLOR */}
                             {item.resinColours && (
-                                <div className="mt-6">
+                                <div className="mt-5">
                                     <p className="text-sm font-medium mb-2">
                                         Color
                                     </p>
@@ -188,10 +190,10 @@ export default function WishlistModal({
                                                 onClick={() =>
                                                     setSelectedColourId(c.id)
                                                 }
-                                                className={`w-9 h-9 rounded-full border ${
+                                                className={`w-9 h-9 rounded-full border-2 ${
                                                     selectedColourId === c.id
-                                                        ? "ring-2 ring-blue-600"
-                                                        : ""
+                                                        ? "ring-2 ring-blue-600 ring-offset-1"
+                                                        : "border-transparent"
                                                 }`}
                                                 style={{
                                                     backgroundColor:
@@ -205,7 +207,7 @@ export default function WishlistModal({
 
                             {/* PACK SIZE */}
                             {item.resinWeights && (
-                                <div className="mt-6">
+                                <div className="mt-5">
                                     <p className="text-sm font-medium mb-2">
                                         Pack Size
                                     </p>
@@ -220,7 +222,7 @@ export default function WishlistModal({
                                                 className={`h-10 rounded-lg border text-sm ${
                                                     selectedWeightId === w.id
                                                         ? "bg-blue-600 text-white border-blue-600"
-                                                        : ""
+                                                        : "bg-white text-gray-700 border-gray-200"
                                                 }`}
                                             >
                                                 {w.label}
@@ -236,7 +238,7 @@ export default function WishlistModal({
                     {/* PREBUILT COLORS */}
                     {item.itemType === "prebuilt" &&
                         prebuiltColours.length > 0 && (
-                            <div className="mt-6">
+                            <div className="mt-5">
                                 <p className="text-sm font-medium mb-2">
                                     Color:
                                 </p>
@@ -253,7 +255,7 @@ export default function WishlistModal({
                                                 selectedPrebuiltColour ===
                                                 c.label
                                                     ? "bg-blue-600 text-white border-blue-600"
-                                                    : "bg-white"
+                                                    : "bg-white text-gray-700 border-gray-200"
                                             }`}
                                         >
                                             {c.label}
@@ -267,7 +269,7 @@ export default function WishlistModal({
                     {/* PREBUILT SIZES */}
                     {item.itemType === "prebuilt" &&
                         prebuiltSizes.length > 0 && (
-                            <div className="mt-6">
+                            <div className="mt-5">
                                 <p className="text-sm font-medium mb-2">
                                     Size:
                                 </p>
@@ -281,7 +283,7 @@ export default function WishlistModal({
                                             className={`h-10 rounded-lg border text-sm ${
                                                 selectedPrebuiltSize === s.label
                                                     ? "bg-blue-600 text-white border-blue-600"
-                                                    : "bg-white"
+                                                    : "bg-white text-gray-700 border-gray-200"
                                             }`}
                                         >
                                             {s.label}
@@ -290,6 +292,30 @@ export default function WishlistModal({
                                 </div>
                             </div>
                         )}
+
+                    {/* QUANTITY */}
+                    <div className="mt-5">
+                        <p className="text-sm font-medium mb-2">Quantity</p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() =>
+                                    setQuantity((q) => Math.max(1, q - 1))
+                                }
+                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                            >
+                                −
+                            </button>
+                            <div className="flex-1 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold text-base">
+                                {quantity}
+                            </div>
+                            <button
+                                onClick={() => setQuantity((q) => q + 1)}
+                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
 
                     {/* CTA */}
                     <Button

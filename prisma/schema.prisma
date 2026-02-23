@@ -321,26 +321,36 @@ model SmallBatchManufacturingResponse {
 
 model PrototypingRequest {
   id                  String   @id @default(cuid())
-  projectType         String
-  technology          String
+
+
+  projectType         String   // Functional Prototype | Low-Volume Production
+  technology          String   // FDM | SLA/DLP | SLS
   material            String
   materialSubtype     String?
-  color               String
-  filamentColor       String?
-  resinColor          String?
-  customMaterial      String?
-  designFile          String?
+
+
+  colors              String[] // Multi-select supported
+
+
+  designFiles         String[] // Cloudinary URLs
+
+
+  quantityType        String?  // Single | Small Batch | Large Batch
+  quantityNumber      Int? @default(1)
+
+
   specialRequirements String?
-  bulkQuantity        String?
-  firstName           String
-  lastName            String
+
+
+  fullName            String
   email               String
   phone               String
   company             String?
+
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
-
 model Onetimep {
   id        String   @id @default(cuid())
   email     String
@@ -955,10 +965,10 @@ model PrebuiltImageRiya {
   altText  String?
   position Int     @default(0)
 
-  productId String
-  product   PrebuiltProductRiya @relation(fields: [productId], references: [id], onDelete: Cascade)
+  prebuildProductId String
+  prebuiltProduct   PrebuiltProductRiya @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 
-  // Optional: tied to a color so color-specific images show when color is selected
+
   colorName String?
 }
 
@@ -968,10 +978,10 @@ model PrebuiltAttributeRiya {
   label String // "Material"
   value String // "Aluminium"
 
-  productId String
-  product   PrebuiltProductRiya @relation(fields: [productId], references: [id], onDelete: Cascade)
+  prebuildProductId String
+  prebuiltProduct   PrebuiltProductRiya @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 
-  @@unique([productId, label])
+  @@unique([prebuildProductId, label])
 }
 
 // Every unique color + size combo = one row with its own price and stock
@@ -979,22 +989,22 @@ model PrebuiltVariantRiya {
   id            String  @id @default(cuid())
   price         Int // in paise/cents
   originalPrice Int     @default(0)
-  stockQuantity Int     @default(0)
+
   isActive      Boolean @default(true)
 
   colorName String? // "Midnight Black"
   colorHex  String? // "#1a1a1a"
 
-  sizeName String? // "Large", "15 inch"
-  sizeCode String? // "L", "XL"
+  sizeName String? 
+ 
 
-  productId String
-  product   PrebuiltProductRiya @relation(fields: [productId], references: [id], onDelete: Cascade)
+  prebuildProductId String
+  prebuiltProduct   PrebuiltProductRiya @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 
   cartItems CartItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([productId, colorName, sizeName])
+  @@unique([prebuildProductId, colorName, sizeName])
 }
