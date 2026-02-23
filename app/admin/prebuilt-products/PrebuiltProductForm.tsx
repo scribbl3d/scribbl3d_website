@@ -5,42 +5,64 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+/* ─── Categories ─────────────────────────────────────────────────────────── */
+
+const CATEGORIES = [
+    "Cosplay",
+    "Figurine",
+    "Home Essentials",
+    "Household Utilities",
+    "Keychains",
+    "Kits",
+    "Lamps",
+    "New Launch",
+    "Personalised",
+    "Statues",
+    "The Latest",
+    "Trending Now",
+    "Utilities",
+    "Wall Decor",
+];
+
 /* ─── Types ──────────────────────────────────────────────────────────────── */
 
-export type AttributeInput = { label: string; value: string };
+type AttributeInput = { label: string; value: string };
 
-export type VariantInput = {
+type VariantInput = {
     id?: string;
-    price: number; // stored in paise
-    originalPrice: number;
-
+    price: number; // paise in DB
+    originalPrice: number; // paise in DB
+    priceDisplay: string; // ₹ string for input
+    originalPriceDisplay: string; // ₹ string for input
     isActive: boolean;
-    colorName?: string;
-    colorHex?: string;
-    sizeName?: string;
-    sizeCode?: string;
+    colorName: string;
+    colorHex: string;
+    sizeName: string;
+    sizeCode: string;
 };
 
-export type ImageInput = {
-    id?: string;
+type ImageInput = {
+    id?: string; // present for existing DB images
     url: string;
-    publicId?: string;
-    altText?: string;
+    file?: File; // present for new uploads (not yet uploaded)
+    altText: string;
     position: number;
-    colorName?: string;
+    colorName: string;
+    isMain: boolean; // true = thumbnail image
+    isNew: boolean; // true = needs uploading, false = already in DB
 };
 
 export type ProductFormData = {
     name: string;
     shortDescription: string;
-    longDescription?: string;
+    longDescription: string;
     category: string;
     isCustomizable: boolean;
     highlighted: boolean;
-    length?: number;
-    breadth?: number;
-    height?: number;
-    weight?: number;
+    length: string;
+    breadth: string;
+    height: string;
+    weight: string;
     features: string[];
     attributes: AttributeInput[];
     variants: VariantInput[];
@@ -51,18 +73,20 @@ type Props = {
     mode: "create" | "edit";
     productId?: string;
     defaultValues?: Partial<ProductFormData & { id: string }>;
-    /** Called after successful API response — should handle redirect */
     onSuccess: () => void;
 };
 
-/* ─── Constants ──────────────────────────────────────────────────────────── */
+/* ─── Helpers ────────────────────────────────────────────────────────────── */
 
-const CATEGORIES = ["FDM", "Resin", "SLA", "SLS", "MSLA", "DLP", "Other"];
+function paiseToDisplay(paise: number): string {
+    return paise > 0 ? (paise / 100).toString() : "";
+}
 
 const emptyVariant = (): VariantInput => ({
     price: 0,
     originalPrice: 0,
-
+    priceDisplay: "",
+    originalPriceDisplay: "",
     isActive: true,
     colorName: "",
     colorHex: "",
@@ -149,7 +173,7 @@ export default function PrebuiltProductForm({
 }: Props) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
-    const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+    const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     /* ── State ── */
@@ -160,42 +184,105 @@ export default function PrebuiltProductForm({
     const [longDescription, setLongDescription] = useState(
         defaultValues?.longDescription ?? "",
     );
-    const [category, setCategory] = useState(defaultValues?.category ?? "FDM");
+    const [category, setCategory] = useState(
+        defaultValues?.category ?? CATEGORIES[0],
+    );
     const [isCustomizable, setIsCustomizable] = useState(
         defaultValues?.isCustomizable ?? false,
     );
-    const [highlighted, setHighlighted] = useState(
-        defaultValues?.highlighted ?? false,
-    );
-    const [length, setLength] = useState(
-        defaultValues?.length?.toString() ?? "",
-    );
-    const [breadth, setBreadth] = useState(
-        defaultValues?.breadth?.toString() ?? "",
-    );
-    const [height, setHeight] = useState(
-        defaultValues?.height?.toString() ?? "",
-    );
-    const [weight, setWeight] = useState(
-        defaultValues?.weight?.toString() ?? "",
-    );
+    const [length, setLength] = useState(defaultValues?.length ?? "");
+    const [breadth, setBreadth] = useState(defaultValues?.breadth ?? "");
+    const [height, setHeight] = useState(defaultValues?.height ?? "");
+    const [weight, setWeight] = useState(defaultValues?.weight ?? "");
     const [features, setFeatures] = useState<string[]>(
         defaultValues?.features ?? [],
     );
     const [featureInput, setFeatureInput] = useState("");
+
     const [attributes, setAttributes] = useState<AttributeInput[]>(
         defaultValues?.attributes?.length
             ? defaultValues.attributes
             : [emptyAttr(), emptyAttr()],
     );
+
     const [variants, setVariants] = useState<VariantInput[]>(
         defaultValues?.variants?.length
-            ? defaultValues.variants
+            ? (defaultValues.variants as any[]).map((v) => ({
+                  ...v,
+                  priceDisplay: paiseToDisplay(v.price),
+                  originalPriceDisplay: paiseToDisplay(v.originalPrice),
+              }))
             : [emptyVariant()],
     );
+
+    // Images hold either existing DB images (isNew=false) or local previews (isNew=true)
     const [images, setImages] = useState<ImageInput[]>(
-        defaultValues?.images ?? [],
+        (defaultValues?.images ?? []).map((img: any, i: number) => ({
+            id: img.id,
+            url: img.url,
+            altText: img.altText ?? "",
+            position: img.position ?? i,
+            colorName: img.colorName ?? "",
+            isMain: img.isMain ?? i === 0,
+            isNew: false,
+        })),
     );
+
+    /* ── Add image from file picker (local preview, no upload yet) ── */
+    const handleFileSelect = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        slotIdx: number,
+    ) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const previewUrl = URL.createObjectURL(file);
+
+        if (slotIdx === images.length) {
+            // New slot — auto-set as main if first image
+            setImages((p) => [
+                ...p,
+                {
+                    url: previewUrl,
+                    file,
+                    altText: "",
+                    position: p.length,
+                    colorName: "",
+                    isMain: p.length === 0, // first image auto-main
+                    isNew: true,
+                },
+            ]);
+        } else {
+            // Replace existing slot — keep isMain status
+            setImages((p) =>
+                p.map((img, i) =>
+                    i === slotIdx
+                        ? {
+                              ...img,
+                              url: previewUrl,
+                              file,
+                              isNew: true,
+                              id: undefined,
+                          }
+                        : img,
+                ),
+            );
+        }
+        e.target.value = "";
+    };
+
+    const setMainImage = (idx: number) => {
+        setImages((p) => {
+            // Move selected to front, mark as main, all others not main
+            const selected = { ...p[idx], isMain: true };
+            const rest = p
+                .filter((_, i) => i !== idx)
+                .map((img) => ({ ...img, isMain: false }));
+            return [selected, ...rest].map((img, i) => ({
+                ...img,
+                position: i,
+            }));
+        });
+    };
 
     /* ── Validation ── */
     const validate = () => {
@@ -204,103 +291,115 @@ export default function PrebuiltProductForm({
         if (!shortDescription.trim())
             e.shortDesc = "Short description is required";
         if (!category) e.category = "Category is required";
-        if (!variants.length) e.variants = "At least one variant is required";
-        if ((variants[0]?.price ?? 0) <= 0)
-            e.price = "Sale price must be greater than 0";
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
-    /* ── Image upload → POST /api/admin/prebuilt-products (multipart) ── */
-    const handleImageUpload = async (
-        e: React.ChangeEvent<HTMLInputElement>,
-        slotIdx: number,
-    ) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setUploadingIdx(slotIdx);
-        try {
-            const fd = new FormData();
-            fd.append("file", file);
-
-            const res = await fetch("/api/admin/prebuilt-products", {
-                method: "POST",
-                body: fd,
-            });
-            if (!res.ok) throw new Error("Upload failed");
-
-            const { url, publicId } = await res.json();
-
-            if (slotIdx === images.length) {
-                setImages((p) => [
-                    ...p,
-                    { url, publicId, altText: name, position: p.length },
-                ]);
-            } else {
-                setImages((p) =>
-                    p.map((img, i) =>
-                        i === slotIdx ? { ...img, url, publicId } : img,
-                    ),
-                );
-            }
-        } catch {
-            alert("Image upload failed. Please try again.");
-        } finally {
-            setUploadingIdx(null);
-            e.target.value = "";
-        }
-    };
-
-    /* ── Submit ── */
+    /* ── Submit → build FormData and POST/PUT ── */
     const handleSubmit = () => {
         if (!validate()) {
             window.scrollTo({ top: 0, behavior: "smooth" });
             return;
         }
 
-        const payload: ProductFormData = {
-            name: name.trim(),
-            shortDescription: shortDescription.trim(),
-            longDescription: longDescription.trim() || undefined,
-            category,
-            isCustomizable,
-            highlighted,
-            length: length ? parseFloat(length) : undefined,
-            breadth: breadth ? parseFloat(breadth) : undefined,
-            height: height ? parseFloat(height) : undefined,
-            weight: weight ? parseFloat(weight) : undefined,
-            features,
-            attributes: attributes.filter(
-                (a) => a.label.trim() && a.value.trim(),
-            ),
-            variants,
-            images,
-        };
-
+        setLoading(true);
         startTransition(async () => {
             try {
+                const fd = new FormData();
+
+                // Basic fields
+                fd.append("name", name.trim());
+                fd.append("shortDescription", shortDescription.trim());
+                fd.append("longDescription", longDescription.trim());
+                fd.append("category", category);
+                fd.append("isCustomizable", String(isCustomizable));
+                fd.append("highlighted", "false");
+                if (weight) fd.append("weight", weight);
+                if (length) fd.append("length", length);
+                if (breadth) fd.append("breadth", breadth);
+                if (height) fd.append("height", height);
+
+                // JSON arrays
+                fd.append("features", JSON.stringify(features));
+                fd.append(
+                    "attributes",
+                    JSON.stringify(
+                        attributes.filter(
+                            (a) => a.label.trim() && a.value.trim(),
+                        ),
+                    ),
+                );
+                fd.append(
+                    "variants",
+                    JSON.stringify(
+                        variants.map(
+                            ({
+                                priceDisplay: _pd,
+                                originalPriceDisplay: _opd,
+                                ...v
+                            }) => v,
+                        ),
+                    ),
+                );
+
+                // Images: split into existing (keep) and new (upload)
+                const existingImages = images.filter((img) => !img.isNew);
+                const newImages = images.filter((img) => img.isNew);
+
+                if (mode === "edit") {
+                    // Tell the server which existing images to keep
+                    fd.append(
+                        "existingImages",
+                        JSON.stringify(
+                            existingImages.map((img) => ({
+                                id: img.id,
+                                url: img.url,
+                                altText: img.altText,
+                                position: img.position,
+                                colorName: img.colorName || null,
+                                isMain: img.isMain,
+                            })),
+                        ),
+                    );
+                }
+
+                // Append new image files + metadata
+                for (let i = 0; i < newImages.length; i++) {
+                    const img = newImages[i];
+                    if (img.file) {
+                        fd.append("newImages", img.file);
+                        fd.append(
+                            "newImagesMeta",
+                            JSON.stringify({
+                                altText: img.altText || name.trim(),
+                                position: img.position,
+                                colorName: img.colorName || null,
+                                isMain: img.isMain,
+                            }),
+                        );
+                    }
+                }
+
                 const url =
                     mode === "create"
                         ? "/api/admin/prebuilt-products"
                         : `/api/admin/prebuilt-products/${productId}`;
-                const method = mode === "create" ? "POST" : "PATCH";
+                const method = mode === "create" ? "POST" : "PUT";
 
-                const res = await fetch(url, {
-                    method,
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload),
-                });
+                const res = await fetch(url, { method, body: fd });
 
                 if (!res.ok) {
-                    const data = await res.json();
+                    const data = await res.json().catch(() => ({}));
                     alert(data.error || "Something went wrong");
                     return;
                 }
 
                 onSuccess();
-            } catch {
+            } catch (err) {
+                console.error(err);
                 alert("Request failed. Please try again.");
+            } finally {
+                setLoading(false);
             }
         });
     };
@@ -317,6 +416,8 @@ export default function PrebuiltProductForm({
     /* ─────────────────────────────────────────────────────────────────────── */
     return (
         <div className="min-h-screen bg-gray-50">
+            <LoadingModal open={loading} isEdit={mode === "edit"} />
+
             {/* Sticky Header */}
             <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -438,7 +539,7 @@ export default function PrebuiltProductForm({
 
             {/* Body */}
             <div className="max-w-screen-xl mx-auto px-8 py-8 grid grid-cols-[1fr_360px] gap-6 items-start">
-                {/* ── Left ── */}
+                {/* ── Left column ── */}
                 <div className="flex flex-col gap-6">
                     {/* Basic Details */}
                     <Card title="Basic Details" icon="📄">
@@ -448,7 +549,7 @@ export default function PrebuiltProductForm({
                                 <Input
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="e.g. Creality K1 Max"
+                                    placeholder="e.g. Spongebob Squarepants Figure"
                                 />
                                 <Err msg={errors.name} />
                             </div>
@@ -500,47 +601,44 @@ export default function PrebuiltProductForm({
                                         onChange={(e) =>
                                             setWeight(e.target.value)
                                         }
-                                        placeholder="e.g. 15.5"
+                                        placeholder="e.g. 0.5"
                                         min={0}
                                         step="0.1"
                                     />
                                 </div>
                             </div>
-                            <div className="flex items-center gap-6 pt-1">
-                                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none">
-                                    <input
-                                        type="checkbox"
-                                        checked={isCustomizable}
-                                        onChange={(e) =>
-                                            setIsCustomizable(e.target.checked)
-                                        }
-                                        className="w-4 h-4 accent-gray-900"
+
+                            {/* Customizable toggle */}
+                            <div className="flex items-center gap-3 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCustomizable((p) => !p)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isCustomizable ? "bg-gray-900" : "bg-gray-200"}`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isCustomizable ? "translate-x-6" : "translate-x-1"}`}
                                     />
+                                </button>
+                                <span className="text-sm text-gray-700 font-medium">
                                     Customizable
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none">
-                                    <input
-                                        type="checkbox"
-                                        checked={highlighted}
-                                        onChange={(e) =>
-                                            setHighlighted(e.target.checked)
-                                        }
-                                        className="w-4 h-4 accent-gray-900"
-                                    />
-                                    Featured / Highlighted
-                                </label>
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                    {isCustomizable
+                                        ? "Customers can personalise this product"
+                                        : "Fixed product, no customisation"}
+                                </span>
                             </div>
                         </div>
                     </Card>
 
-                    {/* Build Volume */}
-                    <Card title="Build Volume (mm)" icon="📐">
+                    {/* Dimensions */}
+                    <Card title="Dimensions (mm)" icon="📐">
                         <div className="grid grid-cols-3 gap-4">
                             {(
                                 [
-                                    ["Length (L)", length, setLength],
-                                    ["Breadth (W)", breadth, setBreadth],
-                                    ["Height (H)", height, setHeight],
+                                    ["Length", length, setLength],
+                                    ["Width", breadth, setBreadth],
+                                    ["Height", height, setHeight],
                                 ] as const
                             ).map(([lbl, val, setter]) => (
                                 <div key={lbl}>
@@ -620,7 +718,7 @@ export default function PrebuiltProductForm({
                                                 p.filter((_, j) => j !== i),
                                             )
                                         }
-                                        className="text-gray-400 hover:text-red-500 transition-colors leading-none"
+                                        className="text-gray-400 hover:text-red-500 transition-colors"
                                     >
                                         ×
                                     </button>
@@ -629,8 +727,8 @@ export default function PrebuiltProductForm({
                         </div>
                     </Card>
 
-                    {/* Attributes */}
-                    <Card title="Specifications / Attributes" icon="🔧">
+                    {/* Specifications */}
+                    <Card title="Specifications" icon="🔧">
                         <div className="space-y-2">
                             {attributes.map((attr, i) => (
                                 <div
@@ -669,7 +767,7 @@ export default function PrebuiltProductForm({
                                                 ),
                                             )
                                         }
-                                        placeholder="Value (e.g. Zinc)"
+                                        placeholder="Value (e.g. PVC)"
                                     />
                                     <button
                                         onClick={() =>
@@ -703,13 +801,12 @@ export default function PrebuiltProductForm({
                             }
                             className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                         >
-                            + Add Attribute
+                            + Add Specification
                         </button>
                     </Card>
 
                     {/* Variants */}
                     <Card title="Variants" icon="🎨">
-                        <Err msg={errors.variants || errors.price} />
                         <div className="space-y-4">
                             {variants.map((v, i) => (
                                 <div
@@ -737,33 +834,35 @@ export default function PrebuiltProductForm({
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <Label required>
-                                                Sale Price (₹)
-                                            </Label>
+                                            <Label>Sale Price (₹)</Label>
                                             <Input
                                                 type="number"
-                                                value={v.price / 100}
-                                                onChange={(e) =>
+                                                value={v.priceDisplay}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value;
                                                     setVariants((p) =>
                                                         p.map((vv, j) =>
                                                             j === i
                                                                 ? {
                                                                       ...vv,
-                                                                      price: Math.round(
-                                                                          parseFloat(
-                                                                              e
-                                                                                  .target
-                                                                                  .value ||
-                                                                                  "0",
-                                                                          ) *
-                                                                              100,
-                                                                      ),
+                                                                      priceDisplay:
+                                                                          raw,
+                                                                      price:
+                                                                          raw ===
+                                                                          ""
+                                                                              ? 0
+                                                                              : Math.round(
+                                                                                    parseFloat(
+                                                                                        raw,
+                                                                                    ) *
+                                                                                        100,
+                                                                                ),
                                                                   }
                                                                 : vv,
                                                         ),
-                                                    )
-                                                }
-                                                placeholder="0.00"
+                                                    );
+                                                }}
+                                                placeholder="e.g. 499"
                                                 min={0}
                                                 step="0.01"
                                             />
@@ -772,38 +871,40 @@ export default function PrebuiltProductForm({
                                             <Label>Original MRP (₹)</Label>
                                             <Input
                                                 type="number"
-                                                value={v.originalPrice / 100}
-                                                onChange={(e) =>
+                                                value={v.originalPriceDisplay}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value;
                                                     setVariants((p) =>
                                                         p.map((vv, j) =>
                                                             j === i
                                                                 ? {
                                                                       ...vv,
+                                                                      originalPriceDisplay:
+                                                                          raw,
                                                                       originalPrice:
-                                                                          Math.round(
-                                                                              parseFloat(
-                                                                                  e
-                                                                                      .target
-                                                                                      .value ||
-                                                                                      "0",
-                                                                              ) *
-                                                                                  100,
-                                                                          ),
+                                                                          raw ===
+                                                                          ""
+                                                                              ? 0
+                                                                              : Math.round(
+                                                                                    parseFloat(
+                                                                                        raw,
+                                                                                    ) *
+                                                                                        100,
+                                                                                ),
                                                                   }
                                                                 : vv,
                                                         ),
-                                                    )
-                                                }
-                                                placeholder="0.00"
+                                                    );
+                                                }}
+                                                placeholder="e.g. 699"
                                                 min={0}
                                                 step="0.01"
                                             />
                                         </div>
-
                                         <div>
                                             <Label>Color Name</Label>
                                             <Input
-                                                value={v.colorName ?? ""}
+                                                value={v.colorName}
                                                 onChange={(e) =>
                                                     setVariants((p) =>
                                                         p.map((vv, j) =>
@@ -819,14 +920,14 @@ export default function PrebuiltProductForm({
                                                         ),
                                                     )
                                                 }
-                                                placeholder="e.g. Midnight Black"
+                                                placeholder="e.g. Red"
                                             />
                                         </div>
                                         <div>
                                             <Label>Color Hex</Label>
                                             <div className="flex gap-2">
                                                 <Input
-                                                    value={v.colorHex ?? ""}
+                                                    value={v.colorHex}
                                                     onChange={(e) =>
                                                         setVariants((p) =>
                                                             p.map((vv, j) =>
@@ -842,7 +943,7 @@ export default function PrebuiltProductForm({
                                                             ),
                                                         )
                                                     }
-                                                    placeholder="#000000"
+                                                    placeholder="#ff0000"
                                                 />
                                                 <input
                                                     type="color"
@@ -869,9 +970,9 @@ export default function PrebuiltProductForm({
                                             </div>
                                         </div>
                                         <div>
-                                            <Label>Size</Label>
+                                            <Label>Size / Variant Name</Label>
                                             <Input
-                                                value={v.sizeName ?? ""}
+                                                value={v.sizeName}
                                                 onChange={(e) =>
                                                     setVariants((p) =>
                                                         p.map((vv, j) =>
@@ -887,8 +988,37 @@ export default function PrebuiltProductForm({
                                                         ),
                                                     )
                                                 }
-                                                placeholder="e.g. Large, Standard, etc."
+                                                placeholder="e.g. Small, 15cm"
                                             />
+                                        </div>
+                                        <div className="flex items-center gap-2 pt-5">
+                                            <input
+                                                type="checkbox"
+                                                id={`active-${i}`}
+                                                checked={v.isActive}
+                                                onChange={(e) =>
+                                                    setVariants((p) =>
+                                                        p.map((vv, j) =>
+                                                            j === i
+                                                                ? {
+                                                                      ...vv,
+                                                                      isActive:
+                                                                          e
+                                                                              .target
+                                                                              .checked,
+                                                                  }
+                                                                : vv,
+                                                        ),
+                                                    )
+                                                }
+                                                className="w-4 h-4 accent-gray-900"
+                                            />
+                                            <label
+                                                htmlFor={`active-${i}`}
+                                                className="text-sm text-gray-700 cursor-pointer select-none"
+                                            >
+                                                Active
+                                            </label>
                                         </div>
                                     </div>
                                 </div>
@@ -905,7 +1035,7 @@ export default function PrebuiltProductForm({
                     </Card>
                 </div>
 
-                {/* ── Right ── */}
+                {/* ── Right column ── */}
                 <div className="flex flex-col gap-6">
                     {/* Images */}
                     <Card title="Images" icon="🖼">
@@ -913,167 +1043,186 @@ export default function PrebuiltProductForm({
                             {images.map((img, i) => (
                                 <div
                                     key={i}
-                                    className="relative group rounded-xl overflow-hidden border border-gray-100 bg-gray-50 aspect-square"
+                                    className={`relative group rounded-xl overflow-hidden border-2 bg-gray-50 aspect-square ${img.isMain ? "border-blue-500" : "border-gray-100"}`}
                                 >
                                     <img
                                         src={img.url}
                                         alt={img.altText || ""}
                                         className="w-full h-full object-cover"
                                     />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                                        <label
-                                            className="p-1.5 bg-white rounded-lg cursor-pointer hover:bg-gray-100"
-                                            title="Replace"
-                                        >
-                                            <svg
-                                                width={13}
-                                                height={13}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth={2}
-                                                viewBox="0 0 24 24"
+
+                                    {/* Main badge */}
+                                    {img.isMain && (
+                                        <span className="absolute top-1 left-1 bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">
+                                            MAIN
+                                        </span>
+                                    )}
+                                    {img.isNew && !img.isMain && (
+                                        <span className="absolute top-1 left-1 bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">
+                                            NEW
+                                        </span>
+                                    )}
+
+                                    {/* Hover actions */}
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
+                                        {!img.isMain && (
+                                            <button
+                                                onClick={() => setMainImage(i)}
+                                                className="w-full text-[11px] font-semibold bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 transition-colors"
                                             >
-                                                <path
-                                                    d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
+                                                ⭐ Set as Main
+                                            </button>
+                                        )}
+                                        <div className="flex gap-1.5 w-full">
+                                            <label
+                                                className="flex-1 flex items-center justify-center p-1.5 bg-white rounded-lg cursor-pointer hover:bg-gray-100 text-[10px] font-medium text-gray-700"
+                                                title="Replace"
+                                            >
+                                                Replace
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) =>
+                                                        handleFileSelect(e, i)
+                                                    }
                                                 />
-                                                <path
-                                                    d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                            </svg>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) =>
-                                                    handleImageUpload(e, i)
+                                            </label>
+                                            <button
+                                                onClick={() =>
+                                                    setImages((p) => {
+                                                        const filtered =
+                                                            p.filter(
+                                                                (_, j) =>
+                                                                    j !== i,
+                                                            );
+                                                        // If we removed the main, make first one main
+                                                        if (
+                                                            img.isMain &&
+                                                            filtered.length > 0
+                                                        ) {
+                                                            filtered[0] = {
+                                                                ...filtered[0],
+                                                                isMain: true,
+                                                            };
+                                                        }
+                                                        return filtered.map(
+                                                            (im, idx) => ({
+                                                                ...im,
+                                                                position: idx,
+                                                            }),
+                                                        );
+                                                    })
                                                 }
-                                            />
-                                        </label>
-                                        <button
-                                            onClick={() =>
-                                                setImages((p) =>
-                                                    p.filter((_, j) => j !== i),
-                                                )
-                                            }
-                                            className="p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                            title="Remove"
-                                        >
-                                            <svg
-                                                width={13}
-                                                height={13}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth={2}
-                                                viewBox="0 0 24 24"
+                                                className="flex-1 p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-[10px] font-medium"
                                             >
-                                                <path
-                                                    d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                            </svg>
-                                        </button>
+                                                Remove
+                                            </button>
+                                        </div>
                                     </div>
-                                    <span className="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
+
+                                    <span className="absolute bottom-1 right-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
                                         #{i + 1}
                                     </span>
                                 </div>
                             ))}
 
                             {/* Upload slot */}
-                            <label
-                                className={`flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 cursor-pointer hover:border-gray-400 transition-colors bg-gray-50 ${uploadingIdx === images.length ? "opacity-50 pointer-events-none" : ""}`}
-                            >
-                                {uploadingIdx === images.length ? (
-                                    <svg
-                                        className="animate-spin text-gray-400"
-                                        width={24}
-                                        height={24}
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <circle
-                                            className="opacity-25"
-                                            cx="12"
-                                            cy="12"
-                                            r="10"
-                                            stroke="currentColor"
-                                            strokeWidth="4"
-                                        />
-                                        <path
-                                            className="opacity-75"
-                                            fill="currentColor"
-                                            d="M4 12a8 8 0 018-8v8z"
-                                        />
-                                    </svg>
-                                ) : (
-                                    <>
-                                        <svg
-                                            width={24}
-                                            height={24}
-                                            fill="none"
-                                            stroke="#9ca3af"
-                                            strokeWidth={1.5}
-                                            viewBox="0 0 24 24"
-                                            className="mb-1"
-                                        >
-                                            <path
-                                                d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            />
-                                        </svg>
-                                        <span className="text-xs text-gray-400 font-medium">
-                                            Upload
-                                        </span>
-                                    </>
-                                )}
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
+                                <svg
+                                    width={24}
+                                    height={24}
+                                    fill="none"
+                                    stroke="#9ca3af"
+                                    strokeWidth={1.5}
+                                    viewBox="0 0 24 24"
+                                    className="mb-1"
+                                >
+                                    <path
+                                        d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                <span className="text-xs text-gray-400 font-medium">
+                                    Upload
+                                </span>
                                 <input
                                     type="file"
                                     accept="image/*"
                                     className="hidden"
                                     onChange={(e) =>
-                                        handleImageUpload(e, images.length)
+                                        handleFileSelect(e, images.length)
                                     }
                                 />
                             </label>
                         </div>
 
-                        {/* Alt texts */}
+                        {/* Per-image alt texts */}
                         {images.length > 0 && (
-                            <div className="space-y-2 mt-1 pt-3 border-t border-gray-100">
+                            <div className="space-y-2 pt-3 border-t border-gray-100">
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                                    Alt Texts
+                                    Alt Texts (per image)
                                 </p>
                                 {images.map((img, i) => (
-                                    <Input
+                                    <div
                                         key={i}
-                                        value={img.altText ?? ""}
-                                        onChange={(e) =>
-                                            setImages((p) =>
-                                                p.map((im, j) =>
-                                                    j === i
-                                                        ? {
-                                                              ...im,
-                                                              altText:
-                                                                  e.target
-                                                                      .value,
-                                                          }
-                                                        : im,
-                                                ),
-                                            )
-                                        }
-                                        placeholder={`Alt text for image #${i + 1}`}
-                                    />
+                                        className="flex items-center gap-2"
+                                    >
+                                        <span className="text-[10px] text-gray-400 font-bold shrink-0 w-5 text-right">
+                                            #{i + 1}
+                                        </span>
+                                        <Input
+                                            value={img.altText}
+                                            onChange={(e) =>
+                                                setImages((p) =>
+                                                    p.map((im, j) =>
+                                                        j === i
+                                                            ? {
+                                                                  ...im,
+                                                                  altText:
+                                                                      e.target
+                                                                          .value,
+                                                              }
+                                                            : im,
+                                                    ),
+                                                )
+                                            }
+                                            placeholder={`e.g. Front view of ${name || "product"}`}
+                                        />
+                                        {img.isMain && (
+                                            <span className="text-[10px] text-blue-500 font-bold shrink-0">
+                                                MAIN
+                                            </span>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                         )}
                     </Card>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─── Loading Modal (same as printers) ──────────────────────────────────── */
+
+function LoadingModal({ open, isEdit }: { open: boolean; isEdit: boolean }) {
+    if (!open) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-2xl shadow-xl px-8 py-7 w-[360px] text-center">
+                <div className="flex justify-center mb-4">
+                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900 mb-1.5">
+                    {isEdit ? "Updating Product…" : "Creating Product…"}
+                </h2>
+                <p className="text-sm text-gray-500">
+                    Uploading images and saving. Please do not close this
+                    window.
+                </p>
             </div>
         </div>
     );

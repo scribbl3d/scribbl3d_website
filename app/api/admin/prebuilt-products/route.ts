@@ -14,61 +14,44 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
 
-        /* -------------------- PAGINATION -------------------- */
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
         const skip = (page - 1) * limit;
 
-        /* -------------------- SEARCH -------------------- */
         const searchField = searchParams.get("searchField") || "name";
         const searchTerm = searchParams.get("searchTerm") || "";
+        const sort = searchParams.get("sort") || "";
 
-        /* -------------------- SORT -------------------- */
-        const sort = searchParams.get("sort") || ""; // e.g. "name-asc", "updatedAt-desc"
-
-        /* -------------------- SEARCH LOGIC -------------------- */
         let fieldFilter: Prisma.PrebuiltProductRiyaWhereInput = {};
 
         if (searchTerm.trim() !== "") {
-            if (searchField === "category") {
-                fieldFilter.category = {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                };
-            } else {
-                fieldFilter[
-                    searchField as keyof Prisma.PrebuiltProductRiyaWhereInput
-                ] = {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                } as any;
-            }
+            fieldFilter[
+                searchField as keyof Prisma.PrebuiltProductRiyaWhereInput
+            ] = {
+                contains: searchTerm,
+                mode: "insensitive",
+            } as any;
         }
 
         const where: Prisma.PrebuiltProductRiyaWhereInput = {
             AND: [fieldFilter],
         };
 
-        /* -------------------- SORT LOGIC -------------------- */
         let orderBy: Prisma.PrebuiltProductRiyaOrderByWithRelationInput[] = [];
 
         if (sort) {
             const [field, direction] = sort.split("-");
             const order = direction === "desc" ? "desc" : "asc";
-
             if (
                 ["name", "category", "updatedAt", "createdAt"].includes(field)
             ) {
                 orderBy.push({ [field]: order } as any);
-                if (field !== "name") orderBy.push({ name: "asc" }); // tie-breaker
+                if (field !== "name") orderBy.push({ name: "asc" });
             }
         }
 
-        if (orderBy.length === 0) {
-            orderBy = [{ updatedAt: "desc" }];
-        }
+        if (orderBy.length === 0) orderBy = [{ updatedAt: "desc" }];
 
-        /* -------------------- FETCH DATA -------------------- */
         const [products, totalCount] = await Promise.all([
             prisma.prebuiltProductRiya.findMany({
                 where,
@@ -77,22 +60,14 @@ export async function GET(request: NextRequest) {
                 take: limit,
                 include: {
                     images: { orderBy: { position: "asc" }, take: 1 },
-                    attributes: true,
-                    variants: { orderBy: { createdAt: "asc" } },
+                    variants: { orderBy: { createdAt: "asc" }, take: 1 },
                 },
             }),
             prisma.prebuiltProductRiya.count({ where }),
         ]);
 
-        /* -------------------- FORMAT RESPONSE -------------------- */
-        const formatted = products.map((p) => ({
-            ...p,
-            primaryImage: p.images[0]?.url || null,
-            primaryVariant: p.variants[0] || null,
-        }));
-
         return NextResponse.json({
-            products: formatted,
+            products,
             page,
             totalPages: Math.ceil(totalCount / limit),
             totalCount,
@@ -107,45 +82,79 @@ export async function GET(request: NextRequest) {
 }
 
 /* ============================================================================
-   POST – Upload image  OR  Create product
-   Detected by Content-Type:
-     multipart/form-data  → image upload to Cloudinary
-     application/json     → create new product
+   POST – Create product
+   Uses multipart/form-data exactly like the printers route.
+   - Basic fields as form fields
+   - features / attributes / variants as JSON strings
+   - Images as "newImages" files + "newImagesMeta" JSON strings
    ============================================================================ */
 export async function POST(request: NextRequest) {
-    const contentType = request.headers.get("content-type") ?? "";
+    try {
+        const formData = await request.formData();
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       IMAGE UPLOAD  (multipart/form-data)
-       Called from the form when user picks a file.
-       Returns: { url, publicId, width, height }
-    ────────────────────────────────────────────────────────────────────────── */
-    if (contentType.includes("multipart/form-data")) {
-        try {
-            const formData = await request.formData();
-            const file = formData.get("file") as File | null;
+        // 1️⃣ Basic fields
+        const name = formData.get("name") as string;
+        const shortDescription = formData.get("shortDescription") as string;
+        const longDescription =
+            (formData.get("longDescription") as string) || null;
+        const category = formData.get("category") as string;
+        const isCustomizable = formData.get("isCustomizable") === "true";
+        const highlighted = formData.get("highlighted") === "true";
+        const weight = formData.get("weight")
+            ? parseFloat(formData.get("weight") as string)
+            : null;
+        const length = formData.get("length")
+            ? parseFloat(formData.get("length") as string)
+            : null;
+        const breadth = formData.get("breadth")
+            ? parseFloat(formData.get("breadth") as string)
+            : null;
+        const height = formData.get("height")
+            ? parseFloat(formData.get("height") as string)
+            : null;
 
-            if (!file) {
-                return NextResponse.json(
-                    { error: "No file provided" },
-                    { status: 400 },
-                );
-            }
+        if (!name?.trim())
+            return NextResponse.json(
+                { error: "Name is required" },
+                { status: 400 },
+            );
+        if (!shortDescription?.trim())
+            return NextResponse.json(
+                { error: "Short description required" },
+                { status: 400 },
+            );
+        if (!category?.trim())
+            return NextResponse.json(
+                { error: "Category is required" },
+                { status: 400 },
+            );
 
-            if (!file.type.startsWith("image/")) {
-                return NextResponse.json(
-                    { error: "Only image files are allowed" },
-                    { status: 400 },
-                );
-            }
+        // 2️⃣ Parse JSON arrays
+        const features = JSON.parse(
+            (formData.get("features") as string) || "[]",
+        );
+        const attributes = JSON.parse(
+            (formData.get("attributes") as string) || "[]",
+        );
+        const variants = JSON.parse(
+            (formData.get("variants") as string) || "[]",
+        );
 
-            if (file.size > 10 * 1024 * 1024) {
-                return NextResponse.json(
-                    { error: "File size must be under 10MB" },
-                    { status: 400 },
-                );
-            }
+        // 3️⃣ Upload images → Cloudinary
+        const newFiles = formData.getAll("newImages") as File[];
+        const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
+        const imageRecords: {
+            url: string;
+            altText: string;
+            position: number;
+            colorName: string | null;
+            isMain: boolean;
+        }[] = [];
+
+        for (let i = 0; i < newFiles.length; i++) {
+            const file = newFiles[i];
+            const meta = JSON.parse(newMetaStrings[i] || "{}");
             const buffer = Buffer.from(await file.arrayBuffer());
 
             const uploadResult: any = await new Promise((resolve, reject) => {
@@ -163,61 +172,16 @@ export async function POST(request: NextRequest) {
                     .end(buffer);
             });
 
-            return NextResponse.json({
+            imageRecords.push({
                 url: uploadResult.secure_url,
-                publicId: uploadResult.public_id,
-                width: uploadResult.width,
-                height: uploadResult.height,
+                altText: meta.altText || name.trim(),
+                position: meta.position ?? i,
+                colorName: meta.colorName || null,
+                isMain: meta.isMain ?? i === 0,
             });
-        } catch (error) {
-            console.error("[PREBUILT_IMAGE_UPLOAD]", error);
-            return NextResponse.json(
-                { error: "Image upload failed" },
-                { status: 500 },
-            );
         }
-    }
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       CREATE PRODUCT  (application/json)
-    ────────────────────────────────────────────────────────────────────────── */
-    try {
-        const body = await request.json();
-
-        const {
-            name,
-            shortDescription,
-            longDescription,
-            category,
-            isCustomizable = false,
-            highlighted = false,
-            length,
-            breadth,
-            height,
-            weight,
-            features = [],
-            attributes = [],
-            variants = [],
-            images = [],
-        } = body;
-
-        // Basic validation
-        if (!name?.trim())
-            return NextResponse.json(
-                { error: "Name is required" },
-                { status: 400 },
-            );
-        if (!shortDescription?.trim())
-            return NextResponse.json(
-                { error: "Short description required" },
-                { status: 400 },
-            );
-        if (!category?.trim())
-            return NextResponse.json(
-                { error: "Category is required" },
-                { status: 400 },
-            );
-
+        // 4️⃣ Create in DB
         const product = await prisma.prebuiltProductRiya.create({
             data: {
                 name: name.trim(),
@@ -226,10 +190,10 @@ export async function POST(request: NextRequest) {
                 category,
                 isCustomizable,
                 highlighted,
-                length: length ? parseFloat(length) : null,
-                breadth: breadth ? parseFloat(breadth) : null,
-                height: height ? parseFloat(height) : null,
-                weight: weight ? parseFloat(weight) : null,
+                length,
+                breadth,
+                height,
+                weight,
                 features,
 
                 attributes: {
@@ -245,7 +209,6 @@ export async function POST(request: NextRequest) {
                     create: variants.map((v: any) => ({
                         price: parseInt(v.price) || 0,
                         originalPrice: parseInt(v.originalPrice) || 0,
-                        stockQuantity: parseInt(v.stockQuantity) || 0,
                         isActive: v.isActive ?? true,
                         colorName: v.colorName || null,
                         colorHex: v.colorHex || null,
@@ -254,14 +217,7 @@ export async function POST(request: NextRequest) {
                     })),
                 },
 
-                images: {
-                    create: images.map((img: any, i: number) => ({
-                        url: img.url,
-                        altText: img.altText || name.trim(),
-                        position: img.position ?? i,
-                        colorName: img.colorName || null,
-                    })),
-                },
+                images: { create: imageRecords },
             },
             include: {
                 images: { orderBy: { position: "asc" } },

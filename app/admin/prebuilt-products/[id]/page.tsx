@@ -47,22 +47,24 @@ export default async function EditPrebuiltProductPage({
         category: product.category,
         isCustomizable: product.isCustomizable,
         highlighted: product.highlighted,
-        length: product.length ?? undefined,
-        breadth: product.breadth ?? undefined,
-        height: product.height ?? undefined,
-        weight: product.weight ?? undefined,
-        features: product.features,
+
+        // Numbers converted to strings to match ProductFormData type
+        length: product.length?.toString() ?? "",
+        breadth: product.breadth?.toString() ?? "",
+        height: product.height?.toString() ?? "",
+        weight: product.weight?.toString() ?? "",
+
+        features: product.features as any, // Cast if JSON typing is strict
 
         attributes: product.attributes.map((a) => ({
             label: a.label,
             value: a.value,
         })),
 
-        // ✅ EXACTLY matches PrebuiltVariantRiya
         variants: product.variants.map((v) => ({
             id: v.id,
-            price: v.price,
-            originalPrice: v.originalPrice,
+            price: v.price.toString(), // Ensure match with client-side state
+            originalPrice: v.originalPrice.toString(),
             isActive: v.isActive,
             colorName: v.colorName ?? "",
             colorHex: v.colorHex ?? "",
@@ -79,6 +81,9 @@ export default async function EditPrebuiltProductPage({
     };
 
     return (
-        <EditPageClient productId={product.id} defaultValues={defaultValues} />
+        <EditPageClient
+            productId={product.id}
+            defaultValues={defaultValues as any}
+        />
     );
 }

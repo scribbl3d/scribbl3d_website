@@ -1,151 +1,110 @@
-// PATH: app/api/admin/prebuilt-products/route.ts
+// PATH: app/api/admin/prebuilt-products/[id]/route.ts
 
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
 /* ============================================================================
-   GET – List all prebuilt products (Search + Sort + Pagination)
+   GET /api/admin/prebuilt-products/[id]
    ============================================================================ */
-export async function GET(request: NextRequest) {
+export async function GET(
+    _req: Request,
+    { params }: { params: Promise<{ id: string }> },
+) {
     try {
-        const searchParams = request.nextUrl.searchParams;
+        const { id } = await params; // Await params for Next.js 15+ compatibility
 
-        /* -------------------- PAGINATION -------------------- */
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "10");
-        const skip = (page - 1) * limit;
-
-        /* -------------------- SEARCH -------------------- */
-        const searchField = searchParams.get("searchField") || "name";
-        const searchTerm = searchParams.get("searchTerm") || "";
-
-        /* -------------------- SORT -------------------- */
-        const sort = searchParams.get("sort") || ""; // e.g. "name-asc", "updatedAt-desc"
-
-        /* -------------------- SEARCH LOGIC -------------------- */
-        let fieldFilter: Prisma.PrebuiltProductRiyaWhereInput = {};
-
-        if (searchTerm.trim() !== "") {
-            if (searchField === "category") {
-                fieldFilter.category = {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                };
-            } else {
-                fieldFilter[
-                    searchField as keyof Prisma.PrebuiltProductRiyaWhereInput
-                ] = {
-                    contains: searchTerm,
-                    mode: "insensitive",
-                } as any;
-            }
-        }
-
-        const where: Prisma.PrebuiltProductRiyaWhereInput = {
-            AND: [fieldFilter],
-        };
-
-        /* -------------------- SORT LOGIC -------------------- */
-        let orderBy: Prisma.PrebuiltProductRiyaOrderByWithRelationInput[] = [];
-
-        if (sort) {
-            const [field, direction] = sort.split("-");
-            const order = direction === "desc" ? "desc" : "asc";
-
-            if (
-                ["name", "category", "updatedAt", "createdAt"].includes(field)
-            ) {
-                orderBy.push({ [field]: order } as any);
-                if (field !== "name") orderBy.push({ name: "asc" }); // tie-breaker
-            }
-        }
-
-        if (orderBy.length === 0) {
-            orderBy = [{ updatedAt: "desc" }];
-        }
-
-        /* -------------------- FETCH DATA -------------------- */
-        const [products, totalCount] = await Promise.all([
-            prisma.prebuiltProductRiya.findMany({
-                where,
-                orderBy,
-                skip,
-                take: limit,
-                include: {
-                    images: { orderBy: { position: "asc" }, take: 1 },
-                    attributes: true,
-                    variants: { orderBy: { createdAt: "asc" } },
-                },
-            }),
-            prisma.prebuiltProductRiya.count({ where }),
-        ]);
-
-        /* -------------------- FORMAT RESPONSE -------------------- */
-        const formatted = products.map((p) => ({
-            ...p,
-            primaryImage: p.images[0]?.url || null,
-            primaryVariant: p.variants[0] || null,
-        }));
-
-        return NextResponse.json({
-            products: formatted,
-            page,
-            totalPages: Math.ceil(totalCount / limit),
-            totalCount,
+        const product = await prisma.prebuiltProductRiya.findUnique({
+            where: { id },
+            include: {
+                images: { orderBy: { position: "asc" } },
+                attributes: true,
+                variants: { orderBy: { createdAt: "asc" } },
+            },
         });
+
+        if (!product) {
+            return NextResponse.json(
+                { error: "Product not found" },
+                { status: 404 },
+            );
+        }
+
+        return NextResponse.json({ product });
     } catch (error) {
-        console.error("[ADMIN_PREBUILT_PRODUCTS_GET]", error);
+        console.error(`[PREBUILT_GET] error`, error);
         return NextResponse.json(
-            { error: "Failed to fetch products" },
+            { error: "Failed to fetch product" },
             { status: 500 },
         );
     }
 }
 
 /* ============================================================================
-   POST – Upload image  OR  Create product
-   Detected by Content-Type:
-     multipart/form-data  → image upload to Cloudinary
-     application/json     → create new product
+   PUT /api/admin/prebuilt-products/[id]
    ============================================================================ */
-export async function POST(request: NextRequest) {
-    const contentType = request.headers.get("content-type") ?? "";
+export async function PUT(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> },
+) {
+    try {
+        const { id } = await params; // Await params for Next.js 15+ compatibility
+        const formData = await request.formData();
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       IMAGE UPLOAD  (multipart/form-data)
-       Called from the form when user picks a file.
-       Returns: { url, publicId, width, height }
-    ────────────────────────────────────────────────────────────────────────── */
-    if (contentType.includes("multipart/form-data")) {
-        try {
-            const formData = await request.formData();
-            const file = formData.get("file") as File | null;
+        // 1️⃣ Basic fields
+        const name = formData.get("name") as string;
+        const shortDescription = formData.get("shortDescription") as string;
+        const longDescription =
+            (formData.get("longDescription") as string) || null;
+        const category = formData.get("category") as string;
+        const isCustomizable = formData.get("isCustomizable") === "true";
+        const highlighted = formData.get("highlighted") === "true";
 
-            if (!file) {
-                return NextResponse.json(
-                    { error: "No file provided" },
-                    { status: 400 },
-                );
-            }
+        const weight = formData.get("weight")
+            ? parseFloat(formData.get("weight") as string)
+            : null;
+        const length = formData.get("length")
+            ? parseFloat(formData.get("length") as string)
+            : null;
+        const breadth = formData.get("breadth")
+            ? parseFloat(formData.get("breadth") as string)
+            : null;
+        const height = formData.get("height")
+            ? parseFloat(formData.get("height") as string)
+            : null;
 
-            if (!file.type.startsWith("image/")) {
-                return NextResponse.json(
-                    { error: "Only image files are allowed" },
-                    { status: 400 },
-                );
-            }
+        // 2️⃣ JSON fields
+        const features = JSON.parse(
+            (formData.get("features") as string) || "[]",
+        );
+        const attributes = JSON.parse(
+            (formData.get("attributes") as string) || "[]",
+        );
+        const variants = JSON.parse(
+            (formData.get("variants") as string) || "[]",
+        );
 
-            if (file.size > 10 * 1024 * 1024) {
-                return NextResponse.json(
-                    { error: "File size must be under 10MB" },
-                    { status: 400 },
-                );
-            }
+        // 3️⃣ Images
+        const existingImages = JSON.parse(
+            (formData.get("existingImages") as string) || "[]",
+        );
 
+        const newFiles = formData.getAll("newImages") as File[];
+        const newMetaStrings = formData.getAll("newImagesMeta") as string[];
+
+        const uploadedImages: {
+            url: string;
+            altText: string;
+            position: number;
+            colorName: string | null;
+            isMain: boolean;
+        }[] = [];
+
+        for (let i = 0; i < newFiles.length; i++) {
+            const file = newFiles[i];
+            const meta = JSON.parse(newMetaStrings[i] || "{}");
             const buffer = Buffer.from(await file.arrayBuffer());
 
             const uploadResult: any = await new Promise((resolve, reject) => {
@@ -163,106 +122,159 @@ export async function POST(request: NextRequest) {
                     .end(buffer);
             });
 
-            return NextResponse.json({
+            uploadedImages.push({
                 url: uploadResult.secure_url,
-                publicId: uploadResult.public_id,
-                width: uploadResult.width,
-                height: uploadResult.height,
+                altText: meta.altText || name.trim(),
+                position: meta.position ?? existingImages.length + i,
+                colorName: meta.colorName || null,
+                isMain: meta.isMain ?? false,
             });
-        } catch (error) {
-            console.error("[PREBUILT_IMAGE_UPLOAD]", error);
+        }
+
+        // 4️⃣ Existing product
+        const existing = await prisma.prebuiltProductRiya.findUnique({
+            where: { id },
+            include: { images: true, variants: true },
+        });
+
+        if (!existing) {
             return NextResponse.json(
-                { error: "Image upload failed" },
-                { status: 500 },
+                { error: "Product not found" },
+                { status: 404 },
             );
         }
-    }
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       CREATE PRODUCT  (application/json)
-    ────────────────────────────────────────────────────────────────────────── */
-    try {
-        const body = await request.json();
+        // 5️⃣ Removed images
+        const keptImageIds = new Set(existingImages.map((img: any) => img.id));
+        const removedImages = existing.images.filter(
+            (img) => !keptImageIds.has(img.id),
+        );
 
-        const {
-            name,
-            shortDescription,
-            longDescription,
-            category,
-            isCustomizable = false,
-            highlighted = false,
-            length,
-            breadth,
-            height,
-            weight,
-            features = [],
-            attributes = [],
-            variants = [],
-            images = [],
-        } = body;
+        for (const img of removedImages) {
+            try {
+                const publicId = img.url
+                    .split("/")
+                    .slice(-2)
+                    .join("/")
+                    .replace(/\.[^/.]+$/, "");
+                await cloudinary.uploader.destroy(publicId);
+            } catch {
+                console.warn("Cloudinary delete failed:", img.url);
+            }
+        }
 
-        // Basic validation
-        if (!name?.trim())
-            return NextResponse.json(
-                { error: "Name is required" },
-                { status: 400 },
-            );
-        if (!shortDescription?.trim())
-            return NextResponse.json(
-                { error: "Short description required" },
-                { status: 400 },
-            );
-        if (!category?.trim())
-            return NextResponse.json(
-                { error: "Category is required" },
-                { status: 400 },
-            );
+        // 6️⃣ Removed variants
+        const incomingVariantIds = variants
+            .filter((v: any) => v.id)
+            .map((v: any) => v.id as string);
 
-        const product = await prisma.prebuiltProductRiya.create({
-            data: {
-                name: name.trim(),
-                shortDescription: shortDescription.trim(),
-                longDescription: longDescription?.trim() || null,
-                category,
-                isCustomizable,
-                highlighted,
-                length: length ? parseFloat(length) : null,
-                breadth: breadth ? parseFloat(breadth) : null,
-                height: height ? parseFloat(height) : null,
-                weight: weight ? parseFloat(weight) : null,
-                features,
+        const removedVariantIds = existing.variants
+            .map((v) => v.id)
+            .filter((vid) => !incomingVariantIds.includes(vid));
 
-                attributes: {
-                    create: attributes
+        // 7️⃣ Transaction
+        await prisma.$transaction(async (tx) => {
+            await tx.prebuiltProductRiya.update({
+                where: { id },
+                data: {
+                    name: name.trim(),
+                    shortDescription: shortDescription.trim(),
+                    longDescription: longDescription?.trim() || null,
+                    category,
+                    isCustomizable,
+                    highlighted,
+                    length,
+                    breadth,
+                    height,
+                    weight,
+                    features,
+                },
+            });
+
+            await tx.prebuiltAttributeRiya.deleteMany({
+                where: { prebuildProductId: id },
+            });
+
+            if (attributes.length) {
+                await tx.prebuiltAttributeRiya.createMany({
+                    data: attributes
                         .filter((a: any) => a.label?.trim() && a.value?.trim())
                         .map((a: any) => ({
+                            prebuildProductId: id,
                             label: a.label.trim(),
                             value: a.value.trim(),
                         })),
-                },
+                });
+            }
 
-                variants: {
-                    create: variants.map((v: any) => ({
-                        price: parseInt(v.price) || 0,
-                        originalPrice: parseInt(v.originalPrice) || 0,
-                        stockQuantity: parseInt(v.stockQuantity) || 0,
-                        isActive: v.isActive ?? true,
-                        colorName: v.colorName || null,
-                        colorHex: v.colorHex || null,
-                        sizeName: v.sizeName || null,
-                        sizeCode: v.sizeCode || null,
-                    })),
-                },
+            if (removedVariantIds.length) {
+                await tx.prebuiltVariantRiya.deleteMany({
+                    where: { id: { in: removedVariantIds } },
+                });
+            }
 
-                images: {
-                    create: images.map((img: any, i: number) => ({
-                        url: img.url,
+            for (const v of variants) {
+                if (v.id) {
+                    await tx.prebuiltVariantRiya.update({
+                        where: { id: v.id },
+                        data: {
+                            price: parseInt(v.price) || 0,
+                            originalPrice: parseInt(v.originalPrice) || 0,
+                            isActive: v.isActive ?? true,
+                            colorName: v.colorName || null,
+                            colorHex: v.colorHex || null,
+                            sizeName: v.sizeName || null,
+                        },
+                    });
+                } else {
+                    await tx.prebuiltVariantRiya.create({
+                        data: {
+                            prebuildProductId: id,
+                            price: parseInt(v.price) || 0,
+                            originalPrice: parseInt(v.originalPrice) || 0,
+                            isActive: v.isActive ?? true,
+                            colorName: v.colorName || null,
+                            colorHex: v.colorHex || null,
+                            sizeName: v.sizeName || null,
+                        },
+                    });
+                }
+            }
+
+            if (removedImages.length) {
+                await tx.prebuiltImageRiya.deleteMany({
+                    where: { id: { in: removedImages.map((img) => img.id) } },
+                });
+            }
+
+            for (const img of existingImages) {
+                await tx.prebuiltImageRiya.update({
+                    where: { id: img.id },
+                    data: {
                         altText: img.altText || name.trim(),
-                        position: img.position ?? i,
+                        position: img.position,
                         colorName: img.colorName || null,
+                        isMain: img.isMain ?? false,
+                    },
+                });
+            }
+
+            if (uploadedImages.length) {
+                await tx.prebuiltImageRiya.createMany({
+                    data: uploadedImages.map((img) => ({
+                        prebuildProductId: id,
+                        url: img.url,
+                        altText: img.altText,
+                        position: img.position,
+                        colorName: img.colorName,
+                        isMain: img.isMain,
                     })),
-                },
-            },
+                });
+            }
+        });
+
+        const updated = await prisma.prebuiltProductRiya.findUnique({
+            where: { id },
             include: {
                 images: { orderBy: { position: "asc" } },
                 attributes: true,
@@ -270,11 +282,58 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        return NextResponse.json({ product }, { status: 201 });
+        return NextResponse.json({ product: updated });
     } catch (error) {
-        console.error("[PREBUILT_PRODUCT_POST]", error);
+        console.error(`[PREBUILT_PUT] error`, error);
         return NextResponse.json(
-            { error: "Failed to create product" },
+            { error: "Failed to update product" },
+            { status: 500 },
+        );
+    }
+}
+
+/* ============================================================================
+   DELETE /api/admin/prebuilt-products/[id]
+   ============================================================================ */
+export async function DELETE(
+    _req: Request,
+    { params }: { params: Promise<{ id: string }> },
+) {
+    try {
+        const { id } = await params; // Await params for Next.js 15+ compatibility
+
+        const product = await prisma.prebuiltProductRiya.findUnique({
+            where: { id },
+            include: { images: true },
+        });
+
+        if (!product) {
+            return NextResponse.json(
+                { error: "Product not found" },
+                { status: 404 },
+            );
+        }
+
+        for (const img of product.images) {
+            try {
+                const publicId = img.url
+                    .split("/")
+                    .slice(-2)
+                    .join("/")
+                    .replace(/\.[^/.]+$/, "");
+                await cloudinary.uploader.destroy(publicId);
+            } catch {
+                console.warn("Cloudinary delete failed:", img.url);
+            }
+        }
+
+        await prisma.prebuiltProductRiya.delete({ where: { id } });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error(`[PREBUILT_DELETE] error`, error);
+        return NextResponse.json(
+            { error: "Failed to delete product" },
             { status: 500 },
         );
     }

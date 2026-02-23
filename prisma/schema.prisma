@@ -342,7 +342,7 @@ model PrototypingRequest {
   specialRequirements String?
 
 
-  fullName            String
+  fullName            String?
   email               String
   phone               String
   company             String?
@@ -960,16 +960,16 @@ model PrebuiltProductRiya {
 }
 
 model PrebuiltImageRiya {
-  id       String  @id @default(cuid())
-  url      String
-  altText  String?
-  position Int     @default(0)
-
-  prebuildProductId String
-  prebuiltProduct   PrebuiltProductRiya @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
-
-
-  colorName String?
+    id                String               @id @default(cuid())
+    prebuildProductId String
+    url               String
+    altText           String?
+    position          Int                  @default(0)
+    colorName         String?
+    isMain            Boolean              @default(false)   // ← ADD THIS
+    createdAt         DateTime             @default(now())
+    updatedAt         DateTime?             @updatedAt
+    product           PrebuiltProductRiya  @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 }
 
 // Specs — e.g. Material: Aluminium, Warranty: 2 Years, Finish: Matte
