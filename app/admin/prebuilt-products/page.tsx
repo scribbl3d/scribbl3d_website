@@ -1,22 +1,9 @@
-// PATH: app/admin/prebuilt-products/page.tsx
+"use client";
 
-import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { ArrowLeft, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-
-export const dynamic = "force-dynamic";
-
-export const metadata = {
-    title: "Prebuilt Products | Admin",
-};
-
-/* ─── Inline server actions ──────────────────────────────────────────────── */
-
-async function deleteProduct(id: string) {
-    "use server";
-    await prisma.prebuiltProductRiya.delete({ where: { id } });
-    revalidatePath("/admin/prebuilt-products");
-}
+import { useEffect, useState } from "react";
+import SearchSortControl from "../_components/SearchSortControl";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -24,7 +11,7 @@ function formatPrice(paise: number) {
     return `₹${(paise / 100).toLocaleString("en-IN")}`;
 }
 
-function formatDate(date: Date) {
+function formatDate(date: string | Date) {
     return new Intl.DateTimeFormat("en-IN", {
         day: "2-digit",
         month: "short",
@@ -36,13 +23,64 @@ function formatDate(date: Date) {
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
 
-export default async function PrebuiltProductsPage() {
-    const products = await prisma.prebuiltProductRiya.findMany({
-        orderBy: { updatedAt: "desc" },
-        include: {
-            variants: { orderBy: { createdAt: "asc" } }, // all variants — needed for count + first-variant price
-        },
-    });
+export default function PrebuiltProductsPage() {
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    /* 🔍 Search & Sort state */
+    const [searchField, setSearchField] = useState("name");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortOption, setSortOption] = useState("updatedAt-desc");
+
+    /* 📄 Pagination */
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+
+    /* ─── Data Fetching ─── */
+    useEffect(() => {
+        fetchProducts();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchField, searchTerm, sortOption, currentPage]);
+
+    const fetchProducts = async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({
+                searchField,
+                searchTerm,
+                sort: sortOption,
+                page: currentPage.toString(),
+                limit: "10",
+            });
+
+            const res = await fetch(`/api/admin/prebuilt-products?${params}`);
+            const data = await res.json();
+
+            setProducts(data.products || []);
+            setTotalPages(data.totalPages || 1);
+            setTotalCount(data.totalCount || 0);
+        } catch (err) {
+            console.error("Error fetching products:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /* ─── Delete Action ─── */
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this product?")) return;
+
+        try {
+            const res = await fetch(`/api/admin/prebuilt-products?id=${id}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) fetchProducts();
+        } catch (err) {
+            console.error("Delete failed:", err);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -54,27 +92,14 @@ export default async function PrebuiltProductsPage() {
                             href="/admin"
                             className="text-gray-400 hover:text-gray-700 transition-colors"
                         >
-                            <svg
-                                width={20}
-                                height={20}
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    d="M19 12H5M12 5l-7 7 7 7"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
+                            <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">
                                 Prebuilt Products
                             </h1>
                             <p className="text-sm text-gray-500">
-                                {products.length} total products
+                                {totalCount} total products
                             </p>
                         </div>
                     </div>
@@ -82,22 +107,42 @@ export default async function PrebuiltProductsPage() {
                         href="/admin/prebuilt-products/new"
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
                     >
-                        <svg
-                            width={16}
-                            height={16}
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2.5}
-                            viewBox="0 0 24 24"
-                        >
-                            <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-                        </svg>
+                        <Plus className="w-4 h-4" />
                         Add New Product
                     </Link>
                 </div>
             </div>
 
             <div className="max-w-screen-xl mx-auto px-8 py-8">
+                {/* 🔍 SEARCH + SORT CONTROL */}
+                <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm">
+                    <SearchSortControl
+                        searchField={searchField}
+                        setSearchField={setSearchField}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        sortOption={sortOption}
+                        setSortOption={setSortOption}
+                        searchOptions={[
+                            { label: "Name", value: "name" },
+                            { label: "Category", value: "category" },
+                        ]}
+                        sortOptions={[
+                            {
+                                label: "Updated (Latest First)",
+                                value: "updatedAt-desc",
+                            },
+                            {
+                                label: "Updated (Earliest First)",
+                                value: "updatedAt-asc",
+                            },
+                            { label: "Name (A–Z)", value: "name-asc" },
+                            { label: "Name (Z–A)", value: "name-desc" },
+                        ]}
+                        suggestionApi="/api/admin/prebuilt-products/suggestions"
+                    />
+                </div>
+
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     {/* ── Toolbar ── */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -105,7 +150,7 @@ export default async function PrebuiltProductsPage() {
                             Products List
                         </h2>
                         <span className="text-sm text-gray-400">
-                            {products.length} entries
+                            {products.length} entries shown
                         </span>
                     </div>
 
@@ -117,7 +162,6 @@ export default async function PrebuiltProductsPage() {
                                     {[
                                         "Name",
                                         "Price",
-                                        "Original Price",
                                         "Category",
                                         "Variants",
                                         "Customizable",
@@ -134,24 +178,33 @@ export default async function PrebuiltProductsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {products.length === 0 ? (
+                                {loading ? (
                                     <tr>
                                         <td
-                                            colSpan={8}
+                                            colSpan={7}
+                                            className="px-5 py-16 text-center"
+                                        >
+                                            <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-300" />
+                                        </td>
+                                    </tr>
+                                ) : products.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan={7}
                                             className="px-5 py-16 text-center text-gray-400 text-base"
                                         >
-                                            No products yet.{" "}
+                                            No products found.{" "}
                                             <Link
                                                 href="/admin/prebuilt-products/new"
                                                 className="text-blue-500 underline"
                                             >
-                                                Add your first product
+                                                Add a product
                                             </Link>
                                         </td>
                                     </tr>
                                 ) : (
                                     products.map((product) => {
-                                        const v = product.variants[0];
+                                        const v = product.variants?.[0];
                                         return (
                                             <tr
                                                 key={product.id}
@@ -176,15 +229,6 @@ export default async function PrebuiltProductsPage() {
                                                         : "—"}
                                                 </td>
 
-                                                {/* Original Price */}
-                                                <td className="px-5 py-4 text-gray-400 line-through whitespace-nowrap">
-                                                    {v?.originalPrice
-                                                        ? formatPrice(
-                                                              v.originalPrice,
-                                                          )
-                                                        : "—"}
-                                                </td>
-
                                                 {/* Category */}
                                                 <td className="px-5 py-4">
                                                     <span className="inline-block bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">
@@ -194,7 +238,8 @@ export default async function PrebuiltProductsPage() {
 
                                                 {/* Variants count */}
                                                 <td className="px-5 py-4 text-center font-semibold text-gray-700">
-                                                    {product.variants.length}
+                                                    {product.variants?.length ||
+                                                        0}
                                                 </td>
 
                                                 {/* Customizable */}
@@ -227,55 +272,19 @@ export default async function PrebuiltProductsPage() {
                                                             className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"
                                                             title="Edit"
                                                         >
-                                                            <svg
-                                                                width={14}
-                                                                height={14}
-                                                                fill="none"
-                                                                stroke="currentColor"
-                                                                strokeWidth={2}
-                                                                viewBox="0 0 24 24"
-                                                            >
-                                                                <path
-                                                                    d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                />
-                                                                <path
-                                                                    d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                />
-                                                            </svg>
+                                                            <Edit className="w-4 h-4" />
                                                         </Link>
-                                                        <form
-                                                            action={deleteProduct.bind(
-                                                                null,
-                                                                product.id,
-                                                            )}
+                                                        <button
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    product.id,
+                                                                )
+                                                            }
+                                                            title="Delete"
+                                                            className="p-2 rounded-lg border border-red-100 bg-red-600 text-white hover:bg-red-700 transition-colors"
                                                         >
-                                                            <button
-                                                                type="submit"
-                                                                title="Delete"
-                                                                className="p-2 rounded-lg border border-red-100 bg-red-600 text-white hover:bg-red-700 transition-colors"
-                                                            >
-                                                                <svg
-                                                                    width={14}
-                                                                    height={14}
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    strokeWidth={
-                                                                        2
-                                                                    }
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        d="M3 6h18M19 6l-1 14H6L5 6M9 6V4h6v2"
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                    />
-                                                                </svg>
-                                                            </button>
-                                                        </form>
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -286,9 +295,53 @@ export default async function PrebuiltProductsPage() {
                         </table>
                     </div>
 
-                    {/* ── Footer ── */}
-                    <div className="px-6 py-3 border-t border-gray-100 text-sm text-gray-400">
-                        Showing {products.length} of {products.length} products
+                    {/* ── PAGINATION ── */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-2">
+                            <button
+                                disabled={currentPage === 1}
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.max(1, p - 1))
+                                }
+                                className="px-3 py-1.5 text-sm font-medium border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-50"
+                            >
+                                Previous
+                            </button>
+
+                            {Array.from(
+                                { length: totalPages },
+                                (_, i) => i + 1,
+                            ).map((page) => (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`px-3.5 py-1.5 text-sm font-bold rounded-lg transition-colors ${
+                                        page === currentPage
+                                            ? "bg-gray-900 text-white"
+                                            : "bg-white border text-gray-600 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    {page}
+                                </button>
+                            ))}
+
+                            <button
+                                disabled={currentPage === totalPages}
+                                onClick={() =>
+                                    setCurrentPage((p) =>
+                                        Math.min(totalPages, p + 1),
+                                    )
+                                }
+                                className="px-3 py-1.5 text-sm font-medium border rounded-lg bg-white disabled:opacity-50 hover:bg-gray-50"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── Footer Info ── */}
+                    <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
+                        Showing {products.length} of {totalCount} total products
                     </div>
                 </div>
             </div>

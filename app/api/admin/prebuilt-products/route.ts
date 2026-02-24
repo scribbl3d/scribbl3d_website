@@ -37,16 +37,20 @@ export async function GET(request: NextRequest) {
             AND: [fieldFilter],
         };
 
-        let orderBy: Prisma.PrebuiltProductRiyaOrderByWithRelationInput[] = [];
+        let orderBy: any = [];
 
         if (sort) {
             const [field, direction] = sort.split("-");
             const order = direction === "desc" ? "desc" : "asc";
+
             if (
                 ["name", "category", "updatedAt", "createdAt"].includes(field)
             ) {
-                orderBy.push({ [field]: order } as any);
+                orderBy.push({ [field]: order });
                 if (field !== "name") orderBy.push({ name: "asc" });
+            } else if (field === "price") {
+                // Sorting by number of variants or first variant price
+                orderBy.push({ variants: { _count: order } });
             }
         }
 
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest) {
                 take: limit,
                 include: {
                     images: { orderBy: { position: "asc" }, take: 1 },
-                    variants: { orderBy: { createdAt: "asc" }, take: 1 },
+                    variants: { orderBy: { createdAt: "asc" } },
                 },
             }),
             prisma.prebuiltProductRiya.count({ where }),
@@ -83,16 +87,11 @@ export async function GET(request: NextRequest) {
 
 /* ============================================================================
    POST – Create product
-   Uses multipart/form-data exactly like the printers route.
-   - Basic fields as form fields
-   - features / attributes / variants as JSON strings
-   - Images as "newImages" files + "newImagesMeta" JSON strings
    ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
 
-        // 1️⃣ Basic fields
         const name = formData.get("name") as string;
         const shortDescription = formData.get("shortDescription") as string;
         const longDescription =
@@ -113,23 +112,13 @@ export async function POST(request: NextRequest) {
             ? parseFloat(formData.get("height") as string)
             : null;
 
-        if (!name?.trim())
+        if (!name?.trim() || !shortDescription?.trim() || !category?.trim()) {
             return NextResponse.json(
-                { error: "Name is required" },
+                { error: "Required fields missing" },
                 { status: 400 },
             );
-        if (!shortDescription?.trim())
-            return NextResponse.json(
-                { error: "Short description required" },
-                { status: 400 },
-            );
-        if (!category?.trim())
-            return NextResponse.json(
-                { error: "Category is required" },
-                { status: 400 },
-            );
+        }
 
-        // 2️⃣ Parse JSON arrays
         const features = JSON.parse(
             (formData.get("features") as string) || "[]",
         );
@@ -140,17 +129,10 @@ export async function POST(request: NextRequest) {
             (formData.get("variants") as string) || "[]",
         );
 
-        // 3️⃣ Upload images → Cloudinary
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
-        const imageRecords: {
-            url: string;
-            altText: string;
-            position: number;
-            colorName: string | null;
-            isMain: boolean;
-        }[] = [];
+        const imageRecords: any[] = [];
 
         for (let i = 0; i < newFiles.length; i++) {
             const file = newFiles[i];
@@ -181,7 +163,6 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // 4️⃣ Create in DB
         const product = await prisma.prebuiltProductRiya.create({
             data: {
                 name: name.trim(),
@@ -195,7 +176,6 @@ export async function POST(request: NextRequest) {
                 height,
                 weight,
                 features,
-
                 attributes: {
                     create: attributes
                         .filter((a: any) => a.label?.trim() && a.value?.trim())
@@ -204,7 +184,6 @@ export async function POST(request: NextRequest) {
                             value: a.value.trim(),
                         })),
                 },
-
                 variants: {
                     create: variants.map((v: any) => ({
                         price: parseInt(v.price) || 0,
@@ -215,7 +194,6 @@ export async function POST(request: NextRequest) {
                         sizeName: v.sizeName || null,
                     })),
                 },
-
                 images: { create: imageRecords },
             },
             include: {
@@ -230,6 +208,36 @@ export async function POST(request: NextRequest) {
         console.error("[PREBUILT_PRODUCT_POST]", error);
         return NextResponse.json(
             { error: "Failed to create product" },
+            { status: 500 },
+        );
+    }
+}
+
+/* ============================================================================
+   DELETE – Delete product by ID
+   ============================================================================ */
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id");
+
+        if (!id) {
+            return NextResponse.json(
+                { error: "Product ID is required" },
+                { status: 400 },
+            );
+        }
+
+        // Delete the product (Prisma will handle relations based on schema cascade rules)
+        await prisma.prebuiltProductRiya.delete({
+            where: { id },
+        });
+
+        return NextResponse.json({ message: "Product deleted successfully" });
+    } catch (error) {
+        console.error("[PREBUILT_PRODUCT_DELETE]", error);
+        return NextResponse.json(
+            { error: "Failed to delete product" },
             { status: 500 },
         );
     }
