@@ -40,7 +40,7 @@ export default async function PrebuiltProductsPage() {
     const products = await prisma.prebuiltProductRiya.findMany({
         orderBy: { updatedAt: "desc" },
         include: {
-            variants: { orderBy: { createdAt: "asc" }, take: 1 },
+            variants: { orderBy: { createdAt: "asc" } }, // all variants — needed for count + first-variant price
         },
     });
 
