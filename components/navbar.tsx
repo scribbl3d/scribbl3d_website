@@ -14,6 +14,7 @@ import { NavbarClient } from "./navbar-client";
 
 const navItems = [
     { name: "Personalise", href: "/personalise" },
+    { name: "Prebuilt Products", href: "/prebuilt-products" },
     { name: "Filaments", href: "/filaments" },
     { name: "Printers", href: "/printers" },
     { name: "Resins", href: "/resins" },
@@ -148,7 +149,7 @@ export default function Navbar() {
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
                                     {cart.reduce(
                                         (total, item) => total + item.quantity,
-                                        0
+                                        0,
                                     )}
                                 </span>
                             )}

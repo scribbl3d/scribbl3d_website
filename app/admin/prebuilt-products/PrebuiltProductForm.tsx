@@ -19,7 +19,6 @@ const CATEGORIES = [
     "Personalised",
     "Statues",
     "The Latest",
-    "Trending Now",
     "Utilities",
     "Wall Decor",
 ];
@@ -188,6 +187,9 @@ export default function PrebuiltProductForm({
     const [isCustomizable, setIsCustomizable] = useState(
         defaultValues?.isCustomizable ?? false,
     );
+    const [highlighted, setHighlighted] = useState(
+        defaultValues?.highlighted ?? false,
+    );
     const [length, setLength] = useState(defaultValues?.length ?? "");
     const [breadth, setBreadth] = useState(defaultValues?.breadth ?? "");
     const [height, setHeight] = useState(defaultValues?.height ?? "");
@@ -213,7 +215,6 @@ export default function PrebuiltProductForm({
             : [emptyVariant()],
     );
 
-    // Images hold either existing DB images (isNew=false) or local previews (isNew=true)
     const [images, setImages] = useState<ImageInput[]>(
         (defaultValues?.images ?? []).map((img: any, i: number) => ({
             id: img.id,
@@ -226,7 +227,7 @@ export default function PrebuiltProductForm({
         })),
     );
 
-    /* ── Add image from file picker (local preview, no upload yet) ── */
+    /* ── Image Handlers ── */
     const handleFileSelect = (
         e: React.ChangeEvent<HTMLInputElement>,
         slotIdx: number,
@@ -236,7 +237,6 @@ export default function PrebuiltProductForm({
         const previewUrl = URL.createObjectURL(file);
 
         if (slotIdx === images.length) {
-            // New slot — auto-set as main if first image
             setImages((p) => [
                 ...p,
                 {
@@ -245,12 +245,11 @@ export default function PrebuiltProductForm({
                     altText: "",
                     position: p.length,
                     colorName: "",
-                    isMain: p.length === 0, // first image auto-main
+                    isMain: p.length === 0,
                     isNew: true,
                 },
             ]);
         } else {
-            // Replace existing slot — keep isMain status
             setImages((p) =>
                 p.map((img, i) =>
                     i === slotIdx
@@ -270,7 +269,6 @@ export default function PrebuiltProductForm({
 
     const setMainImage = (idx: number) => {
         setImages((p) => {
-            // Move selected to front, mark as main, all others not main
             const selected = { ...p[idx], isMain: true };
             const rest = p
                 .filter((_, i) => i !== idx)
@@ -293,7 +291,7 @@ export default function PrebuiltProductForm({
         return Object.keys(e).length === 0;
     };
 
-    /* ── Submit → build FormData and POST/PUT ── */
+    /* ── Submit ── */
     const handleSubmit = () => {
         if (!validate()) {
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -305,19 +303,18 @@ export default function PrebuiltProductForm({
             try {
                 const fd = new FormData();
 
-                // Basic fields
                 fd.append("name", name.trim());
                 fd.append("shortDescription", shortDescription.trim());
                 fd.append("longDescription", longDescription.trim());
                 fd.append("category", category);
                 fd.append("isCustomizable", String(isCustomizable));
-                fd.append("highlighted", "false");
+                fd.append("highlighted", String(highlighted));
+
                 if (weight) fd.append("weight", weight);
                 if (length) fd.append("length", length);
                 if (breadth) fd.append("breadth", breadth);
                 if (height) fd.append("height", height);
 
-                // JSON arrays
                 fd.append("features", JSON.stringify(features));
                 fd.append(
                     "attributes",
@@ -340,12 +337,10 @@ export default function PrebuiltProductForm({
                     ),
                 );
 
-                // Images: split into existing (keep) and new (upload)
                 const existingImages = images.filter((img) => !img.isNew);
                 const newImages = images.filter((img) => img.isNew);
 
                 if (mode === "edit") {
-                    // Tell the server which existing images to keep
                     fd.append(
                         "existingImages",
                         JSON.stringify(
@@ -361,7 +356,6 @@ export default function PrebuiltProductForm({
                     );
                 }
 
-                // Append new image files + metadata
                 for (let i = 0; i < newImages.length; i++) {
                     const img = newImages[i];
                     if (img.file) {
@@ -411,7 +405,6 @@ export default function PrebuiltProductForm({
               ).toLocaleString()
             : null;
 
-    /* ─────────────────────────────────────────────────────────────────────── */
     return (
         <div className="min-h-screen bg-gray-50">
             <LoadingModal open={loading} isEdit={mode === "edit"} />
@@ -463,83 +456,14 @@ export default function PrebuiltProductForm({
                         disabled={isPending}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                        {isPending ? (
-                            <>
-                                <svg
-                                    className="animate-spin"
-                                    width={15}
-                                    height={15}
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                    />
-                                    <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8v8z"
-                                    />
-                                </svg>
-                                Saving...
-                            </>
-                        ) : (
-                            <>
-                                <svg
-                                    width={15}
-                                    height={15}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                    <polyline
-                                        points="17 21 17 13 7 13 7 21"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                    <polyline
-                                        points="7 3 7 8 15 8"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                                Save Product
-                            </>
-                        )}
+                        {isPending ? "Saving..." : "Save Product"}
                     </button>
                 </div>
             </div>
 
-            {/* Error Banner */}
-            {Object.keys(errors).length > 0 && (
-                <div className="max-w-screen-xl mx-auto px-8 pt-6">
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
-                        <strong>Please fix the following errors:</strong>
-                        <ul className="mt-1 list-disc list-inside space-y-0.5">
-                            {Object.values(errors).map((e, i) => (
-                                <li key={i}>{e}</li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
-
             {/* Body */}
             <div className="max-w-screen-xl mx-auto px-8 py-8 grid grid-cols-[1fr_360px] gap-6 items-start">
-                {/* ── Left column ── */}
                 <div className="flex flex-col gap-6">
-                    {/* Basic Details */}
                     <Card title="Basic Details" icon="📄">
                         <div className="space-y-4">
                             <div>
@@ -600,31 +524,60 @@ export default function PrebuiltProductForm({
                                             setWeight(e.target.value)
                                         }
                                         placeholder="e.g. 0.5"
-                                        min={0}
                                         step="0.1"
                                     />
                                 </div>
                             </div>
 
-                            {/* Customizable toggle */}
-                            <div className="flex items-center gap-3 pt-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCustomizable((p) => !p)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isCustomizable ? "bg-gray-900" : "bg-gray-200"}`}
-                                >
-                                    <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isCustomizable ? "translate-x-6" : "translate-x-1"}`}
-                                    />
-                                </button>
-                                <span className="text-sm text-gray-700 font-medium">
-                                    Customizable
-                                </span>
-                                <span className="text-xs text-gray-400">
-                                    {isCustomizable
-                                        ? "Customers can personalise this product"
-                                        : "Fixed product, no customisation"}
-                                </span>
+                            {/* Switches Section */}
+                            <div className="flex flex-col gap-4 pt-4 border-t border-gray-100">
+                                {/* Customizable toggle */}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setIsCustomizable((p) => !p)
+                                        }
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isCustomizable ? "bg-gray-900" : "bg-gray-200"}`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isCustomizable ? "translate-x-6" : "translate-x-1"}`}
+                                        />
+                                    </button>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-gray-700 font-medium">
+                                            Customizable
+                                        </span>
+                                        <span className="text-[11px] text-gray-400">
+                                            Allow customers to personalise this
+                                            product
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Highlighted toggle */}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setHighlighted((p) => !p)
+                                        }
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${highlighted ? "bg-amber-500" : "bg-gray-200"}`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${highlighted ? "translate-x-6" : "translate-x-1"}`}
+                                        />
+                                    </button>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-gray-700 font-medium">
+                                            Highlighted
+                                        </span>
+                                        <span className="text-[11px] text-gray-400">
+                                            Feature this product on the home
+                                            page
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </Card>
@@ -645,12 +598,9 @@ export default function PrebuiltProductForm({
                                         type="number"
                                         value={val}
                                         onChange={(e) =>
-                                            (setter as (v: string) => void)(
-                                                e.target.value,
-                                            )
+                                            (setter as any)(e.target.value)
                                         }
                                         placeholder="0"
-                                        min={0}
                                     />
                                 </div>
                             ))}
@@ -699,11 +649,6 @@ export default function PrebuiltProductForm({
                             </button>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            {features.length === 0 && (
-                                <span className="text-xs text-gray-400">
-                                    No features added yet.
-                                </span>
-                            )}
                             {features.map((f, i) => (
                                 <span
                                     key={i}
@@ -716,7 +661,7 @@ export default function PrebuiltProductForm({
                                                 p.filter((_, j) => j !== i),
                                             )
                                         }
-                                        className="text-gray-400 hover:text-red-500 transition-colors"
+                                        className="text-gray-400 hover:text-red-500"
                                     >
                                         ×
                                     </button>
@@ -773,7 +718,7 @@ export default function PrebuiltProductForm({
                                                 p.filter((_, j) => j !== i),
                                             )
                                         }
-                                        className="p-2.5 rounded-lg bg-red-50 border border-red-100 text-red-500 hover:bg-red-100 transition-colors"
+                                        className="p-2.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                     >
                                         <svg
                                             width={13}
@@ -797,7 +742,7 @@ export default function PrebuiltProductForm({
                             onClick={() =>
                                 setAttributes((p) => [...p, emptyAttr()])
                             }
-                            className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                            className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700"
                         >
                             + Add Specification
                         </button>
@@ -812,7 +757,7 @@ export default function PrebuiltProductForm({
                                     className="border border-gray-100 rounded-xl p-4 bg-gray-50/50"
                                 >
                                     <div className="flex items-center justify-between mb-3">
-                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                        <span className="text-xs font-bold text-gray-500 uppercase">
                                             Variant #{i + 1}
                                         </span>
                                         {variants.length > 1 && (
@@ -861,8 +806,6 @@ export default function PrebuiltProductForm({
                                                     );
                                                 }}
                                                 placeholder="e.g. 499"
-                                                min={0}
-                                                step="0.01"
                                             />
                                         </div>
                                         <div>
@@ -895,8 +838,6 @@ export default function PrebuiltProductForm({
                                                     );
                                                 }}
                                                 placeholder="e.g. 699"
-                                                min={0}
-                                                step="0.01"
                                             />
                                         </div>
                                         <div>
@@ -963,7 +904,7 @@ export default function PrebuiltProductForm({
                                                             ),
                                                         )
                                                     }
-                                                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5 shrink-0"
+                                                    className="w-10 h-10 rounded-lg cursor-pointer p-0.5"
                                                 />
                                             </div>
                                         </div>
@@ -986,7 +927,7 @@ export default function PrebuiltProductForm({
                                                         ),
                                                     )
                                                 }
-                                                placeholder="e.g. Small, 15cm"
+                                                placeholder="e.g. Small"
                                             />
                                         </div>
                                         <div className="flex items-center gap-2 pt-5">
@@ -1013,7 +954,7 @@ export default function PrebuiltProductForm({
                                             />
                                             <label
                                                 htmlFor={`active-${i}`}
-                                                className="text-sm text-gray-700 cursor-pointer select-none"
+                                                className="text-sm text-gray-700 cursor-pointer"
                                             >
                                                 Active
                                             </label>
@@ -1026,107 +967,62 @@ export default function PrebuiltProductForm({
                             onClick={() =>
                                 setVariants((p) => [...p, emptyVariant()])
                             }
-                            className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                            className="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700"
                         >
                             + Add Variant
                         </button>
                     </Card>
                 </div>
 
-                {/* ── Right column ── */}
+                {/* Right column: Images */}
                 <div className="flex flex-col gap-6">
-                    {/* Images */}
                     <Card title="Images" icon="🖼">
                         <div className="grid grid-cols-2 gap-2 mb-3">
                             {images.map((img, i) => (
                                 <div
                                     key={i}
-                                    className={`relative group rounded-xl overflow-hidden border-2 bg-gray-50 aspect-square ${img.isMain ? "border-blue-500" : "border-gray-100"}`}
+                                    className={`relative group rounded-xl overflow-hidden border-2 aspect-square ${img.isMain ? "border-blue-500" : "border-gray-100"}`}
                                 >
                                     <img
                                         src={img.url}
                                         alt={img.altText || ""}
                                         className="w-full h-full object-cover"
                                     />
-
-                                    {/* Main badge */}
                                     {img.isMain && (
                                         <span className="absolute top-1 left-1 bg-blue-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">
                                             MAIN
                                         </span>
                                     )}
-                                    {img.isNew && !img.isMain && (
-                                        <span className="absolute top-1 left-1 bg-green-500 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">
-                                            NEW
-                                        </span>
-                                    )}
-
-                                    {/* Hover actions */}
                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2">
                                         {!img.isMain && (
                                             <button
                                                 onClick={() => setMainImage(i)}
-                                                className="w-full text-[11px] font-semibold bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 transition-colors"
+                                                className="w-full text-[11px] font-semibold bg-blue-500 text-white px-2 py-1 rounded-lg"
                                             >
-                                                ⭐ Set as Main
+                                                Set as Main
                                             </button>
                                         )}
-                                        <div className="flex gap-1.5 w-full">
-                                            <label
-                                                className="flex-1 flex items-center justify-center p-1.5 bg-white rounded-lg cursor-pointer hover:bg-gray-100 text-[10px] font-medium text-gray-700"
-                                                title="Replace"
-                                            >
-                                                Replace
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="hidden"
-                                                    onChange={(e) =>
-                                                        handleFileSelect(e, i)
-                                                    }
-                                                />
-                                            </label>
-                                            <button
-                                                onClick={() =>
-                                                    setImages((p) => {
-                                                        const filtered =
-                                                            p.filter(
-                                                                (_, j) =>
-                                                                    j !== i,
-                                                            );
-                                                        // If we removed the main, make first one main
-                                                        if (
-                                                            img.isMain &&
-                                                            filtered.length > 0
-                                                        ) {
-                                                            filtered[0] = {
-                                                                ...filtered[0],
-                                                                isMain: true,
-                                                            };
-                                                        }
-                                                        return filtered.map(
-                                                            (im, idx) => ({
-                                                                ...im,
-                                                                position: idx,
-                                                            }),
-                                                        );
-                                                    })
-                                                }
-                                                className="flex-1 p-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-[10px] font-medium"
-                                            >
-                                                Remove
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={() =>
+                                                setImages((p) =>
+                                                    p
+                                                        .filter(
+                                                            (_, j) => j !== i,
+                                                        )
+                                                        .map((im, idx) => ({
+                                                            ...im,
+                                                            position: idx,
+                                                        })),
+                                                )
+                                            }
+                                            className="w-full p-1.5 bg-red-600 text-white rounded-lg text-[10px]"
+                                        >
+                                            Remove
+                                        </button>
                                     </div>
-
-                                    <span className="absolute bottom-1 right-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
-                                        #{i + 1}
-                                    </span>
                                 </div>
                             ))}
-
-                            {/* Upload slot */}
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 cursor-pointer hover:border-gray-400 transition-colors bg-gray-50">
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 cursor-pointer hover:border-gray-400 bg-gray-50">
                                 <svg
                                     width={24}
                                     height={24}
@@ -1134,7 +1030,6 @@ export default function PrebuiltProductForm({
                                     stroke="#9ca3af"
                                     strokeWidth={1.5}
                                     viewBox="0 0 24 24"
-                                    className="mb-1"
                                 >
                                     <path
                                         d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
@@ -1142,7 +1037,7 @@ export default function PrebuiltProductForm({
                                         strokeLinejoin="round"
                                     />
                                 </svg>
-                                <span className="text-xs text-gray-400 font-medium">
+                                <span className="text-xs text-gray-400">
                                     Upload
                                 </span>
                                 <input
@@ -1155,48 +1050,6 @@ export default function PrebuiltProductForm({
                                 />
                             </label>
                         </div>
-
-                        {/* Per-image alt texts */}
-                        {images.length > 0 && (
-                            <div className="space-y-2 pt-3 border-t border-gray-100">
-                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                                    Alt Texts (per image)
-                                </p>
-                                {images.map((img, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex items-center gap-2"
-                                    >
-                                        <span className="text-[10px] text-gray-400 font-bold shrink-0 w-5 text-right">
-                                            #{i + 1}
-                                        </span>
-                                        <Input
-                                            value={img.altText}
-                                            onChange={(e) =>
-                                                setImages((p) =>
-                                                    p.map((im, j) =>
-                                                        j === i
-                                                            ? {
-                                                                  ...im,
-                                                                  altText:
-                                                                      e.target
-                                                                          .value,
-                                                              }
-                                                            : im,
-                                                    ),
-                                                )
-                                            }
-                                            placeholder={`e.g. Front view of ${name || "product"}`}
-                                        />
-                                        {img.isMain && (
-                                            <span className="text-[10px] text-blue-500 font-bold shrink-0">
-                                                MAIN
-                                            </span>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
                     </Card>
                 </div>
             </div>
@@ -1204,22 +1057,17 @@ export default function PrebuiltProductForm({
     );
 }
 
-/* ─── Loading Modal (same as printers) ──────────────────────────────────── */
-
 function LoadingModal({ open, isEdit }: { open: boolean; isEdit: boolean }) {
     if (!open) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-2xl shadow-xl px-8 py-7 w-[360px] text-center">
-                <div className="flex justify-center mb-4">
-                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900" />
-                </div>
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-gray-900 mx-auto mb-4" />
                 <h2 className="text-lg font-bold text-gray-900 mb-1.5">
-                    {isEdit ? "Updating Product…" : "Creating Product…"}
+                    {isEdit ? "Updating..." : "Creating..."}
                 </h2>
                 <p className="text-sm text-gray-500">
-                    Uploading images and saving. Please do not close this
-                    window.
+                    Please do not close this window.
                 </p>
             </div>
         </div>
