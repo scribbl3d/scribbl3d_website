@@ -9,8 +9,11 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
-/* ───────────── Upload Helper ───────────── */
-async function uploadToCloudinary(file: File): Promise<string> {
+/* ───────────── Upload Helper with Custom Naming ───────────── */
+async function uploadToCloudinary(
+    file: File,
+    customName: string,
+): Promise<string> {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     return new Promise((resolve, reject) => {
@@ -18,9 +21,10 @@ async function uploadToCloudinary(file: File): Promise<string> {
             .upload_stream(
                 {
                     folder: "prototyping-requests",
-                    resource_type: "raw",
+                    resource_type: "raw", // Needed for STL/STEP files
+                    public_id: customName, // Sets the custom filename
                     use_filename: true,
-                    unique_filename: true,
+                    unique_filename: false, // Prevents Cloudinary from adding random suffixes
                 },
                 (err, res) => {
                     if (err || !res?.secure_url) reject(err);
@@ -31,52 +35,65 @@ async function uploadToCloudinary(file: File): Promise<string> {
     });
 }
 
-/* ───────────── POST ───────────── */
+/* ───────────── POST (Submit Request) ───────────── */
 export async function POST(req: Request) {
     try {
         const formData = await req.formData();
 
-        /* ───────────── Files ───────────── */
+        // Extract basic info for renaming logic
+        const fullName = (formData.get("fullName") as string) || "Anonymous";
+        const cleanName = fullName.trim().replace(/\s+/g, "_"); // Replace spaces with underscores
+
+        // Generate timestamp (YYYYMMDD_HHMMSS)
+        const timestamp = new Date()
+            .toISOString()
+            .replace(/[-:T]/g, "")
+            .split(".")[0];
+
+        /* ───────────── Files & Renaming Logic ───────────── */
         const files = formData.getAll("files") as File[];
         const designFiles: string[] = [];
 
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             if (file instanceof File && file.size > 0) {
-                const url = await uploadToCloudinary(file);
+                // Construct custom name: fullname_datetime_index
+                const customFileName = `${cleanName}_${timestamp}_${i + 1}`;
+
+                const url = await uploadToCloudinary(file, customFileName);
                 designFiles.push(url);
             }
         }
 
-        /* ───────────── Colors ───────────── */
-        const colors = JSON.parse(
-            (formData.get("colors") as string) || "[]",
-        ) as string[];
-
-        /* ───────────── Quantity ───────────── */
+        /* ───────────── Data Parsing ───────────── */
+        const colors = JSON.parse((formData.get("colors") as string) || "[]");
+        const quantityType = formData.get("quantityType") as string;
         const quantityNumberRaw = formData.get("quantityNumber");
-        const quantityNumber = quantityNumberRaw
-            ? Number(quantityNumberRaw)
-            : null;
 
-        /* ───────────── Prisma Create ───────────── */
+        // Automation: If single unit, force count to 1. Else, parse input.
+        const quantityNumber =
+            quantityType === "single"
+                ? 1
+                : quantityNumberRaw
+                  ? Number(quantityNumberRaw)
+                  : null;
+
+        /* ───────────── Prisma Database Entry ───────────── */
         const response = await prisma.prototypingRequest.create({
             data: {
-                projectType: formData.get("projectType") as string,
-                technology: formData.get("technology") as string,
-                material: formData.get("material") as string,
+                projectType: (formData.get("projectType") as string) || "",
+                technology: (formData.get("technology") as string) || "",
+                material: (formData.get("material") as string) || "",
                 materialSubtype: (formData.get("subtype") as string) || null,
-
-                colors,
-                designFiles,
-
-                quantityType: (formData.get("quantityType") as string) || null,
-                quantityNumber,
-
+                colors: colors,
+                designFiles: designFiles,
+                quantityType: quantityType || null,
+                quantityNumber: quantityNumber,
                 specialRequirements: (formData.get("notes") as string) || null,
-
-                fullName: formData.get("fullName") as string,
-                email: formData.get("email") as string,
-                phone: formData.get("phone") as string,
+                fullName: fullName,
+                email: (formData.get("email") as string) || "",
+                phone: (formData.get("phone") as string) || "",
+                address: (formData.get("address") as string) || "",
                 company: (formData.get("company") as string) || null,
             },
         });
@@ -91,7 +108,7 @@ export async function POST(req: Request) {
     }
 }
 
-/* ───────────── GET (Admin / Dashboard) ───────────── */
+/* ───────────── GET (Fetch for Admin) ───────────── */
 export async function GET() {
     try {
         const requests = await prisma.prototypingRequest.findMany({
@@ -99,9 +116,7 @@ export async function GET() {
         });
         return NextResponse.json(requests);
     } catch (error) {
-        return NextResponse.json(
-            { error: "Failed to fetch requests" },
-            { status: 500 },
-        );
+        console.error("Failed to fetch requests:", error);
+        return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
     }
 }

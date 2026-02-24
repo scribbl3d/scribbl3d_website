@@ -346,6 +346,8 @@ model PrototypingRequest {
   email               String
   phone               String
   company             String?
+  address             String?
+
 
 
   createdAt           DateTime @default(now())

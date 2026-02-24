@@ -1,269 +1,349 @@
-import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Search, Filter } from "lucide-react";
+"use client";
+
 import { format } from "date-fns";
+import {
+    Building2,
+    ClipboardList,
+    Download,
+    Eye,
+    FileText,
+    Layers,
+    Mail,
+    MapPin,
+    Package,
+    Palette,
+    Phone,
+    Search,
+    Settings,
+    User,
+    X,
+} from "lucide-react"; // All icons imported here
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface FormResponseViewerProps<T> {
-  title: string;
-  responses: T[];
-  columns: {
-    key: keyof T;
-    label: string;
-    render?: (value: any) => React.ReactNode;
-  }[];
-  detailsColumns: {
-    key: keyof T;
-    label: string;
-    render?: (value: any) => React.ReactNode;
-  }[];
-  isLoading?: boolean;
-  error?: string;
-  onExport?: () => void;
+    title: string;
+    responses: T[];
+    columns: {
+        key: keyof T;
+        label: string;
+        render?: (value: any, item: T) => React.ReactNode;
+    }[];
+    detailsColumns: {
+        key: keyof T;
+        label: string;
+        render?: (value: any, item: T) => React.ReactNode;
+    }[];
+    isLoading?: boolean;
+    error?: string;
 }
 
 export function FormResponseViewer<
-  T extends { id: string; createdAt: string },
->({
-  title,
-  responses,
-  columns,
-  detailsColumns,
-  isLoading,
-  error,
-  onExport,
-}: FormResponseViewerProps<T>) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedResponse, setSelectedResponse] = useState<T | null>(null);
-  const [sortField, setSortField] = useState<keyof T>("createdAt");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+    T extends { id: string; createdAt: string },
+>({ title, responses, columns, isLoading, error }: FormResponseViewerProps<T>) {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedResponse, setSelectedResponse] = useState<any | null>(null);
 
-  const filteredResponses = responses.filter((response) => {
-    const searchLower = searchTerm.toLowerCase();
-    return Object.values(response).some((value) =>
-      String(value).toLowerCase().includes(searchLower)
+    const renderValue = (v: any) => {
+        if (v === null || v === undefined || v === "")
+            return <span className="text-gray-400 italic">Not Provided</span>;
+        if (Array.isArray(v)) return v.join(", ");
+        return String(v);
+    };
+
+    const filtered = responses.filter((r: any) =>
+        Object.values(r).some((v) =>
+            String(v).toLowerCase().includes(searchTerm.toLowerCase()),
+        ),
     );
-  });
 
-  const sortedResponses = [...filteredResponses].sort((a, b) => {
-    const aValue = a[sortField];
-    const bValue = b[sortField];
-    const direction = sortDirection === "asc" ? 1 : -1;
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return aValue.localeCompare(bValue) * direction;
-    }
-    if (aValue instanceof Date && bValue instanceof Date) {
-      return (aValue.getTime() - bValue.getTime()) * direction;
-    }
-    return 0;
-  });
-
-  const handleSort = (field: keyof T) => {
-    if (field === sortField) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-  };
-
-  const exportToCSV = () => {
-    if (onExport) {
-      onExport();
-      return;
-    }
-
-    const headers = detailsColumns.map((col) => col.label);
-    const csvContent = [
-      headers.join(","),
-      ...responses.map((response) =>
-        detailsColumns
-          .map((col) => {
-            const value = response[col.key];
-            return typeof value === "string" ? `"${value}"` : value;
-          })
-          .join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `${title.toLowerCase().replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-destructive">{error}</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>{title}</CardTitle>
-          <Button onClick={exportToCSV} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search responses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-          <Select
-            value={String(sortField)}
-            onValueChange={(value) => handleSort(value as keyof T)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              {columns.map((column) => (
-                <SelectItem key={String(column.key)} value={String(column.key)}>
-                  {column.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <ScrollArea className="h-[600px] rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableHead
-                    key={String(column.key)}
-                    className="cursor-pointer"
-                    onClick={() => handleSort(column.key)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {column.label}
-                      {sortField === column.key && (
-                        <Filter
-                          className={`h-4 w-4 ${
-                            sortDirection === "asc" ? "rotate-180" : ""
-                          }`}
-                        />
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedResponses.map((response) => (
-                <TableRow key={response.id}>
-                  {columns.map((column) => (
-                    <TableCell key={String(column.key)}>
-                      {column.render
-                        ? column.render(response[column.key])
-                        : String(response[column.key])}
-                    </TableCell>
-                  ))}
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedResponse(response)}
-                    >
-                      View Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-
-        <Dialog
-          open={!!selectedResponse}
-          onOpenChange={() => setSelectedResponse(null)}
-        >
-          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Response Details</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4">
-              {selectedResponse &&
-                detailsColumns.map((column) => (
-                  <div key={String(column.key)} className="grid gap-2">
-                    <h4 className="font-medium">{column.label}</h4>
-                    <div className="text-muted-foreground">
-                      {column.render
-                        ? column.render(selectedResponse[column.key])
-                        : String(selectedResponse[column.key])}
-                    </div>
-                  </div>
-                ))}
+    if (isLoading)
+        return (
+            <div className="p-20 text-center animate-pulse font-bold text-gray-400">
+                Loading Engineering Data...
             </div>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  );
+        );
+
+    return (
+        <Card className="rounded-[24px] overflow-hidden border-none ring-1 ring-gray-200 shadow-2xl bg-white">
+            <CardHeader className="bg-white border-b px-8 py-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <CardTitle className="text-2xl font-black tracking-tight">
+                        {title}
+                    </CardTitle>
+                    <div className="relative w-full md:w-80">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Search requests..."
+                            // FIXED: value={searchTerm || ""} prevents the "uncontrolled to controlled" error
+                            value={searchTerm || ""}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 rounded-xl border-gray-200 h-11 shadow-sm"
+                        />
+                    </div>
+                </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+                <ScrollArea className="h-[650px]">
+                    <Table>
+                        <TableHeader className="bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md">
+                            <TableRow>
+                                {columns.map((c: any) => (
+                                    <TableHead
+                                        key={c.key}
+                                        className="font-bold text-[11px] uppercase tracking-widest text-gray-500 py-5 px-8"
+                                    >
+                                        {c.label}
+                                    </TableHead>
+                                ))}
+                                <TableHead className="text-right px-8">
+                                    Action
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filtered.map((r: any) => (
+                                <TableRow
+                                    key={r.id}
+                                    className="hover:bg-gray-50/80 transition-colors border-b border-gray-100"
+                                >
+                                    {columns.map((c: any) => (
+                                        <TableCell
+                                            key={c.key}
+                                            className="py-5 px-8 text-sm font-medium text-gray-700"
+                                        >
+                                            {c.render
+                                                ? c.render(r[c.key], r)
+                                                : renderValue(r[c.key])}
+                                        </TableCell>
+                                    ))}
+                                    <TableCell className="text-right px-8">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="rounded-lg font-bold border-gray-300 hover:bg-black hover:text-white transition-all shadow-sm"
+                                            onClick={() =>
+                                                setSelectedResponse(r)
+                                            }
+                                        >
+                                            <Eye className="h-3.5 w-3.5 mr-2" />
+                                            View Details
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </ScrollArea>
+            </CardContent>
+
+            <Dialog
+                open={!!selectedResponse}
+                onOpenChange={() => setSelectedResponse(null)}
+            >
+                <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-[32px] border-none shadow-2xl">
+                    <DialogHeader className="p-8 bg-black text-white relative">
+                        <button
+                            onClick={() => setSelectedResponse(null)}
+                            className="absolute right-6 top-6 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                        <div>
+                            <DialogTitle className="flex items-center gap-3 text-2xl font-black">
+                                <ClipboardList className="h-6 w-6 text-gray-400" />
+                                Detailed Project Brief
+                            </DialogTitle>
+                            <p className="text-gray-400 text-xs mt-2 font-mono uppercase tracking-widest">
+                                ID: {selectedResponse?.id} •{" "}
+                                {selectedResponse?.createdAt &&
+                                    format(
+                                        new Date(selectedResponse.createdAt),
+                                        "PPP",
+                                    )}
+                            </p>
+                        </div>
+                    </DialogHeader>
+
+                    <ScrollArea className="max-h-[75vh] p-10 bg-white">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                            {/* SECTION: CLIENT INFO */}
+                            <div className="space-y-6">
+                                <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] border-b pb-2">
+                                    Client Information
+                                </h3>
+                                <div className="grid gap-6">
+                                    <DetailItem
+                                        label="Full Name"
+                                        value={selectedResponse?.fullName}
+                                        icon={User}
+                                    />
+                                    <DetailItem
+                                        label="Email Address"
+                                        value={selectedResponse?.email}
+                                        icon={Mail}
+                                    />
+                                    <DetailItem
+                                        label="Phone Number"
+                                        value={selectedResponse?.phone}
+                                        icon={Phone}
+                                    />
+                                    <DetailItem
+                                        label="Company"
+                                        value={selectedResponse?.company}
+                                        icon={Building2}
+                                    />
+                                    <DetailItem
+                                        label="Shipping Address"
+                                        value={selectedResponse?.address}
+                                        icon={MapPin}
+                                        fullWidth
+                                    />
+                                </div>
+                            </div>
+
+                            {/* SECTION: TECHNICAL SPECS */}
+                            <div className="space-y-6">
+                                <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] border-b pb-2">
+                                    Technical Specifications
+                                </h3>
+                                <div className="grid gap-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <DetailItem
+                                            label="Technology"
+                                            value={selectedResponse?.technology}
+                                            icon={Settings}
+                                        />
+                                        <DetailItem
+                                            label="Project Type"
+                                            value={
+                                                selectedResponse?.projectType
+                                            }
+                                            icon={Package}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <DetailItem
+                                            label="Base Material"
+                                            value={selectedResponse?.material}
+                                            icon={Layers}
+                                        />
+                                        <DetailItem
+                                            label="Subtype"
+                                            value={
+                                                selectedResponse?.materialSubtype
+                                            }
+                                            icon={Layers}
+                                        />
+                                    </div>
+                                    <DetailItem
+                                        label="Colors"
+                                        value={renderValue(
+                                            selectedResponse?.colors,
+                                        )}
+                                        icon={Palette}
+                                    />
+                                    <DetailItem
+                                        label="Quantity"
+                                        value={
+                                            selectedResponse?.quantityType ===
+                                            "single"
+                                                ? "1 Unit"
+                                                : selectedResponse?.quantityNumber
+                                        }
+                                        icon={Package}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* SECTION: FILES & NOTES */}
+                            <div className="col-span-1 md:col-span-2 space-y-6 pt-4">
+                                <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] border-b pb-2">
+                                    Files & Requirements
+                                </h3>
+                                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-4">
+                                        Engineering Files
+                                    </p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {selectedResponse?.designFiles?.map(
+                                            (url: string, i: number) => (
+                                                <a
+                                                    key={i}
+                                                    href={url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-3 bg-white border border-gray-200 px-4 py-3 rounded-xl hover:border-black transition-all group shadow-sm"
+                                                >
+                                                    <FileText className="h-5 w-5 text-blue-500" />
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-gray-800">
+                                                            Design File {i + 1}
+                                                        </span>
+                                                        <span className="text-[10px] text-gray-400">
+                                                            Download Raw
+                                                        </span>
+                                                    </div>
+                                                    <Download className="h-4 w-4 ml-4 text-gray-300 group-hover:text-black" />
+                                                </a>
+                                            ),
+                                        )}
+                                    </div>
+                                    <div className="mt-8">
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                                            Special Requirements / Notes
+                                        </p>
+                                        <div className="bg-white p-4 rounded-xl border border-gray-100 text-sm leading-relaxed text-gray-700 min-h-[80px]">
+                                            {selectedResponse?.specialRequirements ||
+                                                "No additional requirements provided."}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollArea>
+                </DialogContent>
+            </Dialog>
+        </Card>
+    );
+}
+
+function DetailItem({ label, value, icon: Icon, fullWidth = false }: any) {
+    return (
+        <div className={cn("flex flex-col gap-1.5", fullWidth && "col-span-2")}>
+            <div className="flex items-center gap-2 text-gray-400">
+                <Icon className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                    {label}
+                </span>
+            </div>
+            <div className="text-sm font-bold text-gray-900 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100/50">
+                {value || (
+                    <span className="text-gray-300 italic font-medium">
+                        N/A
+                    </span>
+                )}
+            </div>
+        </div>
+    );
 }
