@@ -38,7 +38,6 @@ type VariantInput = {
     colorName: string;
     colorHex: string;
     sizeName: string;
-    sizeCode: string;
 };
 
 type ImageInput = {
@@ -91,7 +90,6 @@ const emptyVariant = (): VariantInput => ({
     colorName: "",
     colorHex: "",
     sizeName: "",
-    sizeCode: "",
 });
 
 const emptyAttr = (): AttributeInput => ({ label: "", value: "" });

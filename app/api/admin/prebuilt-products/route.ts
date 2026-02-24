@@ -213,7 +213,6 @@ export async function POST(request: NextRequest) {
                         colorName: v.colorName || null,
                         colorHex: v.colorHex || null,
                         sizeName: v.sizeName || null,
-                        sizeCode: v.sizeCode || null,
                     })),
                 },
 
