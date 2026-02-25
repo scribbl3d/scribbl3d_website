@@ -299,26 +299,35 @@ model FormResponse {
   updatedAt           DateTime @updatedAt
 }
 
-model SmallBatchManufacturingResponse {
+model SmallBatchRequest {
+  id        String   @id @default(cuid())
+  fullName  String
+  email     String
+  phone     String
+  address   String
+  company   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relation to individual products
+  products  SmallBatchProduct[]
+}
+
+model SmallBatchProduct {
   id              String   @id @default(cuid())
-  designFile      String?
+  designFile      String
   quantity        Int
-  requirements    String?
+  notes           String?
   technology      String
   material        String
   materialSubtype String?
-  productColor    String
-  filamentColor   String?
-  resinColor      String?
-  firstName       String
-  lastName        String
-  email           String
-  phone           String
-  company         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  colorMode       String
+  colors          String[] // Stored as string array
+  
+  // Relation back to parent request
+  requestId       String
+  request         SmallBatchRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
-
 model PrototypingRequest {
   id                  String   @id @default(cuid())
 
