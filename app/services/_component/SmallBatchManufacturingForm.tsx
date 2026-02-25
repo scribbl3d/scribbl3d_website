@@ -18,7 +18,6 @@ import {
     FileText,
     Info,
     Layers,
-    MessageSquare,
     Package,
     Plus,
     Trash2,
@@ -1107,34 +1106,106 @@ export default function SmallBatchManufacturingForm({
     );
 
     const renderThankYou = () => (
-        <CardContent className="py-10 text-center space-y-4 px-6">
-            <div className="flex justify-center">
-                <div className="h-16 w-16 bg-green-50 rounded-2xl flex items-center justify-center shadow-inner ring-1 ring-green-100">
-                    <CheckCircle2 className="h-8 w-8 text-green-600" />
+        <CardContent className="px-6 py-5 space-y-5">
+            {/* Header */}
+            <div className="flex items-start gap-4">
+                <div className="h-12 w-12 bg-green-50 rounded-2xl flex items-center justify-center shadow-inner ring-1 ring-green-100 shrink-0">
+                    <CheckCircle2 className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="space-y-0.5 pt-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-green-600">
+                        Request Submitted Successfully
+                    </p>
+                    <h2 className="text-xl font-black text-gray-900 leading-snug">
+                        Thank you.
+                    </h2>
                 </div>
             </div>
-            <div className="space-y-1">
-                <h2 className="text-xl font-black tracking-tight text-gray-900 uppercase">
-                    Request Submitted!
-                </h2>
-                <p className="text-gray-500 text-sm font-medium max-w-xs mx-auto">
-                    Our team will review your request and provide a quotation
-                    within 12–24 hours.
+
+            {/* Confirmation note */}
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 space-y-1">
+                <p className="text-sm font-medium text-gray-600 leading-relaxed">
+                    Thank you for submitting your manufacturing request. A
+                    confirmation email containing your submission details has
+                    been sent to your registered email address.
+                </p>
+                <p className="text-xs text-gray-400 font-medium">
+                    Please check your inbox — and your spam folder, if
+                    necessary.
                 </p>
             </div>
-            <div className="flex flex-col gap-2 max-w-xs mx-auto pt-2">
-                <Button
-                    className="rounded-xl h-10 bg-[#25D366] hover:bg-[#128C7E] w-full text-white font-bold text-sm shadow-lg transition-all"
-                    asChild
-                >
-                    <a href="https://wa.me/your-number" target="_blank">
-                        <MessageSquare className="h-4 w-4 mr-2" /> Chat on
-                        WhatsApp
-                    </a>
-                </Button>
-                <p className="text-xs font-medium text-gray-400">
-                    support@scribbl3d.com
+
+            {/* Divider */}
+            <div className="border-t border-gray-100" />
+
+            {/* What happens next */}
+            <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    What Happens Next?
                 </p>
+                <p className="text-xs text-gray-500 font-medium">
+                    Our engineering team will now:
+                </p>
+                <ul className="space-y-2">
+                    {[
+                        "Review your design files",
+                        "Validate material and process selection",
+                        "Assess manufacturability",
+                        "Prepare a detailed quotation with estimated lead time",
+                    ].map((item, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5">
+                            <span className="h-5 w-5 rounded-full bg-black text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                                {idx + 1}
+                            </span>
+                            <span className="text-sm font-medium text-gray-700 leading-snug pt-0.5">
+                                {item}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+                <div className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5 mt-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-bold text-gray-600">
+                        Expected response: within 12–24 business hours
+                    </span>
+                </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-gray-100" />
+
+            {/* Need immediate assistance */}
+            <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Need Immediate Assistance?
+                </p>
+                <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                    If your project is time-sensitive or requires clarification,
+                    please contact us directly:
+                </p>
+                <a
+                    href="mailto:supplychain@scribbl3d.com"
+                    className="flex items-center gap-2.5 group"
+                >
+                    <div className="h-8 w-8 rounded-xl bg-gray-100 group-hover:bg-black transition-colors flex items-center justify-center shrink-0">
+                        <svg
+                            className="h-4 w-4 text-gray-500 group-hover:text-white transition-colors"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                            />
+                        </svg>
+                    </div>
+                    <span className="text-sm font-bold text-gray-800 group-hover:text-black transition-colors underline underline-offset-2 decoration-gray-300 group-hover:decoration-black">
+                        supplychain@scribbl3d.com
+                    </span>
+                </a>
             </div>
         </CardContent>
     );
