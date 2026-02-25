@@ -244,7 +244,7 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
                     }}
                     className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition"
                 >
-                    Select Options
+                    Select Variants
                 </button>
             </div>
         </div>

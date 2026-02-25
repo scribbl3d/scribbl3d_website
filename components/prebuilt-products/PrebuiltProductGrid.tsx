@@ -1,8 +1,11 @@
 "use client";
 
+import { toast } from "@/components/ui/use-toast";
 import { Heart } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Props {
     products: any[];
@@ -85,44 +88,25 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                         </div>
 
                         {/* Grid - Desktop shows 8 products, Mobile shows 5 */}
-                        <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
-                            {/* Mobile: Show 5 products */}
-                            <div className="lg:hidden col-span-full grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
-                                {mobileProducts.map((product) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Desktop: Show 8 products */}
-                            <div className="lg:grid col-span-full grid grid-cols-4 gap-x-8 gap-y-12">
-                                {previewProducts.map((product) => (
-                                    <ProductCard
-                                        key={product.id}
-                                        product={product}
-                                    />
-                                ))}
-                            </div>
+                        {/* Mobile: Show 5 products */}
+                        <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
+                            {mobileProducts.map((product) => (
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                />
+                            ))}
                         </div>
 
-                        {/* Mobile View All Link */}
-                        {shouldShowViewAll && (
-                            <div className="lg:hidden flex justify-center">
-                                <button
-                                    onClick={() =>
-                                        router.push(
-                                            `/prebuilt-products/${category.toLowerCase().replace(/\s+/g, "-")}`,
-                                        )
-                                    }
-                                    className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors"
-                                >
-                                    View all {categoryProducts.length} products
-                                    →
-                                </button>
-                            </div>
-                        )}
+                        {/* Desktop: Show 8 products */}
+                        <div className="hidden lg:grid grid-cols-4 gap-x-8 gap-y-12">
+                            {previewProducts.map((product) => (
+                                <ProductCard
+                                    key={product.id}
+                                    product={product}
+                                />
+                            ))}
+                        </div>
                     </section>
                 );
             })}
@@ -131,10 +115,95 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
 }
 
 function ProductCard({ product }: { product: any }) {
+    const { data: session } = useSession();
     const mainImage =
         product.images?.find((img: any) => img.isMain)?.url ||
         product.images?.[0]?.url;
     const variant = product.variants?.[0];
+
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+
+    // Check if product is in wishlist on mount
+    useEffect(() => {
+        if (!session || !product?.id) return;
+
+        async function checkWishlist() {
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?prebuiltProductId=${product.id}`,
+                );
+                const data = await res.json();
+                setIsFavorite(data.isInWishlist);
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        }
+
+        checkWishlist();
+    }, [session, product?.id]);
+
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>,
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishlistLoading) return;
+
+        setIsWishlistLoading(true);
+        const wasInWishlist = isFavorite;
+
+        // Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prebuiltProductId: product.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${product.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // Rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
 
     const discount = variant?.originalPrice
         ? Math.round(
@@ -179,32 +248,39 @@ function ProductCard({ product }: { product: any }) {
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                 )}
-                <button className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500">
-                    <Heart size={20} />
+                <button
+                    onClick={handleToggleWishlist}
+                    disabled={isWishlistLoading}
+                    className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500 disabled:opacity-70"
+                >
+                    {isWishlistLoading ? (
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                    ) : (
+                        <Heart
+                            size={20}
+                            className={`transition ${
+                                isFavorite
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-400"
+                            }`}
+                        />
+                    )}
                 </button>
             </div>
 
             {/* Content Section - 16px padding */}
             <div className="p-4 flex flex-col flex-1">
-                {/* Customizable Badge */}
-                <div className="mb-3">
-                    <span
-                        className={`inline-block rounded-full px-3 py-1 text-[10px] font-medium ${
-                            product.isCustomizable
-                                ? "border-2 bg-white text-[#372AAC]"
-                                : "border border-gray-300 bg-white text-gray-600"
-                        }`}
-                        style={
-                            product.isCustomizable
-                                ? { borderColor: "#A3B3FF" }
-                                : {}
-                        }
-                    >
-                        {product.isCustomizable
-                            ? "Customisable"
-                            : "Not Customisable"}
-                    </span>
-                </div>
+                {/* Highlighted Badge - Only show if highlighted is true */}
+                {product.highlighted && (
+                    <div className="mb-3">
+                        <span
+                            className="inline-block rounded-full px-3 py-1 text-[10px] font-medium border-2 bg-white text-[#372AAC]"
+                            style={{ borderColor: "#A3B3FF" }}
+                        >
+                            Trending Now
+                        </span>
+                    </div>
+                )}
 
                 {/* Product Name - 16px, weight 500 */}
                 <h3 className="text-base font-medium text-[#101828] leading-snug mb-2">
@@ -268,7 +344,7 @@ function ProductCard({ product }: { product: any }) {
 
                 {/* Add to Cart Button - 40px height, 10px radius */}
                 <button className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white transition-all hover:bg-black active:scale-[0.97]">
-                    Add to Cart
+                    Select Variants
                 </button>
             </div>
         </div>

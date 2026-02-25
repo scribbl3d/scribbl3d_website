@@ -954,6 +954,7 @@ model ResinCompatibility {
 model PrebuiltProductRiya {
   id               String  @id @default(cuid())
   name             String
+  slug             String? @unique
   shortDescription String
   longDescription  String?
   category         String

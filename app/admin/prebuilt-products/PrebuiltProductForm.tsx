@@ -52,6 +52,7 @@ type ImageInput = {
 
 export type ProductFormData = {
     name: string;
+    slug: string;
     shortDescription: string;
     longDescription: string;
     category: string;
@@ -79,6 +80,15 @@ type Props = {
 function paiseToDisplay(paise: number): string {
     return paise > 0 ? (paise / 100).toString() : "";
 }
+
+const generateSlug = (name: string): string => {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+};
 
 const emptyVariant = (): VariantInput => ({
     price: 0,
@@ -175,6 +185,7 @@ export default function PrebuiltProductForm({
 
     /* ── State ── */
     const [name, setName] = useState(defaultValues?.name ?? "");
+    const [slug, setSlug] = useState(defaultValues?.slug ?? "");
     const [shortDescription, setShortDescription] = useState(
         defaultValues?.shortDescription ?? "",
     );
@@ -280,6 +291,15 @@ export default function PrebuiltProductForm({
         });
     };
 
+    /* ── Slug Auto-generation ── */
+    const handleNameChange = (newName: string) => {
+        setName(newName);
+        // Auto-generate slug from name if slug is empty or user is in create mode
+        if (!slug || mode === "create") {
+            setSlug(generateSlug(newName));
+        }
+    };
+
     /* ── Validation ── */
     const validate = () => {
         const e: Record<string, string> = {};
@@ -304,6 +324,10 @@ export default function PrebuiltProductForm({
                 const fd = new FormData();
 
                 fd.append("name", name.trim());
+                // Use provided slug or generate from name
+                const finalSlug =
+                    slug.trim() || generateSlug(name.trim()) || "product";
+                fd.append("slug", finalSlug);
                 fd.append("shortDescription", shortDescription.trim());
                 fd.append("longDescription", longDescription.trim());
                 fd.append("category", category);
@@ -470,10 +494,24 @@ export default function PrebuiltProductForm({
                                 <Label required>Product Name</Label>
                                 <Input
                                     value={name}
-                                    onChange={(e) => setName(e.target.value)}
+                                    onChange={(e) =>
+                                        handleNameChange(e.target.value)
+                                    }
                                     placeholder="e.g. Spongebob Squarepants Figure"
                                 />
                                 <Err msg={errors.name} />
+                            </div>
+                            <div>
+                                <Label>URL Slug</Label>
+                                <Input
+                                    value={slug}
+                                    onChange={(e) => setSlug(e.target.value)}
+                                    placeholder="Auto-generated from product name"
+                                />
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Automatically generated from product name.
+                                    You can customize it if needed.
+                                </p>
                             </div>
                             <div>
                                 <Label required>Short Description</Label>

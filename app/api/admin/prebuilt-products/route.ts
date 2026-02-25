@@ -8,6 +8,54 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 /* ============================================================================
+   Slug Generation Helper
+   ============================================================================ */
+const generateSlug = (name: string): string => {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+};
+
+/**
+ * Ensures slug uniqueness by appending a counter if needed
+ * e.g., "my-product" → "my-product-1" → "my-product-2"
+ */
+const ensureUniqueSlug = async (
+    baseSlug: string,
+    excludeId?: string,
+): Promise<string> => {
+    let slug = baseSlug;
+    let counter = 1;
+    const maxAttempts = 100;
+
+    while (counter <= maxAttempts) {
+        const where: Prisma.PrebuiltProductRiyaWhereInput = { slug };
+
+        // If editing, exclude current product from uniqueness check
+        if (excludeId) {
+            where.NOT = { id: excludeId };
+        }
+
+        const existing = await prisma.prebuiltProductRiya.findUnique({
+            where: { slug },
+        });
+
+        if (!existing) {
+            return slug;
+        }
+
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+    }
+
+    // Fallback: use timestamp if all attempts fail
+    return `${baseSlug}-${Date.now()}`;
+};
+
+/* ============================================================================
    GET – List all prebuilt products (Search + Sort + Pagination)
    ============================================================================ */
 export async function GET(request: NextRequest) {
@@ -86,13 +134,14 @@ export async function GET(request: NextRequest) {
 }
 
 /* ============================================================================
-   POST – Create product
+   POST – Create product with slug generation
    ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
 
         const name = formData.get("name") as string;
+        const slug = formData.get("slug") as string;
         const shortDescription = formData.get("shortDescription") as string;
         const longDescription =
             (formData.get("longDescription") as string) || null;
@@ -118,6 +167,13 @@ export async function POST(request: NextRequest) {
                 { status: 400 },
             );
         }
+
+        // Slug generation and uniqueness check
+        let finalSlug = slug?.trim();
+        if (!finalSlug) {
+            finalSlug = generateSlug(name.trim());
+        }
+        finalSlug = await ensureUniqueSlug(finalSlug);
 
         const features = JSON.parse(
             (formData.get("features") as string) || "[]",
@@ -166,6 +222,7 @@ export async function POST(request: NextRequest) {
         const product = await prisma.prebuiltProductRiya.create({
             data: {
                 name: name.trim(),
+                slug: finalSlug,
                 shortDescription: shortDescription.trim(),
                 longDescription: longDescription?.trim() || null,
                 category,

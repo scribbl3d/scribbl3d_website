@@ -7,6 +7,50 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 /* ============================================================================
+   Slug Generation Helpers
+   ============================================================================ */
+const generateSlug = (name: string): string => {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+};
+
+/**
+ * Ensures slug uniqueness by appending a counter if needed
+ * Excludes the current product from uniqueness check
+ */
+const ensureUniqueSlug = async (
+    baseSlug: string,
+    excludeId: string,
+): Promise<string> => {
+    let slug = baseSlug;
+    let counter = 1;
+    const maxAttempts = 100;
+
+    while (counter <= maxAttempts) {
+        const existing = await prisma.prebuiltProductRiya.findFirst({
+            where: {
+                slug,
+                NOT: { id: excludeId },
+            },
+        });
+
+        if (!existing) {
+            return slug;
+        }
+
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+    }
+
+    // Fallback: use timestamp if all attempts fail
+    return `${baseSlug}-${Date.now()}`;
+};
+
+/* ============================================================================
    GET /api/admin/prebuilt-products/[id]
    ============================================================================ */
 export async function GET(
@@ -55,6 +99,7 @@ export async function PUT(
 
         // 1️⃣ Basic fields
         const name = formData.get("name") as string;
+        const slug = formData.get("slug") as string;
         const shortDescription = formData.get("shortDescription") as string;
         const longDescription =
             (formData.get("longDescription") as string) || null;
@@ -74,6 +119,13 @@ export async function PUT(
         const height = formData.get("height")
             ? parseFloat(formData.get("height") as string)
             : null;
+
+        // 1.5️⃣ Slug generation and uniqueness check
+        let finalSlug = slug?.trim();
+        if (!finalSlug) {
+            finalSlug = generateSlug(name.trim());
+        }
+        finalSlug = await ensureUniqueSlug(finalSlug, id);
 
         // 2️⃣ JSON fields
         const features = JSON.parse(
@@ -178,6 +230,7 @@ export async function PUT(
                 where: { id },
                 data: {
                     name: name.trim(),
+                    slug: finalSlug,
                     shortDescription: shortDescription.trim(),
                     longDescription: longDescription?.trim() || null,
                     category,

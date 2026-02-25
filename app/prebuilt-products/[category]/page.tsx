@@ -1,10 +1,39 @@
 "use client";
 
 import Loader from "@/components/Loader";
+import { toast } from "@/components/ui/use-toast";
 import { ChevronLeft, Heart } from "lucide-react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+    Cosplay:
+        "High-detail cosplay props and accessories crafted for accuracy, durability, and convention-ready performance.",
+    Figurine:
+        "Premium 3D printed figurines designed with sharp detailing and smooth finishes — perfect for collectors and enthusiasts.",
+    "Home Essentials":
+        "Smart, minimal, and practical 3D printed products designed to simplify and elevate everyday living.",
+    "Household Utilities":
+        "Functional and durable utility products engineered to solve real household problems efficiently.",
+    Keychains:
+        "Compact, creative, and customizable keychains — ideal for gifting, branding, and everyday carry.",
+    Kits: "Curated DIY and learning kits designed to combine creativity, engineering, and hands-on exploration.",
+    Lamps: "Aesthetic 3D printed lamps that blend modern design with warm, ambient lighting.",
+    "New Launch":
+        "Discover our latest product innovations — freshly designed and now available.",
+    Personalised:
+        "Custom-designed 3D printed products tailored to your name, brand, or unique idea.",
+    Statues:
+        "Elegant decorative statues crafted with precision detailing and premium surface finish.",
+    "The Latest":
+        "Trending and recently added products — stay updated with what's new at Scribbl3D.",
+    Utilities:
+        "Purpose-built 3D printed tools and accessories designed for functionality and long-term use.",
+    "Wall Decor":
+        "Modern 3D printed wall décor pieces that add depth, texture, and character to your space.",
+};
 
 export default function CategoryListingPage() {
     const params = useParams();
@@ -35,9 +64,13 @@ export default function CategoryListingPage() {
 
     if (loading) return <Loader />;
 
+    const categoryDescription =
+        CATEGORY_DESCRIPTIONS[categoryName] ||
+        `Discover our collection of ${categoryName.toLowerCase()} and interactive 3D printed models, perfect for display or as unique fidget toys.`;
+
     return (
         <main className="min-h-screen bg-white pb-20">
-            <div className="container mx-auto px-4 py-6">
+            <div className="container mx-auto px-4 py-6 pt-24">
                 {/* Navigation */}
                 <button
                     onClick={() => router.back()}
@@ -56,12 +89,10 @@ export default function CategoryListingPage() {
                     }}
                 >
                     <h1 className="text-[48px] font-black leading-tight mb-4 tracking-tight">
-                        {categoryName}
+                        {categoryName.toUpperCase()}
                     </h1>
                     <p className="max-w-2xl text-[18px] font-normal opacity-90 leading-[29.25px] mb-8">
-                        Discover our collection of {categoryName.toLowerCase()}{" "}
-                        and interactive 3D printed models, perfect for display
-                        or as unique fidget toys.
+                        {categoryDescription}
                     </p>
                     <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-full px-5 py-2 border border-white/10">
                         <span className="text-sm font-black">
@@ -106,10 +137,95 @@ export default function CategoryListingPage() {
 }
 
 function CategoryProductCard({ product }: { product: any }) {
+    const { data: session } = useSession();
     const mainImage =
         product.images?.find((img: any) => img.isMain)?.url ||
         product.images?.[0]?.url;
     const variant = product.variants?.[0];
+
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+
+    // Check if product is in wishlist on mount
+    useEffect(() => {
+        if (!session || !product?.id) return;
+
+        async function checkWishlist() {
+            try {
+                const res = await fetch(
+                    `/api/wishlist/check?prebuiltProductId=${product.id}`,
+                );
+                const data = await res.json();
+                setIsFavorite(data.isInWishlist);
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        }
+
+        checkWishlist();
+    }, [session, product?.id]);
+
+    const handleToggleWishlist = async (
+        e: React.MouseEvent<HTMLButtonElement>,
+    ) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to add items to wishlist",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+
+        if (isWishlistLoading) return;
+
+        setIsWishlistLoading(true);
+        const wasInWishlist = isFavorite;
+
+        // Optimistic update
+        setIsFavorite(!wasInWishlist);
+
+        try {
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prebuiltProductId: product.id,
+                }),
+            });
+
+            toast({
+                title: wasInWishlist
+                    ? "Removed from wishlist"
+                    : "Added to wishlist",
+                description: `${product.name} has been ${
+                    wasInWishlist ? "removed from" : "added to"
+                } your wishlist.`,
+            });
+        } catch (err) {
+            // Rollback on failure
+            setIsFavorite(wasInWishlist);
+
+            toast({
+                title: "Error",
+                description: "Failed to update wishlist. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    };
 
     const discount = variant?.originalPrice
         ? Math.round(
@@ -154,32 +270,39 @@ function CategoryProductCard({ product }: { product: any }) {
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                 )}
-                <button className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500">
-                    <Heart size={20} />
+                <button
+                    onClick={handleToggleWishlist}
+                    disabled={isWishlistLoading}
+                    className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500 disabled:opacity-70"
+                >
+                    {isWishlistLoading ? (
+                        <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                    ) : (
+                        <Heart
+                            size={20}
+                            className={`transition ${
+                                isFavorite
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-gray-400"
+                            }`}
+                        />
+                    )}
                 </button>
             </div>
 
             {/* Content Section - 16px padding */}
             <div className="p-4 flex flex-col flex-1">
-                {/* Customizable Badge */}
-                <div className="mb-3">
-                    <span
-                        className={`inline-block rounded-full px-3 py-1 text-[10px] font-medium ${
-                            product.isCustomizable
-                                ? "border-2 bg-white text-[#372AAC]"
-                                : "border border-gray-300 bg-white text-gray-600"
-                        }`}
-                        style={
-                            product.isCustomizable
-                                ? { borderColor: "#A3B3FF" }
-                                : {}
-                        }
-                    >
-                        {product.isCustomizable
-                            ? "Customisable"
-                            : "Not Customisable"}
-                    </span>
-                </div>
+                {/* Highlighted Badge - Only show if highlighted is true */}
+                {product.highlighted && (
+                    <div className="mb-3">
+                        <span
+                            className="inline-block rounded-full px-3 py-1 text-[10px] font-medium border-2 bg-white text-[#372AAC]"
+                            style={{ borderColor: "#A3B3FF" }}
+                        >
+                            Trending Now
+                        </span>
+                    </div>
+                )}
 
                 {/* Product Name - 16px, weight 500 */}
                 <h3 className="text-base font-medium text-[#101828] leading-snug mb-2">

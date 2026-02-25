@@ -1,33 +1,20 @@
 // PATH: app/admin/prebuilt-products/[id]/page.tsx
+// THIS IS A SERVER COMPONENT (no "use client")
 
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import type { ProductFormData } from "../PrebuiltProductForm";
 import EditPageClient from "./EditPageClient";
 
-export async function generateMetadata({
+export default async function EditProductPage({
     params,
 }: {
     params: Promise<{ id: string }>;
 }) {
+    // ✅ Server component can use await
     const { id } = await params;
 
-    const product = await prisma.prebuiltProductRiya.findUnique({
-        where: { id },
-        select: { name: true },
-    });
-
-    return {
-        title: product ? `Edit: ${product.name} | Admin` : "Not Found | Admin",
-    };
-}
-
-export default async function EditPrebuiltProductPage({
-    params,
-}: {
-    params: Promise<{ id: string }>;
-}) {
-    const { id } = await params;
-
+    // Fetch product from database
     const product = await prisma.prebuiltProductRiya.findUnique({
         where: { id },
         include: {
@@ -37,53 +24,51 @@ export default async function EditPrebuiltProductPage({
         },
     });
 
-    if (!product) notFound();
+    if (!product) {
+        notFound();
+    }
 
-    const defaultValues = {
+    // Prepare defaultValues with SLUG
+    const defaultValues: Partial<ProductFormData & { id: string }> = {
         id: product.id,
         name: product.name,
+        slug: product.slug || "", // ← SLUG FROM DATABASE
         shortDescription: product.shortDescription,
-        longDescription: product.longDescription ?? "",
+        longDescription: product.longDescription || "",
         category: product.category,
         isCustomizable: product.isCustomizable,
         highlighted: product.highlighted,
-
-        // Numbers converted to strings to match ProductFormData type
-        length: product.length?.toString() ?? "",
-        breadth: product.breadth?.toString() ?? "",
-        height: product.height?.toString() ?? "",
-        weight: product.weight?.toString() ?? "",
-
-        features: product.features as any, // Cast if JSON typing is strict
-
-        attributes: product.attributes.map((a) => ({
-            label: a.label,
-            value: a.value,
+        length: product.length ? product.length.toString() : "",
+        breadth: product.breadth ? product.breadth.toString() : "",
+        height: product.height ? product.height.toString() : "",
+        weight: product.weight ? product.weight.toString() : "",
+        features: product.features || [],
+        attributes: (product.attributes || []).map((attr) => ({
+            label: attr.label,
+            value: attr.value,
         })),
-
-        variants: product.variants.map((v) => ({
+        variants: (product.variants || []).map((v) => ({
             id: v.id,
-            price: v.price.toString(), // Ensure match with client-side state
-            originalPrice: v.originalPrice.toString(),
+            price: v.price,
+            originalPrice: v.originalPrice,
+            priceDisplay: (v.price / 100).toString(),
+            originalPriceDisplay: (v.originalPrice / 100).toString(),
             isActive: v.isActive,
-            colorName: v.colorName ?? "",
-            colorHex: v.colorHex ?? "",
-            sizeName: v.sizeName ?? "",
+            colorName: v.colorName || "",
+            colorHex: v.colorHex || "",
+            sizeName: v.sizeName || "",
         })),
-
-        images: product.images.map((img) => ({
+        images: (product.images || []).map((img) => ({
             id: img.id,
             url: img.url,
-            altText: img.altText ?? "",
+            altText: img.altText || "",
             position: img.position,
-            colorName: img.colorName ?? "",
+            colorName: img.colorName || "",
+            isMain: img.isMain,
+            isNew: false,
         })),
     };
 
-    return (
-        <EditPageClient
-            productId={product.id}
-            defaultValues={defaultValues as any}
-        />
-    );
+    // ✅ Pass all data to CLIENT component
+    return <EditPageClient productId={id} defaultValues={defaultValues} />;
 }

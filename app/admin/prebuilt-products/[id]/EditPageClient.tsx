@@ -2,9 +2,8 @@
 
 "use client";
 
-import type { ProductFormData } from "../PrebuiltProductForm";
-
 import { useRouter } from "next/navigation";
+import type { ProductFormData } from "../PrebuiltProductForm";
 import PrebuiltProductForm from "../PrebuiltProductForm";
 
 type Props = {
