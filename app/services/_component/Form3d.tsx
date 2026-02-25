@@ -2,10 +2,9 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -16,38 +15,146 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { AlertCircle, HelpCircle, Loader2 } from "lucide-react";
+import {
+    AlertCircle,
+    CheckCircle2,
+    ChevronRight,
+    Clock,
+    FileText,
+    HelpCircle,
+    Layers,
+    Loader2,
+    Mail,
+    MapPin,
+    Package,
+    Phone,
+    User,
+    Zap,
+} from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+// ─── Material Mapping ─────────────────────────────────────────────────────────
+
+const MATERIALS = {
+    FDM: {
+        PLA: {
+            "PLA+": [
+                "White",
+                "Black",
+                "Red",
+                "Yellow",
+                "Sky Blue",
+                "Navy Blue",
+                "Orange",
+                "Green",
+                "Brown",
+                "Grey",
+                "Violet",
+                "Skin",
+                "Clear",
+                "Pink",
+            ],
+            "PLA Matte": [
+                "Black",
+                "White",
+                "Purple",
+                "Grey",
+                "Red",
+                "Sky Blue",
+                "Pink",
+                "Navy Blue",
+                "Skin",
+                "Orange",
+                "Yellow",
+            ],
+            "PLA Glow In Dark": ["GID Blue", "GID Green"],
+            "PLA Wood": ["Brown"],
+            "PLA Marble": ["Marble"],
+            "PLA Carbonfiber": ["Black"],
+            "PLA Silk": ["Amber Bronze", "Silver", "Red", "Sky Blue", "Yellow"],
+        },
+        ABS: {
+            ABS: [
+                "White",
+                "Black",
+                "Red",
+                "Yellow",
+                "Sky Blue",
+                "Navy Blue",
+                "Orange",
+                "Green",
+                "Brown",
+                "Grey",
+            ],
+            "ABS GF": ["White"],
+            "ABS CF": ["Black"],
+            "ABS FR": ["Black", "White"],
+        },
+        TPU: {
+            "TPU 95A": [
+                "White",
+                "Black",
+                "Red",
+                "Yellow",
+                "Sky Blue",
+                "Navy Blue",
+                "Orange",
+                "Green",
+                "Grey",
+                "Silver Grey",
+                "Clear",
+            ],
+        },
+        PETG: {
+            PETG: ["White", "Sky Blue", "Navy Blue", "Clear", "Black"],
+            "PETG GF": ["White"],
+            "PETG CF": ["Black"],
+        },
+        PA: {
+            PA: ["White", "Black"],
+            "PA GF": ["White"],
+            "PA CF": ["Black"],
+        },
+    },
+    "SLA/DLP": {
+        "Standard Resin": ["White", "Black", "Grey", "Transparent", "Beige"],
+        "Standard Plus Resin": [
+            "White",
+            "Black",
+            "Grey",
+            "Transparent",
+            "Beige",
+        ],
+        "ABS Like Resin": ["White", "Black", "Grey", "Transparent", "Beige"],
+        "Elastic Resin": ["White", "Black", "Grey"],
+        "Castable Resin": ["Green"],
+        "Jewellery Resin": ["Red/Orange"],
+    },
+    SLS: {
+        Nylon: ["Black/Gray"],
+    },
+} as const;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FormData {
-    service: string;
     fileReference: File | null;
     requirement: string;
     fileExtension: string;
-    prototype: string;
-    prototypeOption: string;
-    printingTechnology: string;
-    material: string;
-    materialType: string;
-    materialDescription: string;
+    productionType: string;
     quantity: string;
-    productColor: string;
-    filamentColor: string;
-    resinColor: string;
+    printingTechnology: string;
+    materialFamily: string;
+    material: string;
+    color: string;
     additionalFile: File | null;
-    // Contact Information
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
+    address: string;
     company: string;
 }
 
@@ -56,106 +163,314 @@ interface FormErrors {
 }
 
 const initialFormData: FormData = {
-    service: "",
     fileReference: null,
     requirement: "",
     fileExtension: "",
-    prototype: "",
-    prototypeOption: "",
+    productionType: "",
+    quantity: "1",
     printingTechnology: "",
+    materialFamily: "",
     material: "",
-    materialType: "",
-    materialDescription: "",
-    quantity: "",
-    productColor: "",
-    filamentColor: "",
-    resinColor: "",
+    color: "",
     additionalFile: null,
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
+    address: "",
     company: "",
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const renameFile = (file: File, firstName: string, lastName: string): File => {
+    const now = new Date();
+    const ts =
+        now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0") +
+        "_" +
+        String(now.getHours()).padStart(2, "0") +
+        String(now.getMinutes()).padStart(2, "0") +
+        String(now.getSeconds()).padStart(2, "0");
+    const ext = file.name.includes(".")
+        ? file.name.slice(file.name.lastIndexOf("."))
+        : "";
+    const clean = (s: string) => s.trim().replace(/[^a-zA-Z0-9]/g, "");
+    return new File(
+        [file],
+        `${clean(firstName)}_${clean(lastName)}_${ts}${ext}`,
+        { type: file.type },
+    );
+};
+
+function getMaterialFamilies(tech: string): string[] {
+    if (!tech || !(MATERIALS as any)[tech]) return [];
+    return Object.keys((MATERIALS as any)[tech]);
+}
+
+function getSubTypes(tech: string, family: string): string[] {
+    if (!tech || !family) return [];
+    const familyData = (MATERIALS as any)[tech]?.[family];
+    if (!familyData || Array.isArray(familyData)) return [];
+    return Object.keys(familyData);
+}
+
+function getColors(tech: string, family: string, subType: string): string[] {
+    if (!tech || !family) return [];
+    const familyData = (MATERIALS as any)[tech]?.[family];
+    if (!familyData) return [];
+    if (Array.isArray(familyData)) return familyData as string[];
+    if (!subType) return [];
+    return (familyData[subType] as string[]) || [];
+}
+
+// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+
+function InfoTooltip({ content }: { content: React.ReactNode }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node))
+                setOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    return (
+        <div className="relative inline-flex items-center" ref={ref}>
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className={cn(
+                    "flex items-center justify-center w-5 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-300 focus:ring-offset-1",
+                    open
+                        ? "bg-zinc-800 text-white"
+                        : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-700",
+                )}
+                aria-label="More information"
+            >
+                <HelpCircle className="w-3 h-3" />
+            </button>
+            {open && (
+                <div className="absolute z-50 left-7 top-1/2 -translate-y-1/2 w-64 rounded-2xl border border-zinc-200 bg-white shadow-2xl shadow-zinc-200/80 p-4">
+                    <div className="absolute -left-[7px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white border-l border-b border-zinc-200 rotate-45" />
+                    <div className="text-xs leading-relaxed text-zinc-500">
+                        {content}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+
+function StepIndicator({ current }: { current: number }) {
+    const steps = [
+        { label: "Details", icon: FileText, num: 2 },
+        { label: "Production", icon: Package, num: 3 },
+        { label: "Tech & Color", icon: Layers, num: 4 },
+        { label: "Contact", icon: User, num: 5 },
+        { label: "Review", icon: CheckCircle2, num: 6 },
+    ];
+
+    if (current === 1 || current === 7) return null;
+
+    return (
+        <div className="flex items-start mb-6">
+            {steps.map((step, idx) => {
+                const done = current > step.num;
+                const active = current === step.num;
+                const Icon = step.icon;
+                return (
+                    <div key={idx} className="flex items-start flex-1 min-w-0">
+                        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                            <div
+                                className={cn(
+                                    "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300",
+                                    done &&
+                                        "bg-emerald-500 border-emerald-500 text-white",
+                                    active &&
+                                        "bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-zinc-900/25",
+                                    !done &&
+                                        !active &&
+                                        "bg-white border-zinc-200 text-zinc-400",
+                                )}
+                            >
+                                {done ? (
+                                    <CheckCircle2 className="w-4 h-4" />
+                                ) : (
+                                    <Icon className="w-3.5 h-3.5" />
+                                )}
+                            </div>
+                            <span
+                                className={cn(
+                                    "text-[9px] font-semibold tracking-wide hidden sm:block whitespace-nowrap",
+                                    active
+                                        ? "text-zinc-900"
+                                        : done
+                                          ? "text-emerald-600"
+                                          : "text-zinc-400",
+                                )}
+                            >
+                                {step.label}
+                            </span>
+                        </div>
+                        {idx < steps.length - 1 && (
+                            <div
+                                className={cn(
+                                    "h-px flex-1 mx-2 mt-4 transition-all duration-500",
+                                    done ? "bg-emerald-400" : "bg-zinc-200",
+                                )}
+                            />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// ─── Field Wrapper ────────────────────────────────────────────────────────────
+
+function FieldWrapper({
+    label,
+    error,
+    tooltip,
+    children,
+    required = true,
+}: {
+    label: string;
+    error?: string;
+    tooltip?: React.ReactNode;
+    children: React.ReactNode;
+    required?: boolean;
+}) {
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+                <Label className="text-sm font-semibold text-zinc-800">
+                    {label}
+                    {!required && (
+                        <span className="ml-1.5 text-xs font-normal text-zinc-400">
+                            (Optional)
+                        </span>
+                    )}
+                </Label>
+                {tooltip && <InfoTooltip content={tooltip} />}
+            </div>
+            {children}
+            {error && (
+                <p className="text-xs text-red-500 flex items-center gap-1 pt-0.5">
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+}
+
+// ─── Radio Card ───────────────────────────────────────────────────────────────
+
+function RadioCard({
+    value,
+    label,
+    description,
+    selected,
+    id,
+}: {
+    value: string;
+    label: string;
+    description?: string;
+    selected: boolean;
+    id: string;
+}) {
+    return (
+        <div
+            className={cn(
+                "flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all duration-200",
+                selected
+                    ? "border-zinc-900 bg-zinc-50 shadow-sm"
+                    : "border-zinc-200 hover:border-zinc-300 bg-white",
+            )}
+        >
+            <RadioGroupItem
+                value={value}
+                id={id}
+                className="mt-0.5 flex-shrink-0"
+            />
+            <Label htmlFor={id} className="cursor-pointer flex-1 space-y-0.5">
+                <div className="font-semibold text-sm text-zinc-800">
+                    {label}
+                </div>
+                {description && (
+                    <div className="text-xs text-zinc-500 font-normal">
+                        {description}
+                    </div>
+                )}
+            </Label>
+        </div>
+    );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState<FormData>(initialFormData);
     const [errors, setErrors] = useState<FormErrors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
+    // Snapshot of submitted data so thank-you page can show email even after reset
+    const [submittedEmail, setSubmittedEmail] = useState("");
+    const [submittedProductionType, setSubmittedProductionType] = useState("");
 
-    useEffect(() => {
-        return () => {
-            setFormData(initialFormData);
-            setCurrentStep(1);
-            setErrors({});
-            setIsSubmitting(false);
-            setIsSubmitted(false);
-        };
-    }, []);
+    // ⚠️  Do NOT reset state in a useEffect cleanup — that fires when the
+    // component unmounts, which happens right when the parent closes the dialog.
+    // Reset manually only when the user explicitly starts a new request.
 
-    // Helper function to rename file with customer name and timestamp
-    const renameFileWithCustomerInfo = (
-        file: File,
-        firstName: string,
-        lastName: string,
-    ): File => {
-        const now = new Date();
-        const timestamp =
-            now.getFullYear().toString() +
-            String(now.getMonth() + 1).padStart(2, "0") +
-            String(now.getDate()).padStart(2, "0") +
-            "_" +
-            String(now.getHours()).padStart(2, "0") +
-            String(now.getMinutes()).padStart(2, "0") +
-            String(now.getSeconds()).padStart(2, "0");
+    const materialFamilies = getMaterialFamilies(formData.printingTechnology);
+    const subTypes = getSubTypes(
+        formData.printingTechnology,
+        formData.materialFamily,
+    );
+    const hasSubTypes = subTypes.length > 0;
+    const colors = getColors(
+        formData.printingTechnology,
+        formData.materialFamily,
+        formData.material,
+    );
 
-        const lastDotIndex = file.name.lastIndexOf(".");
-        const extension =
-            lastDotIndex !== -1 ? file.name.slice(lastDotIndex) : "";
-
-        const cleanFirstName = firstName.trim().replace(/[^a-zA-Z0-9]/g, "");
-        const cleanLastName = lastName.trim().replace(/[^a-zA-Z0-9]/g, "");
-
-        const newFileName = `${cleanFirstName}_${cleanLastName}_${timestamp}${extension}`;
-
-        return new File([file], newFileName, { type: file.type });
-    };
+    // ── Validation ───────────────────────────────────────────────────────────
 
     const validateField = useCallback(
         (name: string, value: unknown): string => {
             switch (name) {
-                case "service":
-                    return !value ? "Please select a service" : "";
-                case "fileReference":
-                    if (!value) return "Please upload a reference file";
-                    if (value instanceof File && value.size > 10 * 1024 * 1024)
-                        return "File size must be less than 10MB";
-                    return "";
                 case "requirement":
-                    return !value ? "Please describe your requirements" : "";
+                    return !value
+                        ? "Please describe your design requirements"
+                        : "";
                 case "fileExtension":
-                    return !value ? "Please specify the file extension" : "";
-                case "prototype":
-                    return !value ? "Please select a prototype type" : "";
-                case "prototypeOption":
-                    return !value ? "Please select a prototype option" : "";
-                case "printingTechnology":
-                    return !value ? "Please select a printing technology" : "";
-                case "material":
-                    return !value ? "Please select a material" : "";
-                case "materialType":
-                    return !value ? "Please specify the material type" : "";
-                case "materialDescription":
-                    return !value ? "Please describe the material" : "";
+                    return !value ? "Please select a file format" : "";
+                case "productionType":
+                    return !value ? "Please select a production option" : "";
                 case "quantity":
                     if (!value) return "Please specify the quantity";
                     if (isNaN(Number(value)) || Number(value) < 1)
                         return "Please enter a valid quantity";
                     return "";
-                case "productColor":
-                    return !value ? "Please specify the product color" : "";
+                case "printingTechnology":
+                    return !value ? "Please select a printing technology" : "";
+                case "materialFamily":
+                    return !value ? "Please select a material" : "";
+                case "material":
+                    return !value ? "Please select a material type" : "";
+                case "color":
+                    return !value ? "Please select a colour" : "";
                 case "firstName":
                     return !value ? "First name is required" : "";
                 case "lastName":
@@ -167,6 +482,8 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                     return "";
                 case "phone":
                     return !value ? "Phone number is required" : "";
+                case "address":
+                    return !value ? "Address is required" : "";
                 default:
                     return "";
             }
@@ -174,974 +491,1027 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
         [],
     );
 
-    const handleInputChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            const { name, value } = e.target;
-            setFormData((prev) => ({ ...prev, [name]: value }));
-            const error = validateField(name, value);
-            setErrors((prev) => ({ ...prev, [name]: error }));
-        },
-        [validateField],
-    );
-
-    const handleFileChange = useCallback(
-        (e: React.ChangeEvent<HTMLInputElement>) => {
-            const { name, files } = e.target;
-            if (files) {
-                const file = files[0];
-                const error = validateField(name, file);
-                setErrors((prev) => ({ ...prev, [name]: error }));
-                if (!error) {
-                    setFormData((prev) => ({ ...prev, [name]: file }));
-                }
+    const getFieldsForStep = useCallback(
+        (step: number): string[] => {
+            switch (step) {
+                case 2:
+                    return ["requirement", "fileExtension"];
+                case 3:
+                    if (formData.productionType === "small_batch")
+                        return ["productionType", "quantity"];
+                    return ["productionType"];
+                case 4:
+                    if (formData.productionType === "design_only") return [];
+                    const f = ["printingTechnology", "materialFamily"];
+                    if (hasSubTypes) f.push("material");
+                    f.push("color");
+                    return f;
+                case 5:
+                    return [
+                        "firstName",
+                        "lastName",
+                        "email",
+                        "phone",
+                        "address",
+                    ];
+                default:
+                    return [];
             }
         },
-        [validateField],
+        [formData.productionType, hasSubTypes],
     );
-
-    const handleSelectChange = useCallback(
-        (name: string, value: string) => {
-            setFormData((prev) => ({ ...prev, [name]: value }));
-            const error = validateField(name, value);
-            setErrors((prev) => ({ ...prev, [name]: error }));
-        },
-        [validateField],
-    );
-
-    const getFieldsForStep = useCallback((step: number): string[] => {
-        switch (step) {
-            case 1:
-                return ["service"];
-            case 2:
-                return ["fileReference", "requirement", "fileExtension"];
-            case 3:
-                return ["prototype", "prototypeOption", "quantity"];
-            case 4:
-                return ["printingTechnology"];
-            case 5:
-                return ["material", "materialType", "materialDescription"];
-            case 6:
-                return ["productColor", "filamentColor", "resinColor"];
-            case 7:
-                return ["additionalFile"];
-            case 8:
-                return ["firstName", "lastName", "email", "phone"];
-            default:
-                return [];
-        }
-    }, []);
 
     const validateStep = useCallback(() => {
-        const currentFields = getFieldsForStep(currentStep);
+        const fields = getFieldsForStep(currentStep);
         const newErrors: FormErrors = {};
-
-        currentFields.forEach((field) => {
-            const error = validateField(
-                field,
-                formData[field as keyof FormData],
-            );
-            if (error) newErrors[field] = error;
+        fields.forEach((f) => {
+            const err = validateField(f, formData[f as keyof FormData]);
+            if (err) newErrors[f] = err;
         });
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     }, [currentStep, formData, validateField, getFieldsForStep]);
 
-    const getTotalSteps = useCallback(() => {
-        let total = 8; // Added contact info step
-        if (formData.prototype !== "Yes") {
-            total -= 1;
-        }
-        if (!formData.printingTechnology) {
-            total -= 1;
-        }
-        return total;
-    }, [formData.prototype, formData.printingTechnology]);
+    // ── Handlers ─────────────────────────────────────────────────────────────
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleInput = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+            const { name, value } = e.target;
+            setFormData((p) => ({ ...p, [name]: value }));
+            setErrors((p) => ({ ...p, [name]: validateField(name, value) }));
+        },
+        [validateField],
+    );
+
+    const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, files } = e.target;
+        if (files?.[0]) {
+            const file = files[0];
+            if (name === "fileReference" && file.size > 10 * 1024 * 1024) {
+                setErrors((p) => ({
+                    ...p,
+                    [name]: "File size must be less than 10MB",
+                }));
+                return;
+            }
+            setFormData((p) => ({ ...p, [name]: file }));
+            setErrors((p) => ({ ...p, [name]: "" }));
+        }
+    }, []);
+
+    const handleSelect = useCallback(
+        (name: string, value: string) => {
+            setFormData((p) => ({ ...p, [name]: value }));
+            setErrors((p) => ({ ...p, [name]: validateField(name, value) }));
+        },
+        [validateField],
+    );
+
+    // ── Submit ───────────────────────────────────────────────────────────────
+
+    const handleSubmit = async () => {
         if (!validateStep()) return;
-
         setIsSubmitting(true);
         try {
-            const formDataToSend = new FormData();
-
+            const fd = new FormData();
             Object.entries(formData).forEach(([key, value]) => {
                 if (
                     (key === "fileReference" || key === "additionalFile") &&
                     value instanceof File
                 ) {
-                    // Rename file with customer name and timestamp before uploading
-                    const renamedFile = renameFileWithCustomerInfo(
-                        value,
-                        formData.firstName,
-                        formData.lastName,
+                    fd.append(
+                        key,
+                        renameFile(
+                            value,
+                            formData.firstName,
+                            formData.lastName,
+                        ),
                     );
-                    formDataToSend.append(key, renamedFile);
                 } else if (value instanceof File) {
-                    formDataToSend.append(key, value);
+                    fd.append(key, value);
                 } else if (value) {
-                    formDataToSend.append(key, value.toString());
+                    fd.append(key, value.toString());
                 }
             });
 
             const response = await fetch("/api/form-responses", {
                 method: "POST",
-                body: formDataToSend,
+                body: fd,
             });
 
             if (!response.ok) {
-                setErrors((prev) => ({
-                    ...prev,
-                    submit: "Failed to submit form. Please try again.",
+                setErrors((p) => ({
+                    ...p,
+                    submit: "Failed to submit. Please try again.",
                 }));
                 return;
             }
 
-            setIsSubmitted(true);
-            onSubmit?.();
+            // ✅ Snapshot values needed by the thank-you page BEFORE any state changes
+            setSubmittedEmail(formData.email);
+            setSubmittedProductionType(formData.productionType);
+
+            // ✅ Show thank-you page FIRST — do NOT call onSubmit() here.
+            // The parent should not close the dialog until the user dismisses it.
+            setCurrentStep(7);
         } catch {
-            setErrors((prev) => ({
-                ...prev,
-                submit: "Failed to submit form. Please try again.",
+            setErrors((p) => ({
+                ...p,
+                submit: "Failed to submit. Please try again.",
             }));
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const renderField = useCallback(
-        (
-            label: string,
-            children: React.ReactNode,
-            error?: string,
-            tooltip?: string,
-        ) => {
-            return (
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <Label className="text-base md:text-lg font-medium">
-                            {label}
-                        </Label>
-                        {tooltip && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p className="w-[200px] text-sm">
-                                            {tooltip}
-                                        </p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
-                    {children}
-                    {error && (
-                        <p className="text-sm text-destructive mt-1 animate-slideIn">
-                            {error}
-                        </p>
-                    )}
+    const goNext = () => {
+        if (currentStep === 1) {
+            setCurrentStep(2);
+            return;
+        }
+        if (validateStep()) setCurrentStep((p) => p + 1);
+    };
+    const goPrev = () => setCurrentStep((p) => p - 1);
+
+    // Called from the thank-you page "Close" button
+    const handleClose = () => {
+        // Reset everything for a fresh start next time
+        setFormData(initialFormData);
+        setCurrentStep(1);
+        setErrors({});
+        setSubmittedEmail("");
+        setSubmittedProductionType("");
+        // Now it's safe to tell the parent to close
+        onSubmit?.();
+    };
+
+    // ── Renders ───────────────────────────────────────────────────────────────
+
+    const renderLanding = () => (
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-600 text-xs font-semibold px-3 py-1.5 rounded-full">
+                    <Zap className="w-3 h-3" />
+                    3D Design Request
                 </div>
-            );
-        },
-        [],
+                <h1 className="text-3xl font-black tracking-tight text-zinc-900 leading-tight">
+                    Need a 3D model <br />
+                    <span className="text-zinc-400">created from scratch</span>
+                    <br />
+                    or from a concept?
+                </h1>
+                <p className="text-zinc-500 text-sm leading-relaxed max-w-md">
+                    This form will help us understand your design requirements,
+                    application, and technical expectations so our design team
+                    can evaluate scope and provide an accurate quotation.
+                </p>
+                <div className="flex items-center gap-2 text-zinc-400 text-xs">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Estimated completion time: 5–8 minutes</span>
+                </div>
+            </div>
+
+            <div className="rounded-2xl border-2 border-zinc-100 bg-zinc-50 p-5 space-y-3">
+                <p className="text-sm font-bold text-zinc-700">
+                    Please Keep the Following Ready
+                </p>
+                <ul className="space-y-2">
+                    {[
+                        "A clear description of your idea or concept",
+                        "Reference images, sketches, or inspiration (if available)",
+                        "Intended application of the model",
+                        "Approximate dimensions or size requirements",
+                        "Target material or manufacturing method (if known)",
+                        "Deadline expectations",
+                    ].map((item, i) => (
+                        <li
+                            key={i}
+                            className="flex items-start gap-2.5 text-xs text-zinc-600"
+                        >
+                            <div className="w-4 h-4 rounded-full bg-zinc-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <ChevronRight className="w-2.5 h-2.5 text-zinc-500" />
+                            </div>
+                            {item}
+                        </li>
+                    ))}
+                </ul>
+                <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-200">
+                    Providing detailed information helps reduce revisions and
+                    speeds up project turnaround.
+                </p>
+            </div>
+        </div>
     );
 
-    const renderStep = useCallback(
-        (step: number) => {
-            switch (step) {
-                case 1:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Which service do you need?",
-                                <RadioGroup
-                                    name="service"
-                                    value={formData.service}
-                                    onValueChange={(value) =>
-                                        handleSelectChange("service", value)
-                                    }
-                                    className="grid gap-3"
-                                >
-                                    {[
-                                        {
-                                            value: "3D Designing",
-                                            label: "3D Designing",
-                                        },
-                                        {
-                                            value: "3D Sculpting",
-                                            label: "3D Sculpting",
-                                        },
-                                    ].map((option) => (
-                                        <div
-                                            key={option.value}
-                                            className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent"
-                                        >
-                                            <RadioGroupItem
-                                                value={option.value}
-                                                id={option.value}
-                                                className="w-6 h-6"
-                                            />
-                                            <Label
-                                                htmlFor={option.value}
-                                                className="flex-grow cursor-pointer text-base"
-                                            >
-                                                {option.label}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </RadioGroup>,
-                                errors.service,
-                            )}
-                        </div>
-                    );
+    const renderStep2 = () => (
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-xl font-black text-zinc-900">
+                    Project Details
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                    Step 2 of 6 — Tell us about your design
+                </p>
+            </div>
 
-                case 2:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Upload Reference File",
-                                <div className="grid gap-4">
-                                    <Input
-                                        type="file"
-                                        name="fileReference"
-                                        onChange={handleFileChange}
-                                        accept=".obj,.stl,.xt,.stp,.step,.3mf,.jpg,.png,.pdf"
-                                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                                    />
-                                    <p className="text-sm text-muted-foreground">
-                                        Max file size: 10MB. Supported formats:
-                                        .obj, .stl, .xt, .stp, .step, .3mf,
-                                        .jpg, .png, .pdf
+            <FieldWrapper
+                label="Reference Files"
+                required={false}
+                error={errors.fileReference}
+                tooltip={
+                    <div className="space-y-2">
+                        <p className="font-semibold text-zinc-700">
+                            Accepted file types include:
+                        </p>
+                        <ul className="space-y-1">
+                            <li>• Sketches or hand-drawn diagrams</li>
+                            <li>• Inspiration images</li>
+                            <li>• Existing 3D files (for modification)</li>
+                            <li>• Dimensioned drawings</li>
+                            <li>• PDFs with specifications</li>
+                        </ul>
+                    </div>
+                }
+            >
+                <div className="space-y-1.5">
+                    <Input
+                        type="file"
+                        name="fileReference"
+                        onChange={handleFile}
+                        accept=".obj,.stl,.xt,.stp,.step,.3mf,.jpg,.png,.pdf"
+                        className="file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-700 cursor-pointer h-11"
+                    />
+                    <p className="text-xs text-zinc-400">
+                        Max 10 MB · .STL .STEP .STP .OBJ .3MF .XT .JPG .PNG .PDF
+                    </p>
+                </div>
+            </FieldWrapper>
+
+            <FieldWrapper
+                label="Project Description"
+                error={errors.requirement}
+                tooltip={
+                    <div className="space-y-2">
+                        <p className="font-semibold text-zinc-700">
+                            Please include:
+                        </p>
+                        <ul className="space-y-1">
+                            <li>• What is the part or product?</li>
+                            <li>• What is its intended use?</li>
+                            <li>• Approximate dimensions</li>
+                            <li>• Mechanical or functional requirements</li>
+                            <li>• Assembly requirements (if multiple parts)</li>
+                        </ul>
+                        <p className="pt-1 border-t border-zinc-100 text-zinc-400">
+                            The more clarity you provide, the faster we can
+                            evaluate and quote accurately.
+                        </p>
+                    </div>
+                }
+            >
+                <Textarea
+                    name="requirement"
+                    value={formData.requirement}
+                    onChange={handleInput}
+                    placeholder="Describe your design requirement in detail..."
+                    className="min-h-[120px] resize-y text-sm"
+                />
+            </FieldWrapper>
+
+            <FieldWrapper
+                label="Required File Format"
+                error={errors.fileExtension}
+            >
+                <Select
+                    value={formData.fileExtension}
+                    onValueChange={(v) => handleSelect("fileExtension", v)}
+                >
+                    <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Select output format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {[
+                            {
+                                value: "STL",
+                                label: "STL – Standard format for 3D printing",
+                            },
+                            {
+                                value: "3MF",
+                                label: "3MF – Advanced 3D printing format (supports color & metadata)",
+                            },
+                            {
+                                value: "STEP/STP",
+                                label: "STEP / STP – Editable CAD file for manufacturing",
+                            },
+                            {
+                                value: "SolidWorks",
+                                label: "SolidWorks (SLDPRT / SLDASM) – Native SolidWorks file",
+                            },
+                            {
+                                value: "OBJ",
+                                label: "OBJ – Visualization or rendering use",
+                            },
+                            {
+                                value: "PDF",
+                                label: "PDF (2D Drawing with dimensions) – For documentation/reference",
+                            },
+                            {
+                                value: "Not Sure",
+                                label: "Not Sure — Recommend for Me",
+                            },
+                        ].map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </FieldWrapper>
+        </div>
+    );
+
+    const renderStep3 = () => (
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-xl font-black text-zinc-900">
+                    Manufacturing Requirement
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                    Step 3 of 6 — Do you need physical production?
+                </p>
+            </div>
+
+            <FieldWrapper
+                label="Do you require physical production of this design?"
+                error={errors.productionType}
+            >
+                <RadioGroup
+                    name="productionType"
+                    value={formData.productionType}
+                    onValueChange={(v) => {
+                        setFormData((p) => ({
+                            ...p,
+                            productionType: v,
+                            quantity: v === "prototype" ? "1" : "",
+                        }));
+                        setErrors((p) => ({
+                            ...p,
+                            productionType: "",
+                            quantity: "",
+                        }));
+                    }}
+                    className="space-y-2"
+                >
+                    <RadioCard
+                        value="prototype"
+                        id="prod-prototype"
+                        label="Yes — I need a 3D printed prototype"
+                        description="Single unit for testing and validation"
+                        selected={formData.productionType === "prototype"}
+                    />
+                    <RadioCard
+                        value="small_batch"
+                        id="prod-small_batch"
+                        label="Yes — I need small batch manufacturing"
+                        description="Multiple units for pilot production"
+                        selected={formData.productionType === "small_batch"}
+                    />
+                    <RadioCard
+                        value="design_only"
+                        id="prod-design_only"
+                        label="No — I only need the design files"
+                        description="Digital files only, no physical production"
+                        selected={formData.productionType === "design_only"}
+                    />
+                </RadioGroup>
+            </FieldWrapper>
+
+            {formData.productionType === "prototype" && (
+                <div className="flex items-center gap-3 rounded-xl bg-zinc-50 border-2 border-zinc-200 px-4 py-3">
+                    <div className="w-7 h-7 rounded-full bg-zinc-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-black text-zinc-600">
+                            1
+                        </span>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                        Quantity is automatically set to{" "}
+                        <span className="font-semibold text-zinc-700">1</span>{" "}
+                        for prototype orders.
+                    </p>
+                </div>
+            )}
+
+            {formData.productionType === "small_batch" && (
+                <FieldWrapper label="Quantity" error={errors.quantity}>
+                    <Input
+                        type="number"
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleInput}
+                        min="2"
+                        className="h-11 w-36"
+                        placeholder="e.g. 50"
+                    />
+                </FieldWrapper>
+            )}
+        </div>
+    );
+
+    const renderStep4 = () => {
+        const needsTech = formData.productionType !== "design_only";
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-xl font-black text-zinc-900">
+                        {needsTech ? "Technology & Colour" : "Preferences"}
+                    </h2>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                        Step 4 of 6 —{" "}
+                        {needsTech
+                            ? "Select printing method, material and colour"
+                            : "No printing required"}
+                    </p>
+                </div>
+
+                {!needsTech ? (
+                    <div className="rounded-xl border-2 border-zinc-100 bg-zinc-50 p-5 text-sm text-zinc-500">
+                        Since you only need design files, no printing technology
+                        selection is required. Proceed to the next step.
+                    </div>
+                ) : (
+                    <>
+                        <FieldWrapper
+                            label="3D Printing Technology"
+                            error={errors.printingTechnology}
+                            tooltip={
+                                <div className="space-y-2">
+                                    <p>
+                                        <span className="font-semibold text-zinc-700">
+                                            FDM
+                                        </span>{" "}
+                                        — Fused Deposition Modeling. Uses
+                                        thermoplastic filaments. Cost-effective
+                                        for most parts.
                                     </p>
-                                </div>,
-                                errors.fileReference,
-                            )}
+                                    <p>
+                                        <span className="font-semibold text-zinc-700">
+                                            SLA/DLP
+                                        </span>{" "}
+                                        — Resin-based printing. Ideal for
+                                        high-detail, smooth surface finish
+                                        parts.
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold text-zinc-700">
+                                            SLS
+                                        </span>{" "}
+                                        — Selective Laser Sintering.
+                                        Powder-based, produces strong functional
+                                        parts without support structures.
+                                    </p>
+                                </div>
+                            }
+                        >
+                            <RadioGroup
+                                name="printingTechnology"
+                                value={formData.printingTechnology}
+                                onValueChange={(v) => {
+                                    setFormData((p) => ({
+                                        ...p,
+                                        printingTechnology: v,
+                                        materialFamily: "",
+                                        material: "",
+                                        color: "",
+                                    }));
+                                    setErrors((p) => ({
+                                        ...p,
+                                        printingTechnology: "",
+                                    }));
+                                }}
+                                className="space-y-2"
+                            >
+                                {[
+                                    {
+                                        value: "FDM",
+                                        label: "FDM (Filament Based)",
+                                        desc: "Thermoplastic filaments — cost-effective for most parts",
+                                    },
+                                    {
+                                        value: "SLA/DLP",
+                                        label: "SLA/DLP (Resin Based)",
+                                        desc: "High-detail liquid resin — smooth surface finish",
+                                    },
+                                    {
+                                        value: "SLS",
+                                        label: "SLS (Powder Based)",
+                                        desc: "Strong functional parts — no support structures needed",
+                                    },
+                                ].map((o) => (
+                                    <RadioCard
+                                        key={o.value}
+                                        value={o.value}
+                                        id={`tech-${o.value}`}
+                                        label={o.label}
+                                        description={o.desc}
+                                        selected={
+                                            formData.printingTechnology ===
+                                            o.value
+                                        }
+                                    />
+                                ))}
+                            </RadioGroup>
+                        </FieldWrapper>
 
-                            {renderField(
-                                "Project Requirements",
-                                <Textarea
-                                    name="requirement"
-                                    value={formData.requirement}
-                                    onChange={handleInputChange}
-                                    placeholder="Describe your project requirements..."
-                                    className="min-h-[100px] resize-y"
-                                />,
-                                errors.requirement,
-                            )}
-
-                            {renderField(
-                                "Required File Extension",
-                                <Input
-                                    name="fileExtension"
-                                    value={formData.fileExtension}
-                                    onChange={handleInputChange}
-                                    placeholder="e.g., .stl, .obj, .3mf"
-                                    className="h-12"
-                                />,
-                                errors.fileExtension,
-                            )}
-                        </div>
-                    );
-
-                case 3:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Do you need a prototype?",
-                                <RadioGroup
-                                    name="prototype"
-                                    value={formData.prototype}
-                                    onValueChange={(value) =>
-                                        handleSelectChange("prototype", value)
-                                    }
-                                    className="grid gap-3"
-                                >
-                                    {[
-                                        { value: "Yes", label: "Yes" },
-                                        { value: "No", label: "No" },
-                                    ].map((option) => (
-                                        <div
-                                            key={option.value}
-                                            className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent"
-                                        >
-                                            <RadioGroupItem
-                                                value={option.value}
-                                                id={`prototype-${option.value}`}
-                                                className="w-6 h-6"
-                                            />
-                                            <Label
-                                                htmlFor={`prototype-${option.value}`}
-                                                className="flex-grow cursor-pointer text-base"
-                                            >
-                                                {option.label}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </RadioGroup>,
-                                errors.prototype,
-                            )}
-
-                            {formData.prototype === "Yes" && (
-                                <>
-                                    {renderField(
-                                        "Choose your prototype option",
-                                        <RadioGroup
-                                            name="prototypeOption"
-                                            value={formData.prototypeOption}
-                                            onValueChange={(value) =>
-                                                handleSelectChange(
-                                                    "prototypeOption",
-                                                    value,
-                                                )
-                                            }
-                                            className="grid gap-3"
-                                        >
-                                            {[
-                                                {
-                                                    value: "3D prototype",
-                                                    label: "3D prototype",
-                                                },
-                                                {
-                                                    value: "Small Batch Manufacturing",
-                                                    label: "Small Batch Manufacturing",
-                                                },
-                                            ].map((option) => (
-                                                <div
-                                                    key={option.value}
-                                                    className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent"
-                                                >
-                                                    <RadioGroupItem
-                                                        value={option.value}
-                                                        id={`prototypeOption-${option.value}`}
-                                                        className="w-6 h-6"
-                                                    />
-                                                    <Label
-                                                        htmlFor={`prototypeOption-${option.value}`}
-                                                        className="flex-grow cursor-pointer text-base"
-                                                    >
-                                                        {option.label}
-                                                    </Label>
-                                                </div>
-                                            ))}
-                                        </RadioGroup>,
-                                        errors.prototypeOption,
-                                    )}
-
-                                    {formData.prototypeOption ===
-                                        "Small Batch Manufacturing" &&
-                                        renderField(
-                                            "Quantity",
-                                            <Input
-                                                type="number"
-                                                name="quantity"
-                                                value={formData.quantity}
-                                                onChange={handleInputChange}
-                                                min="1"
-                                                placeholder="Enter quantity needed"
-                                                className="h-12"
-                                            />,
-                                            errors.quantity,
-                                            "Minimum order quantity is 1",
-                                        )}
-                                </>
-                            )}
-                        </div>
-                    );
-
-                case 4:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Choose 3D Printing Technology",
-                                <RadioGroup
-                                    name="printingTechnology"
-                                    value={formData.printingTechnology}
-                                    onValueChange={(value) =>
-                                        handleSelectChange(
-                                            "printingTechnology",
-                                            value,
-                                        )
-                                    }
-                                    className="grid gap-3"
-                                >
-                                    {[
-                                        {
-                                            value: "FDM",
-                                            label: "FDM (Filament Based)",
-                                            tooltip:
-                                                "Fused Deposition Modeling - Uses thermoplastic filaments",
-                                        },
-                                        {
-                                            value: "SLA/DLP",
-                                            label: "SLA/DLP (Resin Based)",
-                                            tooltip:
-                                                "Stereolithography/Digital Light Processing - Uses liquid resins",
-                                        },
-                                        {
-                                            value: "SLS",
-                                            label: "SLS (Powder Based)",
-                                            tooltip:
-                                                "Selective Laser Sintering - Uses powdered materials",
-                                        },
-                                    ].map((option) => (
-                                        <div
-                                            key={option.value}
-                                            className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent"
-                                        >
-                                            <RadioGroupItem
-                                                value={option.value}
-                                                id={`technology-${option.value}`}
-                                                className="w-6 h-6"
-                                            />
-                                            <div className="flex-grow">
-                                                <Label
-                                                    htmlFor={`technology-${option.value}`}
-                                                    className="flex items-center gap-2 cursor-pointer text-base"
-                                                >
-                                                    {option.label}
-                                                    <TooltipProvider>
-                                                        <Tooltip>
-                                                            <TooltipTrigger
-                                                                asChild
-                                                            >
-                                                                <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                                <p className="w-[200px] text-sm">
-                                                                    {
-                                                                        option.tooltip
-                                                                    }
-                                                                </p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                </Label>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </RadioGroup>,
-                                errors.printingTechnology,
-                            )}
-                        </div>
-                    );
-
-                case 5:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Select Material",
+                        {formData.printingTechnology && (
+                            <FieldWrapper
+                                label="Material"
+                                error={errors.materialFamily}
+                            >
                                 <Select
-                                    value={formData.material}
-                                    onValueChange={(value) =>
-                                        handleSelectChange("material", value)
-                                    }
+                                    value={formData.materialFamily}
+                                    onValueChange={(v) => {
+                                        setFormData((p) => ({
+                                            ...p,
+                                            materialFamily: v,
+                                            material: "",
+                                            color: "",
+                                        }));
+                                        setErrors((p) => ({
+                                            ...p,
+                                            materialFamily: "",
+                                        }));
+                                    }}
                                 >
-                                    <SelectTrigger className="h-12">
+                                    <SelectTrigger className="h-11">
                                         <SelectValue placeholder="Choose material" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {formData.printingTechnology ===
-                                            "FDM" &&
-                                            [
-                                                { value: "PLA", label: "PLA" },
-                                                { value: "ABS", label: "ABS" },
-                                                { value: "TPU", label: "TPU" },
-                                                {
-                                                    value: "PETG",
-                                                    label: "PETG",
-                                                },
-                                                {
-                                                    value: "PA",
-                                                    label: "PA (Nylon)",
-                                                },
-                                                {
-                                                    value: "Other",
-                                                    label: "Other",
-                                                },
-                                            ].map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        {formData.printingTechnology ===
-                                            "SLA/DLP" &&
-                                            [
-                                                {
-                                                    value: "Standard Resin",
-                                                    label: "Standard Resin",
-                                                },
-                                                {
-                                                    value: "ABS like Resin",
-                                                    label: "ABS like Resin",
-                                                },
-                                                {
-                                                    value: "Flexible Resin",
-                                                    label: "Flexible Resin",
-                                                },
-                                                {
-                                                    value: "PLA Resin",
-                                                    label: "PLA Resin",
-                                                },
-                                            ].map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        {formData.printingTechnology ===
-                                            "SLS" &&
-                                            [
-                                                {
-                                                    value: "Nylon",
-                                                    label: "Nylon",
-                                                },
-                                                {
-                                                    value: "Aluminium",
-                                                    label: "Aluminium",
-                                                },
-                                                {
-                                                    value: "Carbonfiber",
-                                                    label: "Carbonfiber",
-                                                },
-                                                {
-                                                    value: "TPU 70A",
-                                                    label: "TPU 70A",
-                                                },
-                                                { value: "PP", label: "PP" },
-                                            ].map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
+                                        {materialFamilies.map((m) => (
+                                            <SelectItem key={m} value={m}>
+                                                {m}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
-                                </Select>,
-                                errors.material,
-                            )}
+                                </Select>
+                            </FieldWrapper>
+                        )}
 
-                            {formData.material === "PLA" &&
-                                renderField(
-                                    "PLA Type",
-                                    <Select
-                                        value={formData.materialType}
-                                        onValueChange={(value) =>
-                                            handleSelectChange(
-                                                "materialType",
-                                                value,
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger className="h-12">
-                                            <SelectValue placeholder="Select PLA type" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {[
-                                                {
-                                                    value: "PLA+",
-                                                    label: "PLA+",
-                                                },
-                                                {
-                                                    value: "PLA Matte",
-                                                    label: "PLA Matte",
-                                                },
-                                                {
-                                                    value: "PLA Glow In Dark",
-                                                    label: "PLA Glow In Dark",
-                                                },
-                                                {
-                                                    value: "PLA Wood",
-                                                    label: "PLA Wood",
-                                                },
-                                                {
-                                                    value: "PLA Marble",
-                                                    label: "PLA Marble",
-                                                },
-                                                {
-                                                    value: "PLA Carbonfiber",
-                                                    label: "PLA Carbonfiber",
-                                                },
-                                            ].map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>,
-                                    errors.materialType,
-                                )}
-
-                            {formData.material === "Other" &&
-                                renderField(
-                                    "Describe Material",
-                                    <Textarea
-                                        name="materialDescription"
-                                        value={formData.materialDescription}
-                                        onChange={handleInputChange}
-                                        placeholder="Please describe your material requirements..."
-                                        className="min-h-[100px] resize-y"
-                                    />,
-                                    errors.materialDescription,
-                                )}
-                        </div>
-                    );
-
-                case 6:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Product Color",
-                                <RadioGroup
-                                    name="productColor"
-                                    value={formData.productColor}
-                                    onValueChange={(value) =>
-                                        handleSelectChange(
-                                            "productColor",
-                                            value,
-                                        )
-                                    }
-                                    className="grid gap-3"
+                        {formData.materialFamily && hasSubTypes && (
+                            <FieldWrapper
+                                label="Material Type"
+                                error={errors.material}
+                            >
+                                <Select
+                                    value={formData.material}
+                                    onValueChange={(v) => {
+                                        setFormData((p) => ({
+                                            ...p,
+                                            material: v,
+                                            color: "",
+                                        }));
+                                        setErrors((p) => ({
+                                            ...p,
+                                            material: "",
+                                        }));
+                                    }}
                                 >
-                                    {[
-                                        {
-                                            value: "Standard",
-                                            label: "Standard Color",
-                                        },
-                                        {
-                                            value: "Multicolor",
-                                            label: "Multicolor",
-                                        },
-                                        {
-                                            value: "Custom",
-                                            label: "Custom Color",
-                                        },
-                                    ].map((option) => (
-                                        <div
-                                            key={option.value}
-                                            className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent"
-                                        >
-                                            <RadioGroupItem
-                                                value={option.value}
-                                                id={`color-${option.value}`}
-                                                className="w-6 h-6"
-                                            />
-                                            <Label
-                                                htmlFor={`color-${option.value}`}
-                                                className="flex-grow cursor-pointer text-base"
-                                            >
-                                                {option.label}
-                                            </Label>
-                                        </div>
-                                    ))}
-                                </RadioGroup>,
-                                errors.productColor,
-                            )}
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue placeholder="Choose type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {subTypes.map((s) => (
+                                            <SelectItem key={s} value={s}>
+                                                {s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FieldWrapper>
+                        )}
 
-                            {formData.printingTechnology === "FDM" &&
-                                renderField(
-                                    "Filament Color",
-                                    <Select
-                                        value={formData.filamentColor}
-                                        onValueChange={(value) =>
-                                            handleSelectChange(
-                                                "filamentColor",
-                                                value,
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger className="h-12">
-                                            <SelectValue placeholder="Select filament color" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {[
-                                                {
-                                                    value: "Transparent",
-                                                    label: "Transparent",
-                                                },
-                                                {
-                                                    value: "Black",
-                                                    label: "Black",
-                                                },
-                                                {
-                                                    value: "Grey",
-                                                    label: "Grey",
-                                                },
-                                                {
-                                                    value: "White",
-                                                    label: "White",
-                                                },
-                                                { value: "Red", label: "Red" },
-                                                {
-                                                    value: "Orange",
-                                                    label: "Orange",
-                                                },
-                                                {
-                                                    value: "Yellow",
-                                                    label: "Yellow",
-                                                },
-                                                {
-                                                    value: "Green",
-                                                    label: "Green",
-                                                },
-                                            ].map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>,
-                                )}
+                        {colors.length > 0 && (
+                            <FieldWrapper label="Colour" error={errors.color}>
+                                <Select
+                                    value={formData.color}
+                                    onValueChange={(v) =>
+                                        handleSelect("color", v)
+                                    }
+                                >
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue placeholder="Choose colour" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {colors.map((c) => (
+                                            <SelectItem key={c} value={c}>
+                                                {c}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FieldWrapper>
+                        )}
 
-                            {formData.printingTechnology === "SLA/DLP" &&
-                                renderField(
-                                    "Resin Color",
-                                    <Select
-                                        value={formData.resinColor}
-                                        onValueChange={(value) =>
-                                            handleSelectChange(
-                                                "resinColor",
-                                                value,
-                                            )
-                                        }
-                                    >
-                                        <SelectTrigger className="h-12">
-                                            <SelectValue placeholder="Select resin color" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {[
-                                                {
-                                                    value: "Transparent",
-                                                    label: "Transparent",
-                                                },
-                                                {
-                                                    value: "Black",
-                                                    label: "Black",
-                                                },
-                                                {
-                                                    value: "Grey",
-                                                    label: "Grey",
-                                                },
-                                                {
-                                                    value: "White",
-                                                    label: "White",
-                                                },
-                                                {
-                                                    value: "Beige",
-                                                    label: "Beige",
-                                                },
-                                                {
-                                                    value: "Skin",
-                                                    label: "Skin",
-                                                },
-                                            ].map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>,
-                                )}
-                        </div>
-                    );
-
-                case 7:
-                    return (
-                        <div className="space-y-6">
-                            {renderField(
-                                "Additional Files (Optional)",
-                                <div className="grid gap-4">
-                                    <Input
-                                        type="file"
-                                        name="additionalFile"
-                                        onChange={handleFileChange}
-                                        accept=".obj,.stl,.xt,.stp,.step,.3mf,.jpg,.png,.pdf"
-                                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                                    />
-                                    <p className="text-sm text-muted-foreground">
-                                        Upload any additional reference files or
-                                        documentation. Supported formats: .obj,
-                                        .stl, .xt, .stp, .step, .3mf, .jpg,
-                                        .png, .pdf
-                                    </p>
-                                </div>,
-                            )}
-                        </div>
-                    );
-
-                case 8:
-                    return (
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {renderField(
-                                    "First Name",
-                                    <Input
-                                        name="firstName"
-                                        value={formData.firstName}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter your first name"
-                                        className="h-12"
-                                    />,
-                                    errors.firstName,
-                                )}
-
-                                {renderField(
-                                    "Last Name",
-                                    <Input
-                                        name="lastName"
-                                        value={formData.lastName}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter your last name"
-                                        className="h-12"
-                                    />,
-                                    errors.lastName,
-                                )}
+                        <FieldWrapper label="Additional Files" required={false}>
+                            <div className="space-y-1.5">
+                                <Input
+                                    type="file"
+                                    name="additionalFile"
+                                    onChange={handleFile}
+                                    accept=".obj,.stl,.xt,.stp,.step,.3mf,.jpg,.png,.pdf"
+                                    className="file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-700 cursor-pointer h-11"
+                                />
+                                <p className="text-xs text-zinc-400">
+                                    Upload any additional reference files or
+                                    documentation.
+                                </p>
                             </div>
-
-                            {renderField(
-                                "Email Address",
-                                <Input
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    placeholder="Enter your email"
-                                    className="h-12"
-                                />,
-                                errors.email,
-                            )}
-
-                            {renderField(
-                                "Phone Number",
-                                <Input
-                                    name="phone"
-                                    type="tel"
-                                    value={formData.phone}
-                                    onChange={handleInputChange}
-                                    placeholder="Enter your phone number"
-                                    className="h-12"
-                                />,
-                                errors.phone,
-                            )}
-
-                            {renderField(
-                                "Company Name (Optional)",
-                                <Input
-                                    name="company"
-                                    value={formData.company}
-                                    onChange={handleInputChange}
-                                    placeholder="Enter your company name"
-                                    className="h-12"
-                                />,
-                            )}
-                        </div>
-                    );
-
-                default:
-                    return null;
-            }
-        },
-        [
-            formData,
-            errors,
-            handleInputChange,
-            handleFileChange,
-            handleSelectChange,
-            renderField,
-        ],
-    );
-
-    if (isSubmitted) {
-        return (
-            <div className="text-center space-y-4 p-6">
-                <h2 className="text-2xl font-semibold">Thank You!</h2>
-                <p className="text-muted-foreground">
-                    Your request has been submitted successfully. We will get
-                    back to you soon.
-                </p>
+                        </FieldWrapper>
+                    </>
+                )}
             </div>
         );
-    }
+    };
+
+    const renderStep5 = () => (
+        <div className="space-y-5">
+            <div>
+                <h2 className="text-xl font-black text-zinc-900">
+                    Customer Details
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                    Step 5 of 6 — Your contact information
+                </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FieldWrapper label="First Name" error={errors.firstName}>
+                    <Input
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInput}
+                        placeholder="John"
+                        className="h-11"
+                    />
+                </FieldWrapper>
+                <FieldWrapper label="Last Name" error={errors.lastName}>
+                    <Input
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInput}
+                        placeholder="Smith"
+                        className="h-11"
+                    />
+                </FieldWrapper>
+            </div>
+
+            <FieldWrapper label="Email Address" error={errors.email}>
+                <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                    <Input
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={handleInput}
+                        placeholder="john@example.com"
+                        className="h-11 pl-10"
+                    />
+                </div>
+            </FieldWrapper>
+
+            <FieldWrapper label="Phone Number" error={errors.phone}>
+                <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                    <Input
+                        name="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={handleInput}
+                        placeholder="+1 (555) 000-0000"
+                        className="h-11 pl-10"
+                    />
+                </div>
+            </FieldWrapper>
+
+            <FieldWrapper label="Address" error={errors.address}>
+                <div className="relative">
+                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-zinc-400 pointer-events-none" />
+                    <Textarea
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInput}
+                        placeholder="Street, City, State / Province, ZIP / Postal Code, Country"
+                        className="pl-10 min-h-[80px] resize-none text-sm"
+                    />
+                </div>
+            </FieldWrapper>
+
+            <FieldWrapper label="Company Name" required={false}>
+                <Input
+                    name="company"
+                    value={formData.company}
+                    onChange={handleInput}
+                    placeholder="Your company (optional)"
+                    className="h-11"
+                />
+            </FieldWrapper>
+        </div>
+    );
+
+    const productionLabel =
+        formData.productionType === "prototype"
+            ? "3D Printed Prototype (×1)"
+            : formData.productionType === "small_batch"
+              ? `Small Batch Manufacturing (×${formData.quantity})`
+              : "Design Files Only";
+
+    const SummaryRow = ({
+        label,
+        value,
+    }: {
+        label: string;
+        value?: string | null;
+    }) => {
+        if (!value) return null;
+        return (
+            <div className="flex justify-between items-start gap-4 py-2.5 border-b border-zinc-100 last:border-0">
+                <span className="text-xs text-zinc-400 flex-shrink-0 w-28">
+                    {label}
+                </span>
+                <span className="text-xs font-semibold text-zinc-700 text-right break-all">
+                    {value}
+                </span>
+            </div>
+        );
+    };
+
+    const renderStep6 = () => (
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-xl font-black text-zinc-900">Summary</h2>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                    Step 6 of 6 — Review before submitting
+                </p>
+            </div>
+
+            <div className="space-y-3">
+                {[
+                    {
+                        title: "Project Details",
+                        rows: [
+                            {
+                                label: "File Format",
+                                value: formData.fileExtension,
+                            },
+                            {
+                                label: "Reference File",
+                                value: formData.fileReference?.name,
+                            },
+                        ],
+                    },
+                    {
+                        title: "Manufacturing",
+                        rows: [{ label: "Production", value: productionLabel }],
+                    },
+                    {
+                        title: "Tech & Material",
+                        rows: [
+                            {
+                                label: "Technology",
+                                value:
+                                    formData.printingTechnology ||
+                                    (formData.productionType === "design_only"
+                                        ? "N/A"
+                                        : undefined),
+                            },
+                            {
+                                label: "Material",
+                                value: formData.materialFamily,
+                            },
+                            { label: "Type", value: formData.material },
+                            { label: "Colour", value: formData.color },
+                        ],
+                    },
+                    {
+                        title: "Contact",
+                        rows: [
+                            {
+                                label: "Name",
+                                value: `${formData.firstName} ${formData.lastName}`.trim(),
+                            },
+                            { label: "Email", value: formData.email },
+                            { label: "Phone", value: formData.phone },
+                            { label: "Address", value: formData.address },
+                            { label: "Company", value: formData.company },
+                        ],
+                    },
+                ].map((section) => (
+                    <div
+                        key={section.title}
+                        className="rounded-xl border-2 border-zinc-100 p-4"
+                    >
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">
+                            {section.title}
+                        </p>
+                        {section.rows.map((row) => (
+                            <SummaryRow
+                                key={row.label}
+                                label={row.label}
+                                value={row.value}
+                            />
+                        ))}
+                    </div>
+                ))}
+
+                {formData.requirement && (
+                    <div className="rounded-xl border-2 border-zinc-100 p-4">
+                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">
+                            Description
+                        </p>
+                        <p className="text-xs text-zinc-600 leading-relaxed whitespace-pre-wrap">
+                            {formData.requirement}
+                        </p>
+                    </div>
+                )}
+            </div>
+
+            {errors.submit && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{errors.submit}</AlertDescription>
+                </Alert>
+            )}
+        </div>
+    );
+
+    const renderThankYou = () => (
+        <div className="space-y-5 py-2">
+            <div className="text-center space-y-3 pb-2">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto ring-4 ring-emerald-50">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                </div>
+                <h2 className="text-2xl font-black text-zinc-900 leading-tight">
+                    Request Submitted
+                    <br />
+                    Successfully
+                </h2>
+                <p className="text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                    Thank you for submitting your 3D design request. A
+                    confirmation email containing your submission details has
+                    been sent to{" "}
+                    <span className="font-semibold text-zinc-700">
+                        {submittedEmail}
+                    </span>
+                    . Please check your inbox (and spam folder, if necessary).
+                </p>
+            </div>
+
+            <div className="rounded-2xl border-2 border-zinc-100 bg-zinc-50 p-5 space-y-3">
+                <p className="text-sm font-bold text-zinc-800">
+                    What Happens Next?
+                </p>
+                <p className="text-xs text-zinc-500">
+                    Our design team will now:
+                </p>
+                <ul className="space-y-2">
+                    {[
+                        "Review your concept and reference files",
+                        "Assess technical complexity and feasibility",
+                        "Evaluate manufacturing considerations (if applicable)",
+                        "Prepare a detailed quotation and estimated timeline",
+                    ].map((item, i) => (
+                        <li
+                            key={i}
+                            className="flex items-start gap-2.5 text-xs text-zinc-600"
+                        >
+                            <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                            </div>
+                            {item}
+                        </li>
+                    ))}
+                </ul>
+                <div className="flex items-center gap-2 pt-2 border-t border-zinc-200">
+                    <Clock className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                    <p className="text-xs text-zinc-400">
+                        You can expect a response within{" "}
+                        <span className="font-semibold text-zinc-600">
+                            12–24 business hours
+                        </span>
+                        .
+                    </p>
+                </div>
+            </div>
+
+            {submittedProductionType !== "design_only" && (
+                <div className="rounded-2xl border-2 border-zinc-100 p-5 space-y-2">
+                    <p className="text-sm font-bold text-zinc-800 flex items-center gap-2">
+                        <Package className="w-4 h-4 text-zinc-500" />
+                        If Production Was Requested
+                    </p>
+                    <p className="text-xs text-zinc-500 leading-relaxed">
+                        If you selected prototyping or batch manufacturing, our
+                        team will also evaluate the most suitable printing
+                        process and material for your application.
+                    </p>
+                </div>
+            )}
+
+            <div className="rounded-2xl border-2 border-zinc-100 p-5 space-y-2">
+                <p className="text-sm font-bold text-zinc-800">
+                    Need to Add or Modify Details?
+                </p>
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                    If you need to share additional files or clarify
+                    specifications, simply reply to the confirmation email so we
+                    can track your project accurately.
+                </p>
+            </div>
+
+            <div className="rounded-2xl bg-zinc-900 text-white p-5 space-y-2">
+                <p className="text-sm font-bold flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-yellow-400" />
+                    Urgent Project?
+                </p>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                    For time-sensitive requirements, please contact:
+                </p>
+                <a
+                    href="mailto:supplychain@scribbl3d.com"
+                    className="text-xs font-semibold text-yellow-400 hover:text-yellow-300 transition-colors flex items-center gap-1.5"
+                >
+                    <Mail className="w-3.5 h-3.5" />
+                    supplychain@scribbl3d.com
+                </a>
+            </div>
+
+            {/* Explicit close button — only way parent dialog closes */}
+            <Button
+                type="button"
+                onClick={handleClose}
+                className="w-full h-11 text-sm font-semibold bg-zinc-900 hover:bg-zinc-700 rounded-xl"
+            >
+                Close
+            </Button>
+        </div>
+    );
+
+    const renderCurrentStep = () => {
+        switch (currentStep) {
+            case 1:
+                return renderLanding();
+            case 2:
+                return renderStep2();
+            case 3:
+                return renderStep3();
+            case 4:
+                return renderStep4();
+            case 5:
+                return renderStep5();
+            case 6:
+                return renderStep6();
+            case 7:
+                return renderThankYou();
+            default:
+                return null;
+        }
+    };
+
+    const isLastFormStep = currentStep === 6;
+    const isThankYou = currentStep === 7;
 
     return (
-        <div className="w-full max-w-2xl mx-auto">
-            <ScrollArea className="h-[calc(100vh-250px)] md:h-auto px-1">
-                <form onSubmit={handleSubmit} className="space-y-8">
-                    <Card className="border-none shadow-none">
-                        <CardHeader className="space-y-2">
-                            <CardTitle className="text-xl md:text-2xl">
-                                3D Service Request
-                            </CardTitle>
-                            <Progress
-                                value={(currentStep / getTotalSteps()) * 100}
-                                className="h-2"
-                            />
-                            <p className="text-sm text-muted-foreground">
-                                Step {currentStep} of {getTotalSteps()}
-                            </p>
-                        </CardHeader>
-                        <CardContent>{renderStep(currentStep)}</CardContent>
-                    </Card>
+        <div className="w-full max-w-xl mx-auto">
+            <ScrollArea className="h-[calc(100vh-180px)] md:h-auto px-1">
+                <Card className="border-none shadow-none">
+                    <CardHeader className="pb-0">
+                        <StepIndicator current={currentStep} />
+                    </CardHeader>
+                    <CardContent>{renderCurrentStep()}</CardContent>
+                </Card>
 
-                    {errors.submit && (
-                        <Alert variant="destructive" className="mt-4">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{errors.submit}</AlertDescription>
-                        </Alert>
-                    )}
-
-                    <div className="sticky bottom-0 bg-background pt-4 border-t">
-                        <div className="flex justify-between gap-4">
+                {/* Navigation footer — hidden on thank-you page (it has its own Close button) */}
+                {!isThankYou && (
+                    <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm pt-4 pb-2 border-t border-zinc-100 mt-4">
+                        <div className="flex justify-between gap-3 px-6">
                             {currentStep > 1 && (
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() =>
-                                        setCurrentStep((prev) => prev - 1)
-                                    }
-                                    className="w-full md:w-32 h-12"
+                                    onClick={goPrev}
+                                    className="h-11 px-6 text-sm font-semibold border-zinc-200 rounded-xl"
                                 >
-                                    Previous
+                                    Back
                                 </Button>
                             )}
-                            {currentStep < getTotalSteps() ? (
+                            {isLastFormStep ? (
                                 <Button
                                     type="button"
-                                    onClick={() => {
-                                        if (validateStep()) {
-                                            setCurrentStep((prev) => prev + 1);
-                                        }
-                                    }}
-                                    className="w-full md:w-32 h-12"
-                                >
-                                    Next
-                                </Button>
-                            ) : (
-                                <Button
-                                    type="submit"
+                                    onClick={handleSubmit}
                                     disabled={isSubmitting}
                                     className={cn(
-                                        "w-full md:w-32 h-12",
+                                        "h-11 px-8 text-sm font-semibold bg-zinc-900 hover:bg-zinc-700 ml-auto rounded-xl",
                                         isSubmitting &&
-                                            "opacity-50 cursor-not-allowed",
+                                            "opacity-60 cursor-not-allowed",
                                     )}
                                 >
                                     {isSubmitting ? (
@@ -1150,13 +1520,24 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                                             Submitting...
                                         </>
                                     ) : (
-                                        "Submit"
+                                        "Submit Request"
                                     )}
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    onClick={goNext}
+                                    className="h-11 px-8 text-sm font-semibold bg-zinc-900 hover:bg-zinc-700 ml-auto rounded-xl"
+                                >
+                                    {currentStep === 1
+                                        ? "Get Started"
+                                        : "Continue"}
+                                    <ChevronRight className="w-4 h-4 ml-1" />
                                 </Button>
                             )}
                         </div>
                     </div>
-                </form>
+                )}
             </ScrollArea>
         </div>
     );

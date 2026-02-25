@@ -388,30 +388,38 @@ model PersonaliseFormResponse {
 }
 
 model Form3DResponse {
-  id                  String   @id @default(cuid())
-  service             String
+  id                  String    @id @default(cuid())
+
+  // Files (Cloudinary URLs)
   fileReference       String?
+  additionalFile      String?
+
+  // Project details
   requirement         String
   fileExtension       String
-  prototype           String
-  prototypeOption     String?
-  printingTechnology  String?
-  material            String?
-  materialType        String?
-  materialDescription String?
-  quantity            Int?
-  productColor        String?
-  filamentColor       String?
-  resinColor          String?
-  additionalFile      String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  firstName    String?
-  lastName     String?
-  email        String?
-  phone        String?
-  company      String?
+
+  // Manufacturing / production
+  productionType      String?            // "prototype" | "small_batch" | "design_only"
+  quantity            Int?              // null for design_only, 1 for prototype, user value for small_batch
+
+  // Technology, material & colour (null when productionType = "design_only")
+  printingTechnology  String?           // "FDM" | "SLA/DLP" | "SLS"
+  materialFamily      String?           // e.g. "PLA", "ABS", "Standard Resin", "Nylon"
+  material            String?           // sub-type, e.g. "PLA+", "PLA Matte", "TPU 95A" (null for SLA/DLP & SLS)
+  color               String?           // final colour selection
+
+  // Customer details
+  firstName           String
+  lastName            String
+  email               String
+  phone               String
+  address             String?
+  company             String?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
+
 
 model Review {
   id                String           @id @default(cuid())

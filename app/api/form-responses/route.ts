@@ -15,19 +15,17 @@ async function uploadToCloudinary(
     folder: string,
 ): Promise<string | null> {
     try {
-        // Convert File to Buffer
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Upload to Cloudinary using upload_stream
         const result = await new Promise<any>((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
                     folder: folder,
-                    resource_type: "raw", // For non-image files like .stl, .obj, etc.
-                    public_id: file.name.replace(/\.[^/.]+$/, ""), // Remove extension for public_id
+                    resource_type: "raw",
+                    public_id: file.name.replace(/\.[^/.]+$/, ""),
                     use_filename: true,
-                    unique_filename: false, // We already have timestamp in filename
+                    unique_filename: false,
                 },
                 (error, result) => {
                     if (error) reject(error);
@@ -73,29 +71,34 @@ export async function POST(request: Request) {
 
         const formResponse = await prisma.form3DResponse.create({
             data: {
-                service: (formData.get("service") as string) || "",
+                // Files
                 fileReference: fileReferenceUrl,
+                additionalFile: additionalFileUrl,
+
+                // Project details
                 requirement: (formData.get("requirement") as string) || "",
                 fileExtension: (formData.get("fileExtension") as string) || "",
-                prototype: (formData.get("prototype") as string) || "",
-                prototypeOption:
-                    (formData.get("prototypeOption") as string) || "",
-                printingTechnology:
-                    (formData.get("printingTechnology") as string) || "",
-                material: (formData.get("material") as string) || "",
-                materialType: (formData.get("materialType") as string) || "",
-                materialDescription:
-                    (formData.get("materialDescription") as string) || "",
+
+                // Manufacturing / production
+                productionType:
+                    (formData.get("productionType") as string) || "",
                 quantity: quantityStr ? parseInt(quantityStr) : null,
-                productColor: (formData.get("productColor") as string) || "",
-                filamentColor: (formData.get("filamentColor") as string) || "",
-                resinColor: (formData.get("resinColor") as string) || "",
-                additionalFile: additionalFileUrl,
+
+                // Technology, material & colour
+                printingTechnology:
+                    (formData.get("printingTechnology") as string) || null,
+                materialFamily:
+                    (formData.get("materialFamily") as string) || null,
+                material: (formData.get("material") as string) || null,
+                color: (formData.get("color") as string) || null,
+
+                // Customer details
                 firstName: (formData.get("firstName") as string) || "",
                 lastName: (formData.get("lastName") as string) || "",
                 email: (formData.get("email") as string) || "",
                 phone: (formData.get("phone") as string) || "",
-                company: (formData.get("company") as string) || "",
+                address: (formData.get("address") as string) || "",
+                company: (formData.get("company") as string) || null,
             },
         });
 
@@ -112,9 +115,7 @@ export async function POST(request: Request) {
 export async function GET() {
     try {
         const formResponses = await prisma.form3DResponse.findMany({
-            orderBy: {
-                createdAt: "desc",
-            },
+            orderBy: { createdAt: "desc" },
         });
 
         return NextResponse.json(formResponses);
