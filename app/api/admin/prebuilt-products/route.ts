@@ -7,9 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-/* ============================================================================
-   Slug Generation Helper
-   ============================================================================ */
 const generateSlug = (name: string): string => {
     return name
         .toLowerCase()
@@ -19,10 +16,6 @@ const generateSlug = (name: string): string => {
         .replace(/^-+|-+$/g, "");
 };
 
-/**
- * Ensures slug uniqueness by appending a counter if needed
- * e.g., "my-product" → "my-product-1" → "my-product-2"
- */
 const ensureUniqueSlug = async (
     baseSlug: string,
     excludeId?: string,
@@ -32,27 +25,23 @@ const ensureUniqueSlug = async (
     const maxAttempts = 100;
 
     while (counter <= maxAttempts) {
-        const where: Prisma.PrebuiltProductRiyaWhereInput = { slug };
-
-        // If editing, exclude current product from uniqueness check
-        if (excludeId) {
-            where.NOT = { id: excludeId };
-        }
-
         const existing = await prisma.prebuiltProductRiya.findUnique({
             where: { slug },
         });
 
-        if (!existing) {
-            return slug;
-        }
+        if (!existing) return slug;
 
         slug = `${baseSlug}-${counter}`;
         counter++;
     }
 
-    // Fallback: use timestamp if all attempts fail
     return `${baseSlug}-${Date.now()}`;
+};
+
+const parseDim = (val: unknown): number | null => {
+    if (val === null || val === undefined || val === "") return null;
+    const n = typeof val === "number" ? val : parseFloat(String(val));
+    return isNaN(n) ? null : n;
 };
 
 /* ============================================================================
@@ -97,7 +86,6 @@ export async function GET(request: NextRequest) {
                 orderBy.push({ [field]: order });
                 if (field !== "name") orderBy.push({ name: "asc" });
             } else if (field === "price") {
-                // Sorting by number of variants or first variant price
                 orderBy.push({ variants: { _count: order } });
             }
         }
@@ -134,7 +122,7 @@ export async function GET(request: NextRequest) {
 }
 
 /* ============================================================================
-   POST – Create product with slug generation
+   POST – Create product
    ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
@@ -148,17 +136,10 @@ export async function POST(request: NextRequest) {
         const category = formData.get("category") as string;
         const isCustomizable = formData.get("isCustomizable") === "true";
         const highlighted = formData.get("highlighted") === "true";
+
+        // Weight in grams — no product-level length/breadth/height (those are per-variant)
         const weight = formData.get("weight")
             ? parseFloat(formData.get("weight") as string)
-            : null;
-        const length = formData.get("length")
-            ? parseFloat(formData.get("length") as string)
-            : null;
-        const breadth = formData.get("breadth")
-            ? parseFloat(formData.get("breadth") as string)
-            : null;
-        const height = formData.get("height")
-            ? parseFloat(formData.get("height") as string)
             : null;
 
         if (!name?.trim() || !shortDescription?.trim() || !category?.trim()) {
@@ -168,11 +149,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Slug generation and uniqueness check
         let finalSlug = slug?.trim();
-        if (!finalSlug) {
-            finalSlug = generateSlug(name.trim());
-        }
+        if (!finalSlug) finalSlug = generateSlug(name.trim());
         finalSlug = await ensureUniqueSlug(finalSlug);
 
         const features = JSON.parse(
@@ -228,9 +206,6 @@ export async function POST(request: NextRequest) {
                 category,
                 isCustomizable,
                 highlighted,
-                length,
-                breadth,
-                height,
                 weight,
                 features,
                 attributes: {
@@ -243,12 +218,18 @@ export async function POST(request: NextRequest) {
                 },
                 variants: {
                     create: variants.map((v: any) => ({
-                        price: parseInt(v.price) || 0,
-                        originalPrice: parseInt(v.originalPrice) || 0,
+                        price: Math.round(parseFloat(String(v.price)) || 0),
+                        originalPrice: Math.round(
+                            parseFloat(String(v.originalPrice)) || 0,
+                        ),
                         isActive: v.isActive ?? true,
-                        colorName: v.colorName || null,
-                        colorHex: v.colorHex || null,
-                        sizeName: v.sizeName || null,
+                        colorName: v.colorName?.trim() || null,
+                        colorHex: v.colorHex?.trim() || null,
+                        sizeName: v.sizeName?.trim() || null,
+                        // Per-variant dimensions — parseDim handles "", null, number, string
+                        length: parseDim(v.length),
+                        breadth: parseDim(v.breadth),
+                        height: parseDim(v.height),
                     })),
                 },
                 images: { create: imageRecords },
@@ -285,7 +266,6 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        // Delete the product (Prisma will handle relations based on schema cascade rules)
         await prisma.prebuiltProductRiya.delete({
             where: { id },
         });

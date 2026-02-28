@@ -49,7 +49,7 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                                 <button
                                     onClick={() =>
                                         router.push(
-                                            `/prebuilt-products/${category.toLowerCase().replace(/\s+/g, "-")}`,
+                                            `/prebuilt-products/category/${category.toLowerCase().replace(/\s+/g, "-")}`,
                                         )
                                     }
                                     className="group flex items-center gap-1 text-sm font-bold text-blue-600 transition-all hover:gap-2"
@@ -76,7 +76,7 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                                 <button
                                     onClick={() =>
                                         router.push(
-                                            `/prebuilt-products/${category.toLowerCase().replace(/\s+/g, "-")}`,
+                                            `/prebuilt-products/category/${category.toLowerCase().replace(/\s+/g, "-")}`,
                                         )
                                     }
                                     className="group flex items-center gap-1 text-sm font-bold text-blue-600 transition-all hover:gap-2"
@@ -116,6 +116,9 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
 
 function ProductCard({ product }: { product: any }) {
     const { data: session } = useSession();
+    const router = useRouter();
+
+    // Image and Variant Logic
     const mainImage =
         product.images?.find((img: any) => img.isMain)?.url ||
         product.images?.[0]?.url;
@@ -124,10 +127,9 @@ function ProductCard({ product }: { product: any }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
-    // Check if product is in wishlist on mount
+    // Wishlist check on mount
     useEffect(() => {
         if (!session || !product?.id) return;
-
         async function checkWishlist() {
             try {
                 const res = await fetch(
@@ -139,7 +141,6 @@ function ProductCard({ product }: { product: any }) {
                 console.error("Wishlist check failed", err);
             }
         }
-
         checkWishlist();
     }, [session, product?.id]);
 
@@ -167,34 +168,24 @@ function ProductCard({ product }: { product: any }) {
         }
 
         if (isWishlistLoading) return;
-
         setIsWishlistLoading(true);
         const wasInWishlist = isFavorite;
-
-        // Optimistic update
         setIsFavorite(!wasInWishlist);
 
         try {
             await fetch("/api/wishlist", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    prebuiltProductId: product.id,
-                }),
+                body: JSON.stringify({ prebuiltProductId: product.id }),
             });
-
             toast({
                 title: wasInWishlist
                     ? "Removed from wishlist"
                     : "Added to wishlist",
-                description: `${product.name} has been ${
-                    wasInWishlist ? "removed from" : "added to"
-                } your wishlist.`,
+                description: `${product.name} has been ${wasInWishlist ? "removed from" : "added to"} your wishlist.`,
             });
         } catch (err) {
-            // Rollback on failure
             setIsFavorite(wasInWishlist);
-
             toast({
                 title: "Error",
                 description: "Failed to update wishlist. Please try again.",
@@ -202,6 +193,12 @@ function ProductCard({ product }: { product: any }) {
             });
         } finally {
             setIsWishlistLoading(false);
+        }
+    };
+
+    const handleCardClick = () => {
+        if (product.slug) {
+            router.push(`/prebuilt-products/${product.slug}`);
         }
     };
 
@@ -213,28 +210,32 @@ function ProductCard({ product }: { product: any }) {
           )
         : 0;
 
-    // Get unique sizes and colors from all variants
+    // Logic for Sizes
     const sizes = Array.from(
         new Set(product.variants?.map((v: any) => v.sizeName).filter(Boolean)),
     );
-    const colors = Array.from(
-        new Set(product.variants?.map((v: any) => v.colorName).filter(Boolean)),
-    );
-
-    // Format sizes and colors as comma-separated strings
     const sizeString =
         sizes.length > 0
             ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
             : "One size";
 
-    const colorString =
-        colors.length > 0
-            ? colors.slice(0, 2).join(", ") +
-              (colors.length > 2 ? " & more" : "")
-            : "Standard";
+    // ✅ UNIQUE COLORS LOGIC: Extracts hex and name
+    const uniqueColors = Array.from(
+        new Map(
+            product.variants
+                ?.filter((v: any) => v.colorHex)
+                .map((v: any) => [
+                    v.colorHex,
+                    { hex: v.colorHex, name: v.colorName },
+                ]),
+        ).values(),
+    );
 
     return (
-        <div className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full">
+        <div
+            onClick={handleCardClick}
+            className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full cursor-pointer transition-all hover:shadow-lg hover:border-gray-200"
+        >
             {/* Container for Image */}
             <div
                 className="relative overflow-hidden bg-[#f9f9f9]"
@@ -249,7 +250,10 @@ function ProductCard({ product }: { product: any }) {
                     />
                 )}
                 <button
-                    onClick={handleToggleWishlist}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleWishlist(e);
+                    }}
                     disabled={isWishlistLoading}
                     className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500 disabled:opacity-70"
                 >
@@ -258,19 +262,14 @@ function ProductCard({ product }: { product: any }) {
                     ) : (
                         <Heart
                             size={20}
-                            className={`transition ${
-                                isFavorite
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-400"
-                            }`}
+                            className={`transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
                         />
                     )}
                 </button>
             </div>
 
-            {/* Content Section - 16px padding */}
+            {/* Content Section */}
             <div className="p-4 flex flex-col flex-1">
-                {/* Highlighted Badge - Only show if highlighted is true */}
                 {product.highlighted && (
                     <div className="mb-3">
                         <span
@@ -282,41 +281,73 @@ function ProductCard({ product }: { product: any }) {
                     </div>
                 )}
 
-                {/* Product Name - 16px, weight 500 */}
                 <h3 className="text-base font-medium text-[#101828] leading-snug mb-2">
                     {product.name}
                 </h3>
 
-                {/* Short Description - 14px, weight 400, #4A5565 */}
                 <p className="text-sm leading-relaxed text-[#4A5565] line-clamp-2 mb-4 flex-1">
                     {product.shortDescription}
                 </p>
 
                 {/* Sizes and Colors Section */}
-                <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
-                    {/* Available Sizes - 12px, weight 400 */}
+                <div className="mb-4 pb-4 border-b border-gray-200 space-y-3">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-normal text-[#6A7282]">
                             Available Sizes:
                         </span>
-                        <span className="text-xs font-normal text-[#364153]">
+                        <span className="text-xs font-medium text-[#364153]">
                             {sizeString}
                         </span>
                     </div>
 
-                    {/* Colour Options - 12px, weight 400 */}
+                    {/* ✅ UPDATED COLOUR OPTIONS (Concentric Circles) */}
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-normal text-[#6A7282]">
-                            Colour Options:
+                            Colours:
                         </span>
-                        <span className="text-xs font-normal text-[#364153]">
-                            {colorString}
-                        </span>
+
+                        <div className="flex items-center gap-2">
+                            {uniqueColors.length > 0 ? (
+                                uniqueColors
+                                    .slice(0, 5)
+                                    .map((color: any, index) => {
+                                        const isActive = index === 0;
+
+                                        return (
+                                            <div
+                                                key={index}
+                                                title={color.name}
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center border transition-all
+              ${isActive ? "border-black" : "border-gray-300"}
+            `}
+                                            >
+                                                <div
+                                                    className="w-4 h-4 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            color.hex,
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    })
+                            ) : (
+                                <span className="text-xs font-normal text-[#364153]">
+                                    Standard
+                                </span>
+                            )}
+
+                            {uniqueColors.length > 5 && (
+                                <span className="text-[10px] text-gray-400">
+                                    +{uniqueColors.length - 5}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {/* Pricing Area */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-normal text-[#6A7282]">
                             Starts at
@@ -330,7 +361,6 @@ function ProductCard({ product }: { product: any }) {
                             </span>
                         )}
                     </div>
-
                     {discount > 0 && (
                         <span className="rounded-full bg-[#e8f5e9] px-2 py-1 text-[10px] font-semibold text-[#2e7d32]">
                             {discount}% OFF
@@ -342,8 +372,10 @@ function ProductCard({ product }: { product: any }) {
                     (incl. GST)
                 </span>
 
-                {/* Add to Cart Button - 40px height, 10px radius */}
-                <button className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white transition-all hover:bg-black active:scale-[0.97]">
+                <button
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white transition-all hover:bg-black active:scale-[0.97]"
+                >
                     Select Variants
                 </button>
             </div>

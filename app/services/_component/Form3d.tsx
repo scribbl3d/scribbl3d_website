@@ -2,7 +2,7 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -21,15 +21,12 @@ import {
     CheckCircle2,
     ChevronRight,
     Clock,
-    FileText,
     HelpCircle,
-    Layers,
     Loader2,
     Mail,
     MapPin,
     Package,
     Phone,
-    User,
     Zap,
 } from "lucide-react";
 import type React from "react";
@@ -268,74 +265,6 @@ function InfoTooltip({ content }: { content: React.ReactNode }) {
     );
 }
 
-// ─── Step Indicator ───────────────────────────────────────────────────────────
-
-function StepIndicator({ current }: { current: number }) {
-    const steps = [
-        { label: "Details", icon: FileText, num: 2 },
-        { label: "Production", icon: Package, num: 3 },
-        { label: "Tech & Color", icon: Layers, num: 4 },
-        { label: "Contact", icon: User, num: 5 },
-        { label: "Review", icon: CheckCircle2, num: 6 },
-    ];
-
-    if (current === 1 || current === 7) return null;
-
-    return (
-        <div className="flex items-start mb-6">
-            {steps.map((step, idx) => {
-                const done = current > step.num;
-                const active = current === step.num;
-                const Icon = step.icon;
-                return (
-                    <div key={idx} className="flex items-start flex-1 min-w-0">
-                        <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                            <div
-                                className={cn(
-                                    "flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-300",
-                                    done &&
-                                        "bg-emerald-500 border-emerald-500 text-white",
-                                    active &&
-                                        "bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-zinc-900/25",
-                                    !done &&
-                                        !active &&
-                                        "bg-white border-zinc-200 text-zinc-400",
-                                )}
-                            >
-                                {done ? (
-                                    <CheckCircle2 className="w-4 h-4" />
-                                ) : (
-                                    <Icon className="w-3.5 h-3.5" />
-                                )}
-                            </div>
-                            <span
-                                className={cn(
-                                    "text-[9px] font-semibold tracking-wide hidden sm:block whitespace-nowrap",
-                                    active
-                                        ? "text-zinc-900"
-                                        : done
-                                          ? "text-emerald-600"
-                                          : "text-zinc-400",
-                                )}
-                            >
-                                {step.label}
-                            </span>
-                        </div>
-                        {idx < steps.length - 1 && (
-                            <div
-                                className={cn(
-                                    "h-px flex-1 mx-2 mt-4 transition-all duration-500",
-                                    done ? "bg-emerald-400" : "bg-zinc-200",
-                                )}
-                            />
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
 // ─── Field Wrapper ────────────────────────────────────────────────────────────
 
 function FieldWrapper({
@@ -356,6 +285,7 @@ function FieldWrapper({
             <div className="flex items-center gap-2">
                 <Label className="text-sm font-semibold text-zinc-800">
                     {label}
+                    {required && <span className="ml-1 text-red-500">*</span>}
                     {!required && (
                         <span className="ml-1.5 text-xs font-normal text-zinc-400">
                             (Optional)
@@ -364,10 +294,13 @@ function FieldWrapper({
                 </Label>
                 {tooltip && <InfoTooltip content={tooltip} />}
             </div>
-            {children}
+            {/* Highlight wrapper when there's an error */}
+            <div className={cn(error && "ring-2 ring-red-400/40 rounded-xl")}>
+                {children}
+            </div>
             {error && (
-                <p className="text-xs text-red-500 flex items-center gap-1 pt-0.5">
-                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                <p className="text-xs text-red-500 font-medium flex items-center gap-1.5 pt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                     {error}
                 </p>
             )}
@@ -383,12 +316,14 @@ function RadioCard({
     description,
     selected,
     id,
+    hasError,
 }: {
     value: string;
     label: string;
     description?: string;
     selected: boolean;
     id: string;
+    hasError?: boolean;
 }) {
     return (
         <div
@@ -396,7 +331,9 @@ function RadioCard({
                 "flex items-start gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all duration-200",
                 selected
                     ? "border-zinc-900 bg-zinc-50 shadow-sm"
-                    : "border-zinc-200 hover:border-zinc-300 bg-white",
+                    : hasError
+                      ? "border-red-300 bg-red-50/30 hover:border-red-400"
+                      : "border-zinc-200 hover:border-zinc-300 bg-white",
             )}
         >
             <RadioGroupItem
@@ -418,6 +355,19 @@ function RadioCard({
     );
 }
 
+// ─── Landing checklist item ───────────────────────────────────────────────────
+
+function CheckItem({ children }: { children: React.ReactNode }) {
+    return (
+        <li className="flex items-start gap-3 text-sm text-zinc-600">
+            <div className="w-5 h-5 rounded-full bg-zinc-900 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <ChevronRight className="w-3 h-3 text-white" />
+            </div>
+            {children}
+        </li>
+    );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
@@ -425,13 +375,8 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
     const [formData, setFormData] = useState<FormData>(initialFormData);
     const [errors, setErrors] = useState<FormErrors>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    // Snapshot of submitted data so thank-you page can show email even after reset
     const [submittedEmail, setSubmittedEmail] = useState("");
     const [submittedProductionType, setSubmittedProductionType] = useState("");
-
-    // ⚠️  Do NOT reset state in a useEffect cleanup — that fires when the
-    // component unmounts, which happens right when the parent closes the dialog.
-    // Reset manually only when the user explicitly starts a new request.
 
     const materialFamilies = getMaterialFamilies(formData.printingTechnology);
     const subTypes = getSubTypes(
@@ -567,6 +512,14 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
         [validateField],
     );
 
+    // Prevent scroll from changing number inputs
+    const preventScrollChange = useCallback(
+        (e: React.WheelEvent<HTMLInputElement>) => {
+            e.currentTarget.blur();
+        },
+        [],
+    );
+
     // ── Submit ───────────────────────────────────────────────────────────────
 
     const handleSubmit = async () => {
@@ -607,12 +560,8 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                 return;
             }
 
-            // ✅ Snapshot values needed by the thank-you page BEFORE any state changes
             setSubmittedEmail(formData.email);
             setSubmittedProductionType(formData.productionType);
-
-            // ✅ Show thank-you page FIRST — do NOT call onSubmit() here.
-            // The parent should not close the dialog until the user dismisses it.
             setCurrentStep(7);
         } catch {
             setErrors((p) => ({
@@ -633,49 +582,53 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
     };
     const goPrev = () => setCurrentStep((p) => p - 1);
 
-    // Called from the thank-you page "Close" button
     const handleClose = () => {
-        // Reset everything for a fresh start next time
         setFormData(initialFormData);
         setCurrentStep(1);
         setErrors({});
         setSubmittedEmail("");
         setSubmittedProductionType("");
-        // Now it's safe to tell the parent to close
         onSubmit?.();
     };
 
     // ── Renders ───────────────────────────────────────────────────────────────
 
     const renderLanding = () => (
-        <div className="space-y-8">
+        <div className="space-y-7">
+            {/* Hero */}
             <div className="space-y-4">
-                <div className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-600 text-xs font-semibold px-3 py-1.5 rounded-full">
-                    <Zap className="w-3 h-3" />
+                <div className="inline-flex items-center gap-2 bg-zinc-900 text-zinc-100 text-xs font-semibold px-3 py-1.5 rounded-full tracking-wide">
+                    <Zap className="w-3 h-3 text-yellow-400" />
                     3D Design Request
                 </div>
-                <h1 className="text-3xl font-black tracking-tight text-zinc-900 leading-tight">
-                    Need a 3D model <br />
-                    <span className="text-zinc-400">created from scratch</span>
-                    <br />
-                    or from a concept?
-                </h1>
-                <p className="text-zinc-500 text-sm leading-relaxed max-w-md">
-                    This form will help us understand your design requirements,
-                    application, and technical expectations so our design team
-                    can evaluate scope and provide an accurate quotation.
-                </p>
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-black tracking-tight text-zinc-900 leading-[1.15]">
+                        Need a 3D model
+                        <br />
+                        <span className="text-zinc-400">
+                            designed from concept?
+                        </span>
+                    </h1>
+                    <p className="text-sm text-zinc-500 leading-relaxed max-w-sm">
+                        This form helps our design team understand your
+                        requirements and provide an accurate quotation.
+                    </p>
+                </div>
                 <div className="flex items-center gap-2 text-zinc-400 text-xs">
                     <Clock className="w-3.5 h-3.5" />
                     <span>Estimated completion time: 5–8 minutes</span>
                 </div>
             </div>
 
-            <div className="rounded-2xl border-2 border-zinc-100 bg-zinc-50 p-5 space-y-3">
-                <p className="text-sm font-bold text-zinc-700">
-                    Please Keep the Following Ready
+            {/* Divider */}
+            <div className="h-px bg-zinc-100" />
+
+            {/* Checklist */}
+            <div className="space-y-4">
+                <p className="text-sm font-bold text-zinc-800">
+                    Please keep the following ready
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                     {[
                         "A clear description of your idea or concept",
                         "Reference images, sketches, or inspiration (if available)",
@@ -684,20 +637,19 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         "Target material or manufacturing method (if known)",
                         "Deadline expectations",
                     ].map((item, i) => (
-                        <li
-                            key={i}
-                            className="flex items-start gap-2.5 text-xs text-zinc-600"
-                        >
-                            <div className="w-4 h-4 rounded-full bg-zinc-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                <ChevronRight className="w-2.5 h-2.5 text-zinc-500" />
-                            </div>
-                            {item}
-                        </li>
+                        <CheckItem key={i}>{item}</CheckItem>
                     ))}
                 </ul>
-                <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-200">
-                    Providing detailed information helps reduce revisions and
-                    speeds up project turnaround.
+            </div>
+
+            {/* Footer tip */}
+            <div className="rounded-2xl bg-zinc-50 border border-zinc-200 px-5 py-4">
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                    <span className="font-semibold text-zinc-600">
+                        Pro tip:
+                    </span>{" "}
+                    Providing detailed information reduces revisions and speeds
+                    up your project turnaround significantly.
                 </p>
             </div>
         </div>
@@ -774,7 +726,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                     value={formData.requirement}
                     onChange={handleInput}
                     placeholder="Describe your design requirement in detail..."
-                    className="min-h-[120px] resize-y text-sm"
+                    className={cn(
+                        "min-h-[120px] resize-y text-sm transition-colors",
+                        errors.requirement &&
+                            "border-red-400 focus-visible:ring-red-400",
+                    )}
                 />
             </FieldWrapper>
 
@@ -786,7 +742,12 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                     value={formData.fileExtension}
                     onValueChange={(v) => handleSelect("fileExtension", v)}
                 >
-                    <SelectTrigger className="h-11">
+                    <SelectTrigger
+                        className={cn(
+                            "h-11",
+                            errors.fileExtension && "border-red-400",
+                        )}
+                    >
                         <SelectValue placeholder="Select output format" />
                     </SelectTrigger>
                     <SelectContent>
@@ -862,27 +823,35 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                     }}
                     className="space-y-2"
                 >
-                    <RadioCard
-                        value="prototype"
-                        id="prod-prototype"
-                        label="Yes — I need a 3D printed prototype"
-                        description="Single unit for testing and validation"
-                        selected={formData.productionType === "prototype"}
-                    />
-                    <RadioCard
-                        value="small_batch"
-                        id="prod-small_batch"
-                        label="Yes — I need small batch manufacturing"
-                        description="Multiple units for pilot production"
-                        selected={formData.productionType === "small_batch"}
-                    />
-                    <RadioCard
-                        value="design_only"
-                        id="prod-design_only"
-                        label="No — I only need the design files"
-                        description="Digital files only, no physical production"
-                        selected={formData.productionType === "design_only"}
-                    />
+                    {[
+                        {
+                            value: "prototype",
+                            label: "Yes — I need a 3D printed prototype",
+                            description:
+                                "Single unit for testing and validation",
+                        },
+                        {
+                            value: "small_batch",
+                            label: "Yes — I need small batch manufacturing",
+                            description: "Multiple units for pilot production",
+                        },
+                        {
+                            value: "design_only",
+                            label: "No — I only need the design files",
+                            description:
+                                "Digital files only, no physical production",
+                        },
+                    ].map((o) => (
+                        <RadioCard
+                            key={o.value}
+                            value={o.value}
+                            id={`prod-${o.value}`}
+                            label={o.label}
+                            description={o.description}
+                            selected={formData.productionType === o.value}
+                            hasError={!!errors.productionType}
+                        />
+                    ))}
                 </RadioGroup>
             </FieldWrapper>
 
@@ -908,8 +877,13 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         name="quantity"
                         value={formData.quantity}
                         onChange={handleInput}
+                        onWheel={preventScrollChange}
                         min="2"
-                        className="h-11 w-36"
+                        className={cn(
+                            "h-11 w-36",
+                            errors.quantity &&
+                                "border-red-400 focus-visible:ring-red-400",
+                        )}
                         placeholder="e.g. 50"
                     />
                 </FieldWrapper>
@@ -1017,6 +991,7 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                                             formData.printingTechnology ===
                                             o.value
                                         }
+                                        hasError={!!errors.printingTechnology}
                                     />
                                 ))}
                             </RadioGroup>
@@ -1042,7 +1017,13 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                                         }));
                                     }}
                                 >
-                                    <SelectTrigger className="h-11">
+                                    <SelectTrigger
+                                        className={cn(
+                                            "h-11",
+                                            errors.materialFamily &&
+                                                "border-red-400",
+                                        )}
+                                    >
                                         <SelectValue placeholder="Choose material" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1075,7 +1056,12 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                                         }));
                                     }}
                                 >
-                                    <SelectTrigger className="h-11">
+                                    <SelectTrigger
+                                        className={cn(
+                                            "h-11",
+                                            errors.material && "border-red-400",
+                                        )}
+                                    >
                                         <SelectValue placeholder="Choose type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1097,7 +1083,12 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                                         handleSelect("color", v)
                                     }
                                 >
-                                    <SelectTrigger className="h-11">
+                                    <SelectTrigger
+                                        className={cn(
+                                            "h-11",
+                                            errors.color && "border-red-400",
+                                        )}
+                                    >
                                         <SelectValue placeholder="Choose colour" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1150,7 +1141,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         value={formData.firstName}
                         onChange={handleInput}
                         placeholder="John"
-                        className="h-11"
+                        className={cn(
+                            "h-11",
+                            errors.firstName &&
+                                "border-red-400 focus-visible:ring-red-400",
+                        )}
                     />
                 </FieldWrapper>
                 <FieldWrapper label="Last Name" error={errors.lastName}>
@@ -1159,7 +1154,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         value={formData.lastName}
                         onChange={handleInput}
                         placeholder="Smith"
-                        className="h-11"
+                        className={cn(
+                            "h-11",
+                            errors.lastName &&
+                                "border-red-400 focus-visible:ring-red-400",
+                        )}
                     />
                 </FieldWrapper>
             </div>
@@ -1173,7 +1172,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         value={formData.email}
                         onChange={handleInput}
                         placeholder="john@example.com"
-                        className="h-11 pl-10"
+                        className={cn(
+                            "h-11 pl-10",
+                            errors.email &&
+                                "border-red-400 focus-visible:ring-red-400",
+                        )}
                     />
                 </div>
             </FieldWrapper>
@@ -1187,7 +1190,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         value={formData.phone}
                         onChange={handleInput}
                         placeholder="+1 (555) 000-0000"
-                        className="h-11 pl-10"
+                        className={cn(
+                            "h-11 pl-10",
+                            errors.phone &&
+                                "border-red-400 focus-visible:ring-red-400",
+                        )}
                     />
                 </div>
             </FieldWrapper>
@@ -1200,7 +1207,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                         value={formData.address}
                         onChange={handleInput}
                         placeholder="Street, City, State / Province, ZIP / Postal Code, Country"
-                        className="pl-10 min-h-[80px] resize-none text-sm"
+                        className={cn(
+                            "pl-10 min-h-[80px] resize-none text-sm",
+                            errors.address &&
+                                "border-red-400 focus-visible:ring-red-400",
+                        )}
                     />
                 </div>
             </FieldWrapper>
@@ -1356,8 +1367,7 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                 </h2>
                 <p className="text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
                     Thank you for submitting your 3D design request. A
-                    confirmation email containing your submission details has
-                    been sent to{" "}
+                    confirmation email has been sent to{" "}
                     <span className="font-semibold text-zinc-700">
                         {submittedEmail}
                     </span>
@@ -1444,7 +1454,6 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                 </a>
             </div>
 
-            {/* Explicit close button — only way parent dialog closes */}
             <Button
                 type="button"
                 onClick={handleClose}
@@ -1483,13 +1492,11 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
         <div className="w-full max-w-xl mx-auto">
             <ScrollArea className="h-[calc(100vh-180px)] md:h-auto px-1">
                 <Card className="border-none shadow-none">
-                    <CardHeader className="pb-0">
-                        <StepIndicator current={currentStep} />
-                    </CardHeader>
-                    <CardContent>{renderCurrentStep()}</CardContent>
+                    <CardContent className="pt-6">
+                        {renderCurrentStep()}
+                    </CardContent>
                 </Card>
 
-                {/* Navigation footer — hidden on thank-you page (it has its own Close button) */}
                 {!isThankYou && (
                     <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm pt-4 pb-2 border-t border-zinc-100 mt-4">
                         <div className="flex justify-between gap-3 px-6">

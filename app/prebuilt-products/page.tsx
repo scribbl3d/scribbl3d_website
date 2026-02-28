@@ -14,7 +14,6 @@ export default function PrebuiltPage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                // Replace with your actual API route e.g., /api/prebuilt-products
                 const res = await fetch("/api/prebuilt-products-new");
                 const data = await res.json();
                 setProducts(data);

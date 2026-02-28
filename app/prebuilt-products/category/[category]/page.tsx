@@ -89,7 +89,8 @@ export default function CategoryListingPage() {
                     }}
                 >
                     <h1 className="text-[48px] font-black leading-tight mb-4 tracking-tight">
-                        {categoryName.toUpperCase()}
+                        {categoryName?.charAt(0).toUpperCase() +
+                            categoryName?.slice(1)}
                     </h1>
                     <p className="max-w-2xl text-[18px] font-normal opacity-90 leading-[29.25px] mb-8">
                         {categoryDescription}
@@ -146,23 +147,12 @@ function CategoryProductCard({ product }: { product: any }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
-    // Check if product is in wishlist on mount
     useEffect(() => {
         if (!session || !product?.id) return;
-
-        async function checkWishlist() {
-            try {
-                const res = await fetch(
-                    `/api/wishlist/check?prebuiltProductId=${product.id}`,
-                );
-                const data = await res.json();
-                setIsFavorite(data.isInWishlist);
-            } catch (err) {
-                console.error("Wishlist check failed", err);
-            }
-        }
-
-        checkWishlist();
+        fetch(`/api/wishlist/check?prebuiltProductId=${product.id}`)
+            .then((r) => r.json())
+            .then((d) => setIsFavorite(d.isInWishlist))
+            .catch(() => {});
     }, [session, product?.id]);
 
     const handleToggleWishlist = async (
@@ -189,39 +179,19 @@ function CategoryProductCard({ product }: { product: any }) {
         }
 
         if (isWishlistLoading) return;
-
         setIsWishlistLoading(true);
-        const wasInWishlist = isFavorite;
 
-        // Optimistic update
-        setIsFavorite(!wasInWishlist);
+        const was = isFavorite;
+        setIsFavorite(!was);
 
         try {
             await fetch("/api/wishlist", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    prebuiltProductId: product.id,
-                }),
+                body: JSON.stringify({ prebuiltProductId: product.id }),
             });
-
-            toast({
-                title: wasInWishlist
-                    ? "Removed from wishlist"
-                    : "Added to wishlist",
-                description: `${product.name} has been ${
-                    wasInWishlist ? "removed from" : "added to"
-                } your wishlist.`,
-            });
-        } catch (err) {
-            // Rollback on failure
-            setIsFavorite(wasInWishlist);
-
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
+        } catch {
+            setIsFavorite(was);
         } finally {
             setIsWishlistLoading(false);
         }
@@ -235,119 +205,148 @@ function CategoryProductCard({ product }: { product: any }) {
           )
         : 0;
 
-    // Get unique sizes and colors from all variants
     const sizes = Array.from(
         new Set(product.variants?.map((v: any) => v.sizeName).filter(Boolean)),
     );
-    const colors = Array.from(
-        new Set(product.variants?.map((v: any) => v.colorName).filter(Boolean)),
-    );
 
-    // Format sizes and colors as comma-separated strings
+    const uniqueColors: { name: string; hex: string }[] = Array.from(
+        new Map(
+            product.variants
+                ?.filter((v: any) => v.colorHex)
+                .map((v: any) => [
+                    v.colorHex,
+                    { name: v.colorName, hex: v.colorHex },
+                ]),
+        ).values(),
+    ) as { name: string; hex: string }[];
+
     const sizeString =
         sizes.length > 0
             ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
             : "One size";
 
-    const colorString =
-        colors.length > 0
-            ? colors.slice(0, 2).join(", ") +
-              (colors.length > 2 ? " & more" : "")
-            : "Standard";
-
     return (
-        <div className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full">
-            {/* Container for Image */}
+        <div className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full h-full transition-all hover:shadow-lg hover:border-gray-200">
+            {/* Image */}
             <div
                 className="relative overflow-hidden bg-[#f9f9f9]"
                 style={{ aspectRatio: "1 / 0.9" }}
             >
-                {mainImage && (
+                {mainImage ? (
                     <Image
                         src={mainImage}
                         alt={product.name}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                     />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-300 text-xs">
+                        No image
+                    </div>
                 )}
+
                 <button
                     onClick={handleToggleWishlist}
                     disabled={isWishlistLoading}
-                    className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500 disabled:opacity-70"
+                    className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md hover:text-red-500"
                 >
                     {isWishlistLoading ? (
                         <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                     ) : (
                         <Heart
                             size={20}
-                            className={`transition ${
+                            className={
                                 isFavorite
                                     ? "fill-red-500 text-red-500"
                                     : "text-gray-400"
-                            }`}
+                            }
                         />
                     )}
                 </button>
             </div>
 
-            {/* Content Section - 16px padding */}
+            {/* Content */}
             <div className="p-4 flex flex-col flex-1">
-                {/* Highlighted Badge - Only show if highlighted is true */}
-                {product.highlighted && (
-                    <div className="mb-3">
-                        <span
-                            className="inline-block rounded-full px-3 py-1 text-[10px] font-medium border-2 bg-white text-[#372AAC]"
-                            style={{ borderColor: "#A3B3FF" }}
-                        >
+                {/* Badge Slot (fixed height) */}
+                <div className="mb-3 h-[32px] flex items-center">
+                    {product.highlighted ? (
+                        <span className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-medium text-[#372AAC] border-2 border-[#A3B3FF] bg-white">
                             Trending Now
                         </span>
-                    </div>
-                )}
+                    ) : (
+                        <span className="invisible px-4 py-1.5 text-[11px]">
+                            Trending Now
+                        </span>
+                    )}
+                </div>
 
-                {/* Product Name - 16px, weight 500 */}
-                <h3 className="text-base font-medium text-[#101828] leading-snug mb-2">
+                <h3 className="text-base font-medium text-[#101828] mb-2 line-clamp-2">
                     {product.name}
                 </h3>
 
-                {/* Short Description - 14px, weight 400, #4A5565 */}
-                <p className="text-sm leading-relaxed text-[#4A5565] line-clamp-2 mb-4 flex-1">
+                <p className="text-sm text-[#4A5565] mb-4 line-clamp-2">
                     {product.shortDescription}
                 </p>
 
-                {/* Sizes and Colors Section */}
+                {/* Sizes & Colors */}
                 <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
-                    {/* Available Sizes - 12px, weight 400 */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-normal text-[#6A7282]">
+                        <span className="text-xs text-[#6A7282]">
                             Available Sizes:
                         </span>
-                        <span className="text-xs font-normal text-[#364153]">
+                        <span className="text-xs text-[#364153]">
                             {sizeString}
                         </span>
                     </div>
 
-                    {/* Colour Options - 12px, weight 400 */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-normal text-[#6A7282]">
+                        <span className="text-xs text-[#6A7282]">
                             Colour Options:
                         </span>
-                        <span className="text-xs font-normal text-[#364153]">
-                            {colorString}
-                        </span>
+
+                        {uniqueColors.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                                {uniqueColors.slice(0, 5).map((c, i) => (
+                                    <div
+                                        key={i}
+                                        title={c.name}
+                                        className={`w-6 h-6 rounded-full flex items-center justify-center border ${
+                                            i === 0
+                                                ? "border-black"
+                                                : "border-gray-300"
+                                        }`}
+                                    >
+                                        <div
+                                            className="w-4 h-4 rounded-full"
+                                            style={{ backgroundColor: c.hex }}
+                                        />
+                                    </div>
+                                ))}
+                                {uniqueColors.length > 5 && (
+                                    <span className="text-[10px] text-gray-400">
+                                        +{uniqueColors.length - 5}
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <span className="text-xs text-[#364153]">
+                                Standard
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                {/* Pricing Area */}
-                <div className="flex items-center justify-between mb-3">
+                {/* Price */}
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-normal text-[#6A7282]">
+                        <span className="text-xs text-[#6A7282]">
                             Starts at
                         </span>
                         <span className="text-base font-semibold text-[#1a1a1a]">
                             ₹{variant?.price?.toLocaleString()}
                         </span>
                         {discount > 0 && (
-                            <span className="text-xs text-gray-400 line-through font-normal">
+                            <span className="text-xs text-gray-400 line-through">
                                 ₹{variant?.originalPrice?.toLocaleString()}
                             </span>
                         )}
@@ -360,13 +359,12 @@ function CategoryProductCard({ product }: { product: any }) {
                     )}
                 </div>
 
-                <span className="text-[10px] text-gray-400 font-normal mb-4">
+                <span className="text-[10px] text-gray-400 mb-4">
                     (incl. GST)
                 </span>
 
-                {/* Add to Cart Button - 40px height, 10px radius */}
-                <button className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white transition-all hover:bg-black active:scale-[0.97]">
-                    Add to Cart
+                <button className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white hover:bg-black active:scale-[0.97]">
+                    Select Variants
                 </button>
             </div>
         </div>

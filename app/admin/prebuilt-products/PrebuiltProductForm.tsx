@@ -1,5 +1,3 @@
-// PATH: components/prebuilt-products/PrebuiltProductForm.tsx
-
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -29,25 +27,28 @@ type AttributeInput = { label: string; value: string };
 
 type VariantInput = {
     id?: string;
-    price: number; // paise in DB
-    originalPrice: number; // paise in DB
+    price: number; // rupees
+    originalPrice: number; // rupees
     priceDisplay: string; // ₹ string for input
     originalPriceDisplay: string; // ₹ string for input
     isActive: boolean;
     colorName: string;
     colorHex: string;
     sizeName: string;
+    length: string;
+    breadth: string;
+    height: string;
 };
 
 type ImageInput = {
-    id?: string; // present for existing DB images
+    id?: string;
     url: string;
-    file?: File; // present for new uploads (not yet uploaded)
+    file?: File;
     altText: string;
     position: number;
     colorName: string;
-    isMain: boolean; // true = thumbnail image
-    isNew: boolean; // true = needs uploading, false = already in DB
+    isMain: boolean;
+    isNew: boolean;
 };
 
 export type ProductFormData = {
@@ -58,9 +59,6 @@ export type ProductFormData = {
     category: string;
     isCustomizable: boolean;
     highlighted: boolean;
-    length: string;
-    breadth: string;
-    height: string;
     weight: string;
     features: string[];
     attributes: AttributeInput[];
@@ -76,10 +74,6 @@ type Props = {
 };
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
-
-function paiseToDisplay(paise: number): string {
-    return paise > 0 ? (paise / 100).toString() : "";
-}
 
 const generateSlug = (name: string): string => {
     return name
@@ -99,6 +93,9 @@ const emptyVariant = (): VariantInput => ({
     colorName: "",
     colorHex: "",
     sizeName: "",
+    length: "",
+    breadth: "",
+    height: "",
 });
 
 const emptyAttr = (): AttributeInput => ({ label: "", value: "" });
@@ -201,9 +198,6 @@ export default function PrebuiltProductForm({
     const [highlighted, setHighlighted] = useState(
         defaultValues?.highlighted ?? false,
     );
-    const [length, setLength] = useState(defaultValues?.length ?? "");
-    const [breadth, setBreadth] = useState(defaultValues?.breadth ?? "");
-    const [height, setHeight] = useState(defaultValues?.height ?? "");
     const [weight, setWeight] = useState(defaultValues?.weight ?? "");
     const [features, setFeatures] = useState<string[]>(
         defaultValues?.features ?? [],
@@ -220,8 +214,13 @@ export default function PrebuiltProductForm({
         defaultValues?.variants?.length
             ? (defaultValues.variants as any[]).map((v) => ({
                   ...v,
-                  priceDisplay: paiseToDisplay(v.price),
-                  originalPriceDisplay: paiseToDisplay(v.originalPrice),
+                  // prices already in rupees from DB
+                  priceDisplay: v.price > 0 ? String(v.price) : "",
+                  originalPriceDisplay:
+                      v.originalPrice > 0 ? String(v.originalPrice) : "",
+                  length: v.length != null ? String(v.length) : "",
+                  breadth: v.breadth != null ? String(v.breadth) : "",
+                  height: v.height != null ? String(v.height) : "",
               }))
             : [emptyVariant()],
     );
@@ -294,7 +293,6 @@ export default function PrebuiltProductForm({
     /* ── Slug Auto-generation ── */
     const handleNameChange = (newName: string) => {
         setName(newName);
-        // Auto-generate slug from name if slug is empty or user is in create mode
         if (!slug || mode === "create") {
             setSlug(generateSlug(newName));
         }
@@ -324,7 +322,6 @@ export default function PrebuiltProductForm({
                 const fd = new FormData();
 
                 fd.append("name", name.trim());
-                // Use provided slug or generate from name
                 const finalSlug =
                     slug.trim() || generateSlug(name.trim()) || "product";
                 fd.append("slug", finalSlug);
@@ -335,9 +332,6 @@ export default function PrebuiltProductForm({
                 fd.append("highlighted", String(highlighted));
 
                 if (weight) fd.append("weight", weight);
-                if (length) fd.append("length", length);
-                if (breadth) fd.append("breadth", breadth);
-                if (height) fd.append("height", height);
 
                 fd.append("features", JSON.stringify(features));
                 fd.append(
@@ -356,7 +350,14 @@ export default function PrebuiltProductForm({
                                 priceDisplay: _pd,
                                 originalPriceDisplay: _opd,
                                 ...v
-                            }) => v,
+                            }) => ({
+                                ...v,
+                                length: v.length ? parseFloat(v.length) : null,
+                                breadth: v.breadth
+                                    ? parseFloat(v.breadth)
+                                    : null,
+                                height: v.height ? parseFloat(v.height) : null,
+                            }),
                         ),
                     ),
                 );
@@ -419,15 +420,6 @@ export default function PrebuiltProductForm({
             }
         });
     };
-
-    const totalVolume =
-        length && breadth && height
-            ? (
-                  parseFloat(length) *
-                  parseFloat(breadth) *
-                  parseFloat(height)
-              ).toLocaleString()
-            : null;
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -554,15 +546,15 @@ export default function PrebuiltProductForm({
                                     <Err msg={errors.category} />
                                 </div>
                                 <div>
-                                    <Label>Weight (kg)</Label>
+                                    <Label>Weight (g)</Label>
                                     <Input
                                         type="number"
                                         value={weight}
                                         onChange={(e) =>
                                             setWeight(e.target.value)
                                         }
-                                        placeholder="e.g. 0.5"
-                                        step="0.1"
+                                        placeholder="e.g. 250"
+                                        step="1"
                                     />
                                 </div>
                             </div>
@@ -618,39 +610,6 @@ export default function PrebuiltProductForm({
                                 </div>
                             </div>
                         </div>
-                    </Card>
-
-                    {/* Dimensions */}
-                    <Card title="Dimensions (mm)" icon="📐">
-                        <div className="grid grid-cols-3 gap-4">
-                            {(
-                                [
-                                    ["Length", length, setLength],
-                                    ["Width", breadth, setBreadth],
-                                    ["Height", height, setHeight],
-                                ] as const
-                            ).map(([lbl, val, setter]) => (
-                                <div key={lbl}>
-                                    <Label>{lbl}</Label>
-                                    <Input
-                                        type="number"
-                                        value={val}
-                                        onChange={(e) =>
-                                            (setter as any)(e.target.value)
-                                        }
-                                        placeholder="0"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                        {totalVolume && (
-                            <p className="mt-3 text-xs text-gray-400">
-                                Total Volume:{" "}
-                                <span className="font-semibold text-gray-600">
-                                    {totalVolume} mm³
-                                </span>
-                            </p>
-                        )}
                     </Card>
 
                     {/* Features */}
@@ -835,8 +794,7 @@ export default function PrebuiltProductForm({
                                                                               : Math.round(
                                                                                     parseFloat(
                                                                                         raw,
-                                                                                    ) *
-                                                                                        100,
+                                                                                    ),
                                                                                 ),
                                                                   }
                                                                 : vv,
@@ -867,8 +825,7 @@ export default function PrebuiltProductForm({
                                                                               : Math.round(
                                                                                     parseFloat(
                                                                                         raw,
-                                                                                    ) *
-                                                                                        100,
+                                                                                    ),
                                                                                 ),
                                                                   }
                                                                 : vv,
@@ -996,6 +953,106 @@ export default function PrebuiltProductForm({
                                             >
                                                 Active
                                             </label>
+                                        </div>
+
+                                        {/* Dimensions per variant */}
+                                        <div className="col-span-2">
+                                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-1">
+                                                Dimensions (mm)
+                                            </p>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div>
+                                                    <Label>Length</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={v.length}
+                                                        onChange={(e) =>
+                                                            setVariants((p) =>
+                                                                p.map(
+                                                                    (vv, j) =>
+                                                                        j === i
+                                                                            ? {
+                                                                                  ...vv,
+                                                                                  length: e
+                                                                                      .target
+                                                                                      .value,
+                                                                              }
+                                                                            : vv,
+                                                                ),
+                                                            )
+                                                        }
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label>Width</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={v.breadth}
+                                                        onChange={(e) =>
+                                                            setVariants((p) =>
+                                                                p.map(
+                                                                    (vv, j) =>
+                                                                        j === i
+                                                                            ? {
+                                                                                  ...vv,
+                                                                                  breadth:
+                                                                                      e
+                                                                                          .target
+                                                                                          .value,
+                                                                              }
+                                                                            : vv,
+                                                                ),
+                                                            )
+                                                        }
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label>Height</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={v.height}
+                                                        onChange={(e) =>
+                                                            setVariants((p) =>
+                                                                p.map(
+                                                                    (vv, j) =>
+                                                                        j === i
+                                                                            ? {
+                                                                                  ...vv,
+                                                                                  height: e
+                                                                                      .target
+                                                                                      .value,
+                                                                              }
+                                                                            : vv,
+                                                                ),
+                                                            )
+                                                        }
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                            {v.length &&
+                                                v.breadth &&
+                                                v.height && (
+                                                    <p className="mt-1.5 text-xs text-gray-400">
+                                                        Volume:{" "}
+                                                        <span className="font-semibold text-gray-600">
+                                                            {(
+                                                                parseFloat(
+                                                                    v.length,
+                                                                ) *
+                                                                parseFloat(
+                                                                    v.breadth,
+                                                                ) *
+                                                                parseFloat(
+                                                                    v.height,
+                                                                )
+                                                            ).toLocaleString()}{" "}
+                                                            mm³
+                                                        </span>
+                                                    </p>
+                                                )}
                                         </div>
                                     </div>
                                 </div>

@@ -8,7 +8,7 @@ import SearchSortControl from "../_components/SearchSortControl";
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
 function formatPrice(paise: number) {
-    return `₹${(paise / 100).toLocaleString("en-IN")}`;
+    return `₹${paise.toLocaleString("en-IN")}`;
 }
 
 function formatDate(date: string | Date) {

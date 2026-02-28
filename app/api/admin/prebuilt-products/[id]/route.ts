@@ -18,10 +18,6 @@ const generateSlug = (name: string): string => {
         .replace(/^-+|-+$/g, "");
 };
 
-/**
- * Ensures slug uniqueness by appending a counter if needed
- * Excludes the current product from uniqueness check
- */
 const ensureUniqueSlug = async (
     baseSlug: string,
     excludeId: string,
@@ -32,22 +28,23 @@ const ensureUniqueSlug = async (
 
     while (counter <= maxAttempts) {
         const existing = await prisma.prebuiltProductRiya.findFirst({
-            where: {
-                slug,
-                NOT: { id: excludeId },
-            },
+            where: { slug, NOT: { id: excludeId } },
         });
-
-        if (!existing) {
-            return slug;
-        }
-
+        if (!existing) return slug;
         slug = `${baseSlug}-${counter}`;
         counter++;
     }
-
-    // Fallback: use timestamp if all attempts fail
     return `${baseSlug}-${Date.now()}`;
+};
+
+/**
+ * Safely coerce a dimension value (string | number | null | undefined | "")
+ * to a Float for Prisma, or null if empty/invalid.
+ */
+const parseDim = (val: unknown): number | null => {
+    if (val === null || val === undefined || val === "") return null;
+    const n = typeof val === "number" ? val : parseFloat(String(val));
+    return isNaN(n) ? null : n;
 };
 
 /* ============================================================================
@@ -58,7 +55,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
-        const { id } = await params; // Await params for Next.js 15+ compatibility
+        const { id } = await params;
 
         const product = await prisma.prebuiltProductRiya.findUnique({
             where: { id },
@@ -94,7 +91,7 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
-        const { id } = await params; // Await params for Next.js 15+ compatibility
+        const { id } = await params;
         const formData = await request.formData();
 
         // 1️⃣ Basic fields
@@ -107,24 +104,14 @@ export async function PUT(
         const isCustomizable = formData.get("isCustomizable") === "true";
         const highlighted = formData.get("highlighted") === "true";
 
+        // Weight in grams — no product-level length/breadth/height (those are per-variant)
         const weight = formData.get("weight")
             ? parseFloat(formData.get("weight") as string)
             : null;
-        const length = formData.get("length")
-            ? parseFloat(formData.get("length") as string)
-            : null;
-        const breadth = formData.get("breadth")
-            ? parseFloat(formData.get("breadth") as string)
-            : null;
-        const height = formData.get("height")
-            ? parseFloat(formData.get("height") as string)
-            : null;
 
-        // 1.5️⃣ Slug generation and uniqueness check
+        // 1.5️⃣ Slug
         let finalSlug = slug?.trim();
-        if (!finalSlug) {
-            finalSlug = generateSlug(name.trim());
-        }
+        if (!finalSlug) finalSlug = generateSlug(name.trim());
         finalSlug = await ensureUniqueSlug(finalSlug, id);
 
         // 2️⃣ JSON fields
@@ -236,9 +223,6 @@ export async function PUT(
                     category,
                     isCustomizable,
                     highlighted,
-                    length,
-                    breadth,
-                    height,
                     weight,
                     features,
                 },
@@ -267,28 +251,31 @@ export async function PUT(
             }
 
             for (const v of variants) {
+                const variantData = {
+                    price: Math.round(parseFloat(String(v.price)) || 0),
+                    originalPrice: Math.round(
+                        parseFloat(String(v.originalPrice)) || 0,
+                    ),
+                    isActive: v.isActive ?? true,
+                    colorName: v.colorName?.trim() || null,
+                    colorHex: v.colorHex?.trim() || null,
+                    sizeName: v.sizeName?.trim() || null,
+                    // parseDim handles "", null, undefined, number, and string
+                    length: parseDim(v.length),
+                    breadth: parseDim(v.breadth),
+                    height: parseDim(v.height),
+                };
+
                 if (v.id) {
                     await tx.prebuiltVariantRiya.update({
                         where: { id: v.id },
-                        data: {
-                            price: parseInt(v.price) || 0,
-                            originalPrice: parseInt(v.originalPrice) || 0,
-                            isActive: v.isActive ?? true,
-                            colorName: v.colorName || null,
-                            colorHex: v.colorHex || null,
-                            sizeName: v.sizeName || null,
-                        },
+                        data: variantData,
                     });
                 } else {
                     await tx.prebuiltVariantRiya.create({
                         data: {
                             prebuildProductId: id,
-                            price: parseInt(v.price) || 0,
-                            originalPrice: parseInt(v.originalPrice) || 0,
-                            isActive: v.isActive ?? true,
-                            colorName: v.colorName || null,
-                            colorHex: v.colorHex || null,
-                            sizeName: v.sizeName || null,
+                            ...variantData,
                         },
                     });
                 }
@@ -353,7 +340,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
-        const { id } = await params; // Await params for Next.js 15+ compatibility
+        const { id } = await params;
 
         const product = await prisma.prebuiltProductRiya.findUnique({
             where: { id },

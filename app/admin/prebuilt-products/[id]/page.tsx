@@ -11,10 +11,8 @@ export default async function EditProductPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    // ✅ Server component can use await
     const { id } = await params;
 
-    // Fetch product from database
     const product = await prisma.prebuiltProductRiya.findUnique({
         where: { id },
         include: {
@@ -28,19 +26,15 @@ export default async function EditProductPage({
         notFound();
     }
 
-    // Prepare defaultValues with SLUG
     const defaultValues: Partial<ProductFormData & { id: string }> = {
         id: product.id,
         name: product.name,
-        slug: product.slug || "", // ← SLUG FROM DATABASE
+        slug: product.slug || "",
         shortDescription: product.shortDescription,
         longDescription: product.longDescription || "",
         category: product.category,
         isCustomizable: product.isCustomizable,
         highlighted: product.highlighted,
-        length: product.length ? product.length.toString() : "",
-        breadth: product.breadth ? product.breadth.toString() : "",
-        height: product.height ? product.height.toString() : "",
         weight: product.weight ? product.weight.toString() : "",
         features: product.features || [],
         attributes: (product.attributes || []).map((attr) => ({
@@ -51,12 +45,16 @@ export default async function EditProductPage({
             id: v.id,
             price: v.price,
             originalPrice: v.originalPrice,
-            priceDisplay: (v.price / 100).toString(),
-            originalPriceDisplay: (v.originalPrice / 100).toString(),
+            priceDisplay: v.price.toString(),
+            originalPriceDisplay: v.originalPrice.toString(),
             isActive: v.isActive,
             colorName: v.colorName || "",
             colorHex: v.colorHex || "",
             sizeName: v.sizeName || "",
+            // ✅ Variant-level dimensions
+            length: v.length != null ? v.length.toString() : "",
+            breadth: v.breadth != null ? v.breadth.toString() : "",
+            height: v.height != null ? v.height.toString() : "",
         })),
         images: (product.images || []).map((img) => ({
             id: img.id,
@@ -69,6 +67,5 @@ export default async function EditProductPage({
         })),
     };
 
-    // ✅ Pass all data to CLIENT component
     return <EditPageClient productId={id} defaultValues={defaultValues} />;
 }
