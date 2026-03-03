@@ -47,7 +47,6 @@ async function fetchProducts(
             name: true,
             price: true,
             originalPrice: true,
-            images: true,
             category: true,
         },
         orderBy: { createdAt: "desc" },
@@ -57,7 +56,7 @@ async function fetchProducts(
     return products.map((p) => ({
         id: p.id,
         name: p.name,
-        images: p.images ?? [],
+        images: [],
         price: p.price,
         mrp: p.originalPrice ?? undefined,
         itemType: "product",
@@ -143,36 +142,38 @@ async function fetchPrinters(
     }));
 }
 
-async function fetchPrebuilts(
-    limit: number,
-    excludeIds: string[],
-): Promise<RecommendationResult[]> {
-    const prebuilts = await prisma.prebuiltProduct.findMany({
-        where: {
-            id: { notIn: excludeIds },
-        },
-        select: {
-            id: true,
-            name: true,
-            price: true,
-            originalPrice: true,
-            category: true,
-            images: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-    });
+// async function fetchPrebuilts(
+//     limit: number,
+//     excludeIds: string[],
+// ): Promise<RecommendationResult[]> {
+//     const prebuilts = await prisma.prebuiltProducts.findMany({
+//         where: {
+//             id: { notIn: excludeIds },
+//         },
+//         select: {
+//             id: true,
+//             name: true,
+//             category: true,
+//             images: {
+//                 select: { url: true },
+//                 orderBy: { sortOrder: "asc" },
+//                 take: 1,
+//             },
+//         },
+//         orderBy: { createdAt: "desc" },
+//         take: limit,
+//     });
 
-    return prebuilts.map((p) => ({
-        id: p.id,
-        name: p.name,
-        images: p.images ?? [],
-        price: p.price,
-        mrp: p.originalPrice ?? undefined,
-        itemType: "prebuilt",
-        category: p.category ?? undefined,
-    }));
-}
+//     return prebuilts.map((p) => ({
+//         id: p.id,
+//         name: p.name,
+//         images: p.images.map((i) => i.url),
+//         price: 0,
+//         mrp: undefined,
+//         itemType: "prebuilt",
+//         category: p.category ?? undefined,
+//     }));
+// }
 
 async function fetchResins(
     limit: number,
@@ -250,17 +251,17 @@ export async function GET(req: Request) {
 
         const perType = Math.max(1, Math.ceil(limit / 4));
 
-        const [products, printers, prebuilts, resins] = await Promise.all([
-            fetchProducts(perType, []),
-            fetchPrinters(perType, []),
-            fetchPrebuilts(perType, []),
-            fetchResins(perType, []),
-        ]);
+        // const [products, printers, prebuilts, resins] = await Promise.all([
+        //     fetchProducts(perType, []),
+        //     fetchPrinters(perType, []),
+        //     fetchPrebuilts(perType, []),
+        //     fetchResins(perType, []),
+        // ]);
 
-        const results = [...products, ...printers, ...prebuilts, ...resins];
-        const shuffled = results.sort(() => Math.random() - 0.5);
+        // const results = [...products, ...printers, ...prebuilts, ...resins];
+        // const shuffled = results.sort(() => Math.random() - 0.5);
 
-        return NextResponse.json(shuffled.slice(0, limit));
+        // return NextResponse.json(shuffled.slice(0, limit));
     } catch (error) {
         console.error("Recommendations GET error:", error);
         return NextResponse.json([], { status: 200 });
@@ -321,12 +322,12 @@ export async function POST(req: Request) {
                         cartPrinterIds,
                     );
                     break;
-                case "prebuilt":
-                    results = await fetchPrebuilts(
-                        group.limit,
-                        combinedExcludes,
-                    );
-                    break;
+                // case "prebuilt":
+                //     results = await fetchPrebuilts(
+                //         group.limit,
+                //         combinedExcludes,
+                //     );
+                //     break;
                 case "resin":
                     results = await fetchResins(group.limit, combinedExcludes);
                     break;

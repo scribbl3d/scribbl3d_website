@@ -31,17 +31,15 @@ export async function GET(request: Request) {
         },
         take: 5,
       }),
-      prisma.prebuiltProduct.findMany({
+      prisma.prebuiltProducts.findMany({
         where: {
           OR: [
             { name: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
           ],
         },
         select: {
           id: true,
           name: true,
-          price: true,
           images: true,
         },
         take: 5,

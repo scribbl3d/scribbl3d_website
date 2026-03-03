@@ -5,7 +5,7 @@ export async function GET(request: Request, { params }: { params: any }) {
     try {
         const slug = params.slug as string;
 
-        const product = await db.prebuiltProductRiya.findUnique({
+        const product = await db.prebuiltProducts.findUnique({
             where: { slug },
             include: {
                 images: {

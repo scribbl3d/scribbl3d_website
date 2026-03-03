@@ -86,60 +86,11 @@ model AvailableColors {
   colorCategories Json
 }
 
-model PrebuiltProduct {
-  id              String         @id @default(cuid())
-  name            String
-  description     String
-  images          String[]
-  price           Int            @default(0)
-  originalPrice   Int            @default(0)
-  availableColors String[]       @default([])
-  availableSizes  String[]       @default([])
-  isCustomizable  Boolean        @default(false)
-  category        String
-  highlighted     Boolean        @default(false)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  length          Float?
-  breadth         Float?
-  height          Float?
-  weight          Float?
-  features        String[]       @default([])
-  productDetails  String[]       @default([])
-  productdesc     String?
-  sizeData        Json?
-  cartItems       CartItem[]
-  colors          ProductColor[]
-  sizes           ProductSize[]
-  reviews         Review[]
-  wishlistItems   WishlistItem[]
-}
 
-model ProductSize {
-  id                String          @id @default(cuid())
-  name              String
-  price             Int
-  originalPrice     Int
-  sizeType          String          @default("standard")
-  prebuiltProductId String
-  cartItems         CartItem[]
-  prebuiltProduct   PrebuiltProduct @relation(fields: [prebuiltProductId], references: [id], onDelete: Cascade)
 
-  @@unique([prebuiltProductId, name])
-  @@index([prebuiltProductId])
-}
 
-model ProductColor {
-  id                String          @id @default(cuid())
-  name              String
-  hexCode           String
-  prebuiltProductId String
-  cartItems         CartItem[]
-  prebuiltProduct   PrebuiltProduct @relation(fields: [prebuiltProductId], references: [id], onDelete: Cascade)
 
-  @@unique([prebuiltProductId, name])
-  @@index([prebuiltProductId])
-}
+
 
 model Wishlist {
   id     String         @id @default(cuid())
@@ -155,27 +106,24 @@ model WishlistItem {
   // item types
   productId          String?
   prebuiltProductId  String?
-  prebuiltProductRiyaId String?  
+
   printerId          String?
   resinId            String?
 
-  // variants (optional)
-  productSizeId      String?
-  productColorId     String?
+
 
   resinColourId      String?
   resinWeightId      String?
 
-  prebuiltColor      String?
-  prebuiltSize       String?
+ 
 
   createdAt          DateTime @default(now())
 
   wishlist           Wishlist @relation(fields: [wishlistId], references: [id])
 
   product            Product?         @relation(fields: [productId], references: [id])
-  prebuiltProduct    PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  prebuiltProductRiya PrebuiltProductRiya? @relation(fields: [prebuiltProductRiyaId], references: [id])
+
+  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
   printer            Printer?         @relation(fields: [printerId], references: [id])
   resin              Resin?           @relation(fields: [resinId], references: [id])
 }
@@ -194,8 +142,8 @@ model CartItem {
   cartId            String
   productId         String?
   prebuiltProductId String?
-   prebuiltProductRiyaId String?    // ✅ ADD
-  prebuiltVariantRiyaId String?    // ✅ ADD
+
+  prebuiltVariantId String?    // ✅ ADD
   productSizeId     String?
   productColorId    String?
   quantity          Int
@@ -215,13 +163,13 @@ model CartItem {
   addedAt         DateTime         @default(now())
   customization   String?
   cart            Cart             @relation(fields: [cartId], references: [id])
-  prebuiltProduct PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  prebuiltProductRiya PrebuiltProductRiya? @relation(fields: [prebuiltProductRiyaId], references: [id])
-  prebuiltVariantRiya PrebuiltVariantRiya? @relation(fields: [prebuiltVariantRiyaId], references: [id])
 
-  productColor ProductColor? @relation(fields: [productColorId], references: [id])
+  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
+  prebuiltVariant PrebuiltVariants? @relation(fields: [prebuiltVariantId], references: [id])
+
+
   product      Product?      @relation(fields: [productId], references: [id])
-  productSize  ProductSize?  @relation(fields: [productSizeId], references: [id])
+
 
   @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId, printerId])
 }
@@ -429,11 +377,11 @@ model Review {
   userId            String
   productId         String?
   prebuiltProductId String?
-  prebuiltProductRiyaId String?   // ✅ ADD
+ 
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
-  prebuiltProduct   PrebuiltProduct? @relation(fields: [prebuiltProductId], references: [id])
-  prebuiltProductRiya PrebuiltProductRiya? @relation(fields: [prebuiltProductRiyaId], references: [id])
+
+  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id])
   user              User             @relation(fields: [userId], references: [id])
 
@@ -951,11 +899,11 @@ model ResinCompatibility {
 }
 
 
-model PrebuiltProductRiya {
+model PrebuiltProducts {
   id               String  @id @default(cuid())
   name             String
   slug             String? @unique
-  shortDescription String
+  shortDescription String?
   longDescription  String?
   category         String
   isCustomizable   Boolean @default(false)
@@ -969,15 +917,15 @@ model PrebuiltProductRiya {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  images        PrebuiltImageRiya[]
-  attributes    PrebuiltAttributeRiya[]
-  variants      PrebuiltVariantRiya[]
+  images        PrebuiltImages[]
+  attributes    PrebuiltAttributes[]
+  variants      PrebuiltVariants[]
   cartItems     CartItem[]
   reviews       Review[]
   wishlistItems WishlistItem[]
 }
 
-model PrebuiltImageRiya {
+model PrebuiltImages {
     id                String               @id @default(cuid())
     prebuildProductId String
     url               String
@@ -987,23 +935,23 @@ model PrebuiltImageRiya {
     isMain            Boolean              @default(false)   // ← ADD THIS
     createdAt         DateTime             @default(now())
     updatedAt         DateTime?             @updatedAt
-    product           PrebuiltProductRiya  @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
+    product           PrebuiltProducts  @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 }
 
 // Specs — e.g. Material: Aluminium, Warranty: 2 Years, Finish: Matte
-model PrebuiltAttributeRiya {
+model PrebuiltAttributes {
   id    String @id @default(cuid())
   label String // "Material"
   value String // "Aluminium"
 
   prebuildProductId String
-  prebuiltProduct   PrebuiltProductRiya @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
+  prebuiltProduct   PrebuiltProducts @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 
   @@unique([prebuildProductId, label])
 }
 
 // Every unique color + size combo = one row with its own price and stock
-model PrebuiltVariantRiya {
+model PrebuiltVariants {
   id            String  @id @default(cuid())
   price         Int // 
   originalPrice Int     @default(0)
@@ -1020,7 +968,7 @@ model PrebuiltVariantRiya {
  
 
   prebuildProductId String
-  prebuiltProduct   PrebuiltProductRiya @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
+  prebuiltProduct   PrebuiltProducts @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 
   cartItems CartItem[]
 

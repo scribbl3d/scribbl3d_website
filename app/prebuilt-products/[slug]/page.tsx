@@ -533,7 +533,7 @@ export default function PrebuiltProductPDP() {
         async function fetchProduct() {
             try {
                 setLoading(true);
-                const res = await fetch(`/api/prebuilt-products-new/${slug}`);
+                const res = await fetch(`/api/prebuilt-products/${slug}`);
                 if (!res.ok) throw new Error("Product not found");
                 const data = await res.json();
                 setProduct(data);
@@ -563,7 +563,7 @@ export default function PrebuiltProductPDP() {
         async function fetchSimilar() {
             try {
                 const res = await fetch(
-                    `/api/prebuilt-products-new?category=${encodeURIComponent(product.category)}&limit=8`,
+                    `/api/prebuilt-products?category=${encodeURIComponent(product.category)}&limit=8`,
                 );
                 if (!res.ok) return;
                 const data = await res.json();

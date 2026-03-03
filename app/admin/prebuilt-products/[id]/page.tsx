@@ -13,7 +13,7 @@ export default async function EditProductPage({
 }) {
     const { id } = await params;
 
-    const product = await prisma.prebuiltProductRiya.findUnique({
+    const product = await prisma.prebuiltProducts.findUnique({
         where: { id },
         include: {
             images: { orderBy: { position: "asc" } },
@@ -30,7 +30,7 @@ export default async function EditProductPage({
         id: product.id,
         name: product.name,
         slug: product.slug || "",
-        shortDescription: product.shortDescription,
+        shortDescription: product.shortDescription ?? undefined,
         longDescription: product.longDescription || "",
         category: product.category,
         isCustomizable: product.isCustomizable,

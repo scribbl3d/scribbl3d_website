@@ -197,7 +197,11 @@ export async function GET() {
                 items: {
                     include: {
                         product: true,
-                        prebuiltProduct: true,
+                        prebuiltProduct: {
+                            include: {
+                                images: true,
+                            },
+                        },
                         printer: {
                             include: {
                                 images: { orderBy: { sortOrder: "asc" } },
@@ -269,9 +273,9 @@ export async function GET() {
                     sourceId: item.prebuiltProduct.id,
                     itemType: "prebuilt",
                     name: item.prebuiltProduct.name,
-                    price: item.prebuiltProduct.price,
+                    price: 0,
                     quantity: item.quantity,
-                    images: item.prebuiltProduct.images ?? [],
+                    images: item.prebuiltProduct.images?.map((i) => i.url) ?? [],
                     size: item.prebuiltSize ?? null,
                     color: item.prebuiltColour ?? null,
                 };

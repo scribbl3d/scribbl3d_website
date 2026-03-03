@@ -25,7 +25,7 @@ const ensureUniqueSlug = async (
     const maxAttempts = 100;
 
     while (counter <= maxAttempts) {
-        const existing = await prisma.prebuiltProductRiya.findUnique({
+        const existing = await prisma.prebuiltProducts.findUnique({
             where: { slug },
         });
 
@@ -59,18 +59,18 @@ export async function GET(request: NextRequest) {
         const searchTerm = searchParams.get("searchTerm") || "";
         const sort = searchParams.get("sort") || "";
 
-        let fieldFilter: Prisma.PrebuiltProductRiyaWhereInput = {};
+        let fieldFilter: Prisma.PrebuiltProductsWhereInput = {};
 
         if (searchTerm.trim() !== "") {
             fieldFilter[
-                searchField as keyof Prisma.PrebuiltProductRiyaWhereInput
+                searchField as keyof Prisma.PrebuiltProductsWhereInput
             ] = {
                 contains: searchTerm,
                 mode: "insensitive",
             } as any;
         }
 
-        const where: Prisma.PrebuiltProductRiyaWhereInput = {
+        const where: Prisma.PrebuiltProductsWhereInput = {
             AND: [fieldFilter],
         };
 
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         if (orderBy.length === 0) orderBy = [{ updatedAt: "desc" }];
 
         const [products, totalCount] = await Promise.all([
-            prisma.prebuiltProductRiya.findMany({
+            prisma.prebuiltProducts.findMany({
                 where,
                 orderBy,
                 skip,
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
                     variants: { orderBy: { createdAt: "asc" } },
                 },
             }),
-            prisma.prebuiltProductRiya.count({ where }),
+            prisma.prebuiltProducts.count({ where }),
         ]);
 
         return NextResponse.json({
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const product = await prisma.prebuiltProductRiya.create({
+        const product = await prisma.prebuiltProducts.create({
             data: {
                 name: name.trim(),
                 slug: finalSlug,
@@ -266,7 +266,7 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        await prisma.prebuiltProductRiya.delete({
+        await prisma.prebuiltProducts.delete({
             where: { id },
         });
 

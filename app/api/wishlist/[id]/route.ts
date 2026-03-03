@@ -8,7 +8,7 @@ import { NextResponse } from "next/server";
 ========================= */
 export async function PATCH(
     req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
 
@@ -22,14 +22,14 @@ export async function PATCH(
     const updated = await prisma.wishlistItem.update({
         where: { id },
         data: {
-            productSizeId: body.productSizeId ?? undefined,
-            productColorId: body.productColorId ?? undefined,
+            // productSizeId: body.productSizeId ?? undefined,
+            // productColorId: body.productColorId ?? undefined,
 
             resinColourId: body.resinColourId ?? undefined,
             resinWeightId: body.resinWeightId ?? undefined,
 
-            prebuiltColor: body.prebuiltColor ?? undefined,
-            prebuiltSize: body.prebuiltSize ?? undefined,
+            // prebuiltColor: body.prebuiltColor ?? undefined,
+            // prebuiltSize: body.prebuiltSize ?? undefined,
         },
     });
 
@@ -41,7 +41,7 @@ export async function PATCH(
 ========================= */
 export async function DELETE(
     req: Request,
-    { params }: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> },
 ) {
     const session = await getServerSession(authOptions);
 

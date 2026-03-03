@@ -47,7 +47,7 @@ export default function CategoryListingPage() {
         const fetchCategoryProducts = async () => {
             try {
                 const res = await fetch(
-                    `/api/prebuilt-products-new?category=${params.category}`,
+                    `/api/prebuilt-products?category=${params.category}`,
                 );
                 const data = await res.json();
                 // Safety: Ensure data is an array to fix ".map is not a function"

@@ -1,216 +1,48 @@
 import { prisma } from "@/lib/prisma";
-import type { Prisma } from "@prisma/client";
-import { NextResponse } from "next/server";
-import { z } from "zod";
+import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
-const validSortFields = ["name", "price", "category"] as const;
-type SortField = (typeof validSortFields)[number];
-
-const prebuiltProductSchema = z.object({
-    name: z.string().min(1).max(255),
-    price: z.number().int().positive(),
-    originalPrice: z.number().int().positive(),
-    description: z.string().min(1),
-    isCustomizable: z.boolean(),
-    sizeData: z
-        .array(
-            z.object({
-                name: z.string(),
-                price: z.number(),
-                originalPrice: z.number(),
-                sizeType: z.enum(["standard", "fractional", "custom"]),
-            })
-        )
-        .default([]),
-    category: z.string().min(1).max(255),
-    images: z
-        .array(
-            z
-                .string()
-                .refine(
-                    (val) => val.startsWith("/") || /^https?:\/\//.test(val),
-                    {
-                        message:
-                            "Invalid image URL (must be relative or absolute)",
-                    }
-                )
-        )
-        .default([]),
-    highlighted: z.boolean().default(false),
-});
-
-/* -------------------------------------------------------------------------- */
-/*                                   GET API                                  */
-/* -------------------------------------------------------------------------- */
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
+        const categorySlug = searchParams.get("category");
 
-        // pagination
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "10");
-        const skip = (page - 1) * limit;
+        // Construct the where clause based on whether a category is provided
+        const whereClause = categorySlug
+            ? {
+                  category: {
+                      // Converts 'articulated-models' back to 'Articulated Models'
+                      // and performs a case-insensitive match
+                      equals: categorySlug.replace(/-/g, " "),
+                      mode: "insensitive" as const,
+                  },
+              }
+            : {};
 
-        // filters
-        const category = searchParams.get("category");
-        const highlighted = searchParams.get("highlighted");
-        const search = searchParams.get("search") || "";
-        const searchField = searchParams.get("searchField") || "name";
-
-        // sorting
-        const sortBy = searchParams.get("sortBy");
-        const order = searchParams.get("order") === "desc" ? "desc" : "asc";
-
-        // -------------------------
-        // 🔍 SEARCH LOGIC
-        // -------------------------
-        let fieldFilter: Prisma.PrebuiltProductWhereInput = {};
-
-        if (search.trim() !== "") {
-            if (searchField === "price") {
-                const numeric = Number(search);
-                if (!isNaN(numeric)) {
-                    fieldFilter.price = numeric;
-                }
-            } else if (searchField === "isCustomizable") {
-                fieldFilter.isCustomizable = search === "true";
-            } else {
-                fieldFilter[searchField] = {
-                    contains: search,
-                    mode: "insensitive",
-                };
-            }
-        }
-
-        // -------------------------
-        // 🧩 WHERE CONDITIONS
-        // -------------------------
-        const whereConditions: Prisma.PrebuiltProductWhereInput = {
-            AND: [
-                category ? { category } : {},
-                highlighted === "true" ? { highlighted: true } : {},
-                fieldFilter,
-            ],
-        };
-
-        // -------------------------
-        // ↕ FINAL SORTING LOGIC
-        // -------------------------
-        // -------------------------
-        // ↕ FINAL SORTING LOGIC
-        // -------------------------
-        // -------------------------
-        // ↕ FINAL SORTING LOGIC (with fallback name sort)
-        // -------------------------
-        let orderByClause: any = [];
-
-        // If user selected a sort option:
-        if (sortBy === "price") {
-            orderByClause = [
-                { price: order },
-                { name: "asc" }, // tie-breaker
-            ];
-        } else if (sortBy === "name") {
-            orderByClause = [{ name: order }];
-        } else if (sortBy === "category") {
-            orderByClause = [{ category: order }, { name: "asc" }];
-        } else if (sortBy === "updatedAt") {
-            orderByClause = [{ updatedAt: order }, { name: "asc" }];
-        } else if (sortBy === "createdAt") {
-            orderByClause = [{ createdAt: order }, { name: "asc" }];
-        } else {
-            // ⭐ DEFAULT: alphabetical order always
-            orderByClause = [{ name: "asc" }];
-        }
-
-        // -------------------------
-        // 📦 FETCH DATA
-        // -------------------------
-        const [products, totalCount] = await Promise.all([
-            prisma.prebuiltProduct.findMany({
-                where: whereConditions,
-                orderBy: orderByClause,
-                skip,
-                take: limit,
-                include: { sizes: true },
-            }),
-
-            prisma.prebuiltProduct.count({ where: whereConditions }),
-        ]);
-
-        return NextResponse.json({
-            products,
-            totalPages: Math.ceil(totalCount / limit),
-            totalCount,
-            page,
-        });
-    } catch (error) {
-        console.error("Database query failed:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch pre-built products" },
-            { status: 500 }
-        );
-    }
-}
-
-/* -------------------------------------------------------------------------- */
-/*                                   POST API                                 */
-/* -------------------------------------------------------------------------- */
-
-export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const validatedData = prebuiltProductSchema.parse(body);
-
-        const {
-            name,
-            price,
-            originalPrice,
-            description,
-            isCustomizable,
-            sizeData,
-            category,
-            images,
-            highlighted,
-        } = validatedData;
-
-        const product = await prisma.prebuiltProduct.create({
-            data: {
-                name,
-                price,
-                originalPrice,
-                description,
-                isCustomizable,
-                sizeData,
-                category,
-                images,
-                highlighted,
+        const products = await prisma.prebuiltProducts.findMany({
+            where: whereClause,
+            include: {
+                images: {
+                    orderBy: {
+                        position: "asc",
+                    },
+                },
+                attributes: true,
+                variants: {
+                    where: {
+                        isActive: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "desc",
             },
         });
 
-        return NextResponse.json(product);
+        // Always return an array (even if empty) to prevent .map() errors on frontend
+        return NextResponse.json(products || []);
     } catch (error) {
-        console.error("Failed to create prebuilt product:", error);
-
-        if (error instanceof z.ZodError) {
-            return NextResponse.json(
-                {
-                    error: "Validation failed",
-                    details: error.errors.map((err) => ({
-                        path: err.path.join("."),
-                        message: err.message,
-                    })),
-                },
-                { status: 400 }
-            );
-        }
-
-        return NextResponse.json(
-            { error: "Failed to create prebuilt product" },
-            { status: 500 }
-        );
+        console.error("Error fetching prebuilt products:", error);
+        // Returning an empty array instead of an error object prevents frontend crashes
+        return NextResponse.json([], { status: 500 });
     }
 }

@@ -34,7 +34,7 @@ export async function GET(req: Request) {
             images: product.images ?? [],
         };
     } else if (type === "prebuiltproduct") {
-        const prebuilt = await prisma.prebuiltProduct.findUnique({
+        const prebuilt = await prisma.prebuiltProducts.findUnique({
             where: { id: productId },
         });
         if (!prebuilt)
@@ -43,9 +43,9 @@ export async function GET(req: Request) {
         item = {
             id: prebuilt.id,
             name: prebuilt.name,
-            price: prebuilt.price,
+            price: 0,
             quantity: 1,
-            images: prebuilt.images ?? [],
+            images: [],
         };
     } else if (type === "printer") {
         const printer = await prisma.printer.findUnique({

@@ -27,7 +27,7 @@ const ensureUniqueSlug = async (
     const maxAttempts = 100;
 
     while (counter <= maxAttempts) {
-        const existing = await prisma.prebuiltProductRiya.findFirst({
+        const existing = await prisma.prebuiltProducts.findFirst({
             where: { slug, NOT: { id: excludeId } },
         });
         if (!existing) return slug;
@@ -57,7 +57,7 @@ export async function GET(
     try {
         const { id } = await params;
 
-        const product = await prisma.prebuiltProductRiya.findUnique({
+        const product = await prisma.prebuiltProducts.findUnique({
             where: { id },
             include: {
                 images: { orderBy: { position: "asc" } },
@@ -171,7 +171,7 @@ export async function PUT(
         }
 
         // 4️⃣ Existing product
-        const existing = await prisma.prebuiltProductRiya.findUnique({
+        const existing = await prisma.prebuiltProducts.findUnique({
             where: { id },
             include: { images: true, variants: true },
         });
@@ -213,7 +213,7 @@ export async function PUT(
 
         // 7️⃣ Transaction
         await prisma.$transaction(async (tx) => {
-            await tx.prebuiltProductRiya.update({
+            await tx.prebuiltProducts.update({
                 where: { id },
                 data: {
                     name: name.trim(),
@@ -228,12 +228,12 @@ export async function PUT(
                 },
             });
 
-            await tx.prebuiltAttributeRiya.deleteMany({
+            await tx.prebuiltAttributes.deleteMany({
                 where: { prebuildProductId: id },
             });
 
             if (attributes.length) {
-                await tx.prebuiltAttributeRiya.createMany({
+                await tx.prebuiltAttributes.createMany({
                     data: attributes
                         .filter((a: any) => a.label?.trim() && a.value?.trim())
                         .map((a: any) => ({
@@ -245,7 +245,7 @@ export async function PUT(
             }
 
             if (removedVariantIds.length) {
-                await tx.prebuiltVariantRiya.deleteMany({
+                await tx.prebuiltVariants.deleteMany({
                     where: { id: { in: removedVariantIds } },
                 });
             }
@@ -267,12 +267,12 @@ export async function PUT(
                 };
 
                 if (v.id) {
-                    await tx.prebuiltVariantRiya.update({
+                    await tx.prebuiltVariants.update({
                         where: { id: v.id },
                         data: variantData,
                     });
                 } else {
-                    await tx.prebuiltVariantRiya.create({
+                    await tx.prebuiltVariants.create({
                         data: {
                             prebuildProductId: id,
                             ...variantData,
@@ -282,13 +282,13 @@ export async function PUT(
             }
 
             if (removedImages.length) {
-                await tx.prebuiltImageRiya.deleteMany({
+                await tx.prebuiltImages.deleteMany({
                     where: { id: { in: removedImages.map((img) => img.id) } },
                 });
             }
 
             for (const img of existingImages) {
-                await tx.prebuiltImageRiya.update({
+                await tx.prebuiltImages.update({
                     where: { id: img.id },
                     data: {
                         altText: img.altText || name.trim(),
@@ -300,7 +300,7 @@ export async function PUT(
             }
 
             if (uploadedImages.length) {
-                await tx.prebuiltImageRiya.createMany({
+                await tx.prebuiltImages.createMany({
                     data: uploadedImages.map((img) => ({
                         prebuildProductId: id,
                         url: img.url,
@@ -313,7 +313,7 @@ export async function PUT(
             }
         });
 
-        const updated = await prisma.prebuiltProductRiya.findUnique({
+        const updated = await prisma.prebuiltProducts.findUnique({
             where: { id },
             include: {
                 images: { orderBy: { position: "asc" } },
@@ -342,7 +342,7 @@ export async function DELETE(
     try {
         const { id } = await params;
 
-        const product = await prisma.prebuiltProductRiya.findUnique({
+        const product = await prisma.prebuiltProducts.findUnique({
             where: { id },
             include: { images: true },
         });
@@ -367,7 +367,7 @@ export async function DELETE(
             }
         }
 
-        await prisma.prebuiltProductRiya.delete({ where: { id } });
+        await prisma.prebuiltProducts.delete({ where: { id } });
 
         return NextResponse.json({ success: true });
     } catch (error) {

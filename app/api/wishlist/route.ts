@@ -92,30 +92,30 @@ export async function GET() {
             }
 
             /* ================= PREBUILT ================= */
-            if (item.prebuiltProduct) {
-                return {
-                    id: item.id,
-                    itemType: "prebuilt",
-                    title: item.prebuiltProduct.name,
-                    image: item.prebuiltProduct.images?.[0] ?? null,
-                    badge: item.prebuiltProduct.category ?? null,
-                    price: item.prebuiltProduct.price,
-                    originalPrice: item.prebuiltProduct.originalPrice ?? null,
-                    requiresOptions: true,
-                    availableColours: item.prebuiltProduct.availableColors.map(
-                        (color) => ({
-                            label: color,
-                        })
-                    ),
+            // if (item.prebuiltProduct) {
+            //     return {
+            //         id: item.id,
+            //         itemType: "prebuilt",
+            //         title: item.prebuiltProduct.name,
+            //         image: item.prebuiltProduct.images?.[0] ?? null,
+            //         badge: item.prebuiltProduct.category ?? null,
+            //         price: item.prebuiltProduct.price,
+            //         originalPrice: item.prebuiltProduct.originalPrice ?? null,
+            //         requiresOptions: true,
+            //         availableColours: item.prebuiltProduct.availableColors.map(
+            //             (color) => ({
+            //                 label: color,
+            //             })
+            //         ),
 
-                    availableSizes: item.prebuiltProduct.availableSizes.map(
-                        (size) => ({
-                            label: size,
-                        })
-                    ),
-                    cartPayload: { prebuiltProductId: item.prebuiltProduct.id },
-                };
-            }
+            //         availableSizes: item.prebuiltProduct.availableSizes.map(
+            //             (size) => ({
+            //                 label: size,
+            //             })
+            //         ),
+            //         cartPayload: { prebuiltProductId: item.prebuiltProduct.id },
+            //     };
+            // }
 
             /* ================= PRODUCT (FILAMENT) ================= */
             if (item.product) {
@@ -170,13 +170,13 @@ export async function POST(req: Request) {
     };
 
     const activeType = Object.entries(types).filter(
-        ([_, v]) => typeof v === "string"
+        ([_, v]) => typeof v === "string",
     );
 
     if (activeType.length !== 1) {
         return NextResponse.json(
             { error: "Exactly one wishlist item type is required" },
-            { status: 400 }
+            { status: 400 },
         );
     }
 
@@ -218,14 +218,14 @@ export async function POST(req: Request) {
             printerId: printerId ?? null,
             resinId: resinId ?? null,
 
-            productSizeId: productSizeId ?? null,
-            productColorId: productColorId ?? null,
+            // productSizeId: productSizeId ?? null,
+            // productColorId: productColorId ?? null,
 
             resinColourId: resinColourId ?? null,
             resinWeightId: resinWeightId ?? null,
 
-            prebuiltColor: prebuiltColor ?? null,
-            prebuiltSize: prebuiltSize ?? null,
+            // prebuiltColor: prebuiltColor ?? null,
+            // prebuiltSize: prebuiltSize ?? null,
         },
     });
 

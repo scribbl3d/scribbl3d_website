@@ -14,7 +14,7 @@ export default function PrebuiltPage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch("/api/prebuilt-products-new");
+                const res = await fetch("/api/prebuilt-products");
                 const data = await res.json();
                 setProducts(data);
             } catch (error) {
