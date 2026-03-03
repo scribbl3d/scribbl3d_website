@@ -22,15 +22,11 @@ export async function POST(req: Request) {
         const {
             productId,
             prebuiltProductId,
+            prebuiltVariantId, // ✅ replaces prebuiltColour + prebuiltSize
             printerId,
-
             resinId,
             resinColourId,
             resinWeightId,
-
-            prebuiltColour,
-            prebuiltSize,
-
             quantity = 1,
         } = body;
 
@@ -40,10 +36,29 @@ export async function POST(req: Request) {
                 { status: 400 },
             );
         }
+
+        /* ---------- PREBUILT VALIDATION ---------- */
         if (prebuiltProductId) {
-            if (!prebuiltColour || !prebuiltSize) {
+            if (!prebuiltVariantId) {
                 return NextResponse.json(
-                    { error: "Prebuilt colour & size required" },
+                    { error: "Prebuilt variant required" },
+                    { status: 400 },
+                );
+            }
+
+            // ✅ Validate variant belongs to the product
+            const variant = await prisma.prebuiltVariants.findFirst({
+                where: {
+                    id: prebuiltVariantId,
+                    prebuildProductId: prebuiltProductId,
+                    isActive: true,
+                },
+                select: { id: true },
+            });
+
+            if (!variant) {
+                return NextResponse.json(
+                    { error: "Invalid or inactive prebuilt variant" },
                     { status: 400 },
                 );
             }
@@ -83,19 +98,12 @@ export async function POST(req: Request) {
         }
 
         /* ---------- MERGE LOGIC ---------- */
-        const whereClause: any = {
-            cartId: cart.id,
-        };
+        const whereClause: any = { cartId: cart.id };
 
         if (productId) whereClause.productId = productId;
-        if (prebuiltProductId) {
-            whereClause.prebuiltProductId = prebuiltProductId;
-            whereClause.prebuiltColour = prebuiltColour;
-            whereClause.prebuiltSize = prebuiltSize;
-        }
-
+        if (prebuiltVariantId)
+            whereClause.prebuiltVariantId = prebuiltVariantId; // ✅
         if (printerId) whereClause.printerId = printerId;
-
         if (resinId) {
             whereClause.resinId = resinId;
             whereClause.resinColourId = resinColourId;
@@ -109,26 +117,20 @@ export async function POST(req: Request) {
         if (existingItem) {
             await prisma.cartItem.update({
                 where: { id: existingItem.id },
-                data: {
-                    quantity: existingItem.quantity + quantity,
-                },
+                data: { quantity: existingItem.quantity + quantity },
             });
         } else {
             await prisma.cartItem.create({
                 data: {
                     cartId: cart.id,
                     quantity,
-
                     productId,
                     prebuiltProductId,
+                    prebuiltVariantId, // ✅
                     printerId,
-
                     resinId,
                     resinColourId,
                     resinWeightId,
-
-                    prebuiltColour,
-                    prebuiltSize,
                 },
             });
         }
@@ -144,7 +146,7 @@ export async function POST(req: Request) {
 }
 
 /* =========================
-   HELPER: Extract machine dimensions from printer specifications
+   HELPER: Extract machine dimensions
 ========================= */
 function extractMachineDimensions(specifications: any[]): {
     length: number | null;
@@ -152,10 +154,9 @@ function extractMachineDimensions(specifications: any[]): {
     height: number | null;
 } {
     for (const spec of specifications || []) {
-        const label = (spec.label || "").trim();
+        const labelLower = (spec.label || "").trim().toLowerCase();
         const value = spec.value || "";
 
-        const labelLower = label.toLowerCase();
         if (
             labelLower === "machine dimensions" ||
             labelLower.includes("machine dimension") ||
@@ -175,7 +176,6 @@ function extractMachineDimensions(specifications: any[]): {
             }
         }
     }
-
     return { length: null, width: null, height: null };
 }
 
@@ -199,9 +199,13 @@ export async function GET() {
                         product: true,
                         prebuiltProduct: {
                             include: {
-                                images: true,
+                                images: {
+                                    where: { isMain: true }, // ✅ only main image
+                                    take: 1,
+                                },
                             },
                         },
+                        prebuiltVariant: true, // ✅ include variant
                         printer: {
                             include: {
                                 images: { orderBy: { sortOrder: "asc" } },
@@ -220,9 +224,7 @@ export async function GET() {
             },
         });
 
-        if (!cart) {
-            return NextResponse.json({ items: [] });
-        }
+        if (!cart) return NextResponse.json({ items: [] });
 
         const items = cart.items.map((item) => {
             /* ---------- RESIN ---------- */
@@ -248,7 +250,6 @@ export async function GET() {
                 const machineDims = extractMachineDimensions(
                     item.printer.specifications as any[],
                 );
-
                 return {
                     id: item.id,
                     sourceId: item.printer.id,
@@ -257,9 +258,7 @@ export async function GET() {
                     price: item.printer.price,
                     quantity: item.quantity,
                     images: item.printer.images.map((i) => i.url),
-                    weight: item.printer.weight
-                        ? item.printer.weight.toString()
-                        : null,
+                    weight: item.printer.weight?.toString() ?? null,
                     machineDimensionLength: machineDims.length,
                     machineDimensionWidth: machineDims.width,
                     machineDimensionHeight: machineDims.height,
@@ -267,17 +266,20 @@ export async function GET() {
             }
 
             /* ---------- PREBUILT ---------- */
-            if (item.prebuiltProduct) {
+            if (item.prebuiltProduct && item.prebuiltVariant) {
                 return {
                     id: item.id,
                     sourceId: item.prebuiltProduct.id,
                     itemType: "prebuilt",
                     name: item.prebuiltProduct.name,
-                    price: 0,
+                    price: item.prebuiltVariant.price, // ✅ from variant
                     quantity: item.quantity,
-                    images: item.prebuiltProduct.images?.map((i) => i.url) ?? [],
-                    size: item.prebuiltSize ?? null,
-                    color: item.prebuiltColour ?? null,
+                    images:
+                        item.prebuiltProduct.images?.map((i) => i.url) ?? [],
+                    color: item.prebuiltVariant.colorName ?? null, // ✅ from variant
+                    colorHex: item.prebuiltVariant.colorHex ?? null, // ✅ from variant
+                    size: item.prebuiltVariant.sizeName ?? null, // ✅ from variant
+                    customization: item.customization ?? null,
                 };
             }
 
@@ -328,9 +330,7 @@ export async function DELETE() {
         });
 
         if (cart) {
-            await prisma.cartItem.deleteMany({
-                where: { cartId: cart.id },
-            });
+            await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
         }
 
         return NextResponse.json({ success: true });

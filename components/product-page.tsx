@@ -8,14 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/use-toast";
 import { getSizeLabel } from "@/lib/size-mapper";
 import { useCart } from "@/providers/CartProvider";
-import {
-    Check,
-    ChevronLeft,
-    ChevronRight,
-    Heart,
-    Share2,
-    ShoppingCart,
-} from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Heart, Share2 } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -88,7 +81,7 @@ export default function ProductPage({
     const [quantity, setQuantity] = useState(1);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [relatedProducts, setRelatedProducts] = useState<RelatedProduct[]>(
-        []
+        [],
     );
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -105,7 +98,7 @@ export default function ProductPage({
             if (session) {
                 try {
                     const response = await fetch(
-                        `/api/wishlist/check?productId=${id}&isPrebuilt=true`
+                        `/api/wishlist/check?productId=${id}&isPrebuilt=true`,
                     );
                     if (!response.ok) {
                         throw new Error("Failed to check wishlist status");
@@ -133,14 +126,14 @@ export default function ProductPage({
                         headers: {
                             Accept: "application/json",
                         },
-                    }
+                    },
                 );
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     throw new Error(
                         errorData.error ||
-                            `Failed to fetch related products: ${response.status}`
+                            `Failed to fetch related products: ${response.status}`,
                     );
                 }
 
@@ -155,7 +148,7 @@ export default function ProductPage({
                 setError(
                     error instanceof Error
                         ? error.message
-                        : "Failed to load related products. Please try again later."
+                        : "Failed to load related products. Please try again later.",
                 );
             } finally {
                 setIsLoading(false);
@@ -165,60 +158,60 @@ export default function ProductPage({
         fetchRelatedProducts();
     }, [category, id]);
 
-    const handleAddToCart = async () => {
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your cart.",
-                variant: "destructive",
-            });
-            return;
-        }
+    // const handleAddToCart = async () => {
+    //     if (!session) {
+    //         toast({
+    //             title: "Authentication Required",
+    //             description: "Please log in to add items to your cart.",
+    //             variant: "destructive",
+    //         });
+    //         return;
+    //     }
 
-        // Auto-pick if only one option exists
-        const effectiveSize = sizes.length === 1 ? sizes[0].id : selectedSize;
+    //     // Auto-pick if only one option exists
+    //     const effectiveSize = sizes.length === 1 ? sizes[0].id : selectedSize;
 
-        const effectiveColor =
-            colors.length === 1 ? colors[0].id : selectedColor;
+    //     const effectiveColor =
+    //         colors.length === 1 ? colors[0].id : selectedColor;
 
-        if (!effectiveSize || !effectiveColor) {
-            toast({
-                title: "Selection Required",
-                description: "Please select a size and color.",
-                variant: "destructive",
-            });
-            return;
-        }
+    //     if (!effectiveSize || !effectiveColor) {
+    //         toast({
+    //             title: "Selection Required",
+    //             description: "Please select a size and color.",
+    //             variant: "destructive",
+    //         });
+    //         return;
+    //     }
 
-        setIsLoading(true);
+    //     setIsLoading(true);
 
-        try {
-            const sizeObj = sizes.find((s) => s.id === effectiveSize);
-            const colorObj = colors.find((c) => c.id === effectiveColor);
+    //     try {
+    //         const sizeObj = sizes.find((s) => s.id === effectiveSize);
+    //         const colorObj = colors.find((c) => c.id === effectiveColor);
 
-            await addToCart({
-                prebuiltProductId: id,
-                quantity,
+    //         await addToCart({
+    //             prebuiltProductId: id,
+    //             quantity,
 
-                // 🔥 THIS IS THE FIX
-                prebuiltSize: sizeObj?.name,
-                prebuiltColour: colorObj?.name,
-            });
+    //             // 🔥 THIS IS THE FIX
+    //             prebuiltSize: sizeObj?.name,
+    //             prebuiltColour: colorObj?.name,
+    //         });
 
-            toast({
-                title: "Added to Cart",
-                description: `${name} has been added to your cart.`,
-            });
-        } catch (err) {
-            toast({
-                title: "Error",
-                description: "Failed to add item to cart.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    //         toast({
+    //             title: "Added to Cart",
+    //             description: `${name} has been added to your cart.`,
+    //         });
+    //     } catch (err) {
+    //         toast({
+    //             title: "Error",
+    //             description: "Failed to add item to cart.",
+    //             variant: "destructive",
+    //         });
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
 
     const handleShareClick = () => {
         const productUrl = `https://scribbl3d.com/product/${id}`;
@@ -354,7 +347,7 @@ export default function ProductPage({
                                     className="absolute left-0 top-1/2 -translate-y-1/2 bg-white rounded-full p-1 shadow-lg"
                                     onClick={() =>
                                         setCurrentImageIndex(
-                                            currentImageIndex - 1
+                                            currentImageIndex - 1,
                                         )
                                     }
                                 >
@@ -366,7 +359,7 @@ export default function ProductPage({
                                     className="absolute right-0 top-1/2 -translate-y-1/2 bg-white rounded-full p-1 shadow-lg"
                                     onClick={() =>
                                         setCurrentImageIndex(
-                                            currentImageIndex + 1
+                                            currentImageIndex + 1,
                                         )
                                     }
                                 >
@@ -390,7 +383,7 @@ export default function ProductPage({
                                                     word
                                                         .charAt(0)
                                                         .toUpperCase() +
-                                                    word.slice(1)
+                                                    word.slice(1),
                                             )
                                             .join(" "),
                                         href: `/${category.toLowerCase()}`,
@@ -430,7 +423,7 @@ export default function ProductPage({
                                     {Math.round(
                                         ((currentOriginalPrice - currentPrice) /
                                             currentOriginalPrice) *
-                                            100
+                                            100,
                                     )}
                                     % OFF
                                 </span>
@@ -496,7 +489,7 @@ export default function ProductPage({
                                 <div className="space-y-4">
                                     {/* Standard Sizes */}
                                     {sizes.filter(
-                                        (size) => size.sizeType === "standard"
+                                        (size) => size.sizeType === "standard",
                                     ).length > 0 && (
                                         <div className="space-y-2">
                                             <Label className="text-sm text-gray-500">
@@ -509,14 +502,14 @@ export default function ProductPage({
                                                     const selectedSizeData =
                                                         sizes.find(
                                                             (s) =>
-                                                                s.id === value
+                                                                s.id === value,
                                                         );
                                                     if (selectedSizeData) {
                                                         setCurrentPrice(
-                                                            selectedSizeData.price
+                                                            selectedSizeData.price,
                                                         );
                                                         setCurrentOriginalPrice(
-                                                            selectedSizeData.originalPrice
+                                                            selectedSizeData.originalPrice,
                                                         );
                                                     }
                                                 }}
@@ -526,7 +519,7 @@ export default function ProductPage({
                                                     .filter(
                                                         (size) =>
                                                             size.sizeType ===
-                                                            "standard"
+                                                            "standard",
                                                     )
                                                     .map((size) => (
                                                         <Label
@@ -544,7 +537,7 @@ export default function ProductPage({
                                                             />
                                                             <span className="font-medium">
                                                                 {getSizeLabel(
-                                                                    size.name
+                                                                    size.name,
                                                                 )}
                                                             </span>
                                                         </Label>
@@ -555,7 +548,8 @@ export default function ProductPage({
 
                                     {/* Fractional Sizes */}
                                     {sizes.filter(
-                                        (size) => size.sizeType === "fractional"
+                                        (size) =>
+                                            size.sizeType === "fractional",
                                     ).length > 0 && (
                                         <div className="space-y-2">
                                             <Label className="text-sm text-gray-500">
@@ -568,14 +562,14 @@ export default function ProductPage({
                                                     const selectedSizeData =
                                                         sizes.find(
                                                             (s) =>
-                                                                s.id === value
+                                                                s.id === value,
                                                         );
                                                     if (selectedSizeData) {
                                                         setCurrentPrice(
-                                                            selectedSizeData.price
+                                                            selectedSizeData.price,
                                                         );
                                                         setCurrentOriginalPrice(
-                                                            selectedSizeData.originalPrice
+                                                            selectedSizeData.originalPrice,
                                                         );
                                                     }
                                                 }}
@@ -585,7 +579,7 @@ export default function ProductPage({
                                                     .filter(
                                                         (size) =>
                                                             size.sizeType ===
-                                                            "fractional"
+                                                            "fractional",
                                                     )
                                                     .map((size) => (
                                                         <Label
@@ -603,7 +597,7 @@ export default function ProductPage({
                                                             />
                                                             <span className="font-medium">
                                                                 {getSizeLabel(
-                                                                    size.name
+                                                                    size.name,
                                                                 )}
                                                             </span>
                                                         </Label>
@@ -614,7 +608,7 @@ export default function ProductPage({
 
                                     {/* Custom Sizes */}
                                     {sizes.filter(
-                                        (size) => size.sizeType === "custom"
+                                        (size) => size.sizeType === "custom",
                                     ).length > 0 && (
                                         <div className="space-y-2">
                                             <Label className="text-sm text-gray-500">
@@ -627,14 +621,14 @@ export default function ProductPage({
                                                     const selectedSizeData =
                                                         sizes.find(
                                                             (s) =>
-                                                                s.id === value
+                                                                s.id === value,
                                                         );
                                                     if (selectedSizeData) {
                                                         setCurrentPrice(
-                                                            selectedSizeData.price
+                                                            selectedSizeData.price,
                                                         );
                                                         setCurrentOriginalPrice(
-                                                            selectedSizeData.originalPrice
+                                                            selectedSizeData.originalPrice,
                                                         );
                                                     }
                                                 }}
@@ -644,7 +638,7 @@ export default function ProductPage({
                                                     .filter(
                                                         (size) =>
                                                             size.sizeType ===
-                                                            "custom"
+                                                            "custom",
                                                     )
                                                     .map((size) => (
                                                         <Label
@@ -694,7 +688,7 @@ export default function ProductPage({
                                 </button>
                             </div>
 
-                            <Button
+                            {/* <Button
                                 className="flex-1 bg-[#2B3674] hover:bg-[#1e2654] text-[16px] h-12 rounded-full font-inter font-semibold"
                                 onClick={handleAddToCart}
                                 disabled={
@@ -706,7 +700,7 @@ export default function ProductPage({
                             >
                                 <ShoppingCart className="h-5 w-5 mr-2" />
                                 Add To Cart
-                            </Button>
+                            </Button> */}
 
                             <Button
                                 variant="outline"

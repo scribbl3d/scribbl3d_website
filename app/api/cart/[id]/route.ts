@@ -16,7 +16,10 @@ export async function GET(
 
     try {
         const cartItem = await prisma.cartItem.findUnique({
-            where: { id },
+            where: {
+                id,
+                cart: { userId: session.user.id }, // ✅ ownership check
+            },
         });
 
         if (!cartItem) {
@@ -58,10 +61,20 @@ export async function PUT(
             );
         }
 
+        if (
+            quantity !== undefined &&
+            (typeof quantity !== "number" || quantity < 1)
+        ) {
+            return NextResponse.json(
+                { error: "Invalid quantity" },
+                { status: 400 },
+            );
+        }
+
         const updatedItem = await prisma.cartItem.update({
             where: {
                 id,
-                cart: { userId: session.user.id },
+                cart: { userId: session.user.id }, // ✅ already correct
             },
             data: {
                 ...(quantity !== undefined && { quantity }),
@@ -92,7 +105,10 @@ export async function DELETE(
 
     try {
         await prisma.cartItem.delete({
-            where: { id },
+            where: {
+                id,
+                cart: { userId: session.user.id }, // ✅ ownership check
+            },
         });
 
         return NextResponse.json({ success: true });

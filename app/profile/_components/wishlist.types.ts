@@ -25,12 +25,13 @@ export type WishlistGridItem = {
         originalPrice: number;
     }[];
 
-    /* 🧱 PREBUILT ONLY */
-    availableColours?: {
-        label: string;
-    }[];
-
-    availableSizes?: {
-        label: string;
+    availableVariants?: {
+        id: string;
+        colorName: string | null;
+        colorHex: string | null;
+        sizeName: string | null;
+        price: number;
+        originalPrice: number;
+        isActive: boolean;
     }[];
 };

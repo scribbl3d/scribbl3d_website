@@ -138,40 +138,32 @@ model Cart {
 }
 
 model CartItem {
-  id                String       @id @default(cuid())
+  id                String            @id @default(cuid())
   cartId            String
   productId         String?
   prebuiltProductId String?
-
-  prebuiltVariantId String?    // ✅ ADD
+  prebuiltVariantId String?
   productSizeId     String?
   productColorId    String?
   quantity          Int
   printerId         String?
-  printer           Printer?     @relation(fields: [printerId], references: [id])
-   /* 🧱 PREBUILT (NEW) */
-  prebuiltColour    String?
-  prebuiltSize      String?
-  // Resin selection
   resinId           String?
-  resin             Resin?       @relation(fields: [resinId], references: [id], onDelete: Cascade)
   resinColourId     String?
-  resinColour       ResinColour? @relation(fields: [resinColourId], references: [id])
   resinWeightId     String?
-  resinWeight       ResinWeight? @relation(fields: [resinWeightId], references: [id])
 
-  addedAt         DateTime         @default(now())
-  customization   String?
-  cart            Cart             @relation(fields: [cartId], references: [id])
+  addedAt       DateTime @default(now())
+  customization String?
 
+  cart            Cart              @relation(fields: [cartId], references: [id])
+  product         Product?          @relation(fields: [productId], references: [id])
   prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
   prebuiltVariant PrebuiltVariants? @relation(fields: [prebuiltVariantId], references: [id])
+  printer         Printer?          @relation(fields: [printerId], references: [id])
+  resin           Resin?            @relation(fields: [resinId], references: [id], onDelete: Cascade)
+  resinColour     ResinColour?      @relation(fields: [resinColourId], references: [id])
+  resinWeight     ResinWeight?      @relation(fields: [resinWeightId], references: [id])
 
-
-  product      Product?      @relation(fields: [productId], references: [id])
-
-
-  @@unique([cartId, productId, prebuiltProductId, productSizeId, productColorId, printerId])
+  @@unique([cartId, productId, prebuiltVariantId, productSizeId, productColorId, printerId, resinId, resinColourId, resinWeightId])
 }
 
 model Address {

@@ -17,7 +17,7 @@ import React, {
 
 export type CartItem = {
     id: string;
-    sourceId?: string; // Original product/printer/resin/prebuilt ID
+    sourceId?: string;
     itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
     name: string;
     price: number;
@@ -26,25 +26,21 @@ export type CartItem = {
     size?: string | null;
     color?: string | null;
     colorHex?: string | null;
-    prebuiltColour?: string | null;
-    prebuiltSize?: string | null;
     customization?: string | null;
     weight?: string | null;
-
-    machineDimensionLength?: number | null; // mm
-    machineDimensionWidth?: number | null; // mm
-    machineDimensionHeight?: number | null; // mm
+    machineDimensionLength?: number | null;
+    machineDimensionWidth?: number | null;
+    machineDimensionHeight?: number | null;
 };
 
 export type AddToCartPayload = {
     productId?: string;
     prebuiltProductId?: string;
+    prebuiltVariantId?: string;
     printerId?: string;
     resinId?: string;
     resinColourId?: string;
     resinWeightId?: string;
-    prebuiltColour?: string;
-    prebuiltSize?: string;
     quantity?: number;
 };
 

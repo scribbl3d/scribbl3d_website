@@ -1,6 +1,7 @@
 "use client";
 
 import { toast } from "@/components/ui/use-toast";
+import { useCart } from "@/providers/CartProvider";
 import {
     Check,
     ChevronLeft,
@@ -10,6 +11,7 @@ import {
     Plus,
     ShoppingCart,
     Star,
+    X,
     Zap,
 } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
@@ -17,9 +19,6 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/* ─────────────────────────────────────────────────────────
-   Shimmer skeleton
-───────────────────────────────────────────────────────── */
 function Shimmer({ className = "" }: { className?: string }) {
     return (
         <div
@@ -68,9 +67,6 @@ function PDPSkeleton() {
     );
 }
 
-/* ─────────────────────────────────────────────────────────
-   SVG Icons
-───────────────────────────────────────────────────────── */
 function ShieldCheckIcon() {
     return (
         <svg
@@ -88,6 +84,7 @@ function ShieldCheckIcon() {
         </svg>
     );
 }
+
 function TruckIcon() {
     return (
         <svg
@@ -109,7 +106,290 @@ function TruckIcon() {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Similar Product Card  (exact ProductCard design)
+   ✅ Variant Modal — used by SimilarProductCard
+───────────────────────────────────────────────────────── */
+function VariantModal({
+    product,
+    onClose,
+}: {
+    product: any;
+    onClose: () => void;
+}) {
+    const { addToCart } = useCart();
+    const { data: session } = useSession();
+    const router = useRouter();
+
+    const variants: any[] =
+        product.variants?.filter((v: any) => v.isActive) ?? [];
+
+    const uniqueColors: { name: string; hex: string | null }[] = Array.from(
+        new Map(
+            variants
+                .filter((v) => v.colorName)
+                .map((v) => [
+                    v.colorName,
+                    { name: v.colorName, hex: v.colorHex },
+                ]),
+        ).values(),
+    );
+
+    const [selectedColor, setSelectedColor] = useState<string | null>(
+        uniqueColors[0]?.name ?? null,
+    );
+    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+    const [quantity, setQuantity] = useState(1);
+    const [isAdding, setIsAdding] = useState(false);
+
+    const validSizes: string[] = Array.from(
+        new Set(
+            variants
+                .filter(
+                    (v) =>
+                        v.sizeName &&
+                        (!selectedColor || v.colorName === selectedColor),
+                )
+                .map((v) => v.sizeName),
+        ),
+    );
+
+    const selectedVariant =
+        variants.find(
+            (v) => v.colorName === selectedColor && v.sizeName === selectedSize,
+        ) ??
+        variants.find((v) => v.colorName === selectedColor) ??
+        null;
+
+    const displayPrice =
+        selectedVariant?.price ?? product.variants?.[0]?.price ?? 0;
+    const originalPrice = selectedVariant?.originalPrice ?? 0;
+    const discount =
+        originalPrice > displayPrice && originalPrice > 0
+            ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
+            : 0;
+
+    const handleColorChange = (color: string) => {
+        setSelectedColor(color);
+        setSelectedSize(null);
+    };
+
+    const handleAddToCart = async () => {
+        if (!session) {
+            toast({
+                title: "Authentication required",
+                variant: "destructive",
+                action: (
+                    <button
+                        onClick={() => signIn()}
+                        className="px-3 py-1 bg-white text-black rounded"
+                    >
+                        Log in
+                    </button>
+                ),
+            });
+            return;
+        }
+        if (!selectedVariant) return;
+        setIsAdding(true);
+        try {
+            await addToCart({
+                prebuiltProductId: product.id,
+                prebuiltVariantId: selectedVariant.id,
+                quantity,
+            });
+            const label = [selectedColor, selectedSize]
+                .filter(Boolean)
+                .join(", ");
+            toast({
+                title: "Added to cart",
+                description: `${product.name}${label ? ` (${label})` : ""} × ${quantity} added.`,
+            });
+            onClose();
+        } catch {
+            toast({
+                title: "Error",
+                description: "Failed to add to cart",
+                variant: "destructive",
+            });
+        } finally {
+            setIsAdding(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+                {/* Header */}
+                <div className="flex gap-4 p-5 relative">
+                    <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                        {(product.images?.find((i: any) => i.isMain)?.url ??
+                            product.images?.[0]?.url) && (
+                            <Image
+                                src={
+                                    product.images?.find((i: any) => i.isMain)
+                                        ?.url ?? product.images?.[0]?.url
+                                }
+                                alt={product.name}
+                                fill
+                                className="object-cover"
+                            />
+                        )}
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-base font-semibold pr-6 leading-snug">
+                            {product.name}
+                        </h2>
+                        {product.category && (
+                            <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-600">
+                                {product.category}
+                            </span>
+                        )}
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-black"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="h-px bg-gray-200" />
+
+                <div className="p-5 pb-8">
+                    {/* Price */}
+                    <div className="flex items-baseline gap-3 mb-1">
+                        <span className="text-xl font-bold text-gray-900">
+                            ₹{displayPrice.toLocaleString("en-IN")}
+                        </span>
+                        {originalPrice > displayPrice && (
+                            <span className="text-sm text-gray-400 line-through">
+                                ₹{originalPrice.toLocaleString("en-IN")}
+                            </span>
+                        )}
+                        {discount > 0 && (
+                            <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                                {discount}% off
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-4">(incl. GST)</p>
+
+                    {/* Colors */}
+                    {uniqueColors.length > 0 && (
+                        <div className="mb-4">
+                            <p className="text-sm font-medium mb-2">
+                                Color:{" "}
+                                <span className="font-normal text-gray-500">
+                                    {selectedColor ?? "Select"}
+                                </span>
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                                {uniqueColors.map((c) => (
+                                    <button
+                                        key={c.name}
+                                        onClick={() =>
+                                            handleColorChange(c.name)
+                                        }
+                                        title={c.name}
+                                        className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
+                                            selectedColor === c.name
+                                                ? "ring-2 ring-gray-900 scale-110"
+                                                : "border-transparent hover:ring-1 hover:ring-gray-400"
+                                        }`}
+                                        style={{
+                                            backgroundColor: c.hex ?? "#E5E7EB",
+                                        }}
+                                    >
+                                        {selectedColor === c.name && (
+                                            <Check
+                                                size={12}
+                                                className="absolute inset-0 m-auto text-white drop-shadow"
+                                            />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Sizes */}
+                    {validSizes.length > 0 && (
+                        <div className="mb-4">
+                            <p className="text-sm font-medium mb-2">Size</p>
+                            <div className="flex flex-wrap gap-2">
+                                {validSizes.map((size) => (
+                                    <button
+                                        key={size}
+                                        onClick={() => setSelectedSize(size)}
+                                        className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                            selectedSize === size
+                                                ? "border-gray-900 bg-gray-900 text-white"
+                                                : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        {size}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Quantity */}
+                    <div className="mb-6">
+                        <p className="text-sm font-medium mb-2">Quantity</p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() =>
+                                    setQuantity((q) => Math.max(1, q - 1))
+                                }
+                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                            >
+                                −
+                            </button>
+                            <div className="flex-1 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold">
+                                {quantity}
+                            </div>
+                            <button
+                                onClick={() => setQuantity((q) => q + 1)}
+                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                            >
+                                +
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* CTA */}
+                    <button
+                        disabled={!selectedVariant || isAdding}
+                        onClick={handleAddToCart}
+                        className="w-full h-12 bg-black text-white font-semibold rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                    >
+                        {isAdding ? (
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            "Add to Cart"
+                        )}
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            if (product.slug)
+                                router.push(
+                                    `/prebuilt-products/${product.slug}`,
+                                );
+                            onClose();
+                        }}
+                        className="w-full text-sm mt-3 text-gray-500 hover:text-black"
+                    >
+                        View full details →
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────────────────
+   Similar Product Card
 ───────────────────────────────────────────────────────── */
 function SimilarProductCard({ product }: { product: any }) {
     const { data: session } = useSession();
@@ -122,6 +402,7 @@ function SimilarProductCard({ product }: { product: any }) {
 
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false); // ✅
 
     useEffect(() => {
         if (!session || !product?.id) return;
@@ -136,7 +417,6 @@ function SimilarProductCard({ product }: { product: any }) {
     ) => {
         e.preventDefault();
         e.stopPropagation();
-
         if (!session) {
             toast({
                 title: "Authentication required",
@@ -153,13 +433,10 @@ function SimilarProductCard({ product }: { product: any }) {
             });
             return;
         }
-
         if (isWishlistLoading) return;
         setIsWishlistLoading(true);
-
         const was = isFavorite;
         setIsFavorite(!was);
-
         try {
             await fetch("/api/wishlist", {
                 method: "POST",
@@ -184,7 +461,6 @@ function SimilarProductCard({ product }: { product: any }) {
     const sizes = Array.from(
         new Set(product.variants?.map((v: any) => v.sizeName).filter(Boolean)),
     );
-
     const uniqueColors: { name: string; hex: string }[] = Array.from(
         new Map(
             product.variants
@@ -195,180 +471,180 @@ function SimilarProductCard({ product }: { product: any }) {
                 ]),
         ).values() as IterableIterator<{ name: string; hex: string }>,
     );
-
     const sizeString =
         sizes.length > 0
             ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
             : "One size";
 
     return (
-        <div
-            onClick={() =>
-                product.slug &&
-                router.push(`/prebuilt-products/${product.slug}`)
-            }
-            className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full h-full cursor-pointer transition-all hover:shadow-lg hover:border-gray-200"
-        >
-            {/* Image */}
+        <>
             <div
-                className="relative overflow-hidden bg-[#f9f9f9]"
-                style={{ aspectRatio: "1 / 0.9" }}
+                onClick={() =>
+                    product.slug &&
+                    router.push(`/prebuilt-products/${product.slug}`)
+                }
+                className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full h-full cursor-pointer transition-all hover:shadow-lg hover:border-gray-200"
             >
-                {mainImage ? (
-                    <Image
-                        src={mainImage}
-                        alt={product.name}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                ) : (
-                    <div className="flex items-center justify-center h-full text-gray-300 text-xs">
-                        No image
-                    </div>
-                )}
-
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleWishlist(e);
-                    }}
-                    disabled={isWishlistLoading}
-                    className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500"
+                <div
+                    className="relative overflow-hidden bg-[#f9f9f9]"
+                    style={{ aspectRatio: "1 / 0.9" }}
                 >
-                    {isWishlistLoading ? (
-                        <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
-                    ) : (
-                        <Heart
-                            size={20}
-                            className={
-                                isFavorite
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-400"
-                            }
+                    {mainImage ? (
+                        <Image
+                            src={mainImage}
+                            alt={product.name}
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-110"
                         />
-                    )}
-                </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-4 flex flex-col flex-1">
-                {/* Badge Slot (fixed height) */}
-                <div className="mb-3 h-[32px] flex items-center">
-                    {product.highlighted ? (
-                        <span className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-medium text-[#372AAC] border-2 border-[#3f5df2] bg-white">
-                            Trending Now
-                        </span>
                     ) : (
-                        <span className="invisible px-4 py-1.5 text-[11px]">
-                            Trending Now
-                        </span>
+                        <div className="flex items-center justify-center h-full text-gray-300 text-xs">
+                            No image
+                        </div>
                     )}
-                </div>
-
-                <h3 className="text-base font-medium text-[#101828] mb-2 line-clamp-2">
-                    {product.name}
-                </h3>
-
-                <p className="text-sm text-[#4A5565] mb-4 line-clamp-2">
-                    {product.shortDescription}
-                </p>
-                {/* Sizes & Colors */}
-                <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
-                    {/* Sizes */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#6A7282]">
-                            Available Sizes:
-                        </span>
-                        <span className="text-xs text-[#364153]">
-                            {sizeString}
-                        </span>
-                    </div>
-
-                    {/* Colors */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#6A7282]">
-                            Colour Options:
-                        </span>
-
-                        {uniqueColors.length > 0 ? (
-                            <div className="flex items-center gap-2">
-                                {uniqueColors
-                                    .slice(0, 5)
-                                    .map(
-                                        (
-                                            c: { name: string; hex: string },
-                                            i,
-                                        ) => (
-                                            <div
-                                                key={i}
-                                                title={c.name}
-                                                className={`w-6 h-6 rounded-full flex items-center justify-center border
-                                          ${i === 0 ? "border-black" : "border-gray-300"}
-                                        `}
-                                            >
-                                                <div
-                                                    className="w-4 h-4 rounded-full"
-                                                    style={{
-                                                        backgroundColor: c.hex,
-                                                    }}
-                                                />
-                                            </div>
-                                        ),
-                                    )}
-                                {uniqueColors.length > 5 && (
-                                    <span className="text-[10px] text-gray-400">
-                                        +{uniqueColors.length - 5}
-                                    </span>
-                                )}
-                            </div>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleWishlist(e);
+                        }}
+                        disabled={isWishlistLoading}
+                        className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500"
+                    >
+                        {isWishlistLoading ? (
+                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                         ) : (
+                            <Heart
+                                size={20}
+                                className={
+                                    isFavorite
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-400"
+                                }
+                            />
+                        )}
+                    </button>
+                </div>
+
+                <div className="p-4 flex flex-col flex-1">
+                    <div className="mb-3 h-[32px] flex items-center">
+                        {product.highlighted ? (
+                            <span className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-medium text-[#372AAC] border-2 border-[#3f5df2] bg-white">
+                                Trending Now
+                            </span>
+                        ) : (
+                            <span className="invisible px-4 py-1.5 text-[11px]">
+                                Trending Now
+                            </span>
+                        )}
+                    </div>
+                    <h3 className="text-base font-medium text-[#101828] mb-2 line-clamp-2">
+                        {product.name}
+                    </h3>
+                    <p className="text-sm text-[#4A5565] mb-4 line-clamp-2">
+                        {product.shortDescription}
+                    </p>
+                    <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#6A7282]">
+                                Available Sizes:
+                            </span>
                             <span className="text-xs text-[#364153]">
-                                Standard
+                                {sizeString}
                             </span>
-                        )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#6A7282]">
+                                Colour Options:
+                            </span>
+                            {uniqueColors.length > 0 ? (
+                                <div className="flex items-center gap-2">
+                                    {uniqueColors
+                                        .slice(0, 5)
+                                        .map(
+                                            (
+                                                c: {
+                                                    name: string;
+                                                    hex: string;
+                                                },
+                                                i,
+                                            ) => (
+                                                <div
+                                                    key={i}
+                                                    title={c.name}
+                                                    className={`w-6 h-6 rounded-full flex items-center justify-center border ${i === 0 ? "border-black" : "border-gray-300"}`}
+                                                >
+                                                    <div
+                                                        className="w-4 h-4 rounded-full"
+                                                        style={{
+                                                            backgroundColor:
+                                                                c.hex,
+                                                        }}
+                                                    />
+                                                </div>
+                                            ),
+                                        )}
+                                    {uniqueColors.length > 5 && (
+                                        <span className="text-[10px] text-gray-400">
+                                            +{uniqueColors.length - 5}
+                                        </span>
+                                    )}
+                                </div>
+                            ) : (
+                                <span className="text-xs text-[#364153]">
+                                    Standard
+                                </span>
+                            )}
+                        </div>
                     </div>
-                </div>
-
-                {/* Price */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#6A7282]">
-                            Starts at
-                        </span>
-                        <span className="text-base font-semibold text-[#1a1a1a]">
-                            ₹{variant?.price?.toLocaleString()}
-                        </span>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-[#6A7282]">
+                                Starts at
+                            </span>
+                            <span className="text-base font-semibold text-[#1a1a1a]">
+                                ₹{variant?.price?.toLocaleString()}
+                            </span>
+                            {discount > 0 && (
+                                <span className="text-xs text-gray-400 line-through">
+                                    ₹{variant?.originalPrice?.toLocaleString()}
+                                </span>
+                            )}
+                        </div>
                         {discount > 0 && (
-                            <span className="text-xs text-gray-400 line-through">
-                                ₹{variant?.originalPrice?.toLocaleString()}
+                            <span className="rounded-full bg-[#e8f5e9] px-2 py-1 text-[10px] font-semibold text-[#2e7d32]">
+                                {discount}% OFF
                             </span>
                         )}
                     </div>
+                    <span className="text-[10px] text-gray-400 mb-4">
+                        (incl. GST)
+                    </span>
 
-                    {discount > 0 && (
-                        <span className="rounded-full bg-[#e8f5e9] px-2 py-1 text-[10px] font-semibold text-[#2e7d32]">
-                            {discount}% OFF
-                        </span>
-                    )}
+                    {/* ✅ Now opens modal instead of doing nothing */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowModal(true);
+                        }}
+                        className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white hover:bg-black active:scale-[0.97]"
+                    >
+                        Select Variants
+                    </button>
                 </div>
-
-                <span className="text-[10px] text-gray-400 mb-4">
-                    (incl. GST)
-                </span>
-
-                <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white hover:bg-black active:scale-[0.97]"
-                >
-                    Select Variants
-                </button>
             </div>
-        </div>
+
+            {/* ✅ Variant modal */}
+            {showModal && (
+                <VariantModal
+                    product={product}
+                    onClose={() => setShowModal(false)}
+                />
+            )}
+        </>
     );
 }
 
 /* ─────────────────────────────────────────────────────────
-   Similar Products Carousel Section
+   Similar Products Carousel
 ───────────────────────────────────────────────────────── */
 function SimilarProductsCarousel({
     products,
@@ -380,26 +656,19 @@ function SimilarProductsCarousel({
     const scrollRef = useRef<HTMLDivElement>(null);
     const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const isHoveringRef = useRef(false);
-
-    // Duplicate list for infinite scroll illusion
     const doubled = [...products, ...products];
 
-    /* ── Auto-scroll ── */
     const startAutoScroll = useCallback(() => {
         if (autoScrollRef.current) clearInterval(autoScrollRef.current);
         if (products.length <= 1) return;
-
         autoScrollRef.current = setInterval(() => {
             if (isHoveringRef.current) return;
             const container = scrollRef.current;
             if (!container) return;
-
             const cardWidth =
                 (container.firstElementChild as HTMLElement)?.offsetWidth +
                     20 || 300;
             container.scrollBy({ left: cardWidth, behavior: "smooth" });
-
-            // Seamless loop: when we've scrolled past the first copy, snap back
             setTimeout(() => {
                 if (!container) return;
                 if (container.scrollLeft >= container.scrollWidth / 2) {
@@ -416,7 +685,6 @@ function SimilarProductsCarousel({
         };
     }, [startAutoScroll]);
 
-    /* ── Manual scroll ── */
     const scrollBy = (dir: "left" | "right") => {
         const container = scrollRef.current;
         if (!container) return;
@@ -433,7 +701,6 @@ function SimilarProductsCarousel({
 
     return (
         <div className="mt-14">
-            {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-900">
@@ -444,26 +711,19 @@ function SimilarProductsCarousel({
                     </p>
                 </div>
             </div>
-
-            {/* Carousel wrapper with outside arrows */}
             <div className="relative">
-                {/* Left arrow */}
                 <button
                     onClick={() => scrollBy("left")}
                     className="absolute left-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition"
                 >
                     <ChevronLeft size={18} />
                 </button>
-
-                {/* Right arrow */}
                 <button
                     onClick={() => scrollBy("right")}
                     className="absolute right-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition"
                 >
                     <ChevronRight size={18} />
                 </button>
-
-                {/* Scrollable track */}
                 <div
                     ref={scrollRef}
                     onMouseEnter={() => {
@@ -476,7 +736,6 @@ function SimilarProductsCarousel({
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                     <style>{`div::-webkit-scrollbar{display:none}`}</style>
-
                     {doubled.map((p: any, index: number) => (
                         <div
                             key={`${p.id}-${index}`}
@@ -492,34 +751,30 @@ function SimilarProductsCarousel({
 }
 
 /* ─────────────────────────────────────────────────────────
-   Main PDP
+   Main PDP — unchanged from your original
 ───────────────────────────────────────────────────────── */
 export default function PrebuiltProductPDP() {
     const params = useParams();
     const router = useRouter();
     const { data: session } = useSession();
+    const { addToCart } = useCart();
     const slug = params.slug as string;
 
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Similar products
     const [similarProducts, setSimilarProducts] = useState<any[]>([]);
 
-    // Image carousel
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isHovering, setIsHovering] = useState(false);
     const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
 
-    // Variant
     const [selectedColor, setSelectedColor] = useState<string>("");
     const [selectedSize, setSelectedSize] = useState<string>("");
     const [quantity, setQuantity] = useState(1);
 
-    // UI
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -527,7 +782,6 @@ export default function PrebuiltProductPDP() {
         "specifications" | "features" | "support" | "care"
     >("specifications");
 
-    /* ── Fetch product ── */
     useEffect(() => {
         if (!slug) return;
         async function fetchProduct() {
@@ -557,7 +811,6 @@ export default function PrebuiltProductPDP() {
         fetchProduct();
     }, [slug]);
 
-    /* ── Fetch similar products by category ── */
     useEffect(() => {
         if (!product?.category) return;
         async function fetchSimilar() {
@@ -568,12 +821,15 @@ export default function PrebuiltProductPDP() {
                 if (!res.ok) return;
                 const data = await res.json();
                 const all = data.products || data;
-                const filtered = all.filter(
-                    (p: any) => p.id !== product.id && p.slug !== slug,
+                setSimilarProducts(
+                    all
+                        .filter(
+                            (p: any) => p.id !== product.id && p.slug !== slug,
+                        )
+                        .slice(0, 8),
                 );
-                setSimilarProducts(filtered.slice(0, 8));
             } catch {
-                // silently fail
+                /* silently fail */
             }
         }
         fetchSimilar();
@@ -587,7 +843,6 @@ export default function PrebuiltProductPDP() {
             .catch(() => {});
     }, [session, product?.id]);
 
-    /* ── Image carousel ── */
     const images: any[] = (() => {
         if (!product) return [];
         const byColor =
@@ -641,7 +896,6 @@ export default function PrebuiltProductPDP() {
         setCurrentSlide(0);
     }, [selectedColor]);
 
-    /* ── Variant logic ── */
     const uniqueColors: string[] = Array.from(
         new Set(
             product?.variants
@@ -717,7 +971,6 @@ export default function PrebuiltProductPDP() {
               ).toFixed(1)
             : "0";
 
-    /* ── Actions ── */
     const handleToggleWishlist = async (
         e: React.MouseEvent<HTMLButtonElement>,
     ) => {
@@ -774,27 +1027,44 @@ export default function PrebuiltProductPDP() {
             });
             return;
         }
+        if (!selectedVariant) {
+            toast({
+                title: "Please select a variant",
+                description: "Choose a colour and size before adding to cart.",
+                variant: "destructive",
+            });
+            return;
+        }
+        if (!selectedVariant.isActive) {
+            toast({
+                title: "Variant unavailable",
+                description:
+                    "This colour/size combination is currently out of stock.",
+                variant: "destructive",
+            });
+            return;
+        }
         setIsAddingToCart(true);
         try {
-            const res = await fetch("/api/cart", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    prebuiltProductId: product.id,
-                    quantity,
-                    colorName: selectedColor,
-                    sizeName: selectedSize,
-                }),
+            await addToCart({
+                prebuiltProductId: product.id,
+                prebuiltVariantId: selectedVariant.id,
+                quantity,
             });
-            if (!res.ok) throw new Error();
+            const variantLabel = [selectedColor, selectedSize]
+                .filter(Boolean)
+                .join(", ");
             toast({
                 title: "Added to cart",
-                description: `${quantity} item(s) added successfully`,
+                description: `${product.name}${variantLabel ? ` (${variantLabel})` : ""} × ${quantity} added.`,
             });
-        } catch {
+        } catch (error) {
             toast({
                 title: "Error",
-                description: "Failed to add to cart",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to add to cart",
                 variant: "destructive",
             });
         } finally {
@@ -809,7 +1079,6 @@ export default function PrebuiltProductPDP() {
         { key: "care", label: "Care & Precautions" },
     ] as const;
 
-    /* ── Loading / Error ── */
     if (loading)
         return (
             <div className="min-h-screen bg-white">
@@ -841,7 +1110,7 @@ export default function PrebuiltProductPDP() {
         <div className="min-h-screen bg-white">
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
-            {/* ── Nav ── */}
+            {/* Nav */}
             <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4">
                     <button
@@ -855,9 +1124,8 @@ export default function PrebuiltProductPDP() {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
-                {/* ══ Product Hero ══ */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-                    {/* LEFT — Sticky Image Carousel */}
+                    {/* LEFT — Image Carousel */}
                     <div className="lg:sticky lg:top-20 flex flex-col gap-4">
                         <div
                             className="relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-200 select-none"
@@ -944,24 +1212,6 @@ export default function PrebuiltProductPDP() {
                                     Trending Now
                                 </span>
                             )}
-                            <button
-                                onClick={handleToggleWishlist}
-                                disabled={isWishlistLoading}
-                                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center hover:border-gray-300 transition disabled:opacity-60 z-10"
-                            >
-                                {isWishlistLoading ? (
-                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
-                                ) : (
-                                    <Heart
-                                        size={16}
-                                        className={
-                                            isFavorite
-                                                ? "fill-red-500 text-red-500"
-                                                : "text-gray-400"
-                                        }
-                                    />
-                                )}
-                            </button>
                         </div>
 
                         {totalSlides > 1 && (
@@ -988,12 +1238,32 @@ export default function PrebuiltProductPDP() {
                     </div>
 
                     {/* RIGHT — Product Info */}
-                    <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-6 relative">
+                        {/* Wishlist button */}
+                        <button
+                            onClick={handleToggleWishlist}
+                            disabled={isWishlistLoading}
+                            className="absolute top-0 right-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center hover:border-gray-400 transition disabled:opacity-60 z-10"
+                        >
+                            {isWishlistLoading ? (
+                                <div className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                            ) : (
+                                <Heart
+                                    size={18}
+                                    className={
+                                        isFavorite
+                                            ? "fill-red-500 text-red-500"
+                                            : "text-gray-400"
+                                    }
+                                />
+                            )}
+                        </button>
+
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
                                 {product.category}
                             </p>
-                            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight pr-12">
                                 {product.name}
                             </h1>
                             <p className="mt-2 text-gray-500 text-sm leading-relaxed">
@@ -1211,7 +1481,11 @@ export default function PrebuiltProductPDP() {
                         {/* Add to Cart */}
                         <button
                             onClick={handleAddToCart}
-                            disabled={isAddingToCart}
+                            disabled={
+                                isAddingToCart ||
+                                !selectedVariant ||
+                                !selectedVariant?.isActive
+                            }
                             className="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-2xl font-semibold text-base transition disabled:opacity-50 flex items-center justify-center gap-2.5"
                         >
                             {isAddingToCart ? (
@@ -1219,24 +1493,26 @@ export default function PrebuiltProductPDP() {
                             ) : (
                                 <ShoppingCart size={18} />
                             )}
-                            Add to Cart
+                            {!selectedVariant
+                                ? "Select a Variant"
+                                : !selectedVariant.isActive
+                                  ? "Out of Stock"
+                                  : "Add to Cart"}
                         </button>
 
                         {/* Trust badges */}
                         <div className="flex items-center gap-8">
                             <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <ShieldCheckIcon />
-                                Quality Inspected
+                                <ShieldCheckIcon /> Quality Inspected
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <TruckIcon />
-                                Express Shipping
+                                <TruckIcon /> Express Shipping
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ══ TABS ══ */}
+                {/* TABS */}
                 <div className="mt-14 border border-gray-200 rounded-2xl bg-white overflow-hidden">
                     <div className="flex overflow-x-auto border-b border-gray-200">
                         {tabs.map(({ key, label }) => (
@@ -1249,9 +1525,7 @@ export default function PrebuiltProductPDP() {
                             </button>
                         ))}
                     </div>
-
                     <div className="p-8">
-                        {/* Specifications */}
                         {activeTab === "specifications" && (
                             <div className="flex flex-col gap-8">
                                 {(product.longDescription ||
@@ -1305,8 +1579,6 @@ export default function PrebuiltProductPDP() {
                                 )}
                             </div>
                         )}
-
-                        {/* Features */}
                         {activeTab === "features" && (
                             <div>
                                 {product.features?.length > 0 ? (
@@ -1345,46 +1617,31 @@ export default function PrebuiltProductPDP() {
                                 )}
                             </div>
                         )}
-
-                        {/* Support & Warranty */}
                         {activeTab === "support" && (
                             <div className="flex flex-col gap-7">
-                                <div>
-                                    <h2 className="text-base font-bold text-gray-900 mb-2">
-                                        Warranty
-                                    </h2>
-                                    <p className="text-sm text-gray-500 leading-relaxed">
-                                        7-day structural warranty on all 3D
-                                        printed components covering
-                                        manufacturing defects only. 30-day
-                                        warranty on electrical components (if
-                                        applicable) covering functional defects
-                                        in internal parts.
-                                    </p>
-                                </div>
-                                <div>
-                                    <h2 className="text-base font-bold text-gray-900 mb-2">
-                                        Installation
-                                    </h2>
-                                    <p className="text-sm text-gray-500 leading-relaxed">
-                                        Product is shipped fully assembled and
-                                        ready to use. For electrical variants,
-                                        connect to the recommended power source
-                                        and follow the included quick-start
-                                        guide.
-                                    </p>
-                                </div>
-                                <div>
-                                    <h2 className="text-base font-bold text-gray-900 mb-2">
-                                        Not Covered
-                                    </h2>
-                                    <p className="text-sm text-gray-500 leading-relaxed">
-                                        Warranty does not cover damage from
-                                        impact, heat exposure, moisture,
-                                        incorrect power supply, or unauthorised
-                                        modifications.
-                                    </p>
-                                </div>
+                                {[
+                                    {
+                                        title: "Warranty",
+                                        body: "7-day structural warranty on all 3D printed components covering manufacturing defects only. 30-day warranty on electrical components (if applicable) covering functional defects in internal parts.",
+                                    },
+                                    {
+                                        title: "Installation",
+                                        body: "Product is shipped fully assembled and ready to use. For electrical variants, connect to the recommended power source and follow the included quick-start guide.",
+                                    },
+                                    {
+                                        title: "Not Covered",
+                                        body: "Warranty does not cover damage from impact, heat exposure, moisture, incorrect power supply, or unauthorised modifications.",
+                                    },
+                                ].map((item) => (
+                                    <div key={item.title}>
+                                        <h2 className="text-base font-bold text-gray-900 mb-2">
+                                            {item.title}
+                                        </h2>
+                                        <p className="text-sm text-gray-500 leading-relaxed">
+                                            {item.body}
+                                        </p>
+                                    </div>
+                                ))}
                                 <div>
                                     <h2 className="text-base font-bold text-gray-900 mb-2">
                                         Contact Support
@@ -1401,8 +1658,6 @@ export default function PrebuiltProductPDP() {
                                 </div>
                             </div>
                         )}
-
-                        {/* Care & Precautions */}
                         {activeTab === "care" && (
                             <div className="flex flex-col gap-7">
                                 <div className="flex items-center gap-3">
@@ -1475,7 +1730,7 @@ export default function PrebuiltProductPDP() {
                     </div>
                 </div>
 
-                {/* ── Reviews ── */}
+                {/* Reviews */}
                 {product.reviews?.length > 0 && (
                     <div className="mt-14 border border-gray-200 rounded-2xl bg-white p-8">
                         <div className="flex items-center gap-4 mb-8">
@@ -1545,7 +1800,7 @@ export default function PrebuiltProductPDP() {
                     </div>
                 )}
 
-                {/* ══ Similar Products Carousel ══ */}
+                {/* Similar Products */}
                 {similarProducts.length > 0 && (
                     <SimilarProductsCarousel
                         products={similarProducts}

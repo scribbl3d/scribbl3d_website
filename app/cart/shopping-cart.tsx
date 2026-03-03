@@ -47,12 +47,6 @@ interface ProductSuggestion {
     buildVolume?: string;
 }
 
-/**
- * Shape used for available coupons displayed in the modal.
- * Built from the Discount model:
- *   id, name, code, scope, valueType, value,
- *   minOrderValue, maxDiscount, expiresAt, isHidden, isActive, createdAt, updatedAt
- */
 interface AvailableCoupon {
     code: string;
     name: string;
@@ -63,25 +57,22 @@ interface AvailableCoupon {
 }
 
 /* =================================================================
-   HELPER: Build display label for a Discount
+   HELPERS
 ================================================================= */
 
 function buildValueLabel(d: Discount): string {
-    if (d.valueType === "flat") {
+    if (d.valueType === "flat")
         return `Save ₹${d.value.toLocaleString("en-IN")}`;
-    }
     return `${d.value}% OFF`;
 }
 
 function buildDescription(d: Discount): string {
     const parts: string[] = [];
-
     if (d.valueType === "flat") {
         parts.push(`Flat ₹${d.value.toLocaleString("en-IN")} off`);
     } else {
         parts.push(`Get ${d.value}% off`);
     }
-
     if (d.scope === "item_type" && d.itemTypes?.length > 0) {
         const types = d.itemTypes.map(
             (t: { itemType: string }) => t.itemType + "s",
@@ -90,15 +81,10 @@ function buildDescription(d: Discount): string {
     } else {
         parts[0] += " on your order";
     }
-
-    if (d.maxDiscount) {
+    if (d.maxDiscount)
         parts.push(`Max discount ₹${d.maxDiscount.toLocaleString("en-IN")}`);
-    }
-
-    if (d.minOrderValue) {
+    if (d.minOrderValue)
         parts.push(`Min. order ₹${d.minOrderValue.toLocaleString("en-IN")}`);
-    }
-
     return parts.join(". ") + ".";
 }
 
@@ -111,22 +97,6 @@ function formatExpiryDate(date: string | null | undefined): string | null {
     });
 }
 
-/* =================================================================
-   HELPER: Recommendation Logic
-================================================================= */
-
-/**
- * Determines recommendation parameters based on cart contents.
- *
- * Logic:
- *  1. PREBUILT  → 2 filaments (PLA), 2 printers (random), 2 resins (random)
- *  2. PRODUCT   → 3 printers (FDM), 3 filaments (random)
- *  3. RESIN     → 3 printers (DLP/SLA), 3 resins (random)
- *  4. PRINTER   → 2 printers (same tech), 2 filaments (random), 2 resins (random)
- *
- * When multiple item types are in cart, each type contributes its recommendations.
- * Duplicates are handled by the API via the exclude list.
- */
 function getRecommendationParams(cartItems: CartItem[]): {
     groups: Array<{
         itemType: string;
@@ -138,61 +108,39 @@ function getRecommendationParams(cartItems: CartItem[]): {
 } {
     const itemTypes = new Set<string>();
     const excludeIds = cartItems.map((i) => i.sourceId ?? i.id).filter(Boolean);
-
     for (const item of cartItems) {
         if (item.itemType) itemTypes.add(item.itemType.toLowerCase());
     }
-
     const groups: Array<{
         itemType: string;
         limit: number;
         technology?: string;
         category?: string;
     }> = [];
-
-    // 1. PREBUILT → 2 filaments (PLA), 2 printers (random), 2 resins (random)
     if (itemTypes.has("prebuilt")) {
         groups.push({ itemType: "product", limit: 2, category: "PLA" });
         groups.push({ itemType: "printer", limit: 2 });
         groups.push({ itemType: "resin", limit: 2 });
     }
-
-    // 2. PRODUCT (filaments) → 3 printers (FDM / FFF), 3 filaments (random)
     if (itemTypes.has("product")) {
         groups.push({ itemType: "printer", limit: 3, technology: "FDM / FFF" });
         groups.push({ itemType: "product", limit: 3 });
     }
-
-    // 3. RESIN → 3 printers (SLA / DLP), 3 resins (random)
     if (itemTypes.has("resin")) {
         groups.push({ itemType: "printer", limit: 3, technology: "SLA / DLP" });
         groups.push({ itemType: "resin", limit: 3 });
     }
-
-    // 4. PRINTER → 2 printers (same tech), 2 filaments (random), 2 resins (random)
     if (itemTypes.has("printer")) {
-        // Find the technology of printers in cart (for "same technology")
-        // We'll pass this to the API
-        const printerTechs = Array.from(
-            new Set(
-                cartItems
-                    .filter((i) => i.itemType === "printer")
-                    .map(() => "SAME"), // placeholder, API will need cart printer tech
-            ),
-        );
         groups.push({ itemType: "printer", limit: 2, technology: "SAME" });
         groups.push({ itemType: "product", limit: 2 });
         groups.push({ itemType: "resin", limit: 2 });
     }
-
-    // Fallback: if empty cart or unknown types
     if (groups.length === 0) {
         groups.push({ itemType: "product", limit: 2 });
         groups.push({ itemType: "printer", limit: 2 });
         groups.push({ itemType: "resin", limit: 1 });
         groups.push({ itemType: "prebuilt", limit: 1 });
     }
-
     return { groups, excludeIds };
 }
 
@@ -255,7 +203,6 @@ function CouponCard({
                         </div>
                     )}
                 </div>
-
                 <div className="ml-3 mt-1 flex-shrink-0">
                     {isSelected ? (
                         <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
@@ -284,7 +231,7 @@ function CouponCard({
 }
 
 /* =================================================================
-   COMPONENT: CouponModal (Desktop dialog / Mobile bottom-sheet)
+   COMPONENT: CouponModal
 ================================================================= */
 
 function CouponModal({
@@ -302,11 +249,9 @@ function CouponModal({
     appliedCode: string | undefined;
     cartItems: CartItem[];
     onApplyCoupon: (coupon: AvailableCoupon | null) => void;
-    onCheckCode: (code: string) => Promise<{
-        valid: boolean;
-        message: string;
-        coupon?: AvailableCoupon;
-    }>;
+    onCheckCode: (
+        code: string,
+    ) => Promise<{ valid: boolean; message: string; coupon?: AvailableCoupon }>;
 }) {
     const [manualCode, setManualCode] = useState("");
     const [codeStatus, setCodeStatus] = useState<{
@@ -336,7 +281,6 @@ function CouponModal({
                 setCodeStatus({ type: "success", message: result.message });
                 if (result.coupon) {
                     setSelectedCode(result.coupon.code);
-                    // Store the manually validated coupon so handleApply can find it
                     setManualCoupon(result.coupon);
                 }
             } else {
@@ -352,7 +296,6 @@ function CouponModal({
     };
 
     const handleApply = () => {
-        // Check visible coupons first, then fall back to manually validated coupon
         const selected =
             coupons.find((c) => c.code === selectedCode) ??
             (manualCoupon?.code === selectedCode ? manualCoupon : null);
@@ -364,23 +307,18 @@ function CouponModal({
 
     return (
         <>
-            {/* Backdrop */}
             <div
                 className="fixed inset-0 z-50 bg-black/50 transition-opacity"
                 onClick={onClose}
             />
-
             <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pointer-events-none">
                 <div
                     className="pointer-events-auto bg-white w-full sm:w-[480px] sm:max-h-[85vh] max-h-[90vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Drag handle (mobile) */}
                     <div className="sm:hidden flex justify-center pt-3 pb-1">
                         <div className="w-10 h-1 rounded-full bg-gray-300" />
                     </div>
-
-                    {/* Header */}
                     <div className="flex items-center justify-between px-5 sm:px-6 pt-4 sm:pt-5 pb-4">
                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                             Apply Coupons
@@ -393,8 +331,6 @@ function CouponModal({
                             <X className="w-5 h-5 text-gray-500" />
                         </button>
                     </div>
-
-                    {/* Code input */}
                     <div className="px-5 sm:px-6 pb-4">
                         <div className="flex gap-2">
                             <Input
@@ -419,11 +355,7 @@ function CouponModal({
                         </div>
                         {codeStatus.type && (
                             <div
-                                className={`flex items-center gap-1.5 mt-2 text-sm font-medium ${
-                                    codeStatus.type === "success"
-                                        ? "text-green-600"
-                                        : "text-red-500"
-                                }`}
+                                className={`flex items-center gap-1.5 mt-2 text-sm font-medium ${codeStatus.type === "success" ? "text-green-600" : "text-red-500"}`}
                             >
                                 {codeStatus.type === "success" ? (
                                     <CheckCircle2 className="w-4 h-4" />
@@ -434,18 +366,12 @@ function CouponModal({
                             </div>
                         )}
                     </div>
-
                     <Separator />
-
-                    {/* Available coupons list */}
                     <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4">
                         {(() => {
-                            // Filter to only applicable coupons
                             const applicableCoupons = coupons.filter(
                                 (coupon) => {
                                     const d = coupon.discount;
-
-                                    // Check scoped item types
                                     if (
                                         d.scope === "item_type" &&
                                         d.itemTypes?.length > 0
@@ -468,8 +394,6 @@ function CouponModal({
                                             );
                                         if (scopedSubtotal === 0) return false;
                                     }
-
-                                    // Check min order value
                                     if (d.minOrderValue) {
                                         const cartTotal = cartItems.reduce(
                                             (sum, item) =>
@@ -480,13 +404,10 @@ function CouponModal({
                                         if (cartTotal < d.minOrderValue)
                                             return false;
                                     }
-
                                     return true;
                                 },
                             );
-
                             if (applicableCoupons.length === 0) return null;
-
                             return (
                                 <>
                                     <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
@@ -500,14 +421,14 @@ function CouponModal({
                                                 isSelected={
                                                     selectedCode === coupon.code
                                                 }
-                                                onSelect={() => {
+                                                onSelect={() =>
                                                     setSelectedCode(
                                                         selectedCode ===
                                                             coupon.code
                                                             ? null
                                                             : coupon.code,
-                                                    );
-                                                }}
+                                                    )
+                                                }
                                             />
                                         ))}
                                     </div>
@@ -515,17 +436,11 @@ function CouponModal({
                             );
                         })()}
                     </div>
-
-                    {/* Apply button */}
                     <div className="px-5 sm:px-6 py-4 border-t border-gray-100">
                         <Button
                             onClick={handleApply}
                             disabled={!hasSelection}
-                            className={`w-full h-14 rounded-2xl text-base font-semibold transition-all ${
-                                hasSelection
-                                    ? "bg-gray-900 text-white hover:bg-gray-800"
-                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            }`}
+                            className={`w-full h-14 rounded-2xl text-base font-semibold transition-all ${hasSelection ? "bg-gray-900 text-white hover:bg-gray-800" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
                         >
                             {appliedCode && selectedCode === appliedCode
                                 ? "Coupon Applied"
@@ -550,7 +465,6 @@ function ProductSuggestionCard({
     onAddToCart: (product: ProductSuggestion) => void;
 }) {
     const hasDiscount = product.mrp && product.mrp > product.price;
-
     return (
         <div className="flex-shrink-0 w-[180px] sm:w-[200px] bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow duration-200 snap-start">
             <div className="relative aspect-square bg-gray-50 overflow-hidden">
@@ -568,9 +482,7 @@ function ProductSuggestionCard({
                     </div>
                 )}
             </div>
-
             <div className="p-3">
-                {/* Category badge — shows technology/tileType/category based on itemType */}
                 {product.itemType && (
                     <span
                         className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md mb-1.5 ${
@@ -586,13 +498,6 @@ function ProductSuggestionCard({
                                       : "bg-gray-100 text-gray-700"
                         }`}
                     >
-                        {/*
-                          Badge text per type:
-                            printer  → technology (FDM, SLA, DLP)
-                            product  → category (PLA, ABS, PETG)
-                            prebuilt → category (Enclosure, Accessory)
-                            resin    → resolution + " Resolution" (e.g. "4K Resolution")
-                        */}
                         {product.itemType.toLowerCase() === "resin" &&
                         product.category
                             ? `${product.category} Resolution`
@@ -601,11 +506,9 @@ function ProductSuggestionCard({
                               product.itemType}
                     </span>
                 )}
-
                 <h4 className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug min-h-[2.5rem]">
                     {product.name}
                 </h4>
-
                 <div className="flex items-baseline gap-2 mt-2">
                     <span className="text-base font-bold text-gray-900">
                         ₹{product.price.toLocaleString("en-IN")}
@@ -616,7 +519,6 @@ function ProductSuggestionCard({
                         </span>
                     )}
                 </div>
-
                 <Button
                     onClick={() => onAddToCart(product)}
                     className="w-full mt-3 h-9 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors"
@@ -641,7 +543,6 @@ function ProductSuggestionCard({
 
 /* =================================================================
    COMPONENT: ProductCarousel
-   Horizontal scrollable carousel with left/right nav arrows
 ================================================================= */
 
 function ProductCarousel({
@@ -679,34 +580,27 @@ function ProductCarousel({
         };
     }, [checkScroll, products]);
 
-    // Auto-scroll every 3 seconds
     useEffect(() => {
         if (isPaused || products.length <= 2) return;
-
         const interval = setInterval(() => {
             const el = scrollRef.current;
             if (!el) return;
-
             const cardWidth = 216;
             const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 4;
-
             if (atEnd) {
-                // Loop back to start
                 el.scrollTo({ left: 0, behavior: "smooth" });
             } else {
                 el.scrollBy({ left: cardWidth, behavior: "smooth" });
             }
         }, 3000);
-
         return () => clearInterval(interval);
     }, [isPaused, products.length]);
 
     const scroll = (direction: "left" | "right") => {
         const el = scrollRef.current;
         if (!el) return;
-        const cardWidth = 216;
         el.scrollBy({
-            left: direction === "left" ? -cardWidth * 2 : cardWidth * 2,
+            left: direction === "left" ? -432 : 432,
             behavior: "smooth",
         });
     };
@@ -715,7 +609,6 @@ function ProductCarousel({
 
     return (
         <div className="mt-10">
-            {/* Header with arrows */}
             <div className="flex items-end justify-between mb-4">
                 <div>
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900">
@@ -728,11 +621,7 @@ function ProductCarousel({
                         type="button"
                         onClick={() => scroll("left")}
                         disabled={!canScrollLeft}
-                        className={`p-2 rounded-full border transition-all ${
-                            canScrollLeft
-                                ? "border-gray-300 text-gray-700 hover:bg-gray-100"
-                                : "border-gray-100 text-gray-300 cursor-not-allowed"
-                        }`}
+                        className={`p-2 rounded-full border transition-all ${canScrollLeft ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-gray-100 text-gray-300 cursor-not-allowed"}`}
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -740,18 +629,12 @@ function ProductCarousel({
                         type="button"
                         onClick={() => scroll("right")}
                         disabled={!canScrollRight}
-                        className={`p-2 rounded-full border transition-all ${
-                            canScrollRight
-                                ? "border-gray-300 text-gray-700 hover:bg-gray-100"
-                                : "border-gray-100 text-gray-300 cursor-not-allowed"
-                        }`}
+                        className={`p-2 rounded-full border transition-all ${canScrollRight ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-gray-100 text-gray-300 cursor-not-allowed"}`}
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
                 </div>
             </div>
-
-            {/* Scrollable card row */}
             <div className="relative">
                 <div
                     ref={scrollRef}
@@ -790,19 +673,18 @@ function CartItemCard({
 }) {
     const lineTotal = item.price * item.quantity;
 
-    // Determine color and size display based on item type
-    const displayColor = item.prebuiltColour ?? item.color ?? null;
+    // ✅ Updated: prebuiltColour/prebuiltSize removed, use color/size from CartItem
+    const displayColor = item.color ?? null;
     const displayColorHex = item.colorHex ?? null;
 
-    // Convert size: if it's in grams (e.g. "2000g", "1000g"), show as kg
-    const rawSize = item.prebuiltSize ?? item.size ?? null;
+    const rawSize = item.size ?? null;
     const displaySize = (() => {
         if (!rawSize) return null;
         const gramMatch = rawSize.match(/^(\d+)\s*g$/i);
         if (gramMatch) {
             const grams = parseInt(gramMatch[1]);
             const kg = grams / 1000;
-            return kg % 1 === 0 ? `${kg} kg` : `${kg} kg`;
+            return `${kg} kg`;
         }
         return rawSize;
     })();
@@ -811,7 +693,6 @@ function CartItemCard({
         <Card className="rounded-2xl border border-gray-100 shadow-none hover:shadow-sm transition-shadow">
             <CardContent className="p-4 sm:p-5">
                 <div className="flex gap-4">
-                    {/* Product image */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
                         <Image
                             src={item.images?.[0] ?? "/placeholder.png"}
@@ -821,16 +702,12 @@ function CartItemCard({
                             unoptimized
                         />
                     </div>
-
-                    {/* Product info */}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                             <div className="min-w-0 pr-2">
                                 <h3 className="font-semibold text-gray-900 text-sm sm:text-base leading-snug">
                                     {item.name}
                                 </h3>
-
-                                {/* Variant badges */}
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                                     {displayColor && (
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-xs text-gray-600">
@@ -865,8 +742,6 @@ function CartItemCard({
                                     )}
                                 </div>
                             </div>
-
-                            {/* Delete button */}
                             <button
                                 type="button"
                                 onClick={() => onRemove(item.id)}
@@ -875,8 +750,6 @@ function CartItemCard({
                                 <Trash2 className="w-4 h-4" />
                             </button>
                         </div>
-
-                        {/* Quantity + Price row */}
                         <div className="flex items-center justify-between mt-3">
                             <div className="inline-flex items-center gap-0 border border-gray-200 rounded-xl overflow-hidden">
                                 <button
@@ -908,7 +781,6 @@ function CartItemCard({
                                     <Plus className="w-3.5 h-3.5" />
                                 </button>
                             </div>
-
                             <div className="text-right">
                                 <p className="text-base sm:text-lg font-bold text-gray-900">
                                     ₹{lineTotal.toLocaleString("en-IN")}
@@ -955,29 +827,24 @@ export default function ShoppingCart() {
     const [mobileExpanded, setMobileExpanded] = useState(false);
     const [activeModalItem, setActiveModalItem] = useState<any>(null);
 
-    // Track cart content changes with a stable key
     const cartKey = localCart
         .map((i) => i.id)
         .sort()
         .join(",");
 
-    // --- Fetch cart on mount, then sync from provider
     const hasFetched = useRef(false);
     useEffect(() => {
         if (hasFetched.current) return;
         hasFetched.current = true;
         fetchCart().then(() => {
-            // Small delay to let React propagate the cart state update
             setTimeout(() => setInitialLoadDone(true), 50);
         });
     }, [fetchCart]);
 
-    // Sync localCart from provider whenever cart changes
     useEffect(() => {
         setLocalCart(cart ?? []);
     }, [cart]);
 
-    // --- Fetch available coupons
     useEffect(() => {
         (async () => {
             try {
@@ -997,19 +864,15 @@ export default function ShoppingCart() {
                     setAvailableCoupons(mapped);
                 }
             } catch {
-                // silently fail
+                /* silently fail */
             }
         })();
     }, []);
 
-    // --- Fetch suggestions (only after initial cart load is done)
     useEffect(() => {
         if (!initialLoadDone) return;
-
         const controller = new AbortController();
-
         if (localCart.length === 0) {
-            // Empty cart: fetch wishlist or popular products
             (async () => {
                 try {
                     const wishlistRes = await fetch("/api/wishlist", {
@@ -1037,7 +900,6 @@ export default function ShoppingCart() {
                 }
             })();
         } else {
-            // Filled cart: fetch based on cart item types
             const { groups, excludeIds } = getRecommendationParams(localCart);
             (async () => {
                 try {
@@ -1058,41 +920,20 @@ export default function ShoppingCart() {
                 }
             })();
         }
-
         return () => controller.abort();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialLoadDone, cartKey]);
 
-    // Shimmer until both cart and suggestions are ready
     const isLoading = !initialLoadDone || !suggestionsLoaded;
-
-    /* =========================
-       PRICE CALCULATIONS
-
-       Prices from DB are INCLUSIVE of 18% GST.
-       - Subtotal = sum of (price × qty) — already includes tax
-       - GST display = back-calculated from subtotal for transparency
-       - Coupon discount is applied after subtotal
-       - Grand Total = Subtotal - Coupon Discount (tax already included)
-    ========================= */
 
     const subtotal = localCart.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0,
     );
-
     const couponDiscount = contextDiscountAmount;
-
-    // GST is already included in prices — extract it for display only
-    // Price = Base + 18% GST → Base = Price / 1.18 → GST = Price - Base
     const afterDiscount = subtotal - couponDiscount;
     const gstAmount = Math.round(afterDiscount - afterDiscount / 1.18);
-
     const grandTotal = afterDiscount;
-
-    /* =========================
-       ACTIONS
-    ========================= */
 
     const handleApplyCoupon = async (coupon: AvailableCoupon | null) => {
         if (coupon) {
@@ -1129,16 +970,12 @@ export default function ShoppingCart() {
             const res = await fetch(
                 `/api/discounts/apply?code=${encodeURIComponent(code)}`,
             );
-            if (!res.ok) {
+            if (!res.ok)
                 return {
                     valid: false,
                     message: "This coupon is not applicable to your order",
                 };
-            }
-
             const discount: Discount = await res.json();
-
-            // For scoped discounts, only check against matching item types
             let applicableSubtotal: number;
             if (
                 discount.scope === "item_type" &&
@@ -1156,15 +993,12 @@ export default function ShoppingCart() {
                     0,
                 );
             }
-
             const testAmount = calculateDiscount(discount, applicableSubtotal);
-            if (testAmount === 0) {
+            if (testAmount === 0)
                 return {
                     valid: false,
                     message: "This coupon is not applicable to your order",
                 };
-            }
-
             const coupon: AvailableCoupon = {
                 code: discount.code,
                 name: discount.name,
@@ -1173,12 +1007,9 @@ export default function ShoppingCart() {
                 expiresOn: formatExpiryDate(discount.expiresAt),
                 discount,
             };
-
-            // Hidden coupons show as "secret" when entered manually
             const isSecret =
                 discount.isHidden ||
                 !availableCoupons.some((c) => c.code === discount.code);
-
             return {
                 valid: true,
                 message: isSecret
@@ -1201,7 +1032,6 @@ export default function ShoppingCart() {
             appliedDiscountCode,
             tax: gstAmount,
         });
-
         router.push("/checkout");
     };
 
@@ -1221,23 +1051,19 @@ export default function ShoppingCart() {
         await removeFromCart(id);
     };
 
+    /* ✅ Updated handleAddSuggestion — prebuilt now uses availableVariants */
     const handleAddSuggestion = async (product: ProductSuggestion) => {
         const type = product.itemType?.toLowerCase();
 
-        // Resin & Prebuilt need options selection — open modal
         if (type === "resin" || type === "prebuilt") {
             try {
-                // Fetch full product data for the modal
                 if (type === "resin") {
                     let slug = product.slug;
-
-                    // If slug is missing, fetch it by looking up the resin
                     if (!slug) {
                         try {
                             const lookupRes = await fetch(`/api/resins`);
                             if (lookupRes.ok) {
                                 const resinsResponse = await lookupRes.json();
-                                // Handle paginated response: { resins: [...] }
                                 const resinsList =
                                     resinsResponse.resins ?? resinsResponse;
                                 const found = Array.isArray(resinsList)
@@ -1248,10 +1074,9 @@ export default function ShoppingCart() {
                                 slug = found?.slug;
                             }
                         } catch {
-                            // ignore
+                            /* ignore */
                         }
                     }
-
                     if (!slug) {
                         toast({
                             title: "Unable to load options",
@@ -1261,11 +1086,9 @@ export default function ShoppingCart() {
                         });
                         return;
                     }
-
                     const res = await fetch(`/api/resins/${slug}`);
                     if (!res.ok) throw new Error("Resin not found");
                     const resinData: any = await res.json();
-
                     setActiveModalItem({
                         id: resinData.id,
                         itemType: "resin",
@@ -1296,34 +1119,47 @@ export default function ShoppingCart() {
                             })) ?? [],
                     });
                 } else {
-                    const res = await fetch(`/api/prebuilt/${product.id}`);
+                    // ✅ PREBUILT: use correct endpoint + build availableVariants
+                    const endpoint = product.slug
+                        ? `/api/prebuilt-products/${product.slug}`
+                        : `/api/prebuilt-products/id/${product.id}`; // fallback
+
+                    const res = await fetch(endpoint);
                     if (!res.ok) throw new Error("Product not found");
                     const prebuiltData: any = await res.json();
+
+                    const variants = prebuiltData.variants ?? [];
+                    const cheapest = variants.reduce(
+                        (min: any, v: any) =>
+                            !min || v.price < min.price ? v : min,
+                        null,
+                    );
 
                     setActiveModalItem({
                         id: prebuiltData.id,
                         itemType: "prebuilt",
                         title: prebuiltData.name,
-                        image: prebuiltData.images?.[0] ?? product.images[0],
+                        image:
+                            prebuiltData.images?.find((i: any) => i.isMain)
+                                ?.url ??
+                            prebuiltData.images?.[0]?.url ??
+                            product.images[0],
                         badge: prebuiltData.category,
-                        price: prebuiltData.price ?? product.price,
-                        originalPrice: prebuiltData.originalPrice ?? null,
-                        requiresOptions: true,
-                        slug: prebuiltData.id,
+                        price: cheapest?.price ?? product.price,
+                        originalPrice: cheapest?.originalPrice ?? null,
+                        requiresOptions: variants.length > 0,
+                        slug: prebuiltData.slug ?? null,
                         cartPayload: { prebuiltProductId: prebuiltData.id },
-                        prebuiltColours:
-                            prebuiltData.colors?.map((c: any) => ({
-                                id: c.id,
-                                name: c.name,
-                                hex: c.hexCode ?? null,
-                            })) ?? [],
-                        prebuiltSizes:
-                            prebuiltData.sizes?.map((s: any) => ({
-                                id: s.id,
-                                name: s.name,
-                                price: s.price,
-                                originalPrice: s.originalPrice,
-                            })) ?? [],
+                        // ✅ availableVariants replaces old prebuiltColours + prebuiltSizes
+                        availableVariants: variants.map((v: any) => ({
+                            id: v.id,
+                            colorName: v.colorName ?? null,
+                            colorHex: v.colorHex ?? null,
+                            sizeName: v.sizeName ?? null,
+                            price: v.price,
+                            originalPrice: v.originalPrice ?? 0,
+                            isActive: v.isActive,
+                        })),
                     });
                 }
             } catch {
@@ -1335,7 +1171,7 @@ export default function ShoppingCart() {
             return;
         }
 
-        // Printer & Product — direct add to cart
+        // Printer & Product — direct add
         try {
             const payload: Record<string, string | number> = { quantity: 1 };
             if (type === "printer") {
@@ -1343,16 +1179,12 @@ export default function ShoppingCart() {
             } else {
                 payload.productId = product.id;
             }
-
             await addToCart(
                 payload as unknown as Parameters<typeof addToCart>[0],
             );
             toast({ title: `${product.name} added to cart` });
         } catch {
-            toast({
-                title: "Failed to add item",
-                variant: "destructive",
-            });
+            toast({ title: "Failed to add item", variant: "destructive" });
         }
     };
 
@@ -1363,11 +1195,8 @@ export default function ShoppingCart() {
     if (isLoading) {
         return (
             <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
-                {/* Header shimmer */}
                 <div className="h-9 w-48 bg-gray-200 rounded-lg animate-pulse mb-6" />
-
                 <div className="grid lg:grid-cols-12 gap-6">
-                    {/* Cart items shimmer */}
                     <div className="lg:col-span-8 space-y-3">
                         {[1, 2, 3].map((i) => (
                             <div
@@ -1375,23 +1204,18 @@ export default function ShoppingCart() {
                                 className="rounded-2xl border border-gray-100 p-4 sm:p-5"
                             >
                                 <div className="flex gap-4">
-                                    {/* Image */}
                                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gray-200 animate-pulse flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1 pr-2">
-                                                {/* Name */}
                                                 <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
-                                                {/* Badges */}
                                                 <div className="flex gap-1.5 mt-2">
                                                     <div className="h-5 w-16 bg-gray-100 rounded-md animate-pulse" />
                                                     <div className="h-5 w-12 bg-gray-100 rounded-md animate-pulse" />
                                                 </div>
                                             </div>
-                                            {/* Delete */}
                                             <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
                                         </div>
-                                        {/* Qty + Price */}
                                         <div className="flex items-center justify-between mt-3">
                                             <div className="h-9 w-28 bg-gray-100 rounded-xl animate-pulse" />
                                             <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
@@ -1400,105 +1224,23 @@ export default function ShoppingCart() {
                                 </div>
                             </div>
                         ))}
-
-                        {/* Recommendation shimmer */}
-                        <div className="mt-10 hidden lg:block">
-                            <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
-                            <div className="h-4 w-72 bg-gray-100 rounded animate-pulse mt-1.5" />
-                            <div className="flex gap-4 mt-4">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div
-                                        key={i}
-                                        className="w-[200px] flex-shrink-0 rounded-2xl border border-gray-100 overflow-hidden"
-                                    >
-                                        <div className="aspect-square bg-gray-200 animate-pulse" />
-                                        <div className="p-3 space-y-2">
-                                            <div className="h-4 w-16 bg-gray-100 rounded-md animate-pulse" />
-                                            <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-                                            <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse" />
-                                            <div className="h-5 w-20 bg-gray-200 rounded animate-pulse mt-1" />
-                                            <div className="h-9 w-full bg-gray-200 rounded-xl animate-pulse mt-2" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
-
-                    {/* Order Summary shimmer (desktop) */}
                     <div className="lg:col-span-4 hidden lg:block">
                         <div className="rounded-2xl border border-gray-100 p-6 space-y-4">
                             <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
-                            {/* Coupons box */}
                             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                                 <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
-                                <div className="h-4 w-52 bg-gray-100 rounded animate-pulse" />
                                 <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse mt-2" />
                             </div>
                             <div className="h-px bg-gray-100" />
-                            {/* Price lines */}
                             {[1, 2, 3, 4].map((i) => (
                                 <div key={i} className="flex justify-between">
                                     <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
                                     <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
                                 </div>
                             ))}
-                            <div className="h-px bg-gray-100" />
-                            {/* Grand Total */}
-                            <div className="flex justify-between">
-                                <div className="h-6 w-28 bg-gray-200 rounded animate-pulse" />
-                                <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
-                            </div>
-                            {/* Checkout button */}
                             <div className="h-14 w-full bg-gray-200 rounded-2xl animate-pulse" />
-                            <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mx-auto" />
                         </div>
-                    </div>
-                </div>
-
-                {/* Mobile recommendation shimmer */}
-                <div className="lg:hidden mt-6">
-                    <div className="h-6 w-44 bg-gray-200 rounded animate-pulse" />
-                    <div className="h-4 w-64 bg-gray-100 rounded animate-pulse mt-1.5" />
-                    <div className="flex gap-4 mt-4 overflow-hidden">
-                        {[1, 2].map((i) => (
-                            <div
-                                key={i}
-                                className="w-[180px] flex-shrink-0 rounded-2xl border border-gray-100 overflow-hidden"
-                            >
-                                <div className="aspect-square bg-gray-200 animate-pulse" />
-                                <div className="p-3 space-y-2">
-                                    <div className="h-4 w-14 bg-gray-100 rounded-md animate-pulse" />
-                                    <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
-                                    <div className="h-5 w-16 bg-gray-200 rounded animate-pulse" />
-                                    <div className="h-9 w-full bg-gray-200 rounded-xl animate-pulse" />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Mobile Order Summary shimmer */}
-                <div className="lg:hidden mt-6">
-                    <div className="rounded-2xl border border-gray-100 p-5 space-y-4">
-                        <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
-                        <div className="bg-gray-50 rounded-xl p-4">
-                            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
-                            <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse mt-3" />
-                        </div>
-                        <div className="h-px bg-gray-100" />
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="flex justify-between">
-                                <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
-                                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-                            </div>
-                        ))}
-                        <div className="h-px bg-gray-100" />
-                        <div className="flex justify-between">
-                            <div className="h-6 w-28 bg-gray-200 rounded animate-pulse" />
-                            <div className="h-8 w-24 bg-gray-200 rounded animate-pulse" />
-                        </div>
-                        <div className="h-14 w-full bg-gray-200 rounded-2xl animate-pulse" />
                     </div>
                 </div>
             </div>
@@ -1515,7 +1257,6 @@ export default function ShoppingCart() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
                     Shopping Cart
                 </h1>
-
                 <Card className="rounded-2xl border border-gray-100 shadow-none">
                     <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20">
                         <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
@@ -1534,7 +1275,6 @@ export default function ShoppingCart() {
                         </Link>
                     </CardContent>
                 </Card>
-
                 {emptySuggestions.length > 0 && (
                     <ProductCarousel
                         title="Here are some products you might need"
@@ -1554,7 +1294,6 @@ export default function ShoppingCart() {
     return (
         <>
             <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10 pb-32 lg:pb-10">
-                {/* Header */}
                 <div className="flex items-center gap-3 mb-6">
                     <Link href="/">
                         <button
@@ -1570,7 +1309,6 @@ export default function ShoppingCart() {
                 </div>
 
                 <div className="grid lg:grid-cols-12 gap-6">
-                    {/* --- Cart Items Column --- */}
                     <div className="lg:col-span-8 space-y-3">
                         {localCart.map((item) => (
                             <CartItemCard
@@ -1580,8 +1318,6 @@ export default function ShoppingCart() {
                                 onRemove={handleRemoveFromCart}
                             />
                         ))}
-
-                        {/* Desktop: Carousel inside left column */}
                         {suggestions.length > 0 && (
                             <div className="hidden lg:block">
                                 <ProductCarousel
@@ -1594,7 +1330,7 @@ export default function ShoppingCart() {
                         )}
                     </div>
 
-                    {/* --- Order Summary (Desktop) --- */}
+                    {/* Desktop Order Summary */}
                     <div className="lg:col-span-4 hidden lg:block">
                         <Card className="sticky top-4 rounded-2xl border border-gray-100 shadow-none">
                             <CardHeader className="pb-3">
@@ -1603,7 +1339,6 @@ export default function ShoppingCart() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {/* Coupons section */}
                                 <div className="bg-gray-50 rounded-xl p-4">
                                     <div className="flex items-center gap-2 mb-1">
                                         <Ticket className="w-4 h-4 text-blue-600" />
@@ -1624,10 +1359,7 @@ export default function ShoppingCart() {
                                             : "Apply Coupons"}
                                     </Button>
                                 </div>
-
                                 <Separator />
-
-                                {/* Price breakdown */}
                                 <div className="space-y-2.5 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">
@@ -1637,7 +1369,6 @@ export default function ShoppingCart() {
                                             ₹{subtotal.toLocaleString("en-IN")}
                                         </span>
                                     </div>
-
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">
                                             Coupon Discount
@@ -1661,7 +1392,6 @@ export default function ShoppingCart() {
                                             </button>
                                         )}
                                     </div>
-
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">
                                             Tax (GST)
@@ -1670,7 +1400,6 @@ export default function ShoppingCart() {
                                             ₹{gstAmount.toLocaleString("en-IN")}
                                         </span>
                                     </div>
-
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">
                                             Shipping
@@ -1680,10 +1409,7 @@ export default function ShoppingCart() {
                                         </span>
                                     </div>
                                 </div>
-
                                 <Separator />
-
-                                {/* Grand Total */}
                                 <div className="flex justify-between items-baseline">
                                     <span className="text-lg font-bold text-gray-900">
                                         Grand Total
@@ -1698,24 +1424,19 @@ export default function ShoppingCart() {
                                         </p>
                                     </div>
                                 </div>
-
-                                {/* Checkout button */}
                                 <Button
                                     onClick={handleCheckout}
                                     className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800 transition-colors"
                                 >
-                                    Proceed to Checkout
+                                    Proceed to Checkout{" "}
                                     <ChevronRight className="w-5 h-5 ml-1" />
                                 </Button>
-
                                 <Link
                                     href="/"
                                     className="block text-center text-sm font-semibold text-gray-900 hover:underline"
                                 >
                                     Continue Shopping
                                 </Link>
-
-                                {/* Payment trust badge */}
                                 <div className="flex items-center justify-center gap-2 pt-2">
                                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
                                         <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-bold text-gray-500">
@@ -1735,7 +1456,7 @@ export default function ShoppingCart() {
                     </div>
                 </div>
 
-                {/* --- Mobile: Carousel (full width, outside grid) --- */}
+                {/* Mobile carousel */}
                 {suggestions.length > 0 && (
                     <div className="lg:hidden">
                         <ProductCarousel
@@ -1747,7 +1468,7 @@ export default function ShoppingCart() {
                     </div>
                 )}
 
-                {/* --- Mobile: Order Summary (after recommendations) --- */}
+                {/* Mobile Order Summary */}
                 <div className="lg:hidden mt-6">
                     <Card className="rounded-2xl border border-gray-100 shadow-none">
                         <CardHeader className="pb-3">
@@ -1773,9 +1494,7 @@ export default function ShoppingCart() {
                                         : "Apply Coupons"}
                                 </Button>
                             </div>
-
                             <Separator />
-
                             <div className="space-y-2.5 text-sm">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">
@@ -1823,9 +1542,7 @@ export default function ShoppingCart() {
                                     <span className="font-medium">FREE</span>
                                 </div>
                             </div>
-
                             <Separator />
-
                             <div className="flex justify-between items-baseline">
                                 <span className="text-lg font-bold text-gray-900">
                                     Grand Total
@@ -1839,22 +1556,19 @@ export default function ShoppingCart() {
                                     </p>
                                 </div>
                             </div>
-
                             <Button
                                 onClick={handleCheckout}
                                 className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800"
                             >
-                                Proceed to Checkout
+                                Proceed to Checkout{" "}
                                 <ChevronRight className="w-5 h-5 ml-1" />
                             </Button>
-
                             <Link
                                 href="/"
                                 className="block text-center text-sm font-semibold text-gray-900 hover:underline"
                             >
                                 Continue Shopping
                             </Link>
-
                             <div className="flex items-center justify-center gap-2 pt-2">
                                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
                                     <span className="px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-bold text-gray-500">
@@ -1874,7 +1588,7 @@ export default function ShoppingCart() {
                 </div>
             </div>
 
-            {/* --- Mobile Sticky Bottom Bar --- */}
+            {/* Mobile Sticky Bottom Bar */}
             <div className="fixed bottom-0 left-0 right-0 lg:hidden bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-40">
                 {mobileExpanded && (
                     <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 space-y-2 text-sm animate-in slide-in-from-bottom duration-200">
@@ -1906,7 +1620,6 @@ export default function ShoppingCart() {
                         </div>
                     </div>
                 )}
-
                 <div className="px-4 py-3 flex items-center justify-between">
                     <div>
                         <button
@@ -1918,22 +1631,18 @@ export default function ShoppingCart() {
                                 Grand Total
                             </p>
                             <ChevronUp
-                                className={`w-3 h-3 text-gray-400 transition-transform ${
-                                    mobileExpanded ? "rotate-180" : ""
-                                }`}
+                                className={`w-3 h-3 text-gray-400 transition-transform ${mobileExpanded ? "rotate-180" : ""}`}
                             />
                         </button>
                         <p className="text-xl font-bold text-gray-900">
                             ₹{grandTotal.toLocaleString("en-IN")}
                         </p>
                     </div>
-
                     <Button
                         onClick={handleCheckout}
                         className="h-12 px-8 rounded-2xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800"
                     >
-                        Checkout
-                        <ChevronRight className="w-4 h-4 ml-1" />
+                        Checkout <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                 </div>
             </div>

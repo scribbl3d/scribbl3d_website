@@ -20,7 +20,19 @@ export async function GET() {
                 orderBy: { createdAt: "desc" },
                 include: {
                     product: true,
-                    prebuiltProduct: true,
+                    prebuiltProduct: {
+                        include: {
+                            images: {
+                                where: { isMain: true },
+                                take: 1,
+                            },
+                            // ✅ fetch all active variants with full data
+                            variants: {
+                                where: { isActive: true },
+                                orderBy: { createdAt: "asc" },
+                            },
+                        },
+                    },
                     printer: {
                         include: {
                             images: { orderBy: { sortOrder: "asc" } },
@@ -58,10 +70,11 @@ export async function GET() {
                     price: item.printer.price,
                     originalPrice: item.printer.originalPrice ?? null,
                     requiresOptions: false,
+                    slug: item.printer.slug,
                     cartPayload: { printerId: item.printer.id },
                 };
             }
-            /*
+
             /* ================= RESIN ================= */
             if (item.resin) {
                 return {
@@ -80,7 +93,6 @@ export async function GET() {
                         hex: c.hexCode ?? null,
                         image: c.images[0]?.url ?? null,
                     })),
-
                     resinWeights: item.resin.weights.map((w) => ({
                         id: w.id,
                         label: w.weightInGrams,
@@ -92,30 +104,39 @@ export async function GET() {
             }
 
             /* ================= PREBUILT ================= */
-            // if (item.prebuiltProduct) {
-            //     return {
-            //         id: item.id,
-            //         itemType: "prebuilt",
-            //         title: item.prebuiltProduct.name,
-            //         image: item.prebuiltProduct.images?.[0] ?? null,
-            //         badge: item.prebuiltProduct.category ?? null,
-            //         price: item.prebuiltProduct.price,
-            //         originalPrice: item.prebuiltProduct.originalPrice ?? null,
-            //         requiresOptions: true,
-            //         availableColours: item.prebuiltProduct.availableColors.map(
-            //             (color) => ({
-            //                 label: color,
-            //             })
-            //         ),
+            if (item.prebuiltProduct) {
+                const variants = item.prebuiltProduct.variants ?? [];
 
-            //         availableSizes: item.prebuiltProduct.availableSizes.map(
-            //             (size) => ({
-            //                 label: size,
-            //             })
-            //         ),
-            //         cartPayload: { prebuiltProductId: item.prebuiltProduct.id },
-            //     };
-            // }
+                // Use the cheapest active variant as display price
+                const cheapest = variants.reduce(
+                    (min: any, v: any) =>
+                        !min || v.price < min.price ? v : min,
+                    null as any,
+                );
+
+                return {
+                    id: item.id,
+                    itemType: "prebuilt",
+                    title: item.prebuiltProduct.name,
+                    image: item.prebuiltProduct.images?.[0]?.url ?? null,
+                    badge: item.prebuiltProduct.category ?? null,
+                    price: cheapest?.price ?? 0,
+                    originalPrice: cheapest?.originalPrice ?? null,
+                    requiresOptions: variants.length > 0,
+                    slug: item.prebuiltProduct.slug ?? null,
+                    // ✅ Full variant data so modal can resolve variantId
+                    availableVariants: variants.map((v: any) => ({
+                        id: v.id,
+                        colorName: v.colorName ?? null,
+                        colorHex: v.colorHex ?? null,
+                        sizeName: v.sizeName ?? null,
+                        price: v.price,
+                        originalPrice: v.originalPrice ?? 0,
+                        isActive: v.isActive,
+                    })),
+                    cartPayload: { prebuiltProductId: item.prebuiltProduct.id },
+                };
+            }
 
             /* ================= PRODUCT (FILAMENT) ================= */
             if (item.product) {
@@ -128,6 +149,7 @@ export async function GET() {
                     price: item.product.price,
                     originalPrice: item.product.originalPrice ?? null,
                     requiresOptions: false,
+                    slug: null,
                     cartPayload: { productId: item.product.id },
                 };
             }
@@ -139,6 +161,9 @@ export async function GET() {
     return NextResponse.json({ items });
 }
 
+/* =====================================================
+   POST → TOGGLE WISHLIST ITEM
+===================================================== */
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -146,29 +171,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+    const { productId, prebuiltProductId, printerId, resinId } = body;
 
-    const {
-        productId,
-        prebuiltProductId,
-        printerId,
-        resinId,
-
-        productSizeId,
-        productColorId,
-        resinColourId,
-        resinWeightId,
-        prebuiltColor,
-        prebuiltSize,
-    } = body;
-
-    /* ---------- ENSURE EXACTLY ONE TYPE ---------- */
-    const types = {
-        productId,
-        prebuiltProductId,
-        printerId,
-        resinId,
-    };
-
+    const types = { productId, prebuiltProductId, printerId, resinId };
     const activeType = Object.entries(types).filter(
         ([_, v]) => typeof v === "string",
     );
@@ -182,50 +187,28 @@ export async function POST(req: Request) {
 
     const [typeKey, typeValue] = activeType[0];
 
-    /* ---------- GET OR CREATE WISHLIST ---------- */
     const wishlist =
         (await prisma.wishlist.findUnique({
             where: { userId: session.user.id },
         })) ??
-        (await prisma.wishlist.create({
-            data: { userId: session.user.id },
-        }));
+        (await prisma.wishlist.create({ data: { userId: session.user.id } }));
 
-    /* ---------- CHECK EXISTING (TYPE SAFE) ---------- */
     const existingItem = await prisma.wishlistItem.findFirst({
-        where: {
-            wishlistId: wishlist.id,
-            [typeKey]: typeValue,
-        },
+        where: { wishlistId: wishlist.id, [typeKey]: typeValue },
     });
 
-    /* ---------- TOGGLE OFF ---------- */
     if (existingItem) {
-        await prisma.wishlistItem.delete({
-            where: { id: existingItem.id },
-        });
-
+        await prisma.wishlistItem.delete({ where: { id: existingItem.id } });
         return NextResponse.json({ removed: true });
     }
 
-    /* ---------- TOGGLE ON ---------- */
     await prisma.wishlistItem.create({
         data: {
             wishlistId: wishlist.id,
-
             productId: productId ?? null,
             prebuiltProductId: prebuiltProductId ?? null,
             printerId: printerId ?? null,
             resinId: resinId ?? null,
-
-            // productSizeId: productSizeId ?? null,
-            // productColorId: productColorId ?? null,
-
-            resinColourId: resinColourId ?? null,
-            resinWeightId: resinWeightId ?? null,
-
-            // prebuiltColor: prebuiltColor ?? null,
-            // prebuiltSize: prebuiltSize ?? null,
         },
     });
 

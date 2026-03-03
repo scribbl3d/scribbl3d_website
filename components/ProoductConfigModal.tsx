@@ -86,10 +86,9 @@ export default function ProductConfigModal({
                       }
                     : {
                           prebuiltProductId: product.id,
-                          prebuiltColour: color!,
-                          prebuiltSize: size!,
+
                           quantity: qty,
-                      }
+                      },
             );
 
             if (wishlistItemId) {
@@ -206,7 +205,7 @@ export default function ProductConfigModal({
                                             >
                                                 {c}
                                             </button>
-                                        )
+                                        ),
                                     )}
                                 </div>
                             </div>

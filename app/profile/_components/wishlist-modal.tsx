@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -19,45 +19,97 @@ export default function WishlistModal({
 }) {
     const { addToCart } = useCart();
     const router = useRouter();
+    const { data: session } = useSession();
 
     /* =====================
-       STATE
+       RESIN STATE
     ===================== */
-
     const [selectedColourId, setSelectedColourId] = useState<string | null>(
         null,
     );
     const [selectedWeightId, setSelectedWeightId] = useState<string | null>(
         null,
     );
-    const prebuiltColours = item.availableColours ?? [];
-    const prebuiltSizes = item.availableSizes ?? [];
-
-    const [selectedPrebuiltColour, setSelectedPrebuiltColour] = useState<
-        string | null
-    >(null);
-    const [selectedPrebuiltSize, setSelectedPrebuiltSize] = useState<
-        string | null
-    >(null);
     const [displayPrice, setDisplayPrice] = useState<number>(item.price);
 
+    /* =====================
+       PREBUILT STATE
+    ===================== */
+    const [selectedColor, setSelectedColor] = useState<string | null>(null);
+    const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
+    const variants = item.availableVariants ?? [];
+
+    // Unique colors from variants
+    const uniqueColors: { name: string; hex: string | null }[] = Array.from(
+        new Map(
+            variants
+                .filter((v) => v.colorName)
+                .map((v) => [
+                    v.colorName,
+                    { name: v.colorName!, hex: v.colorHex },
+                ]),
+        ).values(),
+    );
+
+    // Sizes valid for selected color (or all sizes if no color selected)
+    const validSizes: string[] = Array.from(
+        new Set(
+            variants
+                .filter(
+                    (v) =>
+                        v.sizeName &&
+                        v.isActive &&
+                        (!selectedColor || v.colorName === selectedColor),
+                )
+                .map((v) => v.sizeName!),
+        ),
+    );
+
+    // Resolve the selected variant
+    const selectedVariant =
+        variants.find(
+            (v) =>
+                v.colorName === selectedColor &&
+                v.sizeName === selectedSize &&
+                v.isActive,
+        ) ?? null;
+
+    // Update display price when variant changes
+    const handleColorChange = (color: string) => {
+        setSelectedColor(color);
+        setSelectedSize(null); // reset size on color change
+    };
+
+    const handleSizeChange = (size: string) => {
+        setSelectedSize(size);
+        // Update preview price
+        const v = variants.find(
+            (v) =>
+                v.colorName === selectedColor &&
+                v.sizeName === size &&
+                v.isActive,
+        );
+        if (v) setDisplayPrice(v.price);
+    };
+
+    /* =====================
+       QUANTITY
+    ===================== */
     const [quantity, setQuantity] = useState(1);
-    const { data: session } = useSession();
 
     /* =====================
        VALIDATION
     ===================== */
-
     const canAddToCart =
-        (item.itemType === "resin" && selectedColourId && selectedWeightId) ||
-        (item.itemType === "prebuilt" &&
-            selectedPrebuiltColour &&
-            selectedPrebuiltSize);
+        (item.itemType === "resin" &&
+            !!selectedColourId &&
+            !!selectedWeightId) ||
+        (item.itemType === "prebuilt" && !!selectedVariant);
 
     /* =====================
        ACTIONS
     ===================== */
-
     const handleAddToCart = async () => {
         if (!session) {
             toast({
@@ -75,31 +127,23 @@ export default function WishlistModal({
             });
             return;
         }
-        await addToCart({
-            ...item.cartPayload,
 
-            resinColourId:
-                item.itemType === "resin"
-                    ? (selectedColourId ?? undefined)
-                    : undefined,
+        if (item.itemType === "resin") {
+            await addToCart({
+                ...item.cartPayload,
+                resinColourId: selectedColourId ?? undefined,
+                resinWeightId: selectedWeightId ?? undefined,
+                quantity,
+            });
+        }
 
-            resinWeightId:
-                item.itemType === "resin"
-                    ? (selectedWeightId ?? undefined)
-                    : undefined,
-
-            prebuiltColour:
-                item.itemType === "prebuilt"
-                    ? (selectedPrebuiltColour ?? undefined)
-                    : undefined,
-
-            prebuiltSize:
-                item.itemType === "prebuilt"
-                    ? (selectedPrebuiltSize ?? undefined)
-                    : undefined,
-
-            quantity,
-        });
+        if (item.itemType === "prebuilt" && selectedVariant) {
+            await addToCart({
+                prebuiltProductId: item.cartPayload.prebuiltProductId,
+                prebuiltVariantId: selectedVariant.id, // ✅ correct field
+                quantity,
+            });
+        }
 
         onClose();
         toast({
@@ -109,21 +153,18 @@ export default function WishlistModal({
     };
 
     const goToPDP = () => {
-        if (item.itemType === "resin") {
+        if (item.itemType === "resin" && item.slug) {
             router.push(`/resins/${item.slug}`);
         }
-
-        if (item.itemType === "prebuilt") {
-            router.push(`/product/${item.cartPayload.prebuiltProductId}`);
+        if (item.itemType === "prebuilt" && item.slug) {
+            router.push(`/prebuilt-products/${item.slug}`);
         }
-
         onClose();
     };
 
     /* =====================
        UI
     ===================== */
-
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
@@ -136,19 +177,16 @@ export default function WishlistModal({
                         height={56}
                         className="rounded-lg object-cover"
                     />
-
                     <div className="flex-1">
                         <h2 className="text-lg font-semibold pr-6">
                             {item.title}
                         </h2>
-
                         {item.badge && (
                             <span className="inline-block mt-1 px-3 py-1 text-xs rounded-full bg-blue-50 text-blue-600">
                                 {item.badge}
                             </span>
                         )}
                     </div>
-
                     <button
                         onClick={onClose}
                         className="absolute top-4 right-4 text-gray-400 hover:text-black"
@@ -162,13 +200,12 @@ export default function WishlistModal({
                 <div className="p-5 pb-8">
                     {/* PRICE */}
                     <div className="text-xl font-semibold">
-                        ₹{displayPrice}{" "}
+                        ₹{displayPrice.toLocaleString("en-IN")}{" "}
                         <span className="text-sm text-gray-500">
                             (incl. GST)
                         </span>
                     </div>
 
-                    {/* IN STOCK */}
                     <div className="flex items-center gap-2 mt-2 text-sm text-green-600">
                         <span className="w-2 h-2 rounded-full bg-green-500" />
                         In Stock
@@ -177,7 +214,6 @@ export default function WishlistModal({
                     {/* ================= RESIN ================= */}
                     {item.itemType === "resin" && (
                         <>
-                            {/* COLOR */}
                             {item.resinColours && (
                                 <div className="mt-5">
                                     <p className="text-sm font-medium mb-2">
@@ -190,7 +226,8 @@ export default function WishlistModal({
                                                 onClick={() =>
                                                     setSelectedColourId(c.id)
                                                 }
-                                                className={`w-9 h-9 rounded-full border-2 ${
+                                                title={c.name}
+                                                className={`w-9 h-9 rounded-full border-2 transition-all ${
                                                     selectedColourId === c.id
                                                         ? "ring-2 ring-blue-600 ring-offset-1"
                                                         : "border-transparent"
@@ -205,7 +242,6 @@ export default function WishlistModal({
                                 </div>
                             )}
 
-                            {/* PACK SIZE */}
                             {item.resinWeights && (
                                 <div className="mt-5">
                                     <p className="text-sm font-medium mb-2">
@@ -225,7 +261,7 @@ export default function WishlistModal({
                                                         : "bg-white text-gray-700 border-gray-200"
                                                 }`}
                                             >
-                                                {w.label}
+                                                {w.label}g
                                             </button>
                                         ))}
                                     </div>
@@ -235,63 +271,88 @@ export default function WishlistModal({
                     )}
 
                     {/* ================= PREBUILT ================= */}
-                    {/* PREBUILT COLORS */}
-                    {item.itemType === "prebuilt" &&
-                        prebuiltColours.length > 0 && (
-                            <div className="mt-5">
-                                <p className="text-sm font-medium mb-2">
-                                    Color:
-                                </p>
-                                <div className="flex gap-2 flex-wrap">
-                                    {prebuiltColours.map((c) => (
-                                        <button
-                                            key={c.label}
-                                            onClick={() =>
-                                                setSelectedPrebuiltColour(
-                                                    c.label,
-                                                )
-                                            }
-                                            className={`px-3 py-2 rounded-lg border text-sm ${
-                                                selectedPrebuiltColour ===
-                                                c.label
-                                                    ? "bg-blue-600 text-white border-blue-600"
-                                                    : "bg-white text-gray-700 border-gray-200"
-                                            }`}
-                                        >
-                                            {c.label}
-                                        </button>
-                                    ))}
+                    {item.itemType === "prebuilt" && (
+                        <>
+                            {/* COLOR SWATCHES */}
+                            {uniqueColors.length > 0 && (
+                                <div className="mt-5">
+                                    <p className="text-sm font-medium mb-2">
+                                        Color:{" "}
+                                        <span className="font-normal text-gray-500">
+                                            {selectedColor ?? "Select"}
+                                        </span>
+                                    </p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {uniqueColors.map((c) => (
+                                            <button
+                                                key={c.name}
+                                                onClick={() =>
+                                                    handleColorChange(c.name)
+                                                }
+                                                title={c.name}
+                                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
+                                                    selectedColor === c.name
+                                                        ? "ring-2 ring-gray-900 scale-110"
+                                                        : "border-transparent hover:ring-1 hover:ring-gray-400"
+                                                }`}
+                                                style={{
+                                                    backgroundColor:
+                                                        c.hex ?? "#E5E7EB",
+                                                }}
+                                            >
+                                                {selectedColor === c.name && (
+                                                    <Check
+                                                        size={12}
+                                                        className="absolute inset-0 m-auto text-white drop-shadow"
+                                                    />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                    {/* QUANTITY */}
-                    {/* PREBUILT SIZES */}
-                    {item.itemType === "prebuilt" &&
-                        prebuiltSizes.length > 0 && (
-                            <div className="mt-5">
-                                <p className="text-sm font-medium mb-2">
-                                    Size:
-                                </p>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {prebuiltSizes.map((s) => (
-                                        <button
-                                            key={s.label}
-                                            onClick={() =>
-                                                setSelectedPrebuiltSize(s.label)
-                                            }
-                                            className={`h-10 rounded-lg border text-sm ${
-                                                selectedPrebuiltSize === s.label
-                                                    ? "bg-blue-600 text-white border-blue-600"
-                                                    : "bg-white text-gray-700 border-gray-200"
-                                            }`}
-                                        >
-                                            {s.label}
-                                        </button>
-                                    ))}
+                            {/* SIZE BUTTONS — filtered by selected color */}
+                            {validSizes.length > 0 && (
+                                <div className="mt-5">
+                                    <p className="text-sm font-medium mb-2">
+                                        Size
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {validSizes.map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() =>
+                                                    handleSizeChange(size)
+                                                }
+                                                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                    selectedSize === size
+                                                        ? "border-gray-900 bg-gray-900 text-white"
+                                                        : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {/* SELECTED VARIANT PRICE UPDATE */}
+                            {selectedVariant &&
+                                selectedVariant.price !== item.price && (
+                                    <p className="mt-3 text-sm text-gray-500">
+                                        Price for this variant:{" "}
+                                        <span className="font-semibold text-gray-900">
+                                            ₹
+                                            {selectedVariant.price.toLocaleString(
+                                                "en-IN",
+                                            )}
+                                        </span>
+                                    </p>
+                                )}
+                        </>
+                    )}
 
                     {/* QUANTITY */}
                     <div className="mt-5">
@@ -321,7 +382,7 @@ export default function WishlistModal({
                     <Button
                         disabled={!canAddToCart}
                         onClick={handleAddToCart}
-                        className="w-full h-[48px] mt-8 bg-black text-white disabled:bg-gray-400"
+                        className="w-full h-[48px] mt-8 bg-black text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                         Add to Cart
                     </Button>
@@ -330,7 +391,7 @@ export default function WishlistModal({
                         onClick={goToPDP}
                         className="w-full text-sm mt-3 text-gray-500 hover:text-black"
                     >
-                        View full details
+                        View full details →
                     </button>
                 </div>
             </div>
