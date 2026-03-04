@@ -8,12 +8,6 @@ import { NextResponse } from "next/server";
  * POST body:
  *   groups: Array<{ itemType, limit, technology?, category? }>
  *   excludeIds: string[]
- *
- * Recommendation Logic:
- *   1. Prebuilt  → 2 filaments (PLA), 2 printers (random), 2 resins (random)
- *   2. Filaments → 3 printers (FDM), 3 filaments (random)
- *   3. Resins    → 3 printers (DLP/SLA), 3 resins (random)
- *   4. Printers  → 2 printers (same tech), 2 filaments (random), 2 resins (random)
  */
 
 type RecommendationResult = {
@@ -29,7 +23,7 @@ type RecommendationResult = {
 };
 
 /* ================================================================
-   FETCHERS — one per item type
+   FETCHERS
 ================================================================ */
 
 async function fetchProducts(
@@ -48,6 +42,7 @@ async function fetchProducts(
             price: true,
             originalPrice: true,
             category: true,
+            images: true, // ✅ String[] — direct field, not a relation
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -56,7 +51,7 @@ async function fetchProducts(
     return products.map((p) => ({
         id: p.id,
         name: p.name,
-        images: [],
+        images: p.images ?? [],
         price: p.price,
         mrp: p.originalPrice ?? undefined,
         itemType: "product",
@@ -80,18 +75,13 @@ async function fetchPrinters(
         const techs = Array.from(
             new Set(cartPrinters.map((p) => p.technology)),
         );
-        if (techs.length > 0) {
-            techFilter = { technology: { in: techs } };
-        }
+        if (techs.length > 0) techFilter = { technology: { in: techs } };
     } else if (technology && technology !== "SAME") {
         techFilter = { technology };
     }
 
     let printers = await prisma.printer.findMany({
-        where: {
-            id: { notIn: excludeIds },
-            ...techFilter,
-        },
+        where: { id: { notIn: excludeIds }, ...techFilter },
         select: {
             id: true,
             name: true,
@@ -111,9 +101,7 @@ async function fetchPrinters(
     // Fallback: if no printers found with specific tech, fetch any printers
     if (printers.length === 0 && technology) {
         printers = await prisma.printer.findMany({
-            where: {
-                id: { notIn: excludeIds },
-            },
+            where: { id: { notIn: excludeIds } },
             select: {
                 id: true,
                 name: true,
@@ -142,47 +130,62 @@ async function fetchPrinters(
     }));
 }
 
-// async function fetchPrebuilts(
-//     limit: number,
-//     excludeIds: string[],
-// ): Promise<RecommendationResult[]> {
-//     const prebuilts = await prisma.prebuiltProducts.findMany({
-//         where: {
-//             id: { notIn: excludeIds },
-//         },
-//         select: {
-//             id: true,
-//             name: true,
-//             category: true,
-//             images: {
-//                 select: { url: true },
-//                 orderBy: { sortOrder: "asc" },
-//                 take: 1,
-//             },
-//         },
-//         orderBy: { createdAt: "desc" },
-//         take: limit,
-//     });
+// ✅ Restored and fixed — price now comes from cheapest active variant
+async function fetchPrebuilts(
+    limit: number,
+    excludeIds: string[],
+    category?: string,
+): Promise<RecommendationResult[]> {
+    const prebuilts = await prisma.prebuiltProducts.findMany({
+        where: {
+            id: { notIn: excludeIds },
+            ...(category ? { category } : {}),
+        },
+        select: {
+            id: true,
+            name: true,
+            slug: true,
+            category: true,
+            images: {
+                where: { isMain: true },
+                select: { url: true },
+                take: 1,
+            },
+            // ✅ price lives on variants, not on the product itself
+            variants: {
+                where: { isActive: true },
+                select: { price: true, originalPrice: true },
+                orderBy: { price: "asc" },
+                take: 1,
+            },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+    });
 
-//     return prebuilts.map((p) => ({
-//         id: p.id,
-//         name: p.name,
-//         images: p.images.map((i) => i.url),
-//         price: 0,
-//         mrp: undefined,
-//         itemType: "prebuilt",
-//         category: p.category ?? undefined,
-//     }));
-// }
+    return (
+        prebuilts
+            // only return products that have at least one active variant with a price
+            .filter((p) => p.variants.length > 0)
+            .map((p) => ({
+                id: p.id,
+                name: p.name,
+                slug: p.slug ?? undefined,
+                images: p.images.map((i) => i.url),
+                price: p.variants[0].price,
+                mrp: p.variants[0].originalPrice ?? undefined,
+                itemType: "prebuilt",
+                category: p.category ?? undefined,
+            }))
+    );
+}
 
 async function fetchResins(
     limit: number,
     excludeIds: string[],
 ): Promise<RecommendationResult[]> {
     const resins = await prisma.resin.findMany({
-        where: {
-            id: { notIn: excludeIds },
-        },
+        where: { id: { notIn: excludeIds } },
         select: {
             id: true,
             name: true,
@@ -200,10 +203,7 @@ async function fetchResins(
                 take: 1,
             },
             weights: {
-                select: {
-                    price: true,
-                    originalPrice: true,
-                },
+                select: { price: true, originalPrice: true },
                 orderBy: { weightInGrams: "asc" },
                 take: 1,
             },
@@ -217,8 +217,6 @@ async function fetchResins(
         .map((r) => {
             const colourImage = r.colours[0]?.images[0]?.url;
             const image = r.cardImageUrl || colourImage;
-
-            // Pick highest resolution
             const maxResolution =
                 r.resolution.length > 0
                     ? r.resolution.reduce((max, curr) => {
@@ -227,10 +225,10 @@ async function fetchResins(
                           return currNum > maxNum ? curr : max;
                       })
                     : undefined;
-
             return {
                 id: r.id,
                 name: r.name,
+                slug: r.slug ?? undefined,
                 images: image ? [image] : [],
                 price: r.weights[0].price,
                 mrp: r.weights[0].originalPrice ?? undefined,
@@ -248,20 +246,19 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const limit = Math.min(Number(searchParams.get("limit") ?? 6), 12);
-
         const perType = Math.max(1, Math.ceil(limit / 4));
 
-        // const [products, printers, prebuilts, resins] = await Promise.all([
-        //     fetchProducts(perType, []),
-        //     fetchPrinters(perType, []),
-        //     fetchPrebuilts(perType, []),
-        //     fetchResins(perType, []),
-        // ]);
+        const [products, printers, prebuilts, resins] = await Promise.all([
+            fetchProducts(perType, []),
+            fetchPrinters(perType, []),
+            fetchPrebuilts(perType, []),
+            fetchResins(perType, []),
+        ]);
 
-        // const results = [...products, ...printers, ...prebuilts, ...resins];
-        // const shuffled = results.sort(() => Math.random() - 0.5);
+        const results = [...products, ...printers, ...prebuilts, ...resins];
+        const shuffled = results.sort(() => Math.random() - 0.5);
 
-        // return NextResponse.json(shuffled.slice(0, limit));
+        return NextResponse.json(shuffled.slice(0, limit));
     } catch (error) {
         console.error("Recommendations GET error:", error);
         return NextResponse.json([], { status: 200 });
@@ -292,18 +289,12 @@ export async function POST(req: Request) {
             return NextResponse.json([]);
         }
 
-        // Find cart printer IDs for "SAME" technology matching
-        // We need to resolve printer IDs from excludeIds that are printers
-        const cartPrinterIds = excludeIds; // API will check which are actually printers
-
+        const cartPrinterIds = excludeIds;
         const allResults: RecommendationResult[] = [];
         const seenIds = new Set<string>();
 
-        // Process each group sequentially to avoid duplicates
         for (const group of groups) {
-            // Combine global excludeIds with already-recommended IDs
             const combinedExcludes = [...excludeIds, ...Array.from(seenIds)];
-
             let results: RecommendationResult[] = [];
 
             switch (group.itemType.toLowerCase()) {
@@ -322,12 +313,14 @@ export async function POST(req: Request) {
                         cartPrinterIds,
                     );
                     break;
-                // case "prebuilt":
-                //     results = await fetchPrebuilts(
-                //         group.limit,
-                //         combinedExcludes,
-                //     );
-                //     break;
+                case "prebuilt":
+                    // ✅ now fully functional
+                    results = await fetchPrebuilts(
+                        group.limit,
+                        combinedExcludes,
+                        group.category,
+                    );
+                    break;
                 case "resin":
                     results = await fetchResins(group.limit, combinedExcludes);
                     break;

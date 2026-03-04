@@ -70,8 +70,8 @@ function PDPSkeleton() {
 function ShieldCheckIcon() {
     return (
         <svg
-            width="20"
-            height="20"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#16a34a"
@@ -88,8 +88,8 @@ function ShieldCheckIcon() {
 function TruckIcon() {
     return (
         <svg
-            width="20"
-            height="20"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#16a34a"
@@ -105,9 +105,7 @@ function TruckIcon() {
     );
 }
 
-/* ─────────────────────────────────────────────────────────
-   ✅ Variant Modal — used by SimilarProductCard
-───────────────────────────────────────────────────────── */
+/* ── Variant Modal ── */
 function VariantModal({
     product,
     onClose,
@@ -121,7 +119,6 @@ function VariantModal({
 
     const variants: any[] =
         product.variants?.filter((v: any) => v.isActive) ?? [];
-
     const uniqueColors: { name: string; hex: string | null }[] = Array.from(
         new Map(
             variants
@@ -151,14 +148,12 @@ function VariantModal({
                 .map((v) => v.sizeName),
         ),
     );
-
     const selectedVariant =
         variants.find(
             (v) => v.colorName === selectedColor && v.sizeName === selectedSize,
         ) ??
         variants.find((v) => v.colorName === selectedColor) ??
         null;
-
     const displayPrice =
         selectedVariant?.price ?? product.variants?.[0]?.price ?? 0;
     const originalPrice = selectedVariant?.originalPrice ?? 0;
@@ -166,11 +161,6 @@ function VariantModal({
         originalPrice > displayPrice && originalPrice > 0
             ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
             : 0;
-
-    const handleColorChange = (color: string) => {
-        setSelectedColor(color);
-        setSelectedSize(null);
-    };
 
     const handleAddToCart = async () => {
         if (!session) {
@@ -196,12 +186,9 @@ function VariantModal({
                 prebuiltVariantId: selectedVariant.id,
                 quantity,
             });
-            const label = [selectedColor, selectedSize]
-                .filter(Boolean)
-                .join(", ");
             toast({
                 title: "Added to cart",
-                description: `${product.name}${label ? ` (${label})` : ""} × ${quantity} added.`,
+                description: `${product.name} × ${quantity} added.`,
             });
             onClose();
         } catch {
@@ -218,7 +205,6 @@ function VariantModal({
     return (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="flex gap-4 p-5 relative">
                     <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                         {(product.images?.find((i: any) => i.isMain)?.url ??
@@ -251,11 +237,8 @@ function VariantModal({
                         <X size={18} />
                     </button>
                 </div>
-
                 <div className="h-px bg-gray-200" />
-
                 <div className="p-5 pb-8">
-                    {/* Price */}
                     <div className="flex items-baseline gap-3 mb-1">
                         <span className="text-xl font-bold text-gray-900">
                             ₹{displayPrice.toLocaleString("en-IN")}
@@ -272,8 +255,6 @@ function VariantModal({
                         )}
                     </div>
                     <p className="text-xs text-gray-500 mb-4">(incl. GST)</p>
-
-                    {/* Colors */}
                     {uniqueColors.length > 0 && (
                         <div className="mb-4">
                             <p className="text-sm font-medium mb-2">
@@ -286,22 +267,19 @@ function VariantModal({
                                 {uniqueColors.map((c) => (
                                     <button
                                         key={c.name}
-                                        onClick={() =>
-                                            handleColorChange(c.name)
-                                        }
+                                        onClick={() => {
+                                            setSelectedColor(c.name);
+                                            setSelectedSize(null);
+                                        }}
                                         title={c.name}
-                                        className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
-                                            selectedColor === c.name
-                                                ? "ring-2 ring-gray-900 scale-110"
-                                                : "border-transparent hover:ring-1 hover:ring-gray-400"
-                                        }`}
+                                        className={`relative w-8 h-8 rounded-full border-2 transition-all ring-offset-1 ${selectedColor === c.name ? "ring-2 ring-gray-900 scale-110" : "border-transparent hover:ring-1 hover:ring-gray-400"}`}
                                         style={{
                                             backgroundColor: c.hex ?? "#E5E7EB",
                                         }}
                                     >
                                         {selectedColor === c.name && (
                                             <Check
-                                                size={12}
+                                                size={11}
                                                 className="absolute inset-0 m-auto text-white drop-shadow"
                                             />
                                         )}
@@ -310,8 +288,6 @@ function VariantModal({
                             </div>
                         </div>
                     )}
-
-                    {/* Sizes */}
                     {validSizes.length > 0 && (
                         <div className="mb-4">
                             <p className="text-sm font-medium mb-2">Size</p>
@@ -320,11 +296,7 @@ function VariantModal({
                                     <button
                                         key={size}
                                         onClick={() => setSelectedSize(size)}
-                                        className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                            selectedSize === size
-                                                ? "border-gray-900 bg-gray-900 text-white"
-                                                : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
-                                        }`}
+                                        className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${selectedSize === size ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"}`}
                                     >
                                         {size}
                                     </button>
@@ -332,8 +304,6 @@ function VariantModal({
                             </div>
                         </div>
                     )}
-
-                    {/* Quantity */}
                     <div className="mb-6">
                         <p className="text-sm font-medium mb-2">Quantity</p>
                         <div className="flex items-center gap-3">
@@ -341,23 +311,21 @@ function VariantModal({
                                 onClick={() =>
                                     setQuantity((q) => Math.max(1, q - 1))
                                 }
-                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                                className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
                             >
                                 −
                             </button>
-                            <div className="flex-1 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold">
+                            <div className="flex-1 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold">
                                 {quantity}
                             </div>
                             <button
                                 onClick={() => setQuantity((q) => q + 1)}
-                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                                className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
                             >
                                 +
                             </button>
                         </div>
                     </div>
-
-                    {/* CTA */}
                     <button
                         disabled={!selectedVariant || isAdding}
                         onClick={handleAddToCart}
@@ -369,7 +337,6 @@ function VariantModal({
                             "Add to Cart"
                         )}
                     </button>
-
                     <button
                         onClick={() => {
                             if (product.slug)
@@ -388,21 +355,17 @@ function VariantModal({
     );
 }
 
-/* ─────────────────────────────────────────────────────────
-   Similar Product Card
-───────────────────────────────────────────────────────── */
+/* ── Similar Product Card ── */
 function SimilarProductCard({ product }: { product: any }) {
     const { data: session } = useSession();
     const router = useRouter();
-
     const mainImage =
         product.images?.find((img: any) => img.isMain)?.url ||
         product.images?.[0]?.url;
     const variant = product.variants?.[0];
-
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false); // ✅
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         if (!session || !product?.id) return;
@@ -457,7 +420,6 @@ function SimilarProductCard({ product }: { product: any }) {
                   100,
           )
         : 0;
-
     const sizes = Array.from(
         new Set(product.variants?.map((v: any) => v.sizeName).filter(Boolean)),
     );
@@ -523,7 +485,6 @@ function SimilarProductCard({ product }: { product: any }) {
                         )}
                     </button>
                 </div>
-
                 <div className="p-4 flex flex-col flex-1">
                     <div className="mb-3 h-[32px] flex items-center">
                         {product.highlighted ? (
@@ -557,31 +518,20 @@ function SimilarProductCard({ product }: { product: any }) {
                             </span>
                             {uniqueColors.length > 0 ? (
                                 <div className="flex items-center gap-2">
-                                    {uniqueColors
-                                        .slice(0, 5)
-                                        .map(
-                                            (
-                                                c: {
-                                                    name: string;
-                                                    hex: string;
-                                                },
-                                                i,
-                                            ) => (
-                                                <div
-                                                    key={i}
-                                                    title={c.name}
-                                                    className={`w-6 h-6 rounded-full flex items-center justify-center border ${i === 0 ? "border-black" : "border-gray-300"}`}
-                                                >
-                                                    <div
-                                                        className="w-4 h-4 rounded-full"
-                                                        style={{
-                                                            backgroundColor:
-                                                                c.hex,
-                                                        }}
-                                                    />
-                                                </div>
-                                            ),
-                                        )}
+                                    {uniqueColors.slice(0, 5).map((c, i) => (
+                                        <div
+                                            key={i}
+                                            title={c.name}
+                                            className={`w-6 h-6 rounded-full flex items-center justify-center border ${i === 0 ? "border-black" : "border-gray-300"}`}
+                                        >
+                                            <div
+                                                className="w-4 h-4 rounded-full"
+                                                style={{
+                                                    backgroundColor: c.hex,
+                                                }}
+                                            />
+                                        </div>
+                                    ))}
                                     {uniqueColors.length > 5 && (
                                         <span className="text-[10px] text-gray-400">
                                             +{uniqueColors.length - 5}
@@ -618,8 +568,6 @@ function SimilarProductCard({ product }: { product: any }) {
                     <span className="text-[10px] text-gray-400 mb-4">
                         (incl. GST)
                     </span>
-
-                    {/* ✅ Now opens modal instead of doing nothing */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -631,8 +579,6 @@ function SimilarProductCard({ product }: { product: any }) {
                     </button>
                 </div>
             </div>
-
-            {/* ✅ Variant modal */}
             {showModal && (
                 <VariantModal
                     product={product}
@@ -643,9 +589,7 @@ function SimilarProductCard({ product }: { product: any }) {
     );
 }
 
-/* ─────────────────────────────────────────────────────────
-   Similar Products Carousel
-───────────────────────────────────────────────────────── */
+/* ── Similar Products Carousel ── */
 function SimilarProductsCarousel({
     products,
     category,
@@ -671,9 +615,8 @@ function SimilarProductsCarousel({
             container.scrollBy({ left: cardWidth, behavior: "smooth" });
             setTimeout(() => {
                 if (!container) return;
-                if (container.scrollLeft >= container.scrollWidth / 2) {
+                if (container.scrollLeft >= container.scrollWidth / 2)
                     container.scrollTo({ left: 0, behavior: "auto" });
-                }
             }, 600);
         }, 3000);
     }, [products.length]);
@@ -750,9 +693,7 @@ function SimilarProductsCarousel({
     );
 }
 
-/* ─────────────────────────────────────────────────────────
-   Main PDP — unchanged from your original
-───────────────────────────────────────────────────────── */
+/* ── Main PDP ── */
 export default function PrebuiltProductPDP() {
     const params = useParams();
     const router = useRouter();
@@ -764,17 +705,14 @@ export default function PrebuiltProductPDP() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [similarProducts, setSimilarProducts] = useState<any[]>([]);
-
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isHovering, setIsHovering] = useState(false);
     const autoPlayRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const touchStartX = useRef(0);
     const touchEndX = useRef(0);
-
     const [selectedColor, setSelectedColor] = useState<string>("");
     const [selectedSize, setSelectedSize] = useState<string>("");
     const [quantity, setQuantity] = useState(1);
-
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -855,12 +793,11 @@ export default function PrebuiltProductPDP() {
 
     const startAutoPlay = useCallback(() => {
         if (autoPlayRef.current) clearInterval(autoPlayRef.current);
-        if (totalSlides > 1) {
+        if (totalSlides > 1)
             autoPlayRef.current = setInterval(
                 () => setCurrentSlide((c) => (c + 1) % totalSlides),
                 3000,
             );
-        }
     }, [totalSlides]);
 
     useEffect(() => {
@@ -960,7 +897,6 @@ export default function PrebuiltProductPDP() {
         originalPrice > displayPrice && originalPrice > 0
             ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
             : 0;
-
     const avgRating =
         product?.reviews?.length > 0
             ? (
@@ -1110,22 +1046,20 @@ export default function PrebuiltProductPDP() {
         <div className="min-h-screen bg-white">
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
-            {/* Nav */}
             <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4">
                     <button
                         onClick={() => router.push("/prebuilt-products")}
                         className="flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm font-medium transition px-3 py-2 rounded-lg hover:bg-gray-50"
                     >
-                        <ChevronLeft size={16} />
-                        Back to all pre-built products
+                        <ChevronLeft size={16} /> Back to all pre-built products
                     </button>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-                    {/* LEFT — Image Carousel */}
+                    {/* LEFT */}
                     <div className="lg:sticky lg:top-20 flex flex-col gap-4">
                         <div
                             className="relative rounded-2xl overflow-hidden bg-gray-50 border border-gray-200 select-none"
@@ -1205,15 +1139,13 @@ export default function PrebuiltProductPDP() {
                                     No image available
                                 </div>
                             )}
-
                             {product.highlighted && (
                                 <span className="absolute top-4 left-4 flex items-center gap-1.5 bg-gray-900 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full z-10">
-                                    <Zap size={10} className="fill-white" />
+                                    <Zap size={10} className="fill-white" />{" "}
                                     Trending Now
                                 </span>
                             )}
                         </div>
-
                         {totalSlides > 1 && (
                             <div className="flex gap-2.5 justify-center flex-wrap">
                                 {images
@@ -1237,19 +1169,19 @@ export default function PrebuiltProductPDP() {
                         )}
                     </div>
 
-                    {/* RIGHT — Product Info */}
-                    <div className="flex flex-col gap-6 relative">
-                        {/* Wishlist button */}
+                    {/* RIGHT */}
+                    <div className="flex flex-col gap-4 relative">
+                        {/* Wishlist */}
                         <button
                             onClick={handleToggleWishlist}
                             disabled={isWishlistLoading}
-                            className="absolute top-0 right-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center hover:border-gray-400 transition disabled:opacity-60 z-10"
+                            className="absolute top-0 right-0 w-9 h-9 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center hover:border-gray-400 transition disabled:opacity-60 z-10"
                         >
                             {isWishlistLoading ? (
                                 <div className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                             ) : (
                                 <Heart
-                                    size={18}
+                                    size={16}
                                     className={
                                         isFavorite
                                             ? "fill-red-500 text-red-500"
@@ -1259,23 +1191,24 @@ export default function PrebuiltProductPDP() {
                             )}
                         </button>
 
+                        {/* Title */}
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+                            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
                                 {product.category}
                             </p>
-                            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight pr-12">
+                            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight pr-10">
                                 {product.name}
                             </h1>
-                            <p className="mt-2 text-gray-500 text-sm leading-relaxed">
+                            <p className="mt-1.5 text-gray-500 text-sm leading-relaxed">
                                 {product.shortDescription}
                             </p>
                             {product.reviews?.length > 0 && (
-                                <div className="flex items-center gap-2 mt-3">
+                                <div className="flex items-center gap-2 mt-2">
                                     <div className="flex gap-0.5">
                                         {[...Array(5)].map((_, i) => (
                                             <Star
                                                 key={i}
-                                                size={14}
+                                                size={13}
                                                 className={
                                                     i <
                                                     Math.round(
@@ -1301,51 +1234,51 @@ export default function PrebuiltProductPDP() {
                             )}
                         </div>
 
-                        {/* Price */}
-                        <div className="border-t border-b border-gray-100 py-5">
-                            <p className="text-sm text-gray-400 mb-3">Price</p>
+                        {/* ✅ Compact Price */}
+                        <div className="border-t border-b border-gray-100 py-3">
+                            <p className="text-xs text-gray-400 mb-1">Price</p>
                             {originalPrice > displayPrice && (
-                                <div className="flex items-center gap-3 mb-1.5">
-                                    <span className="text-lg text-gray-400 line-through">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="text-sm text-gray-400 line-through">
                                         ₹{originalPrice.toLocaleString("en-IN")}
                                     </span>
                                     {discount > 0 && (
-                                        <span className="text-sm font-semibold text-green-700 bg-green-50 border border-green-300 px-3 py-1 rounded-lg">
+                                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md">
                                             {discount}% off
                                         </span>
                                     )}
                                 </div>
                             )}
-                            <p className="text-4xl font-bold text-gray-900 tracking-tight">
+                            <p className="text-3xl font-bold text-gray-900 tracking-tight">
                                 ₹{displayPrice.toLocaleString("en-IN")}
                             </p>
                             {originalPrice > displayPrice && (
-                                <p className="text-sm text-green-600 font-semibold mt-1.5">
+                                <p className="text-xs text-green-600 font-semibold mt-0.5">
                                     Save ₹
                                     {(
                                         originalPrice - displayPrice
                                     ).toLocaleString("en-IN")}
                                 </p>
                             )}
-                            <p className="text-xs text-gray-400 mt-2.5">
+                            <p className="text-xs text-gray-400 mt-1">
                                 MRP inclusive of all taxes. Shipping calculated
                                 at checkout.
                             </p>
                         </div>
 
-                        {/* Variants */}
+                        {/* ✅ Compact Variants */}
                         {(uniqueColors.length > 0 ||
                             uniqueSizes.length > 0) && (
-                            <div className="border border-gray-200 rounded-2xl p-5 flex flex-col gap-5">
+                            <div className="border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
                                 {uniqueColors.length > 0 && (
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-800 mb-3">
+                                        <p className="text-xs font-semibold text-gray-700 mb-2">
                                             Color:{" "}
                                             <span className="font-normal text-gray-500">
                                                 {selectedColor || "Select"}
                                             </span>
                                         </p>
-                                        <div className="flex gap-3 flex-wrap">
+                                        <div className="flex gap-2 flex-wrap">
                                             {uniqueColors.map((color) => {
                                                 const cv =
                                                     product.variants?.find(
@@ -1367,7 +1300,7 @@ export default function PrebuiltProductPDP() {
                                                             )
                                                         }
                                                         title={color}
-                                                        className={`relative w-10 h-10 rounded-full transition-all ring-offset-2 ${isSelected ? "ring-2 ring-gray-900 scale-110" : "ring-1 ring-gray-200 hover:ring-gray-400 hover:scale-105"}`}
+                                                        className={`relative w-8 h-8 rounded-full transition-all ring-offset-2 ${isSelected ? "ring-2 ring-gray-900 scale-110" : "ring-1 ring-gray-200 hover:ring-gray-400 hover:scale-105"}`}
                                                         style={{
                                                             backgroundColor:
                                                                 hex,
@@ -1375,7 +1308,7 @@ export default function PrebuiltProductPDP() {
                                                     >
                                                         {isSelected && (
                                                             <Check
-                                                                size={14}
+                                                                size={12}
                                                                 className="absolute inset-0 m-auto text-white drop-shadow"
                                                             />
                                                         )}
@@ -1391,10 +1324,10 @@ export default function PrebuiltProductPDP() {
                                     )}
                                 {uniqueSizes.length > 0 && (
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-800 mb-3">
+                                        <p className="text-xs font-semibold text-gray-700 mb-2">
                                             Size
                                         </p>
-                                        <div className="flex gap-2 flex-wrap">
+                                        <div className="flex gap-1.5 flex-wrap">
                                             {uniqueSizes.map((size) => {
                                                 const isSelected =
                                                     selectedSize === size;
@@ -1418,7 +1351,7 @@ export default function PrebuiltProductPDP() {
                                                             )
                                                         }
                                                         disabled={!available}
-                                                        className={`px-5 py-2 rounded-xl border text-sm font-medium transition-all ${isSelected ? "border-gray-900 bg-gray-900 text-white" : available ? "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50" : "border-gray-100 text-gray-300 cursor-not-allowed line-through"}`}
+                                                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${isSelected ? "border-gray-900 bg-gray-900 text-white" : available ? "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50" : "border-gray-100 text-gray-300 cursor-not-allowed line-through"}`}
                                                     >
                                                         {size}
                                                     </button>
@@ -1431,14 +1364,14 @@ export default function PrebuiltProductPDP() {
                                     <>
                                         <div className="border-t border-gray-100" />
                                         <div>
-                                            <p className="text-sm font-semibold text-gray-800 mb-2">
+                                            <p className="text-xs font-semibold text-gray-700 mb-1.5">
                                                 Customization
                                             </p>
                                             <span
-                                                className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${product.isCustomizable ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"}`}
+                                                className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${product.isCustomizable ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"}`}
                                             >
                                                 {product.isCustomizable && (
-                                                    <Check size={11} />
+                                                    <Check size={10} />
                                                 )}
                                                 {product.isCustomizable
                                                     ? "Available"
@@ -1450,9 +1383,9 @@ export default function PrebuiltProductPDP() {
                             </div>
                         )}
 
-                        {/* Quantity */}
+                        {/* ✅ Compact Quantity */}
                         <div>
-                            <p className="text-sm font-semibold text-gray-800 mb-3">
+                            <p className="text-xs font-semibold text-gray-700 mb-2">
                                 Quantity
                             </p>
                             <div className="flex items-center gap-2">
@@ -1460,20 +1393,20 @@ export default function PrebuiltProductPDP() {
                                     onClick={() =>
                                         setQuantity(Math.max(1, quantity - 1))
                                     }
-                                    className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-900 transition bg-white"
+                                    className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-900 transition bg-white"
                                 >
-                                    <Minus size={15} />
+                                    <Minus size={13} />
                                 </button>
-                                <div className="w-14 h-10 rounded-xl border border-gray-200 flex items-center justify-center bg-white">
-                                    <span className="font-semibold text-gray-900 text-base leading-none">
+                                <div className="w-12 h-9 rounded-lg border border-gray-200 flex items-center justify-center bg-white">
+                                    <span className="font-semibold text-gray-900 text-sm">
                                         {quantity}
                                     </span>
                                 </div>
                                 <button
                                     onClick={() => setQuantity(quantity + 1)}
-                                    className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-900 transition bg-white"
+                                    className="w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-900 transition bg-white"
                                 >
-                                    <Plus size={15} />
+                                    <Plus size={13} />
                                 </button>
                             </div>
                         </div>
@@ -1486,12 +1419,12 @@ export default function PrebuiltProductPDP() {
                                 !selectedVariant ||
                                 !selectedVariant?.isActive
                             }
-                            className="w-full bg-gray-900 hover:bg-black text-white py-4 rounded-2xl font-semibold text-base transition disabled:opacity-50 flex items-center justify-center gap-2.5"
+                            className="w-full bg-gray-900 hover:bg-black text-white py-3.5 rounded-xl font-semibold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {isAddingToCart ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
-                                <ShoppingCart size={18} />
+                                <ShoppingCart size={16} />
                             )}
                             {!selectedVariant
                                 ? "Select a Variant"
@@ -1501,11 +1434,11 @@ export default function PrebuiltProductPDP() {
                         </button>
 
                         {/* Trust badges */}
-                        <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
                                 <ShieldCheckIcon /> Quality Inspected
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
                                 <TruckIcon /> Express Shipping
                             </div>
                         </div>
@@ -1519,19 +1452,19 @@ export default function PrebuiltProductPDP() {
                             <button
                                 key={key}
                                 onClick={() => setActiveTab(key)}
-                                className={`px-8 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition -mb-px ${activeTab === key ? "text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-gray-800"}`}
+                                className={`px-6 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition -mb-px ${activeTab === key ? "text-blue-600 border-blue-600" : "text-gray-500 border-transparent hover:text-gray-800"}`}
                             >
                                 {label}
                             </button>
                         ))}
                     </div>
-                    <div className="p-8">
+                    <div className="p-6">
                         {activeTab === "specifications" && (
-                            <div className="flex flex-col gap-8">
+                            <div className="flex flex-col gap-6">
                                 {(product.longDescription ||
                                     product.shortDescription) && (
                                     <div>
-                                        <h2 className="text-base font-semibold text-gray-900 mb-3">
+                                        <h2 className="text-base font-semibold text-gray-900 mb-2">
                                             Description
                                         </h2>
                                         <p className="text-gray-500 text-sm leading-relaxed whitespace-pre-wrap">
@@ -1543,7 +1476,7 @@ export default function PrebuiltProductPDP() {
                                 {(product.attributes?.length > 0 ||
                                     product.weight) && (
                                     <div>
-                                        <h2 className="text-base font-semibold text-gray-900 mb-4">
+                                        <h2 className="text-base font-semibold text-gray-900 mb-3">
                                             Physical Properties
                                         </h2>
                                         <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -1551,9 +1484,9 @@ export default function PrebuiltProductPDP() {
                                                 (attr: any, i: number) => (
                                                     <div
                                                         key={attr.id}
-                                                        className={`flex items-center px-6 py-4 ${i % 2 === 1 ? "bg-gray-50" : "bg-white"} border-b border-gray-100`}
+                                                        className={`flex items-center px-5 py-3 ${i % 2 === 1 ? "bg-gray-50" : "bg-white"} border-b border-gray-100`}
                                                     >
-                                                        <span className="text-sm text-gray-500 w-64 flex-shrink-0">
+                                                        <span className="text-sm text-gray-500 w-56 flex-shrink-0">
                                                             {attr.label}
                                                         </span>
                                                         <span className="text-sm font-medium text-gray-900">
@@ -1564,9 +1497,9 @@ export default function PrebuiltProductPDP() {
                                             )}
                                             {product.weight && (
                                                 <div
-                                                    className={`flex items-center px-6 py-4 ${product.attributes?.length % 2 === 1 ? "bg-gray-50" : "bg-white"}`}
+                                                    className={`flex items-center px-5 py-3 ${product.attributes?.length % 2 === 1 ? "bg-gray-50" : "bg-white"}`}
                                                 >
-                                                    <span className="text-sm text-gray-500 w-64 flex-shrink-0">
+                                                    <span className="text-sm text-gray-500 w-56 flex-shrink-0">
                                                         Weight
                                                     </span>
                                                     <span className="text-sm font-medium text-gray-900">
@@ -1583,10 +1516,10 @@ export default function PrebuiltProductPDP() {
                             <div>
                                 {product.features?.length > 0 ? (
                                     <>
-                                        <h2 className="text-base font-semibold text-gray-900 mb-6">
+                                        <h2 className="text-base font-semibold text-gray-900 mb-4">
                                             Key Features
                                         </h2>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-3.5">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3">
                                             {product.features.map(
                                                 (
                                                     feature: string,
@@ -1594,7 +1527,7 @@ export default function PrebuiltProductPDP() {
                                                 ) => (
                                                     <div
                                                         key={idx}
-                                                        className="flex items-start gap-3"
+                                                        className="flex items-start gap-2.5"
                                                     >
                                                         <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 flex items-center justify-center flex-shrink-0 mt-0.5">
                                                             <Check
@@ -1618,7 +1551,7 @@ export default function PrebuiltProductPDP() {
                             </div>
                         )}
                         {activeTab === "support" && (
-                            <div className="flex flex-col gap-7">
+                            <div className="flex flex-col gap-5">
                                 {[
                                     {
                                         title: "Warranty",
@@ -1634,7 +1567,7 @@ export default function PrebuiltProductPDP() {
                                     },
                                 ].map((item) => (
                                     <div key={item.title}>
-                                        <h2 className="text-base font-bold text-gray-900 mb-2">
+                                        <h2 className="text-sm font-bold text-gray-900 mb-1">
                                             {item.title}
                                         </h2>
                                         <p className="text-sm text-gray-500 leading-relaxed">
@@ -1643,7 +1576,7 @@ export default function PrebuiltProductPDP() {
                                     </div>
                                 ))}
                                 <div>
-                                    <h2 className="text-base font-bold text-gray-900 mb-2">
+                                    <h2 className="text-sm font-bold text-gray-900 mb-1">
                                         Contact Support
                                     </h2>
                                     <p className="text-sm text-gray-500 leading-relaxed">
@@ -1659,14 +1592,14 @@ export default function PrebuiltProductPDP() {
                             </div>
                         )}
                         {activeTab === "care" && (
-                            <div className="flex flex-col gap-7">
+                            <div className="flex flex-col gap-5">
                                 <div className="flex items-center gap-3">
                                     <div className="w-1 h-6 bg-blue-600 rounded-full flex-shrink-0" />
                                     <h2 className="text-base font-semibold text-gray-900">
                                         Maintenance Guidelines
                                     </h2>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {[
                                         {
                                             title: "Cleaning & Surface Care",
@@ -1687,9 +1620,9 @@ export default function PrebuiltProductPDP() {
                                     ].map((card) => (
                                         <div
                                             key={card.title}
-                                            className="bg-gray-50 border border-gray-100 rounded-xl p-5"
+                                            className="bg-gray-50 border border-gray-100 rounded-xl p-4"
                                         >
-                                            <h3 className="text-sm font-bold text-gray-900 mb-2">
+                                            <h3 className="text-sm font-bold text-gray-900 mb-1.5">
                                                 {card.title}
                                             </h3>
                                             <p className="text-sm text-gray-500 leading-relaxed">
@@ -1698,14 +1631,14 @@ export default function PrebuiltProductPDP() {
                                         </div>
                                     ))}
                                 </div>
-                                <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6">
-                                    <div className="flex items-center gap-3 mb-5">
+                                <div className="bg-orange-50 border border-orange-100 rounded-2xl p-5">
+                                    <div className="flex items-center gap-3 mb-4">
                                         <div className="w-1 h-6 bg-orange-500 rounded-full flex-shrink-0" />
                                         <h2 className="text-base font-bold text-orange-800">
                                             Safety Precautions
                                         </h2>
                                     </div>
-                                    <ul className="flex flex-col gap-3">
+                                    <ul className="flex flex-col gap-2.5">
                                         {[
                                             "Heat Limits: Do not expose to temperatures above 50–60°C (material dependent).",
                                             "Moisture: Not waterproof unless explicitly mentioned.",
@@ -1732,13 +1665,13 @@ export default function PrebuiltProductPDP() {
 
                 {/* Reviews */}
                 {product.reviews?.length > 0 && (
-                    <div className="mt-14 border border-gray-200 rounded-2xl bg-white p-8">
-                        <div className="flex items-center gap-4 mb-8">
+                    <div className="mt-10 border border-gray-200 rounded-2xl bg-white p-6">
+                        <div className="flex items-center gap-3 mb-6">
                             <div className="flex gap-0.5">
                                 {[...Array(5)].map((_, i) => (
                                     <Star
                                         key={i}
-                                        size={18}
+                                        size={16}
                                         className={
                                             i < Math.round(Number(avgRating))
                                                 ? "fill-yellow-400 text-yellow-400"
@@ -1747,7 +1680,7 @@ export default function PrebuiltProductPDP() {
                                     />
                                 ))}
                             </div>
-                            <span className="text-2xl font-bold text-gray-900">
+                            <span className="text-xl font-bold text-gray-900">
                                 {avgRating}
                             </span>
                             <span className="text-sm text-gray-400">
@@ -1755,13 +1688,13 @@ export default function PrebuiltProductPDP() {
                                 {product.reviews.length !== 1 ? "s" : ""})
                             </span>
                         </div>
-                        <div className="flex flex-col gap-6">
+                        <div className="flex flex-col gap-5">
                             {product.reviews
                                 .slice(0, 5)
                                 .map((review: any, idx: number) => (
                                     <div
                                         key={idx}
-                                        className="pb-6 border-b border-gray-100 last:border-0"
+                                        className="pb-5 border-b border-gray-100 last:border-0"
                                     >
                                         <div className="flex items-start justify-between mb-2">
                                             <div>
@@ -1773,7 +1706,7 @@ export default function PrebuiltProductPDP() {
                                                         (_, i) => (
                                                             <Star
                                                                 key={i}
-                                                                size={12}
+                                                                size={11}
                                                                 className={
                                                                     i <
                                                                     review.rating
@@ -1800,7 +1733,6 @@ export default function PrebuiltProductPDP() {
                     </div>
                 )}
 
-                {/* Similar Products */}
                 {similarProducts.length > 0 && (
                     <SimilarProductsCarousel
                         products={similarProducts}

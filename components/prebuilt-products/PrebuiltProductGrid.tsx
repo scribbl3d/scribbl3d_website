@@ -13,7 +13,7 @@ interface Props {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Inline Variant Modal (for "Select Variants" on grid cards)
+   Inline Variant Modal
 ───────────────────────────────────────────────────────── */
 function VariantModal({
     product,
@@ -79,8 +79,6 @@ function VariantModal({
         setSelectedSize(null);
     };
 
-    const canAdd = !!selectedVariant;
-
     const handleAddToCart = async () => {
         if (!session) {
             toast({
@@ -98,7 +96,6 @@ function VariantModal({
             return;
         }
         if (!selectedVariant) return;
-
         setIsAdding(true);
         try {
             await addToCart({
@@ -114,7 +111,7 @@ function VariantModal({
                 description: `${product.name}${label ? ` (${label})` : ""} × ${quantity} added.`,
             });
             onClose();
-        } catch (err) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to add to cart",
@@ -268,7 +265,7 @@ function VariantModal({
 
                     {/* CTA */}
                     <button
-                        disabled={!canAdd || isAdding}
+                        disabled={!selectedVariant || isAdding}
                         onClick={handleAddToCart}
                         className="w-full h-12 bg-black text-white font-semibold rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
                     >
@@ -311,7 +308,7 @@ function ProductCard({ product }: { product: any }) {
 
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false); // ✅ modal state
+    const [showModal, setShowModal] = useState(false);
 
     useEffect(() => {
         if (!session || !product?.id) return;
@@ -539,7 +536,6 @@ function ProductCard({ product }: { product: any }) {
                         (incl. GST)
                     </span>
 
-                    {/* ✅ Select Variants button opens modal */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -552,7 +548,6 @@ function ProductCard({ product }: { product: any }) {
                 </div>
             </div>
 
-            {/* ✅ Variant modal */}
             {showModal && (
                 <VariantModal
                     product={product}
@@ -568,6 +563,33 @@ function ProductCard({ product }: { product: any }) {
 ───────────────────────────────────────────────────────── */
 export default function PrebuiltProductGrid({ products = [] }: Props) {
     const router = useRouter();
+
+    // Detect when navbar opens by watching body overflow:hidden (scroll lock).
+    // When nav opens → drop z-index so navbar renders on top.
+    // When nav closes → restore z-50 so sticky works above product cards.
+    const [navOpen, setNavOpen] = useState(false);
+
+    useEffect(() => {
+        const checkBodyLock = () => {
+            const bodyOverflow = window.getComputedStyle(
+                document.body,
+            ).overflow;
+            const htmlOverflow = window.getComputedStyle(
+                document.documentElement,
+            ).overflow;
+            setNavOpen(bodyOverflow === "hidden" || htmlOverflow === "hidden");
+        };
+        const observer = new MutationObserver(checkBodyLock);
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ["style", "class"],
+        });
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["style", "class"],
+        });
+        return () => observer.disconnect();
+    }, []);
 
     if (!Array.isArray(products)) return null;
 
@@ -608,16 +630,20 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
 
                 return (
                     <section key={category} className="space-y-8">
-                        {/* Mobile sticky header */}
-                        <div className="lg:hidden sticky top-0 z-50 bg-white -mx-4 px-4 py-4">
+                        {/* z-50 when nav closed (sticky works) → z-[1] when nav open (navbar on top) */}
+                        <div
+                            className="lg:hidden sticky top-0 bg-white -mx-4 px-4 py-4"
+                            style={{ zIndex: navOpen ? 1 : 50 }}
+                        >
                             <Header />
                         </div>
-                        {/* Desktop header */}
+
+                        {/* Desktop header — not sticky, no z-index needed */}
                         <div className="hidden lg:block">
                             <Header />
                         </div>
 
-                        {/* Mobile grid */}
+                        {/* Mobile grid — 5 products */}
                         <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
                             {mobileProducts.map((product) => (
                                 <ProductCard
@@ -627,7 +653,7 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                             ))}
                         </div>
 
-                        {/* Desktop grid */}
+                        {/* Desktop grid — 8 products */}
                         <div className="hidden lg:grid grid-cols-4 gap-x-8 gap-y-12">
                             {previewProducts.map((product) => (
                                 <ProductCard
