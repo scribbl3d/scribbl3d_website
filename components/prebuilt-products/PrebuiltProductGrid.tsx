@@ -26,8 +26,31 @@ function VariantModal({
     const { data: session } = useSession();
     const router = useRouter();
 
+    // ✅ Full product data (with variants) may not be on the list item.
+    // Fetch it fresh from the PDP API so we always have variants + prices.
+    const [fullProduct, setFullProduct] = useState<any>(product);
+    const [fetching, setFetching] = useState(false);
+
+    useEffect(() => {
+        // Only refetch if variants are missing or have no prices
+        const hasVariants = product.variants?.some(
+            (v: any) => v.isActive && v.price > 0,
+        );
+        if (hasVariants) return;
+
+        if (!product.slug) return;
+        setFetching(true);
+        fetch(`/api/prebuilt-products/${product.slug}`)
+            .then((r) => r.json())
+            .then((data) => setFullProduct(data))
+            .catch(() => {
+                /* silently fail, use what we have */
+            })
+            .finally(() => setFetching(false));
+    }, [product.slug, product.variants]);
+
     const variants: any[] =
-        product.variants?.filter((v: any) => v.isActive) ?? [];
+        fullProduct.variants?.filter((v: any) => v.isActive) ?? [];
 
     const uniqueColors: { name: string; hex: string | null }[] = Array.from(
         new Map(
@@ -46,6 +69,22 @@ function VariantModal({
     const [selectedSize, setSelectedSize] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [isAdding, setIsAdding] = useState(false);
+
+    // Re-init color when fullProduct loads
+    useEffect(() => {
+        const colors = Array.from(
+            new Map(
+                (
+                    fullProduct.variants?.filter(
+                        (v: any) => v.isActive && v.colorName,
+                    ) ?? []
+                ).map((v: any) => [v.colorName, v.colorName]),
+            ).keys(),
+        );
+        if (colors.length > 0 && !selectedColor) {
+            setSelectedColor(colors[0] as string);
+        }
+    }, [fullProduct]);
 
     const validSizes: string[] = Array.from(
         new Set(
@@ -66,8 +105,7 @@ function VariantModal({
         variants.find((v) => v.colorName === selectedColor) ??
         null;
 
-    const displayPrice =
-        selectedVariant?.price ?? product.variants?.[0]?.price ?? 0;
+    const displayPrice = selectedVariant?.price ?? variants[0]?.price ?? 0;
     const originalPrice = selectedVariant?.originalPrice ?? 0;
     const discount =
         originalPrice > displayPrice && originalPrice > 0
@@ -99,7 +137,7 @@ function VariantModal({
         setIsAdding(true);
         try {
             await addToCart({
-                prebuiltProductId: product.id,
+                prebuiltProductId: fullProduct.id,
                 prebuiltVariantId: selectedVariant.id,
                 quantity,
             });
@@ -108,7 +146,7 @@ function VariantModal({
                 .join(", ");
             toast({
                 title: "Added to cart",
-                description: `${product.name}${label ? ` (${label})` : ""} × ${quantity} added.`,
+                description: `${fullProduct.name}${label ? ` (${label})` : ""} × ${quantity} added.`,
             });
             onClose();
         } catch {
@@ -123,18 +161,21 @@ function VariantModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        // ✅ z-[60] — above sticky headers (z-50) so backdrop covers them fully
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex gap-4 p-5 relative">
                     <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        {product.images?.[0]?.url && (
+                        {(fullProduct.images?.find((i: any) => i.isMain)?.url ??
+                            fullProduct.images?.[0]?.url) && (
                             <Image
                                 src={
-                                    product.images.find((i: any) => i.isMain)
-                                        ?.url ?? product.images[0].url
+                                    fullProduct.images?.find(
+                                        (i: any) => i.isMain,
+                                    )?.url ?? fullProduct.images?.[0]?.url
                                 }
-                                alt={product.name}
+                                alt={fullProduct.name}
                                 fill
                                 className="object-cover"
                             />
@@ -142,11 +183,11 @@ function VariantModal({
                     </div>
                     <div className="flex-1">
                         <h2 className="text-base font-semibold pr-6 leading-snug">
-                            {product.name}
+                            {fullProduct.name}
                         </h2>
-                        {product.category && (
+                        {fullProduct.category && (
                             <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-600">
-                                {product.category}
+                                {fullProduct.category}
                             </span>
                         )}
                     </div>
@@ -161,133 +202,154 @@ function VariantModal({
                 <div className="h-px bg-gray-200" />
 
                 <div className="p-5 pb-8">
-                    {/* Price */}
-                    <div className="flex items-baseline gap-3 mb-1">
-                        <span className="text-xl font-bold text-gray-900">
-                            ₹{displayPrice.toLocaleString("en-IN")}
-                        </span>
-                        {originalPrice > displayPrice && (
-                            <span className="text-sm text-gray-400 line-through">
-                                ₹{originalPrice.toLocaleString("en-IN")}
-                            </span>
-                        )}
-                        {discount > 0 && (
-                            <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                                {discount}% off
-                            </span>
-                        )}
-                    </div>
-                    <p className="text-xs text-gray-500 mb-4">(incl. GST)</p>
-
-                    {/* Colors */}
-                    {uniqueColors.length > 0 && (
-                        <div className="mb-4">
-                            <p className="text-sm font-medium mb-2">
-                                Color:{" "}
-                                <span className="font-normal text-gray-500">
-                                    {selectedColor ?? "Select"}
+                    {fetching ? (
+                        <div className="flex items-center justify-center py-10">
+                            <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
+                        </div>
+                    ) : (
+                        <>
+                            {/* Price */}
+                            <div className="flex items-baseline gap-3 mb-1">
+                                <span className="text-xl font-bold text-gray-900">
+                                    ₹{displayPrice.toLocaleString("en-IN")}
                                 </span>
+                                {originalPrice > displayPrice && (
+                                    <span className="text-sm text-gray-400 line-through">
+                                        ₹{originalPrice.toLocaleString("en-IN")}
+                                    </span>
+                                )}
+                                {discount > 0 && (
+                                    <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                                        {discount}% off
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 mb-4">
+                                (incl. GST)
                             </p>
-                            <div className="flex gap-2 flex-wrap">
-                                {uniqueColors.map((c) => (
+
+                            {/* Colors */}
+                            {uniqueColors.length > 0 && (
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium mb-2">
+                                        Color:{" "}
+                                        <span className="font-normal text-gray-500">
+                                            {selectedColor ?? "Select"}
+                                        </span>
+                                    </p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {uniqueColors.map((c) => (
+                                            <button
+                                                key={c.name}
+                                                onClick={() =>
+                                                    handleColorChange(c.name)
+                                                }
+                                                title={c.name}
+                                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
+                                                    selectedColor === c.name
+                                                        ? "ring-2 ring-gray-900 scale-110"
+                                                        : "border-transparent hover:ring-1 hover:ring-gray-400"
+                                                }`}
+                                                style={{
+                                                    backgroundColor:
+                                                        c.hex ?? "#E5E7EB",
+                                                }}
+                                            >
+                                                {selectedColor === c.name && (
+                                                    <Check
+                                                        size={12}
+                                                        className="absolute inset-0 m-auto text-white drop-shadow"
+                                                    />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sizes */}
+                            {validSizes.length > 0 && (
+                                <div className="mb-4">
+                                    <p className="text-sm font-medium mb-2">
+                                        Size
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {validSizes.map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() =>
+                                                    setSelectedSize(size)
+                                                }
+                                                className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                    selectedSize === size
+                                                        ? "border-gray-900 bg-gray-900 text-white"
+                                                        : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                {size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Quantity */}
+                            <div className="mb-6">
+                                <p className="text-sm font-medium mb-2">
+                                    Quantity
+                                </p>
+                                <div className="flex items-center gap-3">
                                     <button
-                                        key={c.name}
                                         onClick={() =>
-                                            handleColorChange(c.name)
+                                            setQuantity((q) =>
+                                                Math.max(1, q - 1),
+                                            )
                                         }
-                                        title={c.name}
-                                        className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
-                                            selectedColor === c.name
-                                                ? "ring-2 ring-gray-900 scale-110"
-                                                : "border-transparent hover:ring-1 hover:ring-gray-400"
-                                        }`}
-                                        style={{
-                                            backgroundColor: c.hex ?? "#E5E7EB",
-                                        }}
+                                        className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
                                     >
-                                        {selectedColor === c.name && (
-                                            <Check
-                                                size={12}
-                                                className="absolute inset-0 m-auto text-white drop-shadow"
-                                            />
-                                        )}
+                                        −
                                     </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Sizes */}
-                    {validSizes.length > 0 && (
-                        <div className="mb-4">
-                            <p className="text-sm font-medium mb-2">Size</p>
-                            <div className="flex flex-wrap gap-2">
-                                {validSizes.map((size) => (
+                                    <div className="flex-1 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold">
+                                        {quantity}
+                                    </div>
                                     <button
-                                        key={size}
-                                        onClick={() => setSelectedSize(size)}
-                                        className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                            selectedSize === size
-                                                ? "border-gray-900 bg-gray-900 text-white"
-                                                : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
-                                        }`}
+                                        onClick={() =>
+                                            setQuantity((q) => q + 1)
+                                        }
+                                        className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
                                     >
-                                        {size}
+                                        +
                                     </button>
-                                ))}
+                                </div>
                             </div>
-                        </div>
+
+                            {/* CTA */}
+                            <button
+                                disabled={!selectedVariant || isAdding}
+                                onClick={handleAddToCart}
+                                className="w-full h-12 bg-black text-white font-semibold rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                            >
+                                {isAdding ? (
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    "Add to Cart"
+                                )}
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    if (fullProduct.slug)
+                                        router.push(
+                                            `/prebuilt-products/${fullProduct.slug}`,
+                                        );
+                                    onClose();
+                                }}
+                                className="w-full text-sm mt-3 text-gray-500 hover:text-black"
+                            >
+                                View full details →
+                            </button>
+                        </>
                     )}
-
-                    {/* Quantity */}
-                    <div className="mb-6">
-                        <p className="text-sm font-medium mb-2">Quantity</p>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() =>
-                                    setQuantity((q) => Math.max(1, q - 1))
-                                }
-                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
-                            >
-                                −
-                            </button>
-                            <div className="flex-1 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold">
-                                {quantity}
-                            </div>
-                            <button
-                                onClick={() => setQuantity((q) => q + 1)}
-                                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
-                            >
-                                +
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* CTA */}
-                    <button
-                        disabled={!selectedVariant || isAdding}
-                        onClick={handleAddToCart}
-                        className="w-full h-12 bg-black text-white font-semibold rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                    >
-                        {isAdding ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            "Add to Cart"
-                        )}
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            if (product.slug)
-                                router.push(
-                                    `/prebuilt-products/${product.slug}`,
-                                );
-                            onClose();
-                        }}
-                        className="w-full text-sm mt-3 text-gray-500 hover:text-black"
-                    >
-                        View full details →
-                    </button>
                 </div>
             </div>
         </div>
@@ -564,9 +626,8 @@ function ProductCard({ product }: { product: any }) {
 export default function PrebuiltProductGrid({ products = [] }: Props) {
     const router = useRouter();
 
-    // Detect when navbar opens by watching body overflow:hidden (scroll lock).
-    // When nav opens → drop z-index so navbar renders on top.
-    // When nav closes → restore z-50 so sticky works above product cards.
+    // Detect navbar open via body scroll-lock (overflow:hidden).
+    // sticky header: z-50 normally, drops to z-[1] when nav opens so navbar shows on top.
     const [navOpen, setNavOpen] = useState(false);
 
     useEffect(() => {
@@ -630,7 +691,12 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
 
                 return (
                     <section key={category} className="space-y-8">
-                        {/* z-50 when nav closed (sticky works) → z-[1] when nav open (navbar on top) */}
+                        {/*
+                            Sticky header:
+                            - z-50 normally → stays above product cards while scrolling ✓
+                            - z-[1] when navbar opens → navbar renders on top ✓
+                            - Modal uses z-[60] → always above this sticky header ✓
+                        */}
                         <div
                             className="lg:hidden sticky top-0 bg-white -mx-4 px-4 py-4"
                             style={{ zIndex: navOpen ? 1 : 50 }}
@@ -638,12 +704,10 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                             <Header />
                         </div>
 
-                        {/* Desktop header — not sticky, no z-index needed */}
                         <div className="hidden lg:block">
                             <Header />
                         </div>
 
-                        {/* Mobile grid — 5 products */}
                         <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12">
                             {mobileProducts.map((product) => (
                                 <ProductCard
@@ -653,7 +717,6 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                             ))}
                         </div>
 
-                        {/* Desktop grid — 8 products */}
                         <div className="hidden lg:grid grid-cols-4 gap-x-8 gap-y-12">
                             {previewProducts.map((product) => (
                                 <ProductCard
