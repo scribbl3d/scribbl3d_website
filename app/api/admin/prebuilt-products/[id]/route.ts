@@ -6,9 +6,6 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-/* ============================================================================
-   Slug Generation Helpers
-   ============================================================================ */
 const generateSlug = (name: string): string => {
     return name
         .toLowerCase()
@@ -37,10 +34,6 @@ const ensureUniqueSlug = async (
     return `${baseSlug}-${Date.now()}`;
 };
 
-/**
- * Safely coerce a dimension value (string | number | null | undefined | "")
- * to a Float for Prisma, or null if empty/invalid.
- */
 const parseDim = (val: unknown): number | null => {
     if (val === null || val === undefined || val === "") return null;
     const n = typeof val === "number" ? val : parseFloat(String(val));
@@ -103,8 +96,8 @@ export async function PUT(
         const category = formData.get("category") as string;
         const isCustomizable = formData.get("isCustomizable") === "true";
         const highlighted = formData.get("highlighted") === "true";
+        const inStock = formData.get("inStock") !== "false"; // defaults to true
 
-        // Weight in grams — no product-level length/breadth/height (those are per-variant)
         const weight = formData.get("weight")
             ? parseFloat(formData.get("weight") as string)
             : null;
@@ -223,6 +216,7 @@ export async function PUT(
                     category,
                     isCustomizable,
                     highlighted,
+                    inStock,
                     weight,
                     features,
                 },
@@ -260,7 +254,6 @@ export async function PUT(
                     colorName: v.colorName?.trim() || null,
                     colorHex: v.colorHex?.trim() || null,
                     sizeName: v.sizeName?.trim() || null,
-                    // parseDim handles "", null, undefined, number, and string
                     length: parseDim(v.length),
                     breadth: parseDim(v.breadth),
                     height: parseDim(v.height),

@@ -53,8 +53,8 @@ export async function PUT(
 
         const slug =
             (formData.get("slug") as string) || existingPrinter?.slug || "";
+        const inStock = formData.get("inStock") !== "false"; // defaults to true
 
-        // 2️⃣ Parse JSON arrays
         const specifications = JSON.parse(
             (formData.get("specifications") as string) || "[]",
         );
@@ -68,7 +68,6 @@ export async function PUT(
             (formData.get("downloads") as string) || "[]",
         );
 
-        // 3️⃣ Extract materials (from Specifications)
         const materialAttributes: {
             attributeKey: string;
             attributeValue: string;
@@ -98,11 +97,9 @@ export async function PUT(
             });
         });
 
-        // 4️⃣ Images (merge existing + new)
         const existingImages = JSON.parse(
             (formData.get("existingImages") as string) || "[]",
         );
-
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
@@ -115,16 +112,12 @@ export async function PUT(
         for (let i = 0; i < newFiles.length; i++) {
             const file = newFiles[i];
             const meta = JSON.parse(newMetaStrings[i] || "{}");
-
             const buffer = Buffer.from(await file.arrayBuffer());
 
             const uploadResult: any = await new Promise((resolve, reject) => {
                 cloudinary.uploader
                     .upload_stream(
-                        {
-                            folder: `printers/${slug}`,
-                            resource_type: "image",
-                        },
+                        { folder: `printers/${slug}`, resource_type: "image" },
                         (error, result) => {
                             if (error) reject(error);
                             else resolve(result);
@@ -171,17 +164,14 @@ export async function PUT(
                     warrantyYears: parseInt(
                         formData.get("warrantyYears") as string,
                     ),
-
                     weight: parseInt(formData.get("weight") as string) || 0,
                     freeInstallation:
                         formData.get("freeInstallation") === "true",
+                    inStock,
                 },
             }),
 
-            // Images
-            prisma.printerImage.deleteMany({
-                where: { printerId: params.id },
-            }),
+            prisma.printerImage.deleteMany({ where: { printerId: params.id } }),
             prisma.printerImage.createMany({
                 data: finalImageRecords.map((img) => ({
                     printerId: params.id,
@@ -191,7 +181,6 @@ export async function PUT(
                 })),
             }),
 
-            // Specifications
             prisma.printerSpecification.deleteMany({
                 where: { printerId: params.id },
             }),
@@ -205,12 +194,8 @@ export async function PUT(
                 })),
             }),
 
-            // Material Compatibility (SYNC)
             prisma.printerAttribute.deleteMany({
-                where: {
-                    printerId: params.id,
-                    attributeKey: "material",
-                },
+                where: { printerId: params.id, attributeKey: "material" },
             }),
             prisma.printerAttribute.createMany({
                 data: materialAttributes.map((attr) => ({
@@ -220,7 +205,6 @@ export async function PUT(
                 })),
             }),
 
-            // Features
             prisma.printerFeature.deleteMany({
                 where: { printerId: params.id },
             }),
@@ -232,7 +216,6 @@ export async function PUT(
                 })),
             }),
 
-            // Applications
             prisma.printerApplication.deleteMany({
                 where: { printerId: params.id },
             }),
@@ -244,7 +227,6 @@ export async function PUT(
                 })),
             }),
 
-            // Downloads
             prisma.printerDownload.deleteMany({
                 where: { printerId: params.id },
             }),
@@ -269,9 +251,9 @@ export async function PUT(
     }
 }
 
-// =======================
-// DELETE: Delete printer
-// =======================
+/* ============================================================================
+   DELETE – Delete printer
+   ============================================================================ */
 export async function DELETE(
     req: Request,
     props: { params: Promise<{ id: string }> },
@@ -279,12 +261,9 @@ export async function DELETE(
     const params = await props.params;
 
     try {
-        // 1️⃣ Fetch printer with images (for Cloudinary cleanup)
         const printer = await prisma.printer.findUnique({
             where: { id: params.id },
-            include: {
-                images: true,
-            },
+            include: { images: true },
         });
 
         if (!printer) {
@@ -294,7 +273,6 @@ export async function DELETE(
             );
         }
 
-        // 2️⃣ Delete Cloudinary images
         for (const img of printer.images) {
             try {
                 const publicId = img.url
@@ -302,17 +280,13 @@ export async function DELETE(
                     .slice(-2)
                     .join("/")
                     .replace(/\.[^/.]+$/, "");
-
                 await cloudinary.uploader.destroy(publicId);
-            } catch (err) {
+            } catch {
                 console.warn("Cloudinary delete failed:", img.url);
             }
         }
 
-        // 3️⃣ Delete printer (CASCADE handles related tables)
-        await prisma.printer.delete({
-            where: { id: params.id },
-        });
+        await prisma.printer.delete({ where: { id: params.id } });
 
         return NextResponse.json({ success: true });
     } catch (error) {

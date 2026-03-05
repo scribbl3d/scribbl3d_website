@@ -34,6 +34,7 @@ export default async function EditProductPage({
         longDescription: product.longDescription || "",
         category: product.category,
         isCustomizable: product.isCustomizable,
+        inStock: product.inStock,
         highlighted: product.highlighted,
         weight: product.weight ? product.weight.toString() : "",
         features: product.features || [],

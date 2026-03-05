@@ -100,6 +100,11 @@ export default function AdminPage() {
                         Discounts
                     </Button>
                 </Link>
+                <Link href="/admin/stock-notifications" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Out of Stock Notifications
+                    </Button>
+                </Link>
             </nav>
         </div>
     );

@@ -597,6 +597,7 @@ model Printer {
   name  String
   slug  String @unique
   brand String
+  inStock Boolean @default(true)
 
   // Pricing
   price         Int // Current price in paise
@@ -625,6 +626,7 @@ model Printer {
   features       PrinterFeature[]
   applications   PrinterApplication[]
   downloads      PrinterDownload[]
+
 
   // SEO & Metadata
   metaTitle        String?
@@ -812,8 +814,6 @@ model ResinWeight {
 
   @@index([resinId])
 }
-
-
 model ResinAttribute {
   id      String @id @default(cuid())
   resinId String
@@ -825,7 +825,6 @@ model ResinAttribute {
 
   @@index([label, value])
 }
-
 model ResinSpecification {
   id      String @id @default(cuid())
   resinId String
@@ -839,7 +838,6 @@ model ResinSpecification {
 
   @@index([resinId, category, sortOrder])
 }
-
 model ResinFeature {
   id      String @id @default(cuid())
   resinId String
@@ -850,7 +848,6 @@ model ResinFeature {
 
   resin Resin @relation(fields: [resinId], references: [id], onDelete: Cascade)
 }
-
 model ResinDownload {
   id      String @id @default(cuid())
   resinId String
@@ -872,7 +869,6 @@ model ResinApplication {
 
   @@index([resinId, sortOrder])
 }
-
 model ResinCompatibility {
   id        String @id @default(cuid())
  resinId String
@@ -883,8 +879,6 @@ model ResinCompatibility {
 
   @@index([resinId, sortOrder])
 }
-
-
 model PrebuiltProducts {
   id               String  @id @default(cuid())
   name             String
@@ -894,23 +888,19 @@ model PrebuiltProducts {
   category         String
   isCustomizable   Boolean @default(false)
   highlighted      Boolean @default(false)
-
-
+  inStock          Boolean @default(true)
   weight  Float?
-
   features String[] @default([])
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   images        PrebuiltImages[]
   attributes    PrebuiltAttributes[]
   variants      PrebuiltVariants[]
   cartItems     CartItem[]
   reviews       Review[]
   wishlistItems WishlistItem[]
-}
 
+}
 model PrebuiltImages {
     id                String               @id @default(cuid())
     prebuildProductId String
@@ -923,8 +913,6 @@ model PrebuiltImages {
     updatedAt         DateTime?             @updatedAt
     product           PrebuiltProducts  @relation(fields: [prebuildProductId], references: [id], onDelete: Cascade)
 }
-
-// Specs — e.g. Material: Aluminium, Warranty: 2 Years, Finish: Matte
 model PrebuiltAttributes {
   id    String @id @default(cuid())
   label String // "Material"
@@ -935,8 +923,6 @@ model PrebuiltAttributes {
 
   @@unique([prebuildProductId, label])
 }
-
-// Every unique color + size combo = one row with its own price and stock
 model PrebuiltVariants {
   id            String  @id @default(cuid())
   price         Int // 
@@ -962,4 +948,16 @@ model PrebuiltVariants {
   updatedAt DateTime @updatedAt
 
   @@unique([prebuildProductId, colorName, sizeName])
+}
+model StockNotification {
+  id          String    @id @default(cuid())
+  productId   String
+  productName String
+  productType String    @default("prebuilt") // "prebuilt" | "printer"
+  email       String
+  phone       String
+  name        String?
+  notified    Boolean   @default(false)
+  notifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
 }

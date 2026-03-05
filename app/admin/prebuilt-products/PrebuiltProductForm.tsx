@@ -27,10 +27,10 @@ type AttributeInput = { label: string; value: string };
 
 type VariantInput = {
     id?: string;
-    price: number; // rupees
-    originalPrice: number; // rupees
-    priceDisplay: string; // ₹ string for input
-    originalPriceDisplay: string; // ₹ string for input
+    price: number;
+    originalPrice: number;
+    priceDisplay: string;
+    originalPriceDisplay: string;
     isActive: boolean;
     colorName: string;
     colorHex: string;
@@ -59,6 +59,7 @@ export type ProductFormData = {
     category: string;
     isCustomizable: boolean;
     highlighted: boolean;
+    inStock: boolean;
     weight: string;
     features: string[];
     attributes: AttributeInput[];
@@ -198,6 +199,7 @@ export default function PrebuiltProductForm({
     const [highlighted, setHighlighted] = useState(
         defaultValues?.highlighted ?? false,
     );
+    const [inStock, setInStock] = useState(defaultValues?.inStock ?? true);
     const [weight, setWeight] = useState(defaultValues?.weight ?? "");
     const [features, setFeatures] = useState<string[]>(
         defaultValues?.features ?? [],
@@ -214,7 +216,6 @@ export default function PrebuiltProductForm({
         defaultValues?.variants?.length
             ? (defaultValues.variants as any[]).map((v) => ({
                   ...v,
-                  // prices already in rupees from DB
                   priceDisplay: v.price > 0 ? String(v.price) : "",
                   originalPriceDisplay:
                       v.originalPrice > 0 ? String(v.originalPrice) : "",
@@ -330,6 +331,7 @@ export default function PrebuiltProductForm({
                 fd.append("category", category);
                 fd.append("isCustomizable", String(isCustomizable));
                 fd.append("highlighted", String(highlighted));
+                fd.append("inStock", String(inStock));
 
                 if (weight) fd.append("weight", weight);
 
@@ -605,6 +607,28 @@ export default function PrebuiltProductForm({
                                         <span className="text-[11px] text-gray-400">
                                             Feature this product on the home
                                             page
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* In Stock toggle */}
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setInStock((p) => !p)}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${inStock ? "bg-green-500" : "bg-gray-200"}`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${inStock ? "translate-x-6" : "translate-x-1"}`}
+                                        />
+                                    </button>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-gray-700 font-medium">
+                                            In Stock
+                                        </span>
+                                        <span className="text-[11px] text-gray-400">
+                                            Mark this product as available for
+                                            purchase
                                         </span>
                                     </div>
                                 </div>

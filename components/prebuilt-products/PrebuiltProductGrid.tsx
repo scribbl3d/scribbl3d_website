@@ -2,7 +2,7 @@
 
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { Check, Heart, X } from "lucide-react";
+import { Bell, Check, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,182 @@ import { useEffect, useState } from "react";
 
 interface Props {
     products: any[];
+}
+
+/* ─────────────────────────────────────────────────────────
+   Notify Me Modal
+───────────────────────────────────────────────────────── */
+function NotifyMeModal({
+    product,
+    onClose,
+}: {
+    product: any;
+    onClose: () => void;
+}) {
+    const { data: session } = useSession();
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
+    const [phone, setPhone] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [done, setDone] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!email.trim() || !phone.trim()) {
+            toast({
+                title: "Email and phone are required",
+                variant: "destructive",
+            });
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const res = await fetch("/api/stock-notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productId: product.id,
+                    productName: product.name,
+                    productType: "prebuilt",
+                    email: email.trim(),
+                    phone: phone.trim(),
+                    name: name.trim() || null,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast({
+                    title: data.error || "Something went wrong",
+                    variant: "destructive",
+                });
+                return;
+            }
+            setDone(true);
+        } catch {
+            toast({ title: "Request failed", variant: "destructive" });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+                <div className="flex items-start justify-between p-5 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
+                            <Bell size={16} className="text-orange-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-bold text-gray-900">
+                                Notify Me When Back
+                            </h2>
+                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                                {product.name}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-black mt-0.5"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="p-5">
+                    {done ? (
+                        <div className="flex flex-col items-center py-6 text-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                                <Check size={22} className="text-green-600" />
+                            </div>
+                            <p className="text-base font-bold text-gray-900">
+                                You're on the list!
+                            </p>
+                            <p className="text-sm text-gray-500 leading-relaxed">
+                                We'll notify you on{" "}
+                                <span className="font-semibold text-gray-700">
+                                    {email}
+                                </span>{" "}
+                                and{" "}
+                                <span className="font-semibold text-gray-700">
+                                    {phone}
+                                </span>{" "}
+                                as soon as this item is back in stock.
+                            </p>
+                            <button
+                                onClick={onClose}
+                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-3.5">
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                This product is currently out of stock. Leave
+                                your details and we'll let you know the moment
+                                it's available.
+                            </p>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Name{" "}
+                                    <span className="text-gray-400 normal-case font-normal">
+                                        (optional)
+                                    </span>
+                                </label>
+                                <input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Your name"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Email{" "}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@example.com"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Phone Number{" "}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="10-digit mobile number"
+                                    maxLength={15}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                            >
+                                {submitting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <Bell size={14} /> Notify Me
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -26,13 +202,10 @@ function VariantModal({
     const { data: session } = useSession();
     const router = useRouter();
 
-    // ✅ Full product data (with variants) may not be on the list item.
-    // Fetch it fresh from the PDP API so we always have variants + prices.
     const [fullProduct, setFullProduct] = useState<any>(product);
     const [fetching, setFetching] = useState(false);
 
     useEffect(() => {
-        // Only refetch if variants are missing or have no prices
         const hasVariants = product.variants?.some(
             (v: any) => v.isActive && v.price > 0,
         );
@@ -43,9 +216,7 @@ function VariantModal({
         fetch(`/api/prebuilt-products/${product.slug}`)
             .then((r) => r.json())
             .then((data) => setFullProduct(data))
-            .catch(() => {
-                /* silently fail, use what we have */
-            })
+            .catch(() => {})
             .finally(() => setFetching(false));
     }, [product.slug, product.variants]);
 
@@ -70,7 +241,6 @@ function VariantModal({
     const [quantity, setQuantity] = useState(1);
     const [isAdding, setIsAdding] = useState(false);
 
-    // Re-init color when fullProduct loads
     useEffect(() => {
         const colors = Array.from(
             new Map(
@@ -161,10 +331,8 @@ function VariantModal({
     };
 
     return (
-        // ✅ z-[60] — above sticky headers (z-50) so backdrop covers them fully
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="flex gap-4 p-5 relative">
                     <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                         {(fullProduct.images?.find((i: any) => i.isMain)?.url ??
@@ -208,7 +376,6 @@ function VariantModal({
                         </div>
                     ) : (
                         <>
-                            {/* Price */}
                             <div className="flex items-baseline gap-3 mb-1">
                                 <span className="text-xl font-bold text-gray-900">
                                     ₹{displayPrice.toLocaleString("en-IN")}
@@ -228,7 +395,6 @@ function VariantModal({
                                 (incl. GST)
                             </p>
 
-                            {/* Colors */}
                             {uniqueColors.length > 0 && (
                                 <div className="mb-4">
                                     <p className="text-sm font-medium mb-2">
@@ -267,7 +433,6 @@ function VariantModal({
                                 </div>
                             )}
 
-                            {/* Sizes */}
                             {validSizes.length > 0 && (
                                 <div className="mb-4">
                                     <p className="text-sm font-medium mb-2">
@@ -293,7 +458,6 @@ function VariantModal({
                                 </div>
                             )}
 
-                            {/* Quantity */}
                             <div className="mb-6">
                                 <p className="text-sm font-medium mb-2">
                                     Quantity
@@ -325,11 +489,21 @@ function VariantModal({
 
                             {/* CTA */}
                             <button
-                                disabled={!selectedVariant || isAdding}
+                                disabled={
+                                    !selectedVariant ||
+                                    isAdding ||
+                                    fullProduct.inStock === false
+                                }
                                 onClick={handleAddToCart}
-                                className="w-full h-12 bg-black text-white font-semibold rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                                className={`w-full h-12 font-semibold rounded-xl transition flex items-center justify-center gap-2 ${
+                                    fullProduct.inStock === false
+                                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                        : "bg-black text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                }`}
                             >
-                                {isAdding ? (
+                                {fullProduct.inStock === false ? (
+                                    "Out of Stock"
+                                ) : isAdding ? (
                                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                 ) : (
                                     "Add to Cart"
@@ -371,6 +545,7 @@ function ProductCard({ product }: { product: any }) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
 
     useEffect(() => {
         if (!session || !product?.id) return;
@@ -487,6 +662,12 @@ function ProductCard({ product }: { product: any }) {
                             className="object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                     )}
+                    {/* Out of Stock badge */}
+                    {product.inStock === false && (
+                        <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
+                            Out of Stock
+                        </div>
+                    )}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -598,15 +779,32 @@ function ProductCard({ product }: { product: any }) {
                         (incl. GST)
                     </span>
 
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowModal(true);
-                        }}
-                        className="w-full rounded-[10px] bg-[#1E1E1E] py-2.5 text-sm font-semibold text-white transition-all hover:bg-black active:scale-[0.97]"
-                    >
-                        Select Variants
-                    </button>
+                    {/* Select Variants — hidden when out of stock */}
+                    {product.inStock !== false && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowModal(true);
+                            }}
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold transition-all bg-[#1E1E1E] text-white hover:bg-black active:scale-[0.97]"
+                        >
+                            Select Variants
+                        </button>
+                    )}
+
+                    {/* Notify Me — only when out of stock */}
+                    {product.inStock === false && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowNotifyModal(true);
+                            }}
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                        >
+                            <Bell size={13} />
+                            Notify Me When Back in Stock
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -614,6 +812,12 @@ function ProductCard({ product }: { product: any }) {
                 <VariantModal
                     product={product}
                     onClose={() => setShowModal(false)}
+                />
+            )}
+            {showNotifyModal && (
+                <NotifyMeModal
+                    product={product}
+                    onClose={() => setShowNotifyModal(false)}
                 />
             )}
         </>
@@ -625,9 +829,6 @@ function ProductCard({ product }: { product: any }) {
 ───────────────────────────────────────────────────────── */
 export default function PrebuiltProductGrid({ products = [] }: Props) {
     const router = useRouter();
-
-    // Detect navbar open via body scroll-lock (overflow:hidden).
-    // sticky header: z-50 normally, drops to z-[1] when nav opens so navbar shows on top.
     const [navOpen, setNavOpen] = useState(false);
 
     useEffect(() => {
@@ -691,12 +892,6 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
 
                 return (
                     <section key={category} className="space-y-8">
-                        {/*
-                            Sticky header:
-                            - z-50 normally → stays above product cards while scrolling ✓
-                            - z-[1] when navbar opens → navbar renders on top ✓
-                            - Modal uses z-[60] → always above this sticky header ✓
-                        */}
                         <div
                             className="lg:hidden sticky top-0 bg-white -mx-4 px-4 py-4"
                             style={{ zIndex: navOpen ? 1 : 50 }}

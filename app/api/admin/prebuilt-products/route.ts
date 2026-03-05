@@ -136,8 +136,8 @@ export async function POST(request: NextRequest) {
         const category = formData.get("category") as string;
         const isCustomizable = formData.get("isCustomizable") === "true";
         const highlighted = formData.get("highlighted") === "true";
+        const inStock = formData.get("inStock") !== "false"; // defaults to true
 
-        // Weight in grams — no product-level length/breadth/height (those are per-variant)
         const weight = formData.get("weight")
             ? parseFloat(formData.get("weight") as string)
             : null;
@@ -206,6 +206,7 @@ export async function POST(request: NextRequest) {
                 category,
                 isCustomizable,
                 highlighted,
+                inStock,
                 weight,
                 features,
                 attributes: {
@@ -226,7 +227,6 @@ export async function POST(request: NextRequest) {
                         colorName: v.colorName?.trim() || null,
                         colorHex: v.colorHex?.trim() || null,
                         sizeName: v.sizeName?.trim() || null,
-                        // Per-variant dimensions — parseDim handles "", null, number, string
                         length: parseDim(v.length),
                         breadth: parseDim(v.breadth),
                         height: parseDim(v.height),

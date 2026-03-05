@@ -12,27 +12,20 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
 
-        /* -------------------- PAGINATION -------------------- */
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
         const skip = (page - 1) * limit;
 
-        /* -------------------- SEARCH -------------------- */
         const searchField = searchParams.get("searchField") || "name";
         const searchTerm = searchParams.get("searchTerm") || "";
+        const sort = searchParams.get("sort") || "";
 
-        /* -------------------- SORT -------------------- */
-        const sort = searchParams.get("sort") || ""; // eg: price-asc
-
-        /* -------------------- SEARCH LOGIC -------------------- */
         let fieldFilter: Prisma.PrinterWhereInput = {};
 
         if (searchTerm.trim() !== "") {
             if (searchField === "price") {
                 const price = Number(searchTerm);
-                if (!isNaN(price)) {
-                    fieldFilter.price = price;
-                }
+                if (!isNaN(price)) fieldFilter.price = price;
             } else {
                 fieldFilter[searchField as keyof Prisma.PrinterWhereInput] = {
                     contains: searchTerm,
@@ -41,41 +34,31 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        const where: Prisma.PrinterWhereInput = {
-            AND: [fieldFilter],
-        };
+        const where: Prisma.PrinterWhereInput = { AND: [fieldFilter] };
 
-        /* -------------------- SORT LOGIC -------------------- */
         let orderBy: Prisma.PrinterOrderByWithRelationInput[] = [];
 
         if (sort) {
             const [field, direction] = sort.split("-");
-
             const order = direction === "desc" ? "desc" : "asc";
 
             if (
-                field === "name" ||
-                field === "price" ||
-                field === "technology" ||
-                field === "brand" ||
-                field === "updatedAt" ||
-                field === "createdAt"
+                [
+                    "name",
+                    "price",
+                    "technology",
+                    "brand",
+                    "updatedAt",
+                    "createdAt",
+                ].includes(field)
             ) {
                 orderBy.push({ [field]: order } as any);
-
-                // tie-breaker for stable sorting
-                if (field !== "name") {
-                    orderBy.push({ name: "asc" });
-                }
+                if (field !== "name") orderBy.push({ name: "asc" });
             }
         }
 
-        // ⭐ DEFAULT SORT (always predictable)
-        if (orderBy.length === 0) {
-            orderBy = [{ name: "asc" }];
-        }
+        if (orderBy.length === 0) orderBy = [{ name: "asc" }];
 
-        /* -------------------- FETCH DATA -------------------- */
         const [printers, totalCount] = await Promise.all([
             prisma.printer.findMany({
                 where,
@@ -93,7 +76,6 @@ export async function GET(request: NextRequest) {
             prisma.printer.count({ where }),
         ]);
 
-        /* -------------------- FORMAT RESPONSE -------------------- */
         const formattedPrinters = printers.map((p) => ({
             ...p,
             imageUrl: p.images[0]?.url || null,
@@ -114,11 +96,13 @@ export async function GET(request: NextRequest) {
     }
 }
 
+/* ============================================================================
+   POST – Create printer
+   ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
 
-        // 1️⃣ Basic fields
         const name = formData.get("name") as string;
 
         let slug = (formData.get("slug") as string) || "";
@@ -140,10 +124,9 @@ export async function POST(request: NextRequest) {
         const vH = parseInt(formData.get("volumeHeight") as string);
         const volumeMax = Math.max(vL, vW, vH);
 
-        // 👇 Extract weight here
         const weight = parseInt((formData.get("weight") as string) || "0");
+        const inStock = formData.get("inStock") !== "false"; // defaults to true
 
-        // 2️⃣ Parse JSON arrays
         const specifications = JSON.parse(
             (formData.get("specifications") as string) || "[]",
         );
@@ -157,7 +140,6 @@ export async function POST(request: NextRequest) {
             (formData.get("downloads") as string) || "[]",
         );
 
-        // 3️⃣ Extract materials → PrinterAttribute
         const materialAttributes: {
             attributeKey: string;
             attributeValue: string;
@@ -187,7 +169,6 @@ export async function POST(request: NextRequest) {
             });
         });
 
-        // 4️⃣ Upload images → Cloudinary
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
@@ -200,16 +181,12 @@ export async function POST(request: NextRequest) {
         for (let i = 0; i < newFiles.length; i++) {
             const file = newFiles[i];
             const meta = JSON.parse(newMetaStrings[i] || "{}");
-
             const buffer = Buffer.from(await file.arrayBuffer());
 
             const uploadResult: any = await new Promise((resolve, reject) => {
                 cloudinary.uploader
                     .upload_stream(
-                        {
-                            folder: `printers/${slug}`,
-                            resource_type: "image",
-                        },
+                        { folder: `printers/${slug}`, resource_type: "image" },
                         (error, result) => {
                             if (error) reject(error);
                             else resolve(result);
@@ -244,16 +221,12 @@ export async function POST(request: NextRequest) {
                 warrantyYears: parseInt(
                     (formData.get("warrantyYears") as string) || "1",
                 ),
-                // 👇 Save weight to DB
-                weight: weight,
+                weight,
                 freeInstallation: formData.get("freeInstallation") === "true",
+                inStock,
 
                 images: { create: imageRecords },
-
-                attributes: {
-                    create: materialAttributes,
-                },
-
+                attributes: { create: materialAttributes },
                 specifications: {
                     create: specifications.map((spec: any, index: number) => ({
                         category: spec.category,
@@ -262,21 +235,18 @@ export async function POST(request: NextRequest) {
                         sortOrder: index,
                     })),
                 },
-
                 features: {
                     create: features.map((feat: any, index: number) => ({
                         title: feat.title,
                         sortOrder: index,
                     })),
                 },
-
                 applications: {
                     create: applications.map((app: any, index: number) => ({
                         name: app.name,
                         sortOrder: index,
                     })),
                 },
-
                 downloads: {
                     create: downloads.map((doc: any, index: number) => ({
                         title: doc.title,
