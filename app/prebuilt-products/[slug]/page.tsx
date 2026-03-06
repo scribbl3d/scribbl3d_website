@@ -652,7 +652,6 @@ function SimilarProductCard({ product }: { product: any }) {
                             No image
                         </div>
                     )}
-                    {/* Out of Stock badge */}
                     {product.inStock === false && (
                         <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
                             Out of Stock
@@ -764,7 +763,6 @@ function SimilarProductCard({ product }: { product: any }) {
                         (incl. GST)
                     </span>
 
-                    {/* Select Variants — hidden when out of stock */}
                     {product.inStock !== false && (
                         <button
                             onClick={(e) => {
@@ -777,7 +775,6 @@ function SimilarProductCard({ product }: { product: any }) {
                         </button>
                     )}
 
-                    {/* Notify Me — only when out of stock */}
                     {product.inStock === false && (
                         <button
                             onClick={(e) => {
@@ -1237,7 +1234,7 @@ export default function PrebuiltProductPDP() {
 
     if (loading)
         return (
-            <div className="min-h-screen bg-white">
+            <div className="min-h-screen bg-white pt-20">
                 <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
                 <div className="border-b border-gray-100 py-3.5 px-10">
                     <Shimmer className="h-4 w-48" />
@@ -1263,22 +1260,20 @@ export default function PrebuiltProductPDP() {
         );
 
     const isOutOfStock = product.inStock === false;
-    // Variant-level OOS: product is in stock but selected variant is not
     const isVariantOutOfStock =
         !isOutOfStock && selectedVariant?.inStock === false;
-    // Combined: either the whole product or the selected variant is OOS
     const isAnyOutOfStock = isOutOfStock || isVariantOutOfStock;
 
-    // Build a human-readable label for the notify modal (e.g. "Red, Large")
     const variantLabel = [selectedColor, selectedSize]
         .filter(Boolean)
         .join(", ");
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white pt-20">
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
-            <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
+            {/* ✅ FIXED: removed sticky top-0 z-10 — was hiding behind site navbar on mobile */}
+            <div className="border-b border-gray-100 bg-white">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10 py-2">
                     <button
                         onClick={() => router.push("/prebuilt-products")}
@@ -1743,7 +1738,7 @@ export default function PrebuiltProductPDP() {
                                                         key={attr.id}
                                                         className={`flex items-center px-5 py-3 ${i % 2 === 1 ? "bg-gray-50" : "bg-white"} border-b border-gray-100`}
                                                     >
-                                                        <span className="text-sm text-gray-500 w-56 flex-shrink-0">
+                                                        <span className="text-sm text-gray-500 w-1/3 min-w-[100px] flex-shrink-0">
                                                             {attr.label}
                                                         </span>
                                                         <span className="text-sm font-medium text-gray-900">
@@ -1756,7 +1751,7 @@ export default function PrebuiltProductPDP() {
                                                 <div
                                                     className={`flex items-center px-5 py-3 ${product.attributes?.length % 2 === 1 ? "bg-gray-50" : "bg-white"}`}
                                                 >
-                                                    <span className="text-sm text-gray-500 w-56 flex-shrink-0">
+                                                    <span className="text-sm text-gray-500 w-1/3 min-w-[100px] flex-shrink-0">
                                                         Weight
                                                     </span>
                                                     <span className="text-sm font-medium text-gray-900">
