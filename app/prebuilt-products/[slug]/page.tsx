@@ -541,8 +541,6 @@ function SimilarProductCard({ product }: { product: any }) {
                     <span className="text-[10px] text-gray-400 mb-4">
                         (incl. GST)
                     </span>
-
-                    {/* Select Variants → WishlistModal (has full OOS logic built in) */}
                     {product.inStock !== false && (
                         <button
                             onClick={(e) => {
@@ -560,7 +558,7 @@ function SimilarProductCard({ product }: { product: any }) {
                                 e.stopPropagation();
                                 setShowNotifyModal(true);
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
                         >
                             <Bell size={13} /> Notify Me When Back in Stock
                         </button>
@@ -715,6 +713,12 @@ export default function PrebuiltProductPDP() {
     const [activeTab, setActiveTab] = useState<
         "specifications" | "features" | "support" | "care"
     >("specifications");
+
+    // ── Customization state ──
+    const [customizationChoice, setCustomizationChoice] = useState<
+        "yes" | "no" | null
+    >(null);
+    const [customizationText, setCustomizationText] = useState("");
 
     useEffect(() => {
         if (!slug) return;
@@ -1004,6 +1008,51 @@ export default function PrebuiltProductPDP() {
         }
     };
 
+    // ── Get Quote via WhatsApp ──
+    const handleGetQuote = () => {
+        if (!customizationText.trim()) {
+            toast({
+                title: "Please describe your customization",
+                variant: "destructive",
+            });
+            return;
+        }
+        const productUrl =
+            typeof window !== "undefined"
+                ? window.location.href
+                : `https://scribbl3d.com/prebuilt-products/${slug}`;
+        const colorLine = selectedColor
+            ? `Preferred Color: ${selectedColor}`
+            : "";
+        const sizeLine = selectedSize ? `Preferred Size : ${selectedSize}` : "";
+
+        const message = [
+            `Hi! I'm interested in customizing one of your products and would like to request a quote.`,
+            ``,
+            `Here are my details:`,
+            `Product: ${product.name}`,
+            `Product Link: ${productUrl}`,
+            `Customization Required:`,
+            customizationText.trim(),
+            sizeLine,
+            colorLine,
+            ``,
+            `Please let me know:`,
+            `• Whether this customization is possible`,
+            `• The estimated price`,
+            `• The expected production time`,
+            ``,
+            `Looking forward to hearing from you. Thank you!`,
+        ]
+            .filter((line) => line !== undefined && !(line === "" && false))
+            .filter((_, i, arr) => !(arr[i] === "" && arr[i - 1] === ""))
+            .join("\n");
+
+        const phone = "919599523434";
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(waUrl, "_blank");
+    };
+
     const tabs = [
         { key: "specifications", label: "Specifications" },
         { key: "features", label: "Features" },
@@ -1045,6 +1094,10 @@ export default function PrebuiltProductPDP() {
     const variantLabel = [selectedColor, selectedSize]
         .filter(Boolean)
         .join(", ");
+
+    // CTA is "Get Quote" when customization is chosen as "yes"
+    const isGetQuoteMode =
+        product.isCustomizable && customizationChoice === "yes";
 
     return (
         <div className="min-h-screen bg-white pt-20">
@@ -1273,7 +1326,8 @@ export default function PrebuiltProductPDP() {
                         </div>
 
                         {(uniqueColors.length > 0 ||
-                            uniqueSizes.length > 0) && (
+                            uniqueSizes.length > 0 ||
+                            product.isCustomizable) && (
                             <div className="border border-gray-200 rounded-xl p-4 flex flex-col gap-4">
                                 {uniqueColors.length > 0 && (
                                     <div>
@@ -1365,30 +1419,91 @@ export default function PrebuiltProductPDP() {
                                         </div>
                                     </div>
                                 )}
-                                {product.isCustomizable !== undefined && (
+
+                                {/* ── Customization section — only shown when product.isCustomizable is true ── */}
+                                {product.isCustomizable && (
                                     <>
                                         <div className="border-t border-gray-100" />
-                                        <div>
-                                            <p className="text-xs font-semibold text-gray-700 mb-1.5">
-                                                Customization
-                                            </p>
-                                            <span
-                                                className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${product.isCustomizable ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500 border-gray-200"}`}
-                                            >
-                                                {product.isCustomizable && (
-                                                    <Check size={10} />
+                                        <div className="flex flex-col gap-3">
+                                            <div>
+                                                <p className="text-xs font-semibold text-gray-700">
+                                                    Customization
+                                                </p>
+                                                <p className="text-sm text-gray-500 mt-0.5">
+                                                    Want to add your own
+                                                    personal touch?
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-1.5">
+                                                {(["yes", "no"] as const).map(
+                                                    (opt) => {
+                                                        const isSelected =
+                                                            customizationChoice ===
+                                                            opt;
+                                                        return (
+                                                            <button
+                                                                key={opt}
+                                                                onClick={() => {
+                                                                    setCustomizationChoice(
+                                                                        opt,
+                                                                    );
+                                                                    if (
+                                                                        opt ===
+                                                                        "no"
+                                                                    )
+                                                                        setCustomizationText(
+                                                                            "",
+                                                                        );
+                                                                }}
+                                                                className={`px-4 py-1.5 rounded-lg border text-xs font-medium transition-all capitalize ${isSelected ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"}`}
+                                                            >
+                                                                {opt === "yes"
+                                                                    ? "Yes"
+                                                                    : "No"}
+                                                            </button>
+                                                        );
+                                                    },
                                                 )}
-                                                {product.isCustomizable
-                                                    ? "Available"
-                                                    : "Not Available"}
-                                            </span>
+                                            </div>
+
+                                            {customizationChoice === "yes" && (
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                                        Describe your
+                                                        customization
+                                                    </label>
+                                                    <textarea
+                                                        value={
+                                                            customizationText
+                                                        }
+                                                        onChange={(e) =>
+                                                            setCustomizationText(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="e.g. Engrave 'Happy Birthday' on the top surface, use matte black finish..."
+                                                        rows={3}
+                                                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none transition"
+                                                    />
+                                                    <p className="text-[11px] text-gray-400 leading-snug">
+                                                        Clicking{" "}
+                                                        <span className="font-semibold text-gray-600">
+                                                            Get Quote
+                                                        </span>{" "}
+                                                        will open WhatsApp with
+                                                        your request pre-filled.
+                                                        Our team will reply with
+                                                        pricing & timelines.
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}
                             </div>
                         )}
 
-                        {!isAnyOutOfStock && (
+                        {!isAnyOutOfStock && !isGetQuoteMode && (
                             <div>
                                 <p className="text-xs font-semibold text-gray-700 mb-2">
                                     Quantity
@@ -1421,35 +1536,57 @@ export default function PrebuiltProductPDP() {
                             </div>
                         )}
 
-                        <button
-                            onClick={
-                                isAnyOutOfStock ? undefined : handleAddToCart
-                            }
-                            disabled={
-                                isAnyOutOfStock ||
-                                isAddingToCart ||
-                                !selectedVariant
-                            }
-                            className={`w-full py-3.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 ${isAnyOutOfStock ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-900 hover:bg-black text-white disabled:opacity-50"}`}
-                        >
-                            {isAnyOutOfStock ? (
-                                "Out of Stock"
-                            ) : isAddingToCart ? (
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <ShoppingCart size={16} />
-                                    {!selectedVariant
-                                        ? "Select a Variant"
-                                        : "Add to Cart"}
-                                </>
-                            )}
-                        </button>
+                        {/* ── CTA: Get Quote (customization) OR Add to Cart ── */}
+                        {isGetQuoteMode ? (
+                            <button
+                                onClick={handleGetQuote}
+                                disabled={!customizationText.trim()}
+                                className="w-full py-3.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {/* WhatsApp icon */}
+                                <svg
+                                    width="17"
+                                    height="17"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                >
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                                </svg>
+                                Get Quote on WhatsApp
+                            </button>
+                        ) : (
+                            <button
+                                onClick={
+                                    isAnyOutOfStock
+                                        ? undefined
+                                        : handleAddToCart
+                                }
+                                disabled={
+                                    isAnyOutOfStock ||
+                                    isAddingToCart ||
+                                    !selectedVariant
+                                }
+                                className={`w-full py-3.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 ${isAnyOutOfStock ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-900 hover:bg-black text-white disabled:opacity-50"}`}
+                            >
+                                {isAnyOutOfStock ? (
+                                    "Out of Stock"
+                                ) : isAddingToCart ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <ShoppingCart size={16} />
+                                        {!selectedVariant
+                                            ? "Select a Variant"
+                                            : "Add to Cart"}
+                                    </>
+                                )}
+                            </button>
+                        )}
 
                         {isAnyOutOfStock && (
                             <button
                                 onClick={() => setShowNotifyModal(true)}
-                                className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
+                                className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
                             >
                                 <Bell size={15} />
                                 Notify Me When Back in Stock
@@ -1461,7 +1598,7 @@ export default function PrebuiltProductPDP() {
                             </button>
                         )}
 
-                        {!isAnyOutOfStock && (
+                        {!isAnyOutOfStock && !isGetQuoteMode && (
                             <div className="flex items-center gap-6">
                                 <div className="flex items-center gap-1.5 text-xs text-gray-600">
                                     <ShieldCheckIcon /> Quality Inspected

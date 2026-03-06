@@ -72,8 +72,8 @@ function NotifyMeModal({
             <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
                 <div className="flex items-start justify-between p-5 border-b border-gray-100">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                            <Bell size={16} className="text-orange-500" />
+                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Bell size={16} className="text-blue-500" />
                         </div>
                         <div>
                             <h2 className="text-sm font-bold text-gray-900">
@@ -765,7 +765,7 @@ function VariantModal({
                                         onClick={() =>
                                             setShowVariantNotify(true)
                                         }
-                                        className="w-full h-12 font-semibold rounded-xl border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-2"
+                                        className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
                                     >
                                         <Bell size={15} />
                                         Notify Me When Back in Stock
@@ -1050,7 +1050,7 @@ function ProductCard({ product }: { product: any }) {
                                 e.stopPropagation();
                                 setShowNotifyModal(true);
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
                         >
                             <Bell size={13} /> Notify Me When Back in Stock
                         </button>
