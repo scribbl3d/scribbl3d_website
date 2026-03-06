@@ -1,5 +1,7 @@
 "use client";
 
+import WishlistModal from "@/app/profile/_components/wishlist-modal";
+import { WishlistGridItem } from "@/app/profile/_components/wishlist.types";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
 import {
@@ -85,7 +87,6 @@ function ShieldCheckIcon() {
         </svg>
     );
 }
-
 function TruckIcon() {
     return (
         <svg
@@ -190,7 +191,6 @@ function NotifyMeModal({
                         <X size={18} />
                     </button>
                 </div>
-
                 <div className="p-5">
                     {done ? (
                         <div className="flex flex-col items-center py-6 text-center gap-3">
@@ -287,260 +287,39 @@ function NotifyMeModal({
     );
 }
 
-/* ── Variant Modal ── */
-function VariantModal({
-    product,
-    onClose,
-}: {
-    product: any;
-    onClose: () => void;
-}) {
-    const { addToCart } = useCart();
-    const { data: session } = useSession();
-    const router = useRouter();
-
-    const variants: any[] =
-        product.variants?.filter((v: any) => v.isActive) ?? [];
-    const uniqueColors: { name: string; hex: string | null }[] = Array.from(
-        new Map(
-            variants
-                .filter((v) => v.colorName)
-                .map((v) => [
-                    v.colorName,
-                    { name: v.colorName, hex: v.colorHex },
-                ]),
-        ).values(),
+/* ── buildWishlistItem helper ── */
+function buildWishlistItem(product: any): WishlistGridItem {
+    const variants = product.variants?.filter((v: any) => v.isActive) ?? [];
+    const cheapest = variants.reduce(
+        (min: any, v: any) => (!min || v.price < min.price ? v : min),
+        null,
     );
-
-    const [selectedColor, setSelectedColor] = useState<string | null>(
-        uniqueColors[0]?.name ?? null,
-    );
-    const [selectedSize, setSelectedSize] = useState<string | null>(null);
-    const [quantity, setQuantity] = useState(1);
-    const [isAdding, setIsAdding] = useState(false);
-
-    const validSizes: string[] = Array.from(
-        new Set(
-            variants
-                .filter(
-                    (v) =>
-                        v.sizeName &&
-                        (!selectedColor || v.colorName === selectedColor),
-                )
-                .map((v) => v.sizeName),
-        ),
-    );
-    const selectedVariant =
-        variants.find(
-            (v) => v.colorName === selectedColor && v.sizeName === selectedSize,
-        ) ??
-        variants.find((v) => v.colorName === selectedColor) ??
-        null;
-    const displayPrice =
-        selectedVariant?.price ?? product.variants?.[0]?.price ?? 0;
-    const originalPrice = selectedVariant?.originalPrice ?? 0;
-    const discount =
-        originalPrice > displayPrice && originalPrice > 0
-            ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
-            : 0;
-
-    const handleAddToCart = async () => {
-        if (!session) {
-            toast({
-                title: "Authentication required",
-                variant: "destructive",
-                action: (
-                    <button
-                        onClick={() => signIn()}
-                        className="px-3 py-1 bg-white text-black rounded"
-                    >
-                        Log in
-                    </button>
-                ),
-            });
-            return;
-        }
-        if (!selectedVariant) return;
-        setIsAdding(true);
-        try {
-            await addToCart({
-                prebuiltProductId: product.id,
-                prebuiltVariantId: selectedVariant.id,
-                quantity,
-            });
-            toast({
-                title: "Added to cart",
-                description: `${product.name} × ${quantity} added.`,
-            });
-            onClose();
-        } catch {
-            toast({
-                title: "Error",
-                description: "Failed to add to cart",
-                variant: "destructive",
-            });
-        } finally {
-            setIsAdding(false);
-        }
+    return {
+        id: product.id,
+        itemType: "prebuilt",
+        title: product.name,
+        image:
+            product.images?.find((i: any) => i.isMain)?.url ??
+            product.images?.[0]?.url ??
+            null,
+        badge: product.category ?? null,
+        price: cheapest?.price ?? 0,
+        originalPrice: cheapest?.originalPrice ?? null,
+        requiresOptions: variants.length > 0,
+        slug: product.slug ?? null,
+        inStock: product.inStock !== false,
+        availableVariants: variants.map((v: any) => ({
+            id: v.id,
+            colorName: v.colorName ?? null,
+            colorHex: v.colorHex ?? null,
+            sizeName: v.sizeName ?? null,
+            price: v.price,
+            originalPrice: v.originalPrice ?? 0,
+            isActive: v.isActive,
+            inStock: v.inStock ?? true,
+        })),
+        cartPayload: { prebuiltProductId: product.id },
     };
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
-                <div className="flex gap-4 p-5 relative">
-                    <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        {(product.images?.find((i: any) => i.isMain)?.url ??
-                            product.images?.[0]?.url) && (
-                            <Image
-                                src={
-                                    product.images?.find((i: any) => i.isMain)
-                                        ?.url ?? product.images?.[0]?.url
-                                }
-                                alt={product.name}
-                                fill
-                                className="object-cover"
-                            />
-                        )}
-                    </div>
-                    <div className="flex-1">
-                        <h2 className="text-base font-semibold pr-6 leading-snug">
-                            {product.name}
-                        </h2>
-                        {product.category && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-600">
-                                {product.category}
-                            </span>
-                        )}
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-black"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-                <div className="h-px bg-gray-200" />
-                <div className="p-5 pb-8">
-                    <div className="flex items-baseline gap-3 mb-1">
-                        <span className="text-xl font-bold text-gray-900">
-                            ₹{displayPrice.toLocaleString("en-IN")}
-                        </span>
-                        {originalPrice > displayPrice && (
-                            <span className="text-sm text-gray-400 line-through">
-                                ₹{originalPrice.toLocaleString("en-IN")}
-                            </span>
-                        )}
-                        {discount > 0 && (
-                            <span className="text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                                {discount}% off
-                            </span>
-                        )}
-                    </div>
-                    <p className="text-xs text-gray-500 mb-4">(incl. GST)</p>
-                    {uniqueColors.length > 0 && (
-                        <div className="mb-4">
-                            <p className="text-sm font-medium mb-2">
-                                Color:{" "}
-                                <span className="font-normal text-gray-500">
-                                    {selectedColor ?? "Select"}
-                                </span>
-                            </p>
-                            <div className="flex gap-2 flex-wrap">
-                                {uniqueColors.map((c) => (
-                                    <button
-                                        key={c.name}
-                                        onClick={() => {
-                                            setSelectedColor(c.name);
-                                            setSelectedSize(null);
-                                        }}
-                                        title={c.name}
-                                        className={`relative w-8 h-8 rounded-full border-2 transition-all ring-offset-1 ${selectedColor === c.name ? "ring-2 ring-gray-900 scale-110" : "border-transparent hover:ring-1 hover:ring-gray-400"}`}
-                                        style={{
-                                            backgroundColor: c.hex ?? "#E5E7EB",
-                                        }}
-                                    >
-                                        {selectedColor === c.name && (
-                                            <Check
-                                                size={11}
-                                                className="absolute inset-0 m-auto text-white drop-shadow"
-                                            />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {validSizes.length > 0 && (
-                        <div className="mb-4">
-                            <p className="text-sm font-medium mb-2">Size</p>
-                            <div className="flex flex-wrap gap-2">
-                                {validSizes.map((size) => (
-                                    <button
-                                        key={size}
-                                        onClick={() => setSelectedSize(size)}
-                                        className={`px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${selectedSize === size ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"}`}
-                                    >
-                                        {size}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    <div className="mb-6">
-                        <p className="text-sm font-medium mb-2">Quantity</p>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() =>
-                                    setQuantity((q) => Math.max(1, q - 1))
-                                }
-                                className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
-                            >
-                                −
-                            </button>
-                            <div className="flex-1 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold">
-                                {quantity}
-                            </div>
-                            <button
-                                onClick={() => setQuantity((q) => q + 1)}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
-                            >
-                                +
-                            </button>
-                        </div>
-                    </div>
-                    <button
-                        disabled={
-                            !selectedVariant ||
-                            isAdding ||
-                            product.inStock === false
-                        }
-                        onClick={handleAddToCart}
-                        className={`w-full h-12 font-semibold rounded-xl transition flex items-center justify-center gap-2 ${product.inStock === false ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-black text-white disabled:bg-gray-300 disabled:cursor-not-allowed"}`}
-                    >
-                        {product.inStock === false ? (
-                            "Out of Stock"
-                        ) : isAdding ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
-                            "Add to Cart"
-                        )}
-                    </button>
-                    <button
-                        onClick={() => {
-                            if (product.slug)
-                                router.push(
-                                    `/prebuilt-products/${product.slug}`,
-                                );
-                            onClose();
-                        }}
-                        className="w-full text-sm mt-3 text-gray-500 hover:text-black"
-                    >
-                        View full details →
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
 }
 
 /* ── Similar Product Card ── */
@@ -553,7 +332,7 @@ function SimilarProductCard({ product }: { product: any }) {
     const variant = product.variants?.[0];
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false);
+    const [activeItem, setActiveItem] = useState<WishlistGridItem | null>(null);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
 
     useEffect(() => {
@@ -763,18 +542,18 @@ function SimilarProductCard({ product }: { product: any }) {
                         (incl. GST)
                     </span>
 
+                    {/* Select Variants → WishlistModal (has full OOS logic built in) */}
                     {product.inStock !== false && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setShowModal(true);
+                                setActiveItem(buildWishlistItem(product));
                             }}
                             className="w-full rounded-[10px] py-2.5 text-sm font-semibold transition-all bg-[#1E1E1E] text-white hover:bg-black active:scale-[0.97]"
                         >
                             Select Variants
                         </button>
                     )}
-
                     {product.inStock === false && (
                         <button
                             onClick={(e) => {
@@ -789,10 +568,10 @@ function SimilarProductCard({ product }: { product: any }) {
                 </div>
             </div>
 
-            {showModal && (
-                <VariantModal
-                    product={product}
-                    onClose={() => setShowModal(false)}
+            {activeItem && (
+                <WishlistModal
+                    item={activeItem}
+                    onClose={() => setActiveItem(null)}
                 />
             )}
             {showNotifyModal && (
@@ -1204,12 +983,12 @@ export default function PrebuiltProductPDP() {
                 prebuiltVariantId: selectedVariant.id,
                 quantity,
             });
-            const variantLabel = [selectedColor, selectedSize]
+            const lbl = [selectedColor, selectedSize]
                 .filter(Boolean)
                 .join(", ");
             toast({
                 title: "Added to cart",
-                description: `${product.name}${variantLabel ? ` (${variantLabel})` : ""} × ${quantity} added.`,
+                description: `${product.name}${lbl ? ` (${lbl})` : ""} × ${quantity} added.`,
             });
         } catch (error) {
             toast({
@@ -1263,7 +1042,6 @@ export default function PrebuiltProductPDP() {
     const isVariantOutOfStock =
         !isOutOfStock && selectedVariant?.inStock === false;
     const isAnyOutOfStock = isOutOfStock || isVariantOutOfStock;
-
     const variantLabel = [selectedColor, selectedSize]
         .filter(Boolean)
         .join(", ");
@@ -1272,7 +1050,6 @@ export default function PrebuiltProductPDP() {
         <div className="min-h-screen bg-white pt-20">
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
-            {/* ✅ FIXED: removed sticky top-0 z-10 — was hiding behind site navbar on mobile */}
             <div className="border-b border-gray-100 bg-white">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10 py-2">
                     <button
@@ -1672,7 +1449,7 @@ export default function PrebuiltProductPDP() {
                         {isAnyOutOfStock && (
                             <button
                                 onClick={() => setShowNotifyModal(true)}
-                                className="w-full py-3.5 rounded-xl font-semibold text-sm border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-2"
+                                className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
                             >
                                 <Bell size={15} />
                                 Notify Me When Back in Stock

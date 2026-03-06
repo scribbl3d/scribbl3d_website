@@ -1,3 +1,4 @@
+// app/api/wishlist/check/route.ts
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";

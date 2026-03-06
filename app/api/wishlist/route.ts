@@ -1,3 +1,4 @@
+//app/api/wishlist/route.ts
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -26,7 +27,6 @@ export async function GET() {
                                 where: { isMain: true },
                                 take: 1,
                             },
-                            // ✅ fetch all active variants with full data
                             variants: {
                                 where: { isActive: true },
                                 orderBy: { createdAt: "asc" },
@@ -71,6 +71,7 @@ export async function GET() {
                     originalPrice: item.printer.originalPrice ?? null,
                     requiresOptions: false,
                     slug: item.printer.slug,
+                    inStock: item.printer.inStock ?? true,
                     cartPayload: { printerId: item.printer.id },
                 };
             }
@@ -87,17 +88,23 @@ export async function GET() {
                     originalPrice: item.resin.weights[0]?.originalPrice ?? 0,
                     requiresOptions: true,
                     slug: item.resin.slug,
+                    inStock: item.resin.inStock ?? true,
                     resinColours: item.resin.colours.map((c) => ({
                         id: c.id,
                         name: c.name,
                         hex: c.hexCode ?? null,
                         image: c.images[0]?.url ?? null,
+                        inStock: c.inStock ?? true,
                     })),
                     resinWeights: item.resin.weights.map((w) => ({
                         id: w.id,
-                        label: w.weightInGrams,
+                        label:
+                            w.weightInGrams >= 1000
+                                ? `${w.weightInGrams / 1000} kg`
+                                : `${w.weightInGrams} g`,
                         price: w.price ?? 0,
                         originalPrice: w.originalPrice ?? 0,
+                        inStock: w.inStock ?? true,
                     })),
                     cartPayload: { resinId: item.resin.id },
                 };
@@ -107,12 +114,17 @@ export async function GET() {
             if (item.prebuiltProduct) {
                 const variants = item.prebuiltProduct.variants ?? [];
 
-                // Use the cheapest active variant as display price
                 const cheapest = variants.reduce(
                     (min: any, v: any) =>
                         !min || v.price < min.price ? v : min,
                     null as any,
                 );
+
+                // Product is OOS if product-level flag is false,
+                // OR if all active variants are individually OOS
+                const allVariantsOOS =
+                    variants.length > 0 &&
+                    variants.every((v: any) => v.inStock === false);
 
                 return {
                     id: item.id,
@@ -124,7 +136,9 @@ export async function GET() {
                     originalPrice: cheapest?.originalPrice ?? null,
                     requiresOptions: variants.length > 0,
                     slug: item.prebuiltProduct.slug ?? null,
-                    // ✅ Full variant data so modal can resolve variantId
+                    inStock:
+                        item.prebuiltProduct.inStock !== false &&
+                        !allVariantsOOS,
                     availableVariants: variants.map((v: any) => ({
                         id: v.id,
                         colorName: v.colorName ?? null,
@@ -133,6 +147,7 @@ export async function GET() {
                         price: v.price,
                         originalPrice: v.originalPrice ?? 0,
                         isActive: v.isActive,
+                        inStock: v.inStock ?? true, // ← ADDED
                     })),
                     cartPayload: { prebuiltProductId: item.prebuiltProduct.id },
                 };
@@ -150,6 +165,7 @@ export async function GET() {
                     originalPrice: item.product.originalPrice ?? null,
                     requiresOptions: false,
                     slug: null,
+                    inStock: true,
                     cartPayload: { productId: item.product.id },
                 };
             }

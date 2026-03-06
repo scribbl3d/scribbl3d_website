@@ -8,6 +8,7 @@ export type WishlistGridItem = {
     originalPrice: number | null;
     requiresOptions: boolean;
     slug: string | null;
+    inStock?: boolean; // ← ADDED: overall product OOS flag
     cartPayload: Record<string, string>;
 
     /* 🧪 RESIN ONLY */
@@ -16,6 +17,7 @@ export type WishlistGridItem = {
         name: string;
         hex: string | null;
         image: string | null;
+        inStock?: boolean; // ← ADDED: per-colour OOS
     }[];
 
     resinWeights?: {
@@ -23,6 +25,7 @@ export type WishlistGridItem = {
         label: string;
         price: number;
         originalPrice: number;
+        inStock?: boolean; // ← ADDED: per-weight OOS
     }[];
 
     availableVariants?: {
@@ -33,5 +36,6 @@ export type WishlistGridItem = {
         price: number;
         originalPrice: number;
         isActive: boolean;
+        inStock?: boolean; // ← ADDED: per-variant OOS
     }[];
 };
