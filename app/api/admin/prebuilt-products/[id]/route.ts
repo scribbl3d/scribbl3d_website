@@ -87,7 +87,6 @@ export async function PUT(
         const { id } = await params;
         const formData = await request.formData();
 
-        // 1️⃣ Basic fields
         const name = formData.get("name") as string;
         const slug = formData.get("slug") as string;
         const shortDescription = formData.get("shortDescription") as string;
@@ -96,18 +95,16 @@ export async function PUT(
         const category = formData.get("category") as string;
         const isCustomizable = formData.get("isCustomizable") === "true";
         const highlighted = formData.get("highlighted") === "true";
-        const inStock = formData.get("inStock") !== "false"; // defaults to true
+        const inStock = formData.get("inStock") !== "false";
 
         const weight = formData.get("weight")
             ? parseFloat(formData.get("weight") as string)
             : null;
 
-        // 1.5️⃣ Slug
         let finalSlug = slug?.trim();
         if (!finalSlug) finalSlug = generateSlug(name.trim());
         finalSlug = await ensureUniqueSlug(finalSlug, id);
 
-        // 2️⃣ JSON fields
         const features = JSON.parse(
             (formData.get("features") as string) || "[]",
         );
@@ -118,7 +115,6 @@ export async function PUT(
             (formData.get("variants") as string) || "[]",
         );
 
-        // 3️⃣ Images
         const existingImages = JSON.parse(
             (formData.get("existingImages") as string) || "[]",
         );
@@ -163,7 +159,6 @@ export async function PUT(
             });
         }
 
-        // 4️⃣ Existing product
         const existing = await prisma.prebuiltProducts.findUnique({
             where: { id },
             include: { images: true, variants: true },
@@ -176,7 +171,7 @@ export async function PUT(
             );
         }
 
-        // 5️⃣ Removed images
+        // Removed images
         const keptImageIds = new Set(existingImages.map((img: any) => img.id));
         const removedImages = existing.images.filter(
             (img) => !keptImageIds.has(img.id),
@@ -195,16 +190,15 @@ export async function PUT(
             }
         }
 
-        // 6️⃣ Removed variants
+        // Removed variants
         const incomingVariantIds = variants
             .filter((v: any) => v.id)
             .map((v: any) => v.id as string);
-
         const removedVariantIds = existing.variants
             .map((v) => v.id)
             .filter((vid) => !incomingVariantIds.includes(vid));
 
-        // 7️⃣ Transaction
+        // Transaction
         await prisma.$transaction(async (tx) => {
             await tx.prebuiltProducts.update({
                 where: { id },
@@ -251,6 +245,7 @@ export async function PUT(
                         parseFloat(String(v.originalPrice)) || 0,
                     ),
                     isActive: v.isActive ?? true,
+                    inStock: v.inStock ?? true, // ← variant-level inStock
                     colorName: v.colorName?.trim() || null,
                     colorHex: v.colorHex?.trim() || null,
                     sizeName: v.sizeName?.trim() || null,
@@ -266,10 +261,7 @@ export async function PUT(
                     });
                 } else {
                     await tx.prebuiltVariants.create({
-                        data: {
-                            prebuildProductId: id,
-                            ...variantData,
-                        },
+                        data: { prebuildProductId: id, ...variantData },
                     });
                 }
             }

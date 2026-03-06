@@ -4,31 +4,49 @@ import {
     Bell,
     CheckCircle,
     ChevronLeft,
+    ChevronRight,
     Clock,
     Mail,
     Package,
     Phone,
     RefreshCw,
     Search,
+    Trash2,
     User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+const PAGE_SIZE = 20;
+
 type Notification = {
     id: string;
     productId: string;
     productName: string;
-    productType: string; // "prebuilt" | "printer"
+    productType: string; // "prebuilt" | "printer" | "resin"
+    variantId: string | null;
+    variantLabel: string | null;
     name: string | null;
     email: string;
     phone: string;
     notified: boolean;
     notifiedAt: string | null;
     createdAt: string;
-    // Enriched by API
     currentInStock: boolean | null;
     productSlug: string | null;
+};
+
+/* ── Type badge colours ── */
+const TYPE_BADGE: Record<string, string> = {
+    printer: "bg-blue-50 text-blue-700",
+    prebuilt: "bg-purple-50 text-purple-700",
+    resin: "bg-teal-50 text-teal-700",
+};
+
+const TYPE_LABEL: Record<string, string> = {
+    printer: "Printer",
+    prebuilt: "Prebuilt",
+    resin: "Resin",
 };
 
 export default function StockNotificationsPage() {
@@ -36,23 +54,32 @@ export default function StockNotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"all" | "pending" | "notified">("all");
     const [typeFilter, setTypeFilter] = useState<
-        "all" | "prebuilt" | "printer"
+        "all" | "prebuilt" | "printer" | "resin"
     >("all");
     const [search, setSearch] = useState("");
     const [markingId, setMarkingId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
     const router = useRouter();
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (pageNum = page) => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
             if (filter !== "all")
                 params.set("notified", String(filter === "notified"));
             if (typeFilter !== "all") params.set("productType", typeFilter);
-            const query = params.toString() ? `?${params.toString()}` : "";
-            const res = await fetch(`/api/stock-notifications${query}`);
+            params.set("page", String(pageNum));
+            params.set("limit", String(PAGE_SIZE));
+            const res = await fetch(
+                `/api/stock-notifications?${params.toString()}`,
+            );
             const data = await res.json();
             setNotifications(data.notifications ?? []);
+            setTotalPages(data.totalPages ?? 1);
+            setTotalCount(data.totalCount ?? 0);
         } catch {
             // silently fail
         } finally {
@@ -61,8 +88,13 @@ export default function StockNotificationsPage() {
     };
 
     useEffect(() => {
-        fetchNotifications();
+        setPage(1);
+        fetchNotifications(1);
     }, [filter, typeFilter]);
+
+    useEffect(() => {
+        fetchNotifications(page);
+    }, [page]);
 
     const handleMarkNotified = async (id: string) => {
         setMarkingId(id);
@@ -111,6 +143,20 @@ export default function StockNotificationsPage() {
         }
     };
 
+    const handleDelete = async (id: string) => {
+        if (!confirm("Delete this notification request?")) return;
+        setDeletingId(id);
+        try {
+            await fetch(`/api/stock-notifications?id=${id}`, {
+                method: "DELETE",
+            });
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+            setTotalCount((c) => c - 1);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
     const filtered = notifications.filter((n) => {
         if (!search.trim()) return true;
         const q = search.toLowerCase();
@@ -122,7 +168,7 @@ export default function StockNotificationsPage() {
         );
     });
 
-    // Group by product for summary
+    // Product summary grouping (from current page)
     const productGroups = filtered.reduce(
         (acc, n) => {
             if (!acc[n.productId]) {
@@ -140,18 +186,7 @@ export default function StockNotificationsPage() {
             if (!n.notified) acc[n.productId].pending++;
             return acc;
         },
-        {} as Record<
-            string,
-            {
-                productId: string;
-                productName: string;
-                productType: string;
-                currentInStock: boolean | null;
-                productSlug: string | null;
-                total: number;
-                pending: number;
-            }
-        >,
+        {} as Record<string, any>,
     );
 
     const pendingCount = notifications.filter((n) => !n.notified).length;
@@ -180,7 +215,7 @@ export default function StockNotificationsPage() {
                         </div>
                     </div>
                     <button
-                        onClick={fetchNotifications}
+                        onClick={() => fetchNotifications(page)}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
                     >
                         <RefreshCw size={14} />
@@ -196,7 +231,7 @@ export default function StockNotificationsPage() {
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-gray-900">
-                                {notifications.length}
+                                {totalCount}
                             </p>
                             <p className="text-xs text-gray-400 font-medium">
                                 Total Requests
@@ -212,7 +247,7 @@ export default function StockNotificationsPage() {
                                 {pendingCount}
                             </p>
                             <p className="text-xs text-gray-400 font-medium">
-                                Pending Notifications
+                                Pending (this page)
                             </p>
                         </div>
                     </div>
@@ -225,7 +260,7 @@ export default function StockNotificationsPage() {
                                 {notifiedCount}
                             </p>
                             <p className="text-xs text-gray-400 font-medium">
-                                Already Notified
+                                Notified (this page)
                             </p>
                         </div>
                     </div>
@@ -239,9 +274,12 @@ export default function StockNotificationsPage() {
                             <h2 className="font-bold text-gray-900 text-sm">
                                 By Product
                             </h2>
+                            <span className="text-xs text-gray-400 ml-1">
+                                (current page)
+                            </span>
                         </div>
                         <div className="divide-y divide-gray-100">
-                            {Object.values(productGroups).map((group) => (
+                            {Object.values(productGroups).map((group: any) => (
                                 <div
                                     key={group.productId}
                                     className="flex items-center justify-between px-6 py-3.5"
@@ -250,13 +288,12 @@ export default function StockNotificationsPage() {
                                         <span className="text-sm font-medium text-gray-900">
                                             {group.productName}
                                         </span>
-                                        {/* Product type badge */}
                                         <span
-                                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${group.productType === "printer" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"}`}
+                                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${TYPE_BADGE[group.productType] ?? "bg-gray-50 text-gray-600"}`}
                                         >
-                                            {group.productType}
+                                            {TYPE_LABEL[group.productType] ??
+                                                group.productType}
                                         </span>
-                                        {/* Live stock status */}
                                         {group.currentInStock !== null && (
                                             <span
                                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${group.currentInStock ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}
@@ -307,23 +344,20 @@ export default function StockNotificationsPage() {
                             </button>
                         ))}
 
-                        {/* Divider */}
                         <span className="w-px bg-gray-200 self-stretch mx-1" />
 
                         {/* Product type filters */}
-                        {(["all", "prebuilt", "printer"] as const).map((t) => (
-                            <button
-                                key={t}
-                                onClick={() => setTypeFilter(t)}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition capitalize ${typeFilter === t ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
-                            >
-                                {t === "all"
-                                    ? "All Types"
-                                    : t === "prebuilt"
-                                      ? "Prebuilt"
-                                      : "Printers"}
-                            </button>
-                        ))}
+                        {(["all", "prebuilt", "printer", "resin"] as const).map(
+                            (t) => (
+                                <button
+                                    key={t}
+                                    onClick={() => setTypeFilter(t)}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition capitalize ${typeFilter === t ? "bg-blue-600 text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+                                >
+                                    {t === "all" ? "All Types" : TYPE_LABEL[t]}
+                                </button>
+                            ),
+                        )}
                     </div>
 
                     <div className="relative w-full sm:w-64">
@@ -374,7 +408,7 @@ export default function StockNotificationsPage() {
                                             Status
                                         </th>
                                         <th className="text-left px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wide">
-                                            Action
+                                            Actions
                                         </th>
                                     </tr>
                                 </thead>
@@ -433,17 +467,22 @@ export default function StockNotificationsPage() {
                                                     <span className="font-medium text-gray-900 text-xs line-clamp-2 max-w-[200px]">
                                                         {n.productName}
                                                     </span>
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        {/* Type badge */}
-                                                        <span
-                                                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${n.productType === "printer" ? "bg-blue-50 text-blue-700" : "bg-purple-50 text-purple-700"}`}
-                                                        >
-                                                            {n.productType ===
-                                                            "printer"
-                                                                ? "Printer"
-                                                                : "Prebuilt"}
+                                                    {n.variantLabel && (
+                                                        <span className="text-[10px] text-gray-500 font-medium">
+                                                            Variant:{" "}
+                                                            <span className="text-gray-700">
+                                                                {n.variantLabel}
+                                                            </span>
                                                         </span>
-                                                        {/* Live stock status */}
+                                                    )}
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span
+                                                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${TYPE_BADGE[n.productType] ?? "bg-gray-50 text-gray-600"}`}
+                                                        >
+                                                            {TYPE_LABEL[
+                                                                n.productType
+                                                            ] ?? n.productType}
+                                                        </span>
                                                         {n.currentInStock !==
                                                             null && (
                                                             <span
@@ -494,7 +533,7 @@ export default function StockNotificationsPage() {
                                                         <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-full w-fit">
                                                             <CheckCircle
                                                                 size={11}
-                                                            />
+                                                            />{" "}
                                                             Notified
                                                         </span>
                                                         {n.notifiedAt && (
@@ -513,40 +552,56 @@ export default function StockNotificationsPage() {
                                                     </div>
                                                 ) : (
                                                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full w-fit">
-                                                        <Clock size={11} />
+                                                        <Clock size={11} />{" "}
                                                         Pending
                                                     </span>
                                                 )}
                                             </td>
 
-                                            {/* Action */}
+                                            {/* Actions */}
                                             <td className="px-5 py-4">
-                                                {!n.notified ? (
+                                                <div className="flex items-center gap-2">
+                                                    {!n.notified && (
+                                                        <button
+                                                            onClick={() =>
+                                                                handleMarkNotified(
+                                                                    n.id,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                markingId ===
+                                                                n.id
+                                                            }
+                                                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {markingId ===
+                                                            n.id ? (
+                                                                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                            ) : (
+                                                                <CheckCircle
+                                                                    size={12}
+                                                                />
+                                                            )}
+                                                            Mark Notified
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() =>
-                                                            handleMarkNotified(
-                                                                n.id,
-                                                            )
+                                                            handleDelete(n.id)
                                                         }
                                                         disabled={
-                                                            markingId === n.id
+                                                            deletingId === n.id
                                                         }
-                                                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-gray-900 text-white rounded-lg hover:bg-black transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        {markingId === n.id ? (
-                                                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                        {deletingId === n.id ? (
+                                                            <div className="w-3 h-3 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
                                                         ) : (
-                                                            <CheckCircle
-                                                                size={12}
-                                                            />
+                                                            <Trash2 size={12} />
                                                         )}
-                                                        Mark Notified
+                                                        Delete
                                                     </button>
-                                                ) : (
-                                                    <span className="text-xs text-gray-300 font-medium">
-                                                        Done
-                                                    </span>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -556,12 +611,63 @@ export default function StockNotificationsPage() {
                     )}
                 </div>
 
-                {filtered.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-3 text-right">
-                        Showing {filtered.length} of {notifications.length}{" "}
-                        entries
+                {/* Pagination + count */}
+                <div className="flex items-center justify-between mt-4">
+                    <p className="text-xs text-gray-400">
+                        Showing {notifications.length} of {totalCount} entries
+                        {search.trim() && ` · ${filtered.length} match search`}
                     </p>
-                )}
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                disabled={page === 1}
+                                onClick={() => setPage((p) => p - 1)}
+                                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronLeft size={14} /> Prev
+                            </button>
+
+                            {Array.from({ length: totalPages }).map((_, i) => {
+                                const p = i + 1;
+                                // show first, last, current, and neighbours
+                                if (
+                                    p !== 1 &&
+                                    p !== totalPages &&
+                                    Math.abs(p - page) > 1
+                                ) {
+                                    if (p === 2 || p === totalPages - 1)
+                                        return (
+                                            <span
+                                                key={p}
+                                                className="text-gray-400 text-xs px-1"
+                                            >
+                                                …
+                                            </span>
+                                        );
+                                    return null;
+                                }
+                                return (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPage(p)}
+                                        className={`w-8 h-8 text-sm font-semibold rounded-lg transition ${p === page ? "bg-gray-900 text-white" : "border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                                    >
+                                        {p}
+                                    </button>
+                                );
+                            })}
+
+                            <button
+                                disabled={page === totalPages}
+                                onClick={() => setPage((p) => p + 1)}
+                                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                Next <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

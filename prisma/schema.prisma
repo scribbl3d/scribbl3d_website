@@ -742,6 +742,7 @@ model Resin {
   name  String
   slug  String @unique
   brand String
+  inStock          Boolean @default(true) 
 
   technology String
   resolution String[]
@@ -773,6 +774,7 @@ model ResinColour {
   name      String // "Grey", "Clear", "Black"
   hexCode   String?
   sortOrder Int     @default(0)
+  inStock   Boolean @default(true) 
 
   images ResinImage[]
 
@@ -806,6 +808,7 @@ model ResinWeight {
   price         Int // ₹ (integer)
   originalPrice Int? // ₹ (integer)
   discount      Int? // ₹ (integer)
+  inStock       Boolean @default(true) 
 
   sortOrder     Int @default(0)
 
@@ -929,6 +932,7 @@ model PrebuiltVariants {
   originalPrice Int     @default(0)
 
   isActive      Boolean @default(true)
+  inStock       Boolean  @default(true)
 
   colorName String? // "Midnight Black"
   colorHex  String? // "#1a1a1a"
@@ -950,14 +954,16 @@ model PrebuiltVariants {
   @@unique([prebuildProductId, colorName, sizeName])
 }
 model StockNotification {
-  id          String    @id @default(cuid())
-  productId   String
-  productName String
-  productType String    @default("prebuilt") // "prebuilt" | "printer"
-  email       String
-  phone       String
-  name        String?
-  notified    Boolean   @default(false)
-  notifiedAt  DateTime?
-  createdAt   DateTime  @default(now())
+  id           String    @id @default(cuid())
+  productId    String
+  productName  String
+  productType  String    @default("prebuilt") // "prebuilt" | "printer" | "resin"
+  variantId    String?   // null = whole product OOS; set = specific variant OOS
+  variantLabel String?   // e.g. "Red, Large" — stored at save time for admin display
+  email        String
+  phone        String
+  name         String?
+  notified     Boolean   @default(false)
+  notifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
 }

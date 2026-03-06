@@ -801,7 +801,7 @@ function ProductCard({ product }: { product: any }) {
                             }}
                             className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
                         >
-                            <Bell size={13} />
+                            <Bell size={14} />
                             Notify Me When Back in Stock
                         </button>
                     )}

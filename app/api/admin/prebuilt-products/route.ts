@@ -28,13 +28,10 @@ const ensureUniqueSlug = async (
         const existing = await prisma.prebuiltProducts.findUnique({
             where: { slug },
         });
-
         if (!existing) return slug;
-
         slug = `${baseSlug}-${counter}`;
         counter++;
     }
-
     return `${baseSlug}-${Date.now()}`;
 };
 
@@ -70,9 +67,7 @@ export async function GET(request: NextRequest) {
             } as any;
         }
 
-        const where: Prisma.PrebuiltProductsWhereInput = {
-            AND: [fieldFilter],
-        };
+        const where: Prisma.PrebuiltProductsWhereInput = { AND: [fieldFilter] };
 
         let orderBy: any = [];
 
@@ -136,7 +131,7 @@ export async function POST(request: NextRequest) {
         const category = formData.get("category") as string;
         const isCustomizable = formData.get("isCustomizable") === "true";
         const highlighted = formData.get("highlighted") === "true";
-        const inStock = formData.get("inStock") !== "false"; // defaults to true
+        const inStock = formData.get("inStock") !== "false";
 
         const weight = formData.get("weight")
             ? parseFloat(formData.get("weight") as string)
@@ -224,6 +219,7 @@ export async function POST(request: NextRequest) {
                             parseFloat(String(v.originalPrice)) || 0,
                         ),
                         isActive: v.isActive ?? true,
+                        inStock: v.inStock ?? true, // ← variant-level inStock
                         colorName: v.colorName?.trim() || null,
                         colorHex: v.colorHex?.trim() || null,
                         sizeName: v.sizeName?.trim() || null,
@@ -266,9 +262,7 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        await prisma.prebuiltProducts.delete({
-            where: { id },
-        });
+        await prisma.prebuiltProducts.delete({ where: { id } });
 
         return NextResponse.json({ message: "Product deleted successfully" });
     } catch (error) {

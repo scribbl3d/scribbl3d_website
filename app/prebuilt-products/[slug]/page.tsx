@@ -109,9 +109,13 @@ function TruckIcon() {
 /* ── Notify Me Modal ── */
 function NotifyMeModal({
     product,
+    variantId,
+    variantLabel,
     onClose,
 }: {
     product: any;
+    variantId?: string;
+    variantLabel?: string;
     onClose: () => void;
 }) {
     const { data: session } = useSession();
@@ -138,6 +142,8 @@ function NotifyMeModal({
                     productId: product.id,
                     productName: product.name,
                     productType: "prebuilt",
+                    variantId: variantId ?? null,
+                    variantLabel: variantLabel ?? null,
                     email: email.trim(),
                     phone: phone.trim(),
                     name: name.trim() || null,
@@ -173,6 +179,7 @@ function NotifyMeModal({
                             </h2>
                             <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
                                 {product.name}
+                                {variantLabel ? ` — ${variantLabel}` : ""}
                             </p>
                         </div>
                     </div>
@@ -777,7 +784,7 @@ function SimilarProductCard({ product }: { product: any }) {
                                 e.stopPropagation();
                                 setShowNotifyModal(true);
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition-all flex items-center justify-center gap-2"
                         >
                             <Bell size={13} /> Notify Me When Back in Stock
                         </button>
@@ -1256,13 +1263,23 @@ export default function PrebuiltProductPDP() {
         );
 
     const isOutOfStock = product.inStock === false;
+    // Variant-level OOS: product is in stock but selected variant is not
+    const isVariantOutOfStock =
+        !isOutOfStock && selectedVariant?.inStock === false;
+    // Combined: either the whole product or the selected variant is OOS
+    const isAnyOutOfStock = isOutOfStock || isVariantOutOfStock;
+
+    // Build a human-readable label for the notify modal (e.g. "Red, Large")
+    const variantLabel = [selectedColor, selectedSize]
+        .filter(Boolean)
+        .join(", ");
 
     return (
         <div className="min-h-screen bg-white">
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
             <div className="border-b border-gray-100 bg-white sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4">
+                <div className="max-w-7xl mx-auto px-6 lg:px-10 py-2">
                     <button
                         onClick={() => router.push("/prebuilt-products")}
                         className="flex items-center gap-2 text-gray-500 hover:text-gray-900 text-sm font-medium transition px-3 py-2 rounded-lg hover:bg-gray-50"
@@ -1599,7 +1616,7 @@ export default function PrebuiltProductPDP() {
                             </div>
                         )}
 
-                        {!isOutOfStock && (
+                        {!isAnyOutOfStock && (
                             <div>
                                 <p className="text-xs font-semibold text-gray-700 mb-2">
                                     Quantity
@@ -1633,16 +1650,17 @@ export default function PrebuiltProductPDP() {
                         )}
 
                         <button
-                            onClick={isOutOfStock ? undefined : handleAddToCart}
-                            disabled={
-                                isOutOfStock ||
-                                isAddingToCart ||
-                                !selectedVariant ||
-                                !selectedVariant?.isActive
+                            onClick={
+                                isAnyOutOfStock ? undefined : handleAddToCart
                             }
-                            className={`w-full py-3.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 ${isOutOfStock ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-900 hover:bg-black text-white disabled:opacity-50"}`}
+                            disabled={
+                                isAnyOutOfStock ||
+                                isAddingToCart ||
+                                !selectedVariant
+                            }
+                            className={`w-full py-3.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 ${isAnyOutOfStock ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-900 hover:bg-black text-white disabled:opacity-50"}`}
                         >
-                            {isOutOfStock ? (
+                            {isAnyOutOfStock ? (
                                 "Out of Stock"
                             ) : isAddingToCart ? (
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1651,23 +1669,27 @@ export default function PrebuiltProductPDP() {
                                     <ShoppingCart size={16} />
                                     {!selectedVariant
                                         ? "Select a Variant"
-                                        : !selectedVariant.isActive
-                                          ? "Out of Stock"
-                                          : "Add to Cart"}
+                                        : "Add to Cart"}
                                 </>
                             )}
                         </button>
 
-                        {isOutOfStock && (
+                        {isAnyOutOfStock && (
                             <button
                                 onClick={() => setShowNotifyModal(true)}
-                                className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                                className="w-full py-3.5 rounded-xl font-semibold text-sm border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-2"
                             >
-                                <Bell size={15} /> Notify Me When Back in Stock
+                                <Bell size={15} />
+                                Notify Me When Back in Stock
+                                {isVariantOutOfStock && variantLabel && (
+                                    <span className="text-xs font-normal opacity-75">
+                                        ({variantLabel})
+                                    </span>
+                                )}
                             </button>
                         )}
 
-                        {!isOutOfStock && (
+                        {!isAnyOutOfStock && (
                             <div className="flex items-center gap-6">
                                 <div className="flex items-center gap-1.5 text-xs text-gray-600">
                                     <ShieldCheckIcon /> Quality Inspected
@@ -1979,6 +2001,12 @@ export default function PrebuiltProductPDP() {
             {showNotifyModal && (
                 <NotifyMeModal
                     product={product}
+                    variantId={
+                        isVariantOutOfStock ? selectedVariant?.id : undefined
+                    }
+                    variantLabel={
+                        isVariantOutOfStock ? variantLabel : undefined
+                    }
                     onClose={() => setShowNotifyModal(false)}
                 />
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, Download, Heart } from "lucide-react";
+import { ArrowLeft, Bell, Check, Download, Heart, X } from "lucide-react";
 
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,23 +12,203 @@ import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 
+/* ── Notify Me Modal ── */
+function NotifyMeModal({
+    resin,
+    variantId,
+    variantLabel,
+    onClose,
+}: {
+    resin: any;
+    variantId?: string;
+    variantLabel?: string;
+    onClose: () => void;
+}) {
+    const { data: session } = useSession();
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
+    const [phone, setPhone] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [done, setDone] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!email.trim() || !phone.trim()) {
+            toast({
+                title: "Email and phone are required",
+                variant: "destructive",
+            });
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const res = await fetch("/api/stock-notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productId: resin.id,
+                    productName: resin.name,
+                    productType: "resin",
+                    variantId: variantId ?? null,
+                    variantLabel: variantLabel ?? null,
+                    email: email.trim(),
+                    phone: phone.trim(),
+                    name: name.trim() || null,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast({
+                    title: data.error || "Something went wrong",
+                    variant: "destructive",
+                });
+                return;
+            }
+            setDone(true);
+        } catch {
+            toast({ title: "Request failed", variant: "destructive" });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+                <div className="flex items-start justify-between p-5 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
+                            <Bell size={16} className="text-orange-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-bold text-gray-900">
+                                Notify Me When Back
+                            </h2>
+                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                                {resin.name}
+                                {variantLabel ? ` — ${variantLabel}` : ""}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-black mt-0.5"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="p-5">
+                    {done ? (
+                        <div className="flex flex-col items-center py-6 text-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                                <Check size={22} className="text-green-600" />
+                            </div>
+                            <p className="text-base font-bold text-gray-900">
+                                You're on the list!
+                            </p>
+                            <p className="text-sm text-gray-500 leading-relaxed">
+                                We'll notify you on{" "}
+                                <span className="font-semibold text-gray-700">
+                                    {email}
+                                </span>{" "}
+                                and{" "}
+                                <span className="font-semibold text-gray-700">
+                                    {phone}
+                                </span>{" "}
+                                as soon as this item is back in stock.
+                            </p>
+                            <button
+                                onClick={onClose}
+                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-3.5">
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                {variantLabel
+                                    ? `${variantLabel} is currently out of stock. Leave your details and we'll notify you the moment it's available.`
+                                    : "This resin is currently out of stock. Leave your details and we'll let you know the moment it's available."}
+                            </p>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Name{" "}
+                                    <span className="text-gray-400 normal-case font-normal">
+                                        (optional)
+                                    </span>
+                                </label>
+                                <input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Your name"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Email{" "}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@example.com"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Phone Number{" "}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="10-digit mobile number"
+                                    maxLength={15}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                            >
+                                {submitting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <Bell size={14} /> Notify Me
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ── Main PDP ── */
 export default function ResinDetailPage() {
     const { slug } = useParams<{ slug: string }>();
     const { addToCart } = useCart();
     const [activeTab, setActiveTab] = useState("description");
     const { data: session } = useSession();
     const [isFavorite, setIsFavorite] = useState(false);
-
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
-
     const [resin, setResin] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-
     const [selectedColourIndex, setSelectedColourIndex] = useState(0);
     const [selectedWeightIndex, setSelectedWeightIndex] = useState(0);
-    const [selectedImageIndex, setSelectedImageIndex] = useState(0);
     const [quantity, setQuantity] = useState(1);
     const [isCartLoading, setIsCartLoading] = useState(false);
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
+
     const ArrowRight = ({ size = 22 }: { size?: number }) => (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
             <path
@@ -87,18 +267,41 @@ export default function ResinDetailPage() {
     const colour = resin?.colours[selectedColourIndex];
     const images = colour?.images;
     const weight = resin?.weights[selectedWeightIndex];
+
+    /* ── OOS detection (three levels) ── */
+    const isProductOOS = resin?.inStock === false;
+    const isColourOOS = !isProductOOS && colour?.inStock === false;
+    const isWeightOOS =
+        !isProductOOS && !isColourOOS && weight?.inStock === false;
+    const isAnyOOS = isProductOOS || isColourOOS || isWeightOOS;
+
+    // What to pass to the modal
+    const notifyVariantId = isProductOOS
+        ? undefined
+        : isColourOOS
+          ? colour?.id
+          : weight?.id;
+    const notifyVariantLabel = isProductOOS
+        ? undefined
+        : isColourOOS
+          ? colour?.name
+          : weight
+            ? `${weight.weightInGrams}g`
+            : undefined;
+
     const groupedSpecs = resin?.specifications.reduce((acc, spec) => {
         if (!acc[spec.category]) acc[spec.category] = [];
         acc[spec.category].push(spec);
         return acc;
     }, {});
+
     const maxResolution = resin?.resolution
-        ?.map((r: string) => parseInt(r)) // ["4K","8K"] → [4,8]
-        ?.sort((a, b) => b - a)[0]; // → 8
+        ?.map((r: string) => parseInt(r))
+        ?.sort((a, b) => b - a)[0];
+
     const temperature = resin?.attributes?.find(
         (attr: any) => attr.label === "Temperature",
     )?.value;
-
     const pressure = resin?.attributes?.find(
         (attr: any) => attr.label === "Pressure",
     )?.value;
@@ -106,9 +309,8 @@ export default function ResinDetailPage() {
     const selectedWeightId = resin?.weights?.[selectedWeightIndex]?.id ?? null;
 
     const handleAddToCart = async () => {
-        if (!resin || isCartLoading) return;
+        if (!resin || isCartLoading || isAnyOOS) return;
 
-        /* ---------- AUTH CHECK ---------- */
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -126,7 +328,6 @@ export default function ResinDetailPage() {
             return;
         }
 
-        /* ---------- VARIANT VALIDATION ---------- */
         if (!selectedColourId || !selectedWeightId) {
             toast({
                 title: "Selection Required",
@@ -138,7 +339,6 @@ export default function ResinDetailPage() {
         }
 
         setIsCartLoading(true);
-
         try {
             await addToCart({
                 resinId: resin.id,
@@ -146,7 +346,6 @@ export default function ResinDetailPage() {
                 resinWeightId: selectedWeightId,
                 quantity,
             });
-
             toast({
                 title: "Added to Cart",
                 description: `${resin.name} has been added to your cart.`,
@@ -162,9 +361,9 @@ export default function ResinDetailPage() {
             setIsCartLoading(false);
         }
     };
+
     useEffect(() => {
         if (!session || !resin?.id) return;
-
         async function checkWishlist() {
             try {
                 const res = await fetch(
@@ -176,7 +375,6 @@ export default function ResinDetailPage() {
                 console.error("Wishlist check failed", err);
             }
         }
-
         checkWishlist();
     }, [session, resin?.id]);
 
@@ -204,35 +402,24 @@ export default function ResinDetailPage() {
         }
 
         if (isWishlistLoading) return;
-
         setIsWishlistLoading(true);
-
         const wasInWishlist = isFavorite;
-
-        // ✅ Optimistic update
         setIsFavorite(!wasInWishlist);
 
         try {
             await fetch("/api/wishlist", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    resinId: resin.id,
-                }),
+                body: JSON.stringify({ resinId: resin.id }),
             });
-
             toast({
                 title: wasInWishlist
                     ? "Removed from wishlist"
                     : "Added to wishlist",
-                description: `${resin.name} has been ${
-                    wasInWishlist ? "removed from" : "added to"
-                } your wishlist.`,
+                description: `${resin.name} has been ${wasInWishlist ? "removed from" : "added to"} your wishlist.`,
             });
-        } catch (err) {
-            // 🔁 rollback on failure
+        } catch {
             setIsFavorite(wasInWishlist);
-
             toast({
                 title: "Error",
                 description: "Failed to update wishlist. Please try again.",
@@ -246,53 +433,37 @@ export default function ResinDetailPage() {
     const [current, setCurrent] = useState(0);
     const [isHovering, setIsHovering] = useState(false);
     const touchStartX = useRef<number | null>(null);
-
     const total = images?.length || 0;
 
-    /* =====================
-       AUTO SLIDE (3s)
-    ===================== */
     useEffect(() => {
         if (!total || isHovering) return;
-
-        const interval = setInterval(() => {
-            setCurrent((prev) => (prev + 1) % total);
-        }, 3000);
-
+        const interval = setInterval(
+            () => setCurrent((prev) => (prev + 1) % total),
+            3000,
+        );
         return () => clearInterval(interval);
     }, [total, isHovering]);
 
-    /* =====================
-       NAVIGATION
-    ===================== */
     const next = () => setCurrent((c) => (c + 1) % total);
     const prev = () => setCurrent((c) => (c === 0 ? total - 1 : c - 1));
 
-    /* =====================
-       TOUCH (SWIPE)
-    ===================== */
     const onTouchStart = (e: React.TouchEvent) => {
         touchStartX.current = e.touches[0].clientX;
     };
-
     const onTouchEnd = (e: React.TouchEvent) => {
         if (touchStartX.current === null) return;
-
-        const touchEndX = e.changedTouches[0].clientX;
-        const diff = touchStartX.current - touchEndX;
-
-        if (diff > 50)
-            next(); // swipe left
-        else if (diff < -50) prev(); // swipe right
-
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        if (diff > 50) next();
+        else if (diff < -50) prev();
         touchStartX.current = null;
     };
+
     if (loading) return <ResinDetailSkeleton />;
     if (!resin) return null;
+
     return (
         <div className="min-h-screen bg-gray-50 pt-24">
             {/* Header */}
-
             <div className="bg-white border-b">
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <Link
@@ -304,12 +475,12 @@ export default function ResinDetailPage() {
                     </Link>
                 </div>
             </div>
+
             {/* Main */}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    {/* Images - Sticky on desktop */}
+                    {/* Images - Sticky */}
                     <div className="lg:self-start lg:sticky lg:top-28">
-                        {/* MAIN CAROUSEL */}
                         <div
                             className="bg-white border rounded-lg p-4 mb-4"
                             onMouseEnter={() => setIsHovering(true)}
@@ -318,7 +489,6 @@ export default function ResinDetailPage() {
                             onTouchEnd={onTouchEnd}
                         >
                             <div className="relative w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                                {/* SLIDER */}
                                 <div
                                     className="flex h-full transition-transform duration-500 ease-in-out"
                                     style={{
@@ -345,65 +515,45 @@ export default function ResinDetailPage() {
                                     ))}
                                 </div>
 
-                                {/* LEFT ARROW */}
                                 {isHovering && total > 1 && (
-                                    <button
-                                        onClick={prev}
-                                        aria-label="Previous image"
-                                        className="
-                        absolute left-4 top-1/2 -translate-y-1/2
-                        w-12 h-12
-                        bg-white
-                        rounded-full
-                        flex items-center justify-center
-                        shadow-[0_4px_20px_rgba(0,0,0,0.12)]
-                        transition-transform duration-300
-                        hover:scale-110
-                        group
-                    "
-                                    >
-                                        <span className="text-black transition-transform duration-300 group-hover:scale-125">
-                                            <ArrowLefti size={22} />
-                                        </span>
-                                    </button>
+                                    <>
+                                        <button
+                                            onClick={prev}
+                                            aria-label="Previous image"
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:scale-110 group"
+                                        >
+                                            <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                                <ArrowLefti size={22} />
+                                            </span>
+                                        </button>
+                                        <button
+                                            onClick={next}
+                                            aria-label="Next image"
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:scale-110 group"
+                                        >
+                                            <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                                <ArrowRight size={22} />
+                                            </span>
+                                        </button>
+                                    </>
                                 )}
 
-                                {/* RIGHT ARROW */}
-                                {isHovering && total > 1 && (
-                                    <button
-                                        onClick={next}
-                                        aria-label="Next image"
-                                        className="
-                        absolute right-4 top-1/2 -translate-y-1/2
-                        w-12 h-12
-                        bg-white
-                        rounded-full
-                        flex items-center justify-center
-                        shadow-[0_4px_20px_rgba(0,0,0,0.12)]
-                        transition-transform duration-300
-                        hover:scale-110
-                        group
-                    "
-                                    >
-                                        <span className="text-black transition-transform duration-300 group-hover:scale-125">
-                                            <ArrowRight size={22} />
-                                        </span>
-                                    </button>
+                                {/* OOS badge on image — only for whole product */}
+                                {isProductOOS && (
+                                    <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full z-10">
+                                        Out of Stock
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* THUMBNAILS - Centered */}
+                        {/* Thumbnails */}
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center">
                             {images?.map((img, idx) => (
                                 <button
                                     key={img.id}
                                     onClick={() => setCurrent(idx)}
-                                    className={`w-20 h-20 rounded-lg border-2 transition flex-shrink-0 overflow-hidden ${
-                                        current === idx
-                                            ? "border-blue-600"
-                                            : "border-gray-300"
-                                    }`}
+                                    className={`w-20 h-20 rounded-lg border-2 transition flex-shrink-0 overflow-hidden ${current === idx ? "border-blue-600" : "border-gray-300"}`}
                                 >
                                     <Image
                                         src={img.url}
@@ -417,7 +567,7 @@ export default function ResinDetailPage() {
                         </div>
                     </div>
 
-                    {/* Info - Scrolls normally */}
+                    {/* Info */}
                     <div className="bg-white border rounded-lg p-6 relative">
                         <div className="flex justify-between items-start mb-2">
                             <p className="text-sm text-gray-600">
@@ -432,11 +582,7 @@ export default function ResinDetailPage() {
                                     <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                                 ) : (
                                     <Heart
-                                        className={`w-5 h-5 transition ${
-                                            isFavorite
-                                                ? "fill-red-500 text-red-500"
-                                                : "text-gray-400"
-                                        }`}
+                                        className={`w-5 h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
                                     />
                                 )}
                             </button>
@@ -451,12 +597,9 @@ export default function ResinDetailPage() {
 
                         {/* Tags */}
                         <div className="flex flex-wrap gap-2 mb-6">
-                            {/* Technology tag */}
                             <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                 {resin.technology}
                             </span>
-
-                            {/* Max resolution tag */}
                             {maxResolution && (
                                 <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                                     {maxResolution}K Resolution Ready
@@ -464,7 +607,7 @@ export default function ResinDetailPage() {
                             )}
                         </div>
 
-                        {/* Colour */}
+                        {/* Colour selector */}
                         <div className="mb-6">
                             <p className="text-sm font-medium mb-2">
                                 Color:{" "}
@@ -477,60 +620,115 @@ export default function ResinDetailPage() {
                                     }
                                     )
                                 </span>
+                                {isColourOOS && (
+                                    <span className="ml-2 text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                                        Out of Stock
+                                    </span>
+                                )}
                             </p>
-
-                            <div className="flex gap-2">
-                                {resin.colours.map((c, idx) => (
-                                    <button
-                                        key={c.id}
-                                        onClick={() => {
-                                            setSelectedColourIndex(idx);
-                                            setSelectedImageIndex(0);
-                                            setCurrent(0);
-                                        }}
-                                        className={`w-8 h-8 rounded-full border-2 ${
-                                            idx === selectedColourIndex
-                                                ? "border-blue-600"
-                                                : "border-gray-300"
-                                        }`}
-                                        style={{
-                                            backgroundColor:
-                                                c.hexCode || "#ccc",
-                                        }}
-                                        title={c.hexCode} // optional: shows on hover
-                                    />
-                                ))}
+                            <div className="flex gap-2 flex-wrap">
+                                {resin.colours.map((c: any, idx: number) => {
+                                    const thisColourOOS =
+                                        isProductOOS || c.inStock === false;
+                                    return (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => {
+                                                setSelectedColourIndex(idx);
+                                                setSelectedWeightIndex(0);
+                                                setCurrent(0);
+                                            }}
+                                            disabled={isProductOOS}
+                                            title={
+                                                thisColourOOS
+                                                    ? `${c.name} — Out of Stock`
+                                                    : c.name
+                                            }
+                                            className={`relative w-8 h-8 rounded-full border-2 transition-all ring-offset-1 ${
+                                                idx === selectedColourIndex
+                                                    ? "border-blue-600 ring-2 ring-blue-400"
+                                                    : "border-gray-300 hover:border-gray-500"
+                                            } ${thisColourOOS ? "opacity-40" : ""}`}
+                                            style={{
+                                                backgroundColor:
+                                                    c.hexCode || "#ccc",
+                                            }}
+                                        >
+                                            {/* strikethrough overlay for OOS colours */}
+                                            {thisColourOOS && (
+                                                <span className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="block w-[110%] h-[2px] bg-red-500 rotate-45 rounded" />
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
+                            {isColourOOS && (
+                                <p className="mt-1.5 text-xs text-gray-500">
+                                    This colour is out of stock. Select another
+                                    colour or get notified below.
+                                </p>
+                            )}
                         </div>
 
-                        {/* Weight */}
+                        {/* Weight selector */}
                         <div className="mb-6">
                             <p className="text-sm font-medium mb-2">
                                 Pack Size
                             </p>
                             <div className="flex flex-wrap gap-2">
-                                {resin.weights.map((w, idx) => (
-                                    <button
-                                        key={w.id}
-                                        onClick={() =>
-                                            setSelectedWeightIndex(idx)
-                                        }
-                                        className={`px-4 py-2 rounded-lg border text-sm ${
-                                            idx === selectedWeightIndex
-                                                ? "border-blue-600 text-blue-600"
-                                                : "border-gray-300"
-                                        }`}
-                                    >
-                                        {w.weightInGrams / 1000} kg
-                                    </button>
-                                ))}
+                                {resin.weights.map((w: any, idx: number) => {
+                                    // Weight is disabled if: product OOS, selected colour OOS, or this weight itself OOS
+                                    const thisWeightDisabled =
+                                        isProductOOS ||
+                                        isColourOOS ||
+                                        w.inStock === false;
+                                    const isSelected =
+                                        idx === selectedWeightIndex;
+                                    return (
+                                        <button
+                                            key={w.id}
+                                            onClick={() =>
+                                                !thisWeightDisabled &&
+                                                setSelectedWeightIndex(idx)
+                                            }
+                                            disabled={thisWeightDisabled}
+                                            title={
+                                                w.inStock === false
+                                                    ? `${w.weightInGrams / 1000}kg — Out of Stock`
+                                                    : undefined
+                                            }
+                                            className={`px-4 py-2 rounded-lg border text-sm transition-all relative ${
+                                                thisWeightDisabled
+                                                    ? "border-gray-200 text-gray-300 cursor-not-allowed line-through"
+                                                    : isSelected
+                                                      ? "border-blue-600 text-blue-600"
+                                                      : "border-gray-300 hover:border-gray-500"
+                                            }`}
+                                        >
+                                            {w.weightInGrams / 1000} kg
+                                            {w.inStock === false &&
+                                                !isProductOOS &&
+                                                !isColourOOS && (
+                                                    <span className="ml-1 text-[10px] text-red-400"></span>
+                                                )}
+                                        </button>
+                                    );
+                                })}
                             </div>
+                            {isWeightOOS && (
+                                <p className="mt-1.5 text-xs text-gray-500">
+                                    This pack size is out of stock. Select
+                                    another size or get notified below.
+                                </p>
+                            )}
                         </div>
 
                         {/* Price */}
                         <div className="mb-6">
                             <div className="flex items-baseline gap-3">
-                                {weight.originalPrice && (
+                                {weight?.originalPrice && (
                                     <>
                                         <span className="text-lg text-gray-400 line-through">
                                             ₹
@@ -545,9 +743,9 @@ export default function ResinDetailPage() {
                                 )}
                             </div>
                             <p className="text-4xl font-bold text-gray-900 mt-1">
-                                ₹{weight.price.toLocaleString("en-IN")}
+                                ₹{weight?.price?.toLocaleString("en-IN")}
                             </p>
-                            {weight.originalPrice && (
+                            {weight?.originalPrice && (
                                 <p className="text-sm text-green-600 font-medium mt-1">
                                     Save ₹
                                     {(
@@ -560,15 +758,11 @@ export default function ResinDetailPage() {
                                 at checkout.
                             </p>
                         </div>
+
                         <hr className="mb-4" />
-                        {/* STOCK + COMPATIBILITY LINE */}
+
                         <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                            {/* Green dot */}
-
-                            {/* Separator dot */}
                             <span className="text-gray-400">•</span>
-
-                            {/* Compatibility text (dynamic) */}
                             <span className="text-gray-600">
                                 Compatible with most{" "}
                                 <span className="font-medium text-gray-600">
@@ -578,76 +772,101 @@ export default function ResinDetailPage() {
                             </span>
                         </div>
 
-                        {/* Quantity */}
-                        <div className="flex items-center gap-3 mb-6">
-                            <button
-                                className="w-10 h-10 border rounded"
-                                disabled={quantity === 1}
-                                onClick={() =>
-                                    setQuantity((q) => Math.max(1, q - 1))
-                                }
-                            >
-                                −
-                            </button>
-                            <input
-                                value={quantity}
-                                onChange={(e) =>
-                                    setQuantity(
-                                        Math.max(
-                                            1,
-                                            Number(e.target.value || 1),
-                                        ),
-                                    )
-                                }
-                                className="w-16 h-10 border rounded text-center"
-                            />
-                            <button
-                                className="w-10 h-10 border rounded"
-                                onClick={() => setQuantity((q) => q + 1)}
-                            >
-                                +
-                            </button>
-                        </div>
+                        {/* Quantity — hidden when any OOS */}
+                        {!isAnyOOS && (
+                            <div className="flex items-center gap-3 mb-6">
+                                <button
+                                    className="w-10 h-10 border rounded"
+                                    disabled={quantity === 1}
+                                    onClick={() =>
+                                        setQuantity((q) => Math.max(1, q - 1))
+                                    }
+                                >
+                                    −
+                                </button>
+                                <input
+                                    value={quantity}
+                                    onChange={(e) =>
+                                        setQuantity(
+                                            Math.max(
+                                                1,
+                                                Number(e.target.value || 1),
+                                            ),
+                                        )
+                                    }
+                                    className="w-16 h-10 border rounded text-center"
+                                />
+                                <button
+                                    className="w-10 h-10 border rounded"
+                                    onClick={() => setQuantity((q) => q + 1)}
+                                >
+                                    +
+                                </button>
+                            </div>
+                        )}
 
                         {/* CTA Buttons */}
                         <div className="space-y-3 mb-6">
-                            <button
-                                className="relative w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                onClick={handleAddToCart}
-                                disabled={
-                                    !selectedColourId ||
-                                    !selectedWeightId ||
-                                    isCartLoading
-                                }
-                            >
-                                <span
-                                    className={
+                            {/* Add to Cart — hidden when any OOS */}
+                            {!isAnyOOS && (
+                                <button
+                                    className="relative w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                    onClick={handleAddToCart}
+                                    disabled={
+                                        !selectedColourId ||
+                                        !selectedWeightId ||
                                         isCartLoading
-                                            ? "opacity-0"
-                                            : "opacity-100"
                                     }
                                 >
-                                    Add to Cart
-                                </span>
-
-                                {isCartLoading && (
-                                    <span className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span
+                                        className={
+                                            isCartLoading
+                                                ? "opacity-0"
+                                                : "opacity-100"
+                                        }
+                                    >
+                                        Add to Cart
                                     </span>
-                                )}
-                            </button>
+                                    {isCartLoading && (
+                                        <span className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        </span>
+                                    )}
+                                </button>
+                            )}
 
-                            <button
-                                className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                                onClick={() => {
-                                    const message = `Hi, I'd like to request a custom quote for ${resin.name} based on my requirements.`;
+                            {/* Notify Me — shown when any OOS */}
+                            {isAnyOOS && (
+                                <button
+                                    onClick={() => setShowNotifyModal(true)}
+                                    className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Bell size={15} />
+                                    Notify Me When Back in Stock
+                                    {(isColourOOS || isWeightOOS) &&
+                                        notifyVariantLabel && (
+                                            <span className="text-xs font-normal opacity-75">
+                                                ({notifyVariantLabel})
+                                            </span>
+                                        )}
+                                </button>
+                            )}
 
-                                    const url = `https://wa.me/919599523434?text=${encodeURIComponent(message)}`;
-                                    window.open(url, "_blank");
-                                }}
-                            >
-                                Contact Sales
-                            </button>
+                            {/* Contact Sales — hidden when any OOS */}
+                            {!isAnyOOS && (
+                                <button
+                                    className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                                    onClick={() => {
+                                        const message = `Hi, I'd like to request a custom quote for ${resin.name} based on my requirements.`;
+                                        window.open(
+                                            `https://wa.me/919599523434?text=${encodeURIComponent(message)}`,
+                                            "_blank",
+                                        );
+                                    }}
+                                >
+                                    Contact Sales
+                                </button>
+                            )}
                         </div>
 
                         {/* Quick Specifications */}
@@ -655,7 +874,6 @@ export default function ResinDetailPage() {
                             <h3 className="text-lg font-semibold text-gray-900 mb-4">
                                 Quick Specifications
                             </h3>
-
                             <div className="space-y-3">
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
@@ -665,7 +883,6 @@ export default function ResinDetailPage() {
                                         {resin.technology}
                                     </span>
                                 </div>
-
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
                                         UV Wavelength
@@ -674,7 +891,6 @@ export default function ResinDetailPage() {
                                         405 nm
                                     </span>
                                 </div>
-
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
                                         Resolution Optimization
@@ -683,7 +899,6 @@ export default function ResinDetailPage() {
                                         {resin.resolution?.join(", ")}
                                     </span>
                                 </div>
-
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
                                         Shore Hardness
@@ -698,12 +913,10 @@ export default function ResinDetailPage() {
                                         }
                                     </span>
                                 </div>
-
                                 <div className="grid grid-cols-[1fr_auto] gap-x-6 text-sm">
                                     <span className="text-gray-600">
                                         Heat Deflection Temp
                                     </span>
-
                                     <span className="font-medium text-gray-900 whitespace-nowrap">
                                         {temperature && `${temperature}°C`}
                                         {temperature && pressure && " @ "}
@@ -712,13 +925,13 @@ export default function ResinDetailPage() {
                                 </div>
                                 {resin.attributes?.map((attr: any) => {
                                     if (
-                                        attr.label === "Temperature" ||
-                                        attr.label === "Pressure" ||
-                                        attr.label === "Heat Deflection Temp"
-                                    ) {
+                                        [
+                                            "Temperature",
+                                            "Pressure",
+                                            "Heat Deflection Temp",
+                                        ].includes(attr.label)
+                                    )
                                         return null;
-                                    }
-
                                     return (
                                         <div
                                             key={attr.label}
@@ -738,34 +951,27 @@ export default function ResinDetailPage() {
                     </div>
                 </div>
             </div>
+
             {/* Tabs Section */}
             <div className="bg-white rounded-lg border border-gray-200">
-                {/* Tab Navigation */}
                 <div className="border-b border-gray-200">
                     <nav className="flex overflow-x-auto border-b px-4">
                         {[
                             "description",
                             "specifications",
                             "compatibility",
-
                             "safety & Handling",
                         ].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-                                    activeTab === tab
-                                        ? "border-blue-600 text-blue-600"
-                                        : "border-transparent text-gray-600 hover:text-gray-900"
-                                }`}
+                                className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-600 hover:text-gray-900"}`}
                             >
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
                             </button>
                         ))}
                     </nav>
                 </div>
-
-                {/* Tab Content */}
                 <div className="p-6">
                     {activeTab === "description" && (
                         <DescriptionTab
@@ -783,27 +989,34 @@ export default function ResinDetailPage() {
                             technology={resin.technology}
                         />
                     )}
-
                     {activeTab === "safety & Handling" && (
                         <SafetyTab downloads={resin.downloads} />
                     )}
                 </div>
             </div>
+
             <div className="mt-12">
                 <SimilarResinsCarousel
                     currentResinId={resin.id}
                     technology={resin.technology}
                 />
             </div>
+
+            {showNotifyModal && (
+                <NotifyMeModal
+                    resin={resin}
+                    variantId={notifyVariantId}
+                    variantLabel={notifyVariantLabel}
+                    onClose={() => setShowNotifyModal(false)}
+                />
+            )}
         </div>
     );
 }
-type Specification = {
-    id: string;
-    label: string;
-    value: string;
-};
 
+/* ── Tab Components (unchanged) ── */
+
+type Specification = { id: string; label: string; value: string };
 type GroupedSpecs = Record<string, Specification[]>;
 
 function DescriptionTab({ description, features, applications }) {
@@ -831,7 +1044,6 @@ function DescriptionTab({ description, features, applications }) {
                     ))}
                 </div>
             </div>
-
             <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     Ideal Applications
@@ -850,6 +1062,7 @@ function DescriptionTab({ description, features, applications }) {
         </div>
     );
 }
+
 function SpecificationsTab({
     specifications,
 }: {
@@ -862,7 +1075,6 @@ function SpecificationsTab({
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
                         {category}
                     </h3>
-
                     <div className="space-y-3">
                         {specs.map((spec) => (
                             <div
@@ -900,11 +1112,9 @@ function CompatibilityTab({ compatibility, technology }) {
                     <span className="font-medium text-gray-900">405 nm</span> UV
                     wavelength.
                 </span>
-
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 mt-2">
                     Key Features
                 </h3>
-                {/* Compatibility list box */}
                 <div className="border border-[#E5E7EB] rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8">
                         {compatibility?.map((c) => (
@@ -918,8 +1128,7 @@ function CompatibilityTab({ compatibility, technology }) {
                         ))}
                     </div>
                 </div>
-                {/* Info note */}
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 mt-4">
                     <p className="text-sm text-blue-700">
                         <span className="font-medium">Note:</span> Always verify
                         compatibility with your specific printer model and check
@@ -945,12 +1154,10 @@ function SafetyTab({ downloads }) {
                             strokeLinejoin="round"
                         />
                     </svg>
-
                     <h4 className="text-sm font-medium text-[#733E0A]">
                         Safety Warnings
                     </h4>
                 </div>
-
                 <ul className="list-disc pl-5 space-y-1 text-sm text-[#894B00]">
                     <li>May cause skin irritation and allergic reactions</li>
                     <li>Harmful if swallowed or inhaled</li>
@@ -959,7 +1166,6 @@ function SafetyTab({ downloads }) {
                     <li>Use only in well-ventilated areas</li>
                 </ul>
             </div>
-
             <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Storage Instructions
@@ -970,7 +1176,6 @@ function SafetyTab({ downloads }) {
                     temperature: 15–35°C.
                 </p>
             </div>
-
             <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Handling Guidelines
@@ -996,7 +1201,6 @@ function SafetyTab({ downloads }) {
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         Safety Downloads
                     </h3>
-
                     {downloads.map((download) => (
                         <a
                             key={download.id}
@@ -1020,7 +1224,6 @@ function SafetyTab({ downloads }) {
                                     )}
                                 </div>
                             </div>
-
                             <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
                                 <span>Download</span>
                                 <svg
@@ -1055,22 +1258,17 @@ function SafetyTab({ downloads }) {
 function ResinDetailSkeleton() {
     return (
         <div className="min-h-screen bg-gray-50 pt-24 animate-pulse">
-            {/* Header */}
             <div className="bg-white border-b">
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="h-5 w-40 bg-gray-200 rounded"></div>
                 </div>
             </div>
-
-            {/* Main Content */}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    {/* Left Column - Images */}
                     <div className="lg:self-start lg:sticky lg:top-28">
                         <div className="bg-white border rounded-lg p-4 mb-4">
                             <div className="w-full aspect-square bg-gray-200 rounded-lg"></div>
                         </div>
-                        {/* Thumbnails */}
                         <div className="flex gap-2 justify-center">
                             {[1, 2, 3, 4].map((i) => (
                                 <div
@@ -1080,28 +1278,17 @@ function ResinDetailSkeleton() {
                             ))}
                         </div>
                     </div>
-
-                    {/* Right Column - Product Info */}
                     <div className="bg-white border rounded-lg p-6">
-                        {/* Brand */}
                         <div className="h-4 w-24 bg-gray-200 rounded mb-4"></div>
-
-                        {/* Title */}
                         <div className="h-8 w-3/4 bg-gray-200 rounded mb-3"></div>
-
-                        {/* Description */}
                         <div className="space-y-2 mb-6">
                             <div className="h-4 w-full bg-gray-200 rounded"></div>
                             <div className="h-4 w-5/6 bg-gray-200 rounded"></div>
                         </div>
-
-                        {/* Tags */}
                         <div className="flex gap-2 mb-6">
                             <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
                             <div className="h-6 w-32 bg-gray-200 rounded-full"></div>
                         </div>
-
-                        {/* Color selector */}
                         <div className="mb-6">
                             <div className="h-4 w-20 bg-gray-200 rounded mb-2"></div>
                             <div className="flex gap-2">
@@ -1113,8 +1300,6 @@ function ResinDetailSkeleton() {
                                 ))}
                             </div>
                         </div>
-
-                        {/* Pack Size selector */}
                         <div className="mb-6">
                             <div className="h-4 w-20 bg-gray-200 rounded mb-2"></div>
                             <div className="flex gap-2">
@@ -1126,89 +1311,21 @@ function ResinDetailSkeleton() {
                                 ))}
                             </div>
                         </div>
-
-                        {/* Price */}
                         <div className="mb-6">
-                            <div className="flex items-baseline gap-3 mb-1">
-                                <div className="h-5 w-20 bg-gray-200 rounded"></div>
-                                <div className="h-5 w-16 bg-gray-200 rounded"></div>
-                            </div>
                             <div className="h-10 w-36 bg-gray-200 rounded mb-2"></div>
-                            <div className="h-4 w-24 bg-gray-200 rounded"></div>
                         </div>
-
                         <hr className="mb-4" />
-
-                        {/* Compatibility line */}
                         <div className="h-4 w-48 bg-gray-200 rounded mb-4"></div>
-
-                        {/* Quantity */}
                         <div className="flex items-center gap-3 mb-6">
                             <div className="w-10 h-10 bg-gray-200 rounded"></div>
                             <div className="w-16 h-10 bg-gray-200 rounded"></div>
                             <div className="w-10 h-10 bg-gray-200 rounded"></div>
                         </div>
-
-                        {/* CTA Buttons */}
                         <div className="space-y-3 mb-6">
                             <div className="h-12 w-full bg-gray-200 rounded-lg"></div>
                             <div className="h-12 w-full bg-gray-200 rounded-lg"></div>
                         </div>
-
-                        {/* Quick Specifications */}
-                        <div className="border-t border-gray-200 pt-6">
-                            <div className="h-5 w-40 bg-gray-200 rounded mb-4"></div>
-                            <div className="space-y-3">
-                                {[1, 2, 3, 4, 5, 6].map((i) => (
-                                    <div
-                                        key={i}
-                                        className="flex justify-between"
-                                    >
-                                        <div className="h-4 w-28 bg-gray-200 rounded"></div>
-                                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     </div>
-                </div>
-            </div>
-
-            {/* Tabs Section Skeleton */}
-            <div className="bg-white rounded-lg border border-gray-200 mt-8">
-                <div className="border-b border-gray-200">
-                    <div className="flex gap-4 px-4 py-4">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div
-                                key={i}
-                                className="h-5 w-24 bg-gray-200 rounded"
-                            ></div>
-                        ))}
-                    </div>
-                </div>
-                <div className="p-6">
-                    <div className="space-y-4">
-                        <div className="h-5 w-40 bg-gray-200 rounded"></div>
-                        <div className="h-4 w-full bg-gray-200 rounded"></div>
-                        <div className="h-4 w-5/6 bg-gray-200 rounded"></div>
-                        <div className="h-4 w-4/6 bg-gray-200 rounded"></div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Similar Resins Skeleton */}
-            <div className="mt-12 px-6">
-                <div className="h-6 w-48 bg-gray-200 rounded mb-6"></div>
-                <div className="flex gap-4 overflow-hidden">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="w-64 flex-shrink-0">
-                            <div className="bg-white border rounded-lg p-4">
-                                <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
-                                <div className="h-4 w-3/4 bg-gray-200 rounded mb-2"></div>
-                                <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                            </div>
-                        </div>
-                    ))}
                 </div>
             </div>
         </div>

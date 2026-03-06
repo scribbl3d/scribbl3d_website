@@ -32,6 +32,7 @@ type VariantInput = {
     priceDisplay: string;
     originalPriceDisplay: string;
     isActive: boolean;
+    inStock: boolean;
     colorName: string;
     colorHex: string;
     sizeName: string;
@@ -91,6 +92,7 @@ const emptyVariant = (): VariantInput => ({
     priceDisplay: "",
     originalPriceDisplay: "",
     isActive: true,
+    inStock: true,
     colorName: "",
     colorHex: "",
     sizeName: "",
@@ -168,6 +170,45 @@ function Err({ msg }: { msg?: string }) {
     return msg ? <p className="mt-1 text-xs text-red-500">{msg}</p> : null;
 }
 
+/* ─── Toggle helper ─────────────────────────────────────────────────────── */
+function Toggle({
+    value,
+    onChange,
+    activeColor = "bg-green-500",
+    label,
+    description,
+}: {
+    value: boolean;
+    onChange: (v: boolean) => void;
+    activeColor?: string;
+    label: string;
+    description?: string;
+}) {
+    return (
+        <div className="flex items-center gap-3">
+            <button
+                type="button"
+                onClick={() => onChange(!value)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${value ? activeColor : "bg-gray-200"}`}
+            >
+                <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? "translate-x-6" : "translate-x-1"}`}
+                />
+            </button>
+            <div className="flex flex-col">
+                <span className="text-sm text-gray-700 font-medium">
+                    {label}
+                </span>
+                {description && (
+                    <span className="text-[11px] text-gray-400">
+                        {description}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
+
 /* ─── Main Form ──────────────────────────────────────────────────────────── */
 
 export default function PrebuiltProductForm({
@@ -216,6 +257,7 @@ export default function PrebuiltProductForm({
         defaultValues?.variants?.length
             ? (defaultValues.variants as any[]).map((v) => ({
                   ...v,
+                  inStock: v.inStock ?? true,
                   priceDisplay: v.price > 0 ? String(v.price) : "",
                   originalPriceDisplay:
                       v.originalPrice > 0 ? String(v.originalPrice) : "",
@@ -291,15 +333,11 @@ export default function PrebuiltProductForm({
         });
     };
 
-    /* ── Slug Auto-generation ── */
     const handleNameChange = (newName: string) => {
         setName(newName);
-        if (!slug || mode === "create") {
-            setSlug(generateSlug(newName));
-        }
+        if (!slug || mode === "create") setSlug(generateSlug(newName));
     };
 
-    /* ── Validation ── */
     const validate = () => {
         const e: Record<string, string> = {};
         if (!name.trim()) e.name = "Product name is required";
@@ -308,6 +346,12 @@ export default function PrebuiltProductForm({
         if (!category) e.category = "Category is required";
         setErrors(e);
         return Object.keys(e).length === 0;
+    };
+
+    const updateVariant = (i: number, key: keyof VariantInput, value: any) => {
+        setVariants((p) =>
+            p.map((vv, j) => (j === i ? { ...vv, [key]: value } : vv)),
+        );
     };
 
     /* ── Submit ── */
@@ -321,7 +365,6 @@ export default function PrebuiltProductForm({
         startTransition(async () => {
             try {
                 const fd = new FormData();
-
                 fd.append("name", name.trim());
                 const finalSlug =
                     slug.trim() || generateSlug(name.trim()) || "product";
@@ -332,9 +375,7 @@ export default function PrebuiltProductForm({
                 fd.append("isCustomizable", String(isCustomizable));
                 fd.append("highlighted", String(highlighted));
                 fd.append("inStock", String(inStock));
-
                 if (weight) fd.append("weight", weight);
-
                 fd.append("features", JSON.stringify(features));
                 fd.append(
                     "attributes",
@@ -404,7 +445,6 @@ export default function PrebuiltProductForm({
                         ? "/api/admin/prebuilt-products"
                         : `/api/admin/prebuilt-products/${productId}`;
                 const method = mode === "create" ? "POST" : "PUT";
-
                 const res = await fetch(url, { method, body: fd });
 
                 if (!res.ok) {
@@ -412,7 +452,6 @@ export default function PrebuiltProductForm({
                     alert(data.error || "Something went wrong");
                     return;
                 }
-
                 onSuccess();
             } catch (err) {
                 console.error(err);
@@ -482,6 +521,7 @@ export default function PrebuiltProductForm({
             {/* Body */}
             <div className="max-w-screen-xl mx-auto px-8 py-8 grid grid-cols-[1fr_360px] gap-6 items-start">
                 <div className="flex flex-col gap-6">
+                    {/* Basic Details */}
                     <Card title="Basic Details" icon="📄">
                         <div className="space-y-4">
                             <div>
@@ -561,77 +601,29 @@ export default function PrebuiltProductForm({
                                 </div>
                             </div>
 
-                            {/* Switches Section */}
+                            {/* Product-level Switches */}
                             <div className="flex flex-col gap-4 pt-4 border-t border-gray-100">
-                                {/* Customizable toggle */}
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setIsCustomizable((p) => !p)
-                                        }
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isCustomizable ? "bg-gray-900" : "bg-gray-200"}`}
-                                    >
-                                        <span
-                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isCustomizable ? "translate-x-6" : "translate-x-1"}`}
-                                        />
-                                    </button>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm text-gray-700 font-medium">
-                                            Customizable
-                                        </span>
-                                        <span className="text-[11px] text-gray-400">
-                                            Allow customers to personalise this
-                                            product
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Highlighted toggle */}
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setHighlighted((p) => !p)
-                                        }
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${highlighted ? "bg-amber-500" : "bg-gray-200"}`}
-                                    >
-                                        <span
-                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${highlighted ? "translate-x-6" : "translate-x-1"}`}
-                                        />
-                                    </button>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm text-gray-700 font-medium">
-                                            Highlighted
-                                        </span>
-                                        <span className="text-[11px] text-gray-400">
-                                            Feature this product on the home
-                                            page
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* In Stock toggle */}
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setInStock((p) => !p)}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${inStock ? "bg-green-500" : "bg-gray-200"}`}
-                                    >
-                                        <span
-                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${inStock ? "translate-x-6" : "translate-x-1"}`}
-                                        />
-                                    </button>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm text-gray-700 font-medium">
-                                            In Stock
-                                        </span>
-                                        <span className="text-[11px] text-gray-400">
-                                            Mark this product as available for
-                                            purchase
-                                        </span>
-                                    </div>
-                                </div>
+                                <Toggle
+                                    value={isCustomizable}
+                                    onChange={setIsCustomizable}
+                                    activeColor="bg-gray-900"
+                                    label="Customizable"
+                                    description="Allow customers to personalise this product"
+                                />
+                                <Toggle
+                                    value={highlighted}
+                                    onChange={setHighlighted}
+                                    activeColor="bg-amber-500"
+                                    label="Highlighted"
+                                    description="Feature this product on the home page"
+                                />
+                                <Toggle
+                                    value={inStock}
+                                    onChange={setInStock}
+                                    activeColor="bg-green-500"
+                                    label="In Stock (Overall)"
+                                    description="Master switch — turn off to mark entire product as out of stock"
+                                />
                             </div>
                         </div>
                     </Card>
@@ -797,6 +789,7 @@ export default function PrebuiltProductForm({
                                         )}
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
+                                        {/* Price */}
                                         <div>
                                             <Label>Sale Price (₹)</Label>
                                             <Input
@@ -804,25 +797,21 @@ export default function PrebuiltProductForm({
                                                 value={v.priceDisplay}
                                                 onChange={(e) => {
                                                     const raw = e.target.value;
-                                                    setVariants((p) =>
-                                                        p.map((vv, j) =>
-                                                            j === i
-                                                                ? {
-                                                                      ...vv,
-                                                                      priceDisplay:
-                                                                          raw,
-                                                                      price:
-                                                                          raw ===
-                                                                          ""
-                                                                              ? 0
-                                                                              : Math.round(
-                                                                                    parseFloat(
-                                                                                        raw,
-                                                                                    ),
-                                                                                ),
-                                                                  }
-                                                                : vv,
-                                                        ),
+                                                    updateVariant(
+                                                        i,
+                                                        "priceDisplay",
+                                                        raw,
+                                                    );
+                                                    updateVariant(
+                                                        i,
+                                                        "price",
+                                                        raw === ""
+                                                            ? 0
+                                                            : Math.round(
+                                                                  parseFloat(
+                                                                      raw,
+                                                                  ),
+                                                              ),
                                                     );
                                                 }}
                                                 placeholder="e.g. 499"
@@ -835,47 +824,37 @@ export default function PrebuiltProductForm({
                                                 value={v.originalPriceDisplay}
                                                 onChange={(e) => {
                                                     const raw = e.target.value;
-                                                    setVariants((p) =>
-                                                        p.map((vv, j) =>
-                                                            j === i
-                                                                ? {
-                                                                      ...vv,
-                                                                      originalPriceDisplay:
-                                                                          raw,
-                                                                      originalPrice:
-                                                                          raw ===
-                                                                          ""
-                                                                              ? 0
-                                                                              : Math.round(
-                                                                                    parseFloat(
-                                                                                        raw,
-                                                                                    ),
-                                                                                ),
-                                                                  }
-                                                                : vv,
-                                                        ),
+                                                    updateVariant(
+                                                        i,
+                                                        "originalPriceDisplay",
+                                                        raw,
+                                                    );
+                                                    updateVariant(
+                                                        i,
+                                                        "originalPrice",
+                                                        raw === ""
+                                                            ? 0
+                                                            : Math.round(
+                                                                  parseFloat(
+                                                                      raw,
+                                                                  ),
+                                                              ),
                                                     );
                                                 }}
                                                 placeholder="e.g. 699"
                                             />
                                         </div>
+
+                                        {/* Color */}
                                         <div>
                                             <Label>Color Name</Label>
                                             <Input
                                                 value={v.colorName}
                                                 onChange={(e) =>
-                                                    setVariants((p) =>
-                                                        p.map((vv, j) =>
-                                                            j === i
-                                                                ? {
-                                                                      ...vv,
-                                                                      colorName:
-                                                                          e
-                                                                              .target
-                                                                              .value,
-                                                                  }
-                                                                : vv,
-                                                        ),
+                                                    updateVariant(
+                                                        i,
+                                                        "colorName",
+                                                        e.target.value,
                                                     )
                                                 }
                                                 placeholder="e.g. Red"
@@ -887,18 +866,10 @@ export default function PrebuiltProductForm({
                                                 <Input
                                                     value={v.colorHex}
                                                     onChange={(e) =>
-                                                        setVariants((p) =>
-                                                            p.map((vv, j) =>
-                                                                j === i
-                                                                    ? {
-                                                                          ...vv,
-                                                                          colorHex:
-                                                                              e
-                                                                                  .target
-                                                                                  .value,
-                                                                      }
-                                                                    : vv,
-                                                            ),
+                                                        updateVariant(
+                                                            i,
+                                                            "colorHex",
+                                                            e.target.value,
                                                         )
                                                     }
                                                     placeholder="#ff0000"
@@ -909,77 +880,51 @@ export default function PrebuiltProductForm({
                                                         v.colorHex || "#000000"
                                                     }
                                                     onChange={(e) =>
-                                                        setVariants((p) =>
-                                                            p.map((vv, j) =>
-                                                                j === i
-                                                                    ? {
-                                                                          ...vv,
-                                                                          colorHex:
-                                                                              e
-                                                                                  .target
-                                                                                  .value,
-                                                                      }
-                                                                    : vv,
-                                                            ),
+                                                        updateVariant(
+                                                            i,
+                                                            "colorHex",
+                                                            e.target.value,
                                                         )
                                                     }
                                                     className="w-10 h-10 rounded-lg cursor-pointer p-0.5"
                                                 />
                                             </div>
                                         </div>
+
+                                        {/* Size */}
                                         <div>
                                             <Label>Size / Variant Name</Label>
                                             <Input
                                                 value={v.sizeName}
                                                 onChange={(e) =>
-                                                    setVariants((p) =>
-                                                        p.map((vv, j) =>
-                                                            j === i
-                                                                ? {
-                                                                      ...vv,
-                                                                      sizeName:
-                                                                          e
-                                                                              .target
-                                                                              .value,
-                                                                  }
-                                                                : vv,
-                                                        ),
+                                                    updateVariant(
+                                                        i,
+                                                        "sizeName",
+                                                        e.target.value,
                                                     )
                                                 }
                                                 placeholder="e.g. Small"
                                             />
                                         </div>
-                                        <div className="flex items-center gap-2 pt-5">
-                                            <input
-                                                type="checkbox"
-                                                id={`active-${i}`}
-                                                checked={v.isActive}
-                                                onChange={(e) =>
-                                                    setVariants((p) =>
-                                                        p.map((vv, j) =>
-                                                            j === i
-                                                                ? {
-                                                                      ...vv,
-                                                                      isActive:
-                                                                          e
-                                                                              .target
-                                                                              .checked,
-                                                                  }
-                                                                : vv,
-                                                        ),
+
+                                        {/* In Stock toggle — per variant */}
+                                        <div className="flex items-center pt-5">
+                                            <Toggle
+                                                value={v.inStock}
+                                                onChange={(val) =>
+                                                    updateVariant(
+                                                        i,
+                                                        "inStock",
+                                                        val,
                                                     )
                                                 }
-                                                className="w-4 h-4 accent-gray-900"
+                                                activeColor="bg-green-500"
+                                                label="In Stock"
+                                                description="This specific variant is available"
                                             />
-                                            <label
-                                                htmlFor={`active-${i}`}
-                                                className="text-sm text-gray-700 cursor-pointer"
-                                            >
-                                                Active
-                                            </label>
                                         </div>
 
-                                        {/* Dimensions per variant */}
+                                        {/* Dimensions */}
                                         <div className="col-span-2">
                                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-1">
                                                 Dimensions (mm)
@@ -991,18 +936,10 @@ export default function PrebuiltProductForm({
                                                         type="number"
                                                         value={v.length}
                                                         onChange={(e) =>
-                                                            setVariants((p) =>
-                                                                p.map(
-                                                                    (vv, j) =>
-                                                                        j === i
-                                                                            ? {
-                                                                                  ...vv,
-                                                                                  length: e
-                                                                                      .target
-                                                                                      .value,
-                                                                              }
-                                                                            : vv,
-                                                                ),
+                                                            updateVariant(
+                                                                i,
+                                                                "length",
+                                                                e.target.value,
                                                             )
                                                         }
                                                         placeholder="0"
@@ -1014,19 +951,10 @@ export default function PrebuiltProductForm({
                                                         type="number"
                                                         value={v.breadth}
                                                         onChange={(e) =>
-                                                            setVariants((p) =>
-                                                                p.map(
-                                                                    (vv, j) =>
-                                                                        j === i
-                                                                            ? {
-                                                                                  ...vv,
-                                                                                  breadth:
-                                                                                      e
-                                                                                          .target
-                                                                                          .value,
-                                                                              }
-                                                                            : vv,
-                                                                ),
+                                                            updateVariant(
+                                                                i,
+                                                                "breadth",
+                                                                e.target.value,
                                                             )
                                                         }
                                                         placeholder="0"
@@ -1038,18 +966,10 @@ export default function PrebuiltProductForm({
                                                         type="number"
                                                         value={v.height}
                                                         onChange={(e) =>
-                                                            setVariants((p) =>
-                                                                p.map(
-                                                                    (vv, j) =>
-                                                                        j === i
-                                                                            ? {
-                                                                                  ...vv,
-                                                                                  height: e
-                                                                                      .target
-                                                                                      .value,
-                                                                              }
-                                                                            : vv,
-                                                                ),
+                                                            updateVariant(
+                                                                i,
+                                                                "height",
+                                                                e.target.value,
                                                             )
                                                         }
                                                         placeholder="0"

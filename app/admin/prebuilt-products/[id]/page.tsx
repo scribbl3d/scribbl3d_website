@@ -49,10 +49,10 @@ export default async function EditProductPage({
             priceDisplay: v.price.toString(),
             originalPriceDisplay: v.originalPrice.toString(),
             isActive: v.isActive,
+            inStock: v.inStock ?? true,
             colorName: v.colorName || "",
             colorHex: v.colorHex || "",
             sizeName: v.sizeName || "",
-            // ✅ Variant-level dimensions
             length: v.length != null ? v.length.toString() : "",
             breadth: v.breadth != null ? v.breadth.toString() : "",
             height: v.height != null ? v.height.toString() : "",

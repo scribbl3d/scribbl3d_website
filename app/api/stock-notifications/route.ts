@@ -13,12 +13,22 @@ interface ProductLookup {
 
 /* ============================================================================
    POST – Subscribe to stock notification
+   Body: { productId, productName, productType, email, phone, name?,
+           variantId?, variantLabel? }
    ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { productId, productName, productType, email, phone, name } =
-            body;
+        const {
+            productId,
+            productName,
+            productType,
+            email,
+            phone,
+            name,
+            variantId,
+            variantLabel,
+        } = body;
 
         if (!productId || !productName || !email || !phone) {
             return NextResponse.json(
@@ -50,6 +60,7 @@ export async function POST(request: NextRequest) {
                 productId,
                 email: email.toLowerCase().trim(),
                 notified: false,
+                variantId: variantId ?? null,
             },
         });
 
@@ -65,6 +76,8 @@ export async function POST(request: NextRequest) {
                 productId,
                 productName,
                 productType: productType ?? "prebuilt",
+                variantId: variantId ?? null,
+                variantLabel: variantLabel?.trim() || null,
                 email: email.toLowerCase().trim(),
                 phone: phoneClean,
                 name: name?.trim() || null,
@@ -86,26 +99,37 @@ export async function POST(request: NextRequest) {
 
 /* ============================================================================
    GET – Admin: list all notifications with live stock status
-   Query params: productId, productType ("prebuilt" | "printer"), notified
+   Query params: productId, productType, variantId, notified, page, limit
    ============================================================================ */
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const productId = searchParams.get("productId");
         const productType = searchParams.get("productType");
+        const variantId = searchParams.get("variantId");
         const notified = searchParams.get("notified");
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "20");
+        const skip = (page - 1) * limit;
 
         const where: any = {};
         if (productId) where.productId = productId;
         if (productType) where.productType = productType;
-        if (notified !== null) where.notified = notified === "true";
+        if (variantId) where.variantId = variantId;
+        if (notified !== null && notified !== "")
+            where.notified = notified === "true";
 
-        const notifications = await prisma.stockNotification.findMany({
-            where,
-            orderBy: { createdAt: "desc" },
-        });
+        const [notifications, totalCount] = await Promise.all([
+            prisma.stockNotification.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limit,
+            }),
+            prisma.stockNotification.count({ where }),
+        ]);
 
-        // Collect unique IDs per type
+        // ── Collect IDs per product type ──────────────────────────────────
         const prebuiltIds = Array.from(
             new Set(
                 notifications
@@ -113,7 +137,6 @@ export async function GET(request: NextRequest) {
                     .map((n) => n.productId),
             ),
         );
-
         const printerIds = Array.from(
             new Set(
                 notifications
@@ -121,47 +144,130 @@ export async function GET(request: NextRequest) {
                     .map((n) => n.productId),
             ),
         );
+        const resinIds = Array.from(
+            new Set(
+                notifications
+                    .filter((n) => n.productType === "resin")
+                    .map((n) => n.productId),
+            ),
+        );
 
-        // Fetch live stock status from both tables separately (avoids Promise.all type inference issues)
-        const prebuiltRows: ProductLookup[] =
+        // ── Product-level stock lookup ────────────────────────────────────
+        const [prebuiltRows, printerRows, resinRows] = await Promise.all([
             prebuiltIds.length > 0
-                ? await prisma.prebuiltProducts.findMany({
+                ? prisma.prebuiltProducts.findMany({
                       where: { id: { in: prebuiltIds } },
                       select: { id: true, inStock: true, slug: true },
                   })
-                : [];
-
-        const printerRows: ProductLookup[] =
+                : [],
             printerIds.length > 0
-                ? await prisma.printer.findMany({
+                ? prisma.printer.findMany({
                       where: { id: { in: printerIds } },
                       select: { id: true, inStock: true, slug: true },
                   })
-                : [];
+                : [],
+            resinIds.length > 0
+                ? prisma.resin.findMany({
+                      where: { id: { in: resinIds } },
+                      select: { id: true, inStock: true, slug: true },
+                  })
+                : [],
+        ]);
 
-        // Build lookup maps
-        const prebuiltMap = new Map<string, ProductLookup>(
-            prebuiltRows.map((p) => [p.id, p]),
+        const prebuiltMap = new Map<string, ProductLookup>();
+        const printerMap = new Map<string, ProductLookup>();
+        const resinMap = new Map<string, ProductLookup>();
+        prebuiltRows.forEach((p) => prebuiltMap.set(p.id, p as ProductLookup));
+        printerRows.forEach((p) => printerMap.set(p.id, p as ProductLookup));
+        resinRows.forEach((p) => resinMap.set(p.id, p as ProductLookup));
+
+        // ── Variant-level stock lookup ────────────────────────────────────
+        const prebuiltVariantIds = Array.from(
+            new Set(
+                notifications
+                    .filter((n) => n.productType === "prebuilt" && n.variantId)
+                    .map((n) => n.variantId as string),
+            ),
         );
-        const printerMap = new Map<string, ProductLookup>(
-            printerRows.map((p) => [p.id, p]),
+        const resinVariantIds = Array.from(
+            new Set(
+                notifications
+                    .filter((n) => n.productType === "resin" && n.variantId)
+                    .map((n) => n.variantId as string),
+            ),
         );
 
-        // Enrich each notification with live stock info
+        const [prebuiltVariantRows, resinColourRows, resinWeightRows] =
+            await Promise.all([
+                prebuiltVariantIds.length > 0
+                    ? prisma.prebuiltVariants.findMany({
+                          where: { id: { in: prebuiltVariantIds } },
+                          select: { id: true, inStock: true },
+                      })
+                    : [],
+                resinVariantIds.length > 0
+                    ? prisma.resinColour.findMany({
+                          where: { id: { in: resinVariantIds } },
+                          select: { id: true, inStock: true },
+                      })
+                    : [],
+                resinVariantIds.length > 0
+                    ? prisma.resinWeight.findMany({
+                          where: { id: { in: resinVariantIds } },
+                          select: { id: true, inStock: true },
+                      })
+                    : [],
+            ]);
+
+        type VariantStock = { id: string; inStock: boolean };
+        const prebuiltVariantMap = new Map<string, VariantStock>();
+        const resinVariantMap = new Map<string, VariantStock>();
+        prebuiltVariantRows.forEach((v) =>
+            prebuiltVariantMap.set(v.id, { id: v.id, inStock: v.inStock }),
+        );
+        resinColourRows.forEach((v) =>
+            resinVariantMap.set(v.id, { id: v.id, inStock: v.inStock }),
+        );
+        resinWeightRows.forEach((v) =>
+            resinVariantMap.set(v.id, { id: v.id, inStock: v.inStock }),
+        );
+
+        // ── Enrich notifications ──────────────────────────────────────────
         const enriched = notifications.map((n) => {
-            const productData =
-                n.productType === "printer"
-                    ? printerMap.get(n.productId)
-                    : prebuiltMap.get(n.productId);
+            let productData: ProductLookup | undefined;
+            if (n.productType === "printer")
+                productData = printerMap.get(n.productId);
+            else if (n.productType === "resin")
+                productData = resinMap.get(n.productId);
+            else productData = prebuiltMap.get(n.productId);
+
+            let variantInStock: boolean | null = null;
+            if (n.variantId) {
+                if (n.productType === "prebuilt") {
+                    variantInStock =
+                        prebuiltVariantMap.get(n.variantId)?.inStock ?? null;
+                } else if (n.productType === "resin") {
+                    variantInStock =
+                        resinVariantMap.get(n.variantId)?.inStock ?? null;
+                }
+            }
 
             return {
                 ...n,
-                currentInStock: productData?.inStock ?? null,
+                currentInStock:
+                    variantInStock !== null
+                        ? variantInStock
+                        : (productData?.inStock ?? null),
                 productSlug: productData?.slug ?? null,
             };
         });
 
-        return NextResponse.json({ notifications: enriched });
+        return NextResponse.json({
+            notifications: enriched,
+            totalCount,
+            page,
+            totalPages: Math.ceil(totalCount / limit),
+        });
     } catch (error) {
         console.error("[STOCK_NOTIFICATION_GET]", error);
         return NextResponse.json(
@@ -173,16 +279,21 @@ export async function GET(request: NextRequest) {
 
 /* ============================================================================
    PATCH – Mark notification(s) as notified
-   Body: { notificationId } OR { productId }
+   Body: { notificationId } OR { productId } OR { variantId }
    ============================================================================ */
 export async function PATCH(request: NextRequest) {
     try {
         const body = await request.json();
-        const { productId, notificationId } = body;
+        const { productId, notificationId, variantId } = body;
 
         if (notificationId) {
             await prisma.stockNotification.update({
                 where: { id: notificationId },
+                data: { notified: true, notifiedAt: new Date() },
+            });
+        } else if (variantId) {
+            await prisma.stockNotification.updateMany({
+                where: { variantId, notified: false },
                 data: { notified: true, notifiedAt: new Date() },
             });
         } else if (productId) {
@@ -192,7 +303,7 @@ export async function PATCH(request: NextRequest) {
             });
         } else {
             return NextResponse.json(
-                { error: "productId or notificationId required" },
+                { error: "productId, variantId, or notificationId required" },
                 { status: 400 },
             );
         }
@@ -202,6 +313,33 @@ export async function PATCH(request: NextRequest) {
         console.error("[STOCK_NOTIFICATION_PATCH]", error);
         return NextResponse.json(
             { error: "Failed to update notification" },
+            { status: 500 },
+        );
+    }
+}
+
+/* ============================================================================
+   DELETE – Delete a single notification by ID
+   Query: ?id=<notificationId>
+   ============================================================================ */
+export async function DELETE(request: NextRequest) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id");
+
+        if (!id) {
+            return NextResponse.json(
+                { error: "Notification ID is required" },
+                { status: 400 },
+            );
+        }
+
+        await prisma.stockNotification.delete({ where: { id } });
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("[STOCK_NOTIFICATION_DELETE]", error);
+        return NextResponse.json(
+            { error: "Failed to delete notification" },
             { status: 500 },
         );
     }

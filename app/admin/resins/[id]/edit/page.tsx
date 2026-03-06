@@ -40,7 +40,6 @@ const MANDATORY_LABELS = {
     PRESSURE: "Pressure",
 };
 
-// UPDATED: Exactly the 2 categories you asked for
 const SPEC_CATEGORIES = ["Print Parameters", "Packaging & Storage"];
 
 /* ===================== TYPES ===================== */
@@ -56,6 +55,7 @@ type ResinColourForm = {
     id?: string;
     name: string;
     hexCode?: string;
+    inStock: boolean; // ← per-colour inStock
     images: ImageItem[];
 };
 
@@ -64,6 +64,7 @@ type ResinWeightForm = {
     weightInGrams: string;
     price: string;
     originalPrice?: string;
+    inStock: boolean; // ← per-weight inStock
 };
 
 type ResinAttribute = {
@@ -102,6 +103,7 @@ type ResinFormData = {
     description: string;
     cardImageUrl: string;
     cardImageFile?: File;
+    inStock: boolean; // ← overall product inStock
 
     attributes: ResinAttribute[];
     colours: ResinColourForm[];
@@ -112,9 +114,57 @@ type ResinFormData = {
     compatibilities: Compatibility[];
     downloads: Download[];
 };
-const isValidHexColor = (value: string) => {
-    return /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(value);
-};
+
+const isValidHexColor = (value: string) =>
+    /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(value);
+
+/* ===================== TOGGLE COMPONENT ===================== */
+
+function Toggle({
+    value,
+    onChange,
+    activeColor = "bg-green-500",
+    label,
+    description,
+    small = false,
+}: {
+    value: boolean;
+    onChange: (v: boolean) => void;
+    activeColor?: string;
+    label: string;
+    description?: string;
+    small?: boolean;
+}) {
+    return (
+        <div className="flex items-center gap-2.5">
+            <button
+                type="button"
+                onClick={() => onChange(!value)}
+                className={`relative inline-flex items-center rounded-full transition-colors focus:outline-none ${
+                    small ? "h-5 w-9" : "h-6 w-11"
+                } ${value ? activeColor : "bg-gray-200"}`}
+            >
+                <span
+                    className={`inline-block rounded-full bg-white transition-transform ${
+                        small ? "h-3 w-3" : "h-4 w-4"
+                    } ${value ? (small ? "translate-x-5" : "translate-x-6") : "translate-x-1"}`}
+                />
+            </button>
+            <div className="flex flex-col">
+                <span
+                    className={`font-medium text-gray-700 ${small ? "text-xs" : "text-sm"}`}
+                >
+                    {label}
+                </span>
+                {description && (
+                    <span className="text-[11px] text-gray-400">
+                        {description}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
 
 /* ===================== COMPONENT ===================== */
 
@@ -127,7 +177,7 @@ export default function ResinFormPage() {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(false);
     const [colourErrors, setColourErrors] = useState<Record<number, string>>(
-        {}
+        {},
     );
 
     const [formData, setFormData] = useState<ResinFormData>({
@@ -135,10 +185,11 @@ export default function ResinFormPage() {
         slug: "",
         brand: "",
         technology: "",
-        resolution: [], // MultiSelect reads this
+        resolution: [],
         shortDescription: "",
         description: "",
         cardImageUrl: "",
+        inStock: true,
         attributes: [],
         colours: [],
         weights: [],
@@ -160,14 +211,20 @@ export default function ResinFormPage() {
             .then((data) => {
                 setFormData({
                     ...data,
-                    // Safety: Ensure resolution is an array to prevent crashes
                     resolution: Array.isArray(data.resolution)
                         ? data.resolution
                         : [],
                     cardImageUrl: data.cardImageUrl || "",
+                    inStock: data.inStock ?? true,
                     attributes: data.attributes || [],
-                    colours: data.colours || [],
-                    weights: data.weights || [],
+                    colours: (data.colours || []).map((c: any) => ({
+                        ...c,
+                        inStock: c.inStock ?? true,
+                    })),
+                    weights: (data.weights || []).map((w: any) => ({
+                        ...w,
+                        inStock: w.inStock ?? true,
+                    })),
                     specifications: data.specifications || [],
                     features: data.features || [],
                     applications: data.applications || [],
@@ -209,7 +266,7 @@ export default function ResinFormPage() {
         key: keyof ResinFormData,
         index: number,
         field: string,
-        value: any
+        value: any,
     ) =>
         setFormData((p) => {
             const arr = [...(p[key] as any[])];
@@ -226,15 +283,13 @@ export default function ResinFormPage() {
             [key]: (p[key] as any[]).filter((_, i) => i !== index),
         }));
 
-    /* --- Attribute Helpers --- */
-
     const getAttrValue = (label: string) =>
         formData.attributes.find((a) => a.label === label)?.value || "";
 
     const setAttrValue = (label: string, value: string) => {
         setFormData((prev) => {
             const existingIndex = prev.attributes.findIndex(
-                (a) => a.label === label
+                (a) => a.label === label,
             );
             let newAttrs = [...prev.attributes];
             if (existingIndex >= 0) {
@@ -261,7 +316,7 @@ export default function ResinFormPage() {
 
     const handleColourImageUpload = (
         colourIndex: number,
-        files: FileList | null
+        files: FileList | null,
     ) => {
         if (!files) return;
         const currentImages = formData.colours[colourIndex].images;
@@ -279,7 +334,7 @@ export default function ResinFormPage() {
         setFormData((prev) => {
             const colours = [...prev.colours];
             colours[colourIndex].images = colours[colourIndex].images.filter(
-                (_, idx) => idx !== imageIndex
+                (_, idx) => idx !== imageIndex,
             );
             return { ...prev, colours };
         });
@@ -304,25 +359,25 @@ export default function ResinFormPage() {
             data.append("slug", formData.slug);
             data.append("brand", formData.brand);
             data.append("technology", formData.technology);
-            // Safe JSON stringify
             data.append(
                 "resolution",
-                JSON.stringify(formData.resolution || [])
+                JSON.stringify(formData.resolution || []),
             );
             data.append("shortDescription", formData.shortDescription);
             data.append("description", formData.description);
+            data.append("inStock", String(formData.inStock)); // ← overall inStock
 
             data.append("attributes", JSON.stringify(formData.attributes));
-            data.append("weights", JSON.stringify(formData.weights));
+            data.append("weights", JSON.stringify(formData.weights)); // includes per-weight inStock
             data.append(
                 "specifications",
-                JSON.stringify(formData.specifications)
+                JSON.stringify(formData.specifications),
             );
             data.append("features", JSON.stringify(formData.features));
             data.append("applications", JSON.stringify(formData.applications));
             data.append(
                 "compatibilities",
-                JSON.stringify(formData.compatibilities)
+                JSON.stringify(formData.compatibilities),
             );
             data.append("downloads", JSON.stringify(formData.downloads));
 
@@ -337,15 +392,11 @@ export default function ResinFormPage() {
                     if (img.file) {
                         const key = `col_${cIdx}_img_${iIdx}`;
                         data.append(key, img.file);
-                        return {
-                            ...img,
-                            uploadKey: key,
-                            file: undefined,
-                        };
+                        return { ...img, uploadKey: key, file: undefined };
                     }
                     return img;
                 });
-                return { ...colour, images: processedImages };
+                return { ...colour, images: processedImages }; // includes per-colour inStock
             });
 
             data.append("colours", JSON.stringify(processedColours));
@@ -375,9 +426,9 @@ export default function ResinFormPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-20">
             <form onSubmit={handleSubmit}>
-                {/* HEADER */}
                 <LoadingModal open={loading} isEdit={isEdit} />
 
+                {/* HEADER */}
                 <div className="sticky top-0 bg-white border-b z-20 shadow-sm">
                     <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between">
                         <div className="flex items-center gap-3">
@@ -443,7 +494,7 @@ export default function ResinFormPage() {
                             }
                         />
 
-                        {/* CARD IMAGE UPLOAD */}
+                        {/* Card Image */}
                         <div className="mt-4 border-t pt-4">
                             <label className="text-sm font-medium mb-2 block text-gray-700">
                                 Card / Thumbnail Image
@@ -483,13 +534,24 @@ export default function ResinFormPage() {
                                             accept="image/*"
                                             onChange={(e) =>
                                                 handleCardImageUpload(
-                                                    e.target.files
+                                                    e.target.files,
                                                 )
                                             }
                                         />
                                     </label>
                                 )}
                             </div>
+                        </div>
+
+                        {/* Overall inStock toggle */}
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                            <Toggle
+                                value={formData.inStock}
+                                onChange={(v) => updateField("inStock", v)}
+                                activeColor="bg-green-500"
+                                label="In Stock (Overall)"
+                                description="Master switch — turn off to mark entire product as out of stock across all colours and weights"
+                            />
                         </div>
                     </Section>
 
@@ -502,7 +564,7 @@ export default function ResinFormPage() {
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-4 rounded bg-gray-50">
                                 {MATERIAL_OPTIONS.map((opt) => {
                                     const currentVal = getAttrValue(
-                                        MANDATORY_LABELS.MATERIAL
+                                        MANDATORY_LABELS.MATERIAL,
                                     );
                                     const selected = currentVal
                                         .split(",")
@@ -518,20 +580,19 @@ export default function ResinFormPage() {
                                                 type="checkbox"
                                                 checked={isChecked}
                                                 onChange={() => {
-                                                    let newSelected;
-                                                    if (isChecked)
-                                                        newSelected =
-                                                            selected.filter(
-                                                                (s) => s !== opt
-                                                            );
-                                                    else
-                                                        newSelected = [
-                                                            ...selected,
-                                                            opt,
-                                                        ];
+                                                    const newSelected =
+                                                        isChecked
+                                                            ? selected.filter(
+                                                                  (s) =>
+                                                                      s !== opt,
+                                                              )
+                                                            : [
+                                                                  ...selected,
+                                                                  opt,
+                                                              ];
                                                     setAttrValue(
                                                         MANDATORY_LABELS.MATERIAL,
-                                                        newSelected.join(", ")
+                                                        newSelected.join(", "),
                                                     );
                                                 }}
                                                 className="w-4 h-4"
@@ -556,13 +617,13 @@ export default function ResinFormPage() {
                                             type="radio"
                                             checked={
                                                 getAttrValue(
-                                                    MANDATORY_LABELS.WASHABLE
+                                                    MANDATORY_LABELS.WASHABLE,
                                                 ) === "Yes"
                                             }
                                             onChange={() =>
                                                 setAttrValue(
                                                     MANDATORY_LABELS.WASHABLE,
-                                                    "Yes"
+                                                    "Yes",
                                                 )
                                             }
                                         />{" "}
@@ -573,13 +634,13 @@ export default function ResinFormPage() {
                                             type="radio"
                                             checked={
                                                 getAttrValue(
-                                                    MANDATORY_LABELS.WASHABLE
+                                                    MANDATORY_LABELS.WASHABLE,
                                                 ) === "No"
                                             }
                                             onChange={() =>
                                                 setAttrValue(
                                                     MANDATORY_LABELS.WASHABLE,
-                                                    "No"
+                                                    "No",
                                                 )
                                             }
                                         />{" "}
@@ -597,7 +658,7 @@ export default function ResinFormPage() {
                             <Input
                                 label={
                                     MANDATORY_LABELS.TEMP +
-                                    " For heat deflection temperature  (without units)"
+                                    " For heat deflection temperature (without units)"
                                 }
                                 value={getAttrValue(MANDATORY_LABELS.TEMP)}
                                 onChange={(v: string) =>
@@ -607,7 +668,7 @@ export default function ResinFormPage() {
                             <Input
                                 label={
                                     MANDATORY_LABELS.PRESSURE +
-                                    " For heat deflection temperature  (without units)"
+                                    " For heat deflection temperature (without units)"
                                 }
                                 value={getAttrValue(MANDATORY_LABELS.PRESSURE)}
                                 onChange={(v: string) =>
@@ -623,8 +684,8 @@ export default function ResinFormPage() {
                             .filter(
                                 (a) =>
                                     !Object.values(MANDATORY_LABELS).includes(
-                                        a.label
-                                    )
+                                        a.label,
+                                    ),
                             )
                             .map((a, i) => {
                                 const realIndex =
@@ -642,7 +703,7 @@ export default function ResinFormPage() {
                                                     "attributes",
                                                     realIndex,
                                                     "label",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             className="border px-3 py-2 rounded"
@@ -655,7 +716,7 @@ export default function ResinFormPage() {
                                                     "attributes",
                                                     realIndex,
                                                     "value",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             className="border px-3 py-2 rounded"
@@ -665,7 +726,7 @@ export default function ResinFormPage() {
                                             onClick={() =>
                                                 removeItem(
                                                     "attributes",
-                                                    realIndex
+                                                    realIndex,
                                                 )
                                             }
                                             className="text-red-600 text-sm justify-self-start"
@@ -687,8 +748,9 @@ export default function ResinFormPage() {
                         <div className="grid grid-cols-12 gap-2 text-sm font-semibold text-gray-500 mb-2">
                             <div className="col-span-3">Weight (g)</div>
                             <div className="col-span-3">Selling Price (₹)</div>
-                            <div className="col-span-3">MRP (₹)</div>
+                            <div className="col-span-2">MRP (₹)</div>
                             <div className="col-span-2">Discount</div>
+                            <div className="col-span-1">In Stock</div>
                             <div className="col-span-1"></div>
                         </div>
                         {formData.weights.map((w, i) => {
@@ -702,7 +764,7 @@ export default function ResinFormPage() {
                             return (
                                 <div
                                     key={i}
-                                    className="grid grid-cols-12 gap-3 items-start mb-4"
+                                    className="grid grid-cols-12 gap-3 items-center mb-4"
                                 >
                                     <div className="col-span-3">
                                         <input
@@ -713,7 +775,7 @@ export default function ResinFormPage() {
                                                     "weights",
                                                     i,
                                                     "weightInGrams",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             className="w-full border px-3 py-2 rounded"
@@ -729,7 +791,7 @@ export default function ResinFormPage() {
                                                     "weights",
                                                     i,
                                                     "price",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             className={`w-full border px-3 py-2 rounded ${isInvalid ? "border-red-500 bg-red-50" : ""}`}
@@ -740,7 +802,7 @@ export default function ResinFormPage() {
                                             </p>
                                         )}
                                     </div>
-                                    <div className="col-span-3">
+                                    <div className="col-span-2">
                                         <input
                                             placeholder="MRP"
                                             type="number"
@@ -750,7 +812,7 @@ export default function ResinFormPage() {
                                                     "weights",
                                                     i,
                                                     "originalPrice",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                             className="w-full border px-3 py-2 rounded"
@@ -767,7 +829,24 @@ export default function ResinFormPage() {
                                             </span>
                                         )}
                                     </div>
-                                    <div className="col-span-1 flex items-center justify-center pt-2">
+                                    {/* Per-weight inStock toggle */}
+                                    <div className="col-span-1 flex items-center">
+                                        <Toggle
+                                            value={w.inStock ?? true}
+                                            onChange={(v) =>
+                                                updateArrayItem(
+                                                    "weights",
+                                                    i,
+                                                    "inStock",
+                                                    v,
+                                                )
+                                            }
+                                            activeColor="bg-green-500"
+                                            label=""
+                                            small
+                                        />
+                                    </div>
+                                    <div className="col-span-1 flex items-center justify-center">
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -786,6 +865,7 @@ export default function ResinFormPage() {
                                 addItem("weights", {
                                     weightInGrams: "",
                                     price: "",
+                                    inStock: true,
                                 })
                             }
                         />
@@ -799,68 +879,72 @@ export default function ResinFormPage() {
                                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4"
                             >
                                 <div className="flex justify-between items-start mb-6 border-b pb-4">
-                                    <div className="grid grid-cols-2 gap-4 flex-1 mr-8">
-                                        <Input
-                                            label="Colour Name"
-                                            value={c.name}
-                                            onChange={(v: string) =>
-                                                updateArrayItem(
-                                                    "colours",
-                                                    i,
-                                                    "name",
-                                                    v
-                                                )
-                                            }
-                                        />
-                                        <Input
-                                            label="Hex Code"
-                                            value={c.hexCode || ""}
-                                            onChange={(v: string) => {
-                                                // normalize input
-                                                const value = v.startsWith("#")
-                                                    ? v.toUpperCase()
-                                                    : `#${v.toUpperCase()}`;
-
-                                                updateArrayItem(
-                                                    "colours",
-                                                    i,
-                                                    "hexCode",
-                                                    value
-                                                );
-
-                                                // validate
-                                                if (
-                                                    value &&
-                                                    !isValidHexColor(value)
-                                                ) {
-                                                    setColourErrors((prev) => ({
-                                                        ...prev,
-                                                        [i]: "Invalid hex code (example: #FF5733)",
-                                                    }));
-                                                } else {
-                                                    setColourErrors((prev) => {
-                                                        const next = {
-                                                            ...prev,
-                                                        };
-                                                        delete next[i];
-                                                        return next;
-                                                    });
+                                    <div className="flex-1 mr-8 space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Input
+                                                label="Colour Name"
+                                                value={c.name}
+                                                onChange={(v: string) =>
+                                                    updateArrayItem(
+                                                        "colours",
+                                                        i,
+                                                        "name",
+                                                        v,
+                                                    )
                                                 }
-                                            }}
-                                        />
+                                            />
+                                            <Input
+                                                label="Hex Code"
+                                                value={c.hexCode || ""}
+                                                onChange={(v: string) => {
+                                                    const value = v.startsWith(
+                                                        "#",
+                                                    )
+                                                        ? v.toUpperCase()
+                                                        : `#${v.toUpperCase()}`;
+                                                    updateArrayItem(
+                                                        "colours",
+                                                        i,
+                                                        "hexCode",
+                                                        value,
+                                                    );
+                                                    if (
+                                                        value &&
+                                                        !isValidHexColor(value)
+                                                    ) {
+                                                        setColourErrors(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                [i]: "Invalid hex code (example: #FF5733)",
+                                                            }),
+                                                        );
+                                                    } else {
+                                                        setColourErrors(
+                                                            (prev) => {
+                                                                const next = {
+                                                                    ...prev,
+                                                                };
+                                                                delete next[i];
+                                                                return next;
+                                                            },
+                                                        );
+                                                    }
+                                                }}
+                                            />
+                                        </div>
                                         {colourErrors[i] && (
-                                            <p className="mt-2 text-sm text-red-500">
+                                            <p className="text-sm text-red-500">
                                                 {colourErrors[i]}
                                             </p>
                                         )}
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <div
                                                 className="w-8 h-8 rounded border border-gray-300"
                                                 style={{
                                                     backgroundColor:
                                                         c.hexCode &&
                                                         isValidHexColor(
-                                                            c.hexCode
+                                                            c.hexCode,
                                                         )
                                                             ? c.hexCode
                                                             : "#ffffff",
@@ -870,6 +954,23 @@ export default function ResinFormPage() {
                                                 Preview
                                             </span>
                                         </div>
+
+                                        {/* Per-colour inStock toggle */}
+                                        <Toggle
+                                            value={c.inStock ?? true}
+                                            onChange={(v) =>
+                                                updateArrayItem(
+                                                    "colours",
+                                                    i,
+                                                    "inStock",
+                                                    v,
+                                                )
+                                            }
+                                            activeColor="bg-green-500"
+                                            label="In Stock"
+                                            description="Turn off to mark this colour as out of stock"
+                                            small
+                                        />
                                     </div>
                                     <button
                                         type="button"
@@ -902,7 +1003,7 @@ export default function ResinFormPage() {
                                                         onClick={() =>
                                                             removeColourImage(
                                                                 i,
-                                                                idx
+                                                                idx,
                                                             )
                                                         }
                                                         className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-sm transition-transform hover:scale-110"
@@ -925,7 +1026,7 @@ export default function ResinFormPage() {
                                                 onChange={(e) =>
                                                     handleColourImageUpload(
                                                         i,
-                                                        e.target.files
+                                                        e.target.files,
                                                     )
                                                 }
                                             />
@@ -940,6 +1041,7 @@ export default function ResinFormPage() {
                                 addItem("colours", {
                                     name: "",
                                     hexCode: "",
+                                    inStock: true,
                                     images: [],
                                 })
                             }
@@ -973,7 +1075,7 @@ export default function ResinFormPage() {
                                                             "specifications",
                                                             originalIndex,
                                                             "label",
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     placeholder="Label"
@@ -986,7 +1088,7 @@ export default function ResinFormPage() {
                                                             "specifications",
                                                             originalIndex,
                                                             "value",
-                                                            e.target.value
+                                                            e.target.value,
                                                         )
                                                     }
                                                     placeholder="Value"
@@ -997,7 +1099,7 @@ export default function ResinFormPage() {
                                                     onClick={() =>
                                                         removeItem(
                                                             "specifications",
-                                                            originalIndex
+                                                            originalIndex,
                                                         )
                                                     }
                                                     className="text-red-600"
@@ -1064,7 +1166,7 @@ export default function ResinFormPage() {
                                             "downloads",
                                             i,
                                             "title",
-                                            e.target.value
+                                            e.target.value,
                                         )
                                     }
                                     className="border px-3 py-2 rounded"
@@ -1077,7 +1179,7 @@ export default function ResinFormPage() {
                                             "downloads",
                                             i,
                                             "downloadUrl",
-                                            e.target.value
+                                            e.target.value,
                                         )
                                     }
                                     className="border px-3 py-2 rounded"
@@ -1120,23 +1222,18 @@ export default function ResinFormPage() {
 }
 
 /* ===================== SMALL COMPONENTS ===================== */
+
 function LoadingModal({ open, isEdit }: { open: boolean; isEdit: boolean }) {
     if (!open) return null;
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-xl shadow-lg px-8 py-6 w-[360px] text-center">
-                {/* Spinner */}
                 <div className="flex justify-center mb-4">
                     <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
                 </div>
-
-                {/* Title */}
                 <h2 className="text-lg font-semibold mb-2">
                     {isEdit ? "Editing Product…" : "Adding Product…"}
                 </h2>
-
-                {/* Subtitle */}
                 <p className="text-sm text-gray-600">
                     This may take up to a few minutes. Please do not close this
                     window.
@@ -1210,9 +1307,7 @@ function Select({ label, value, options, onChange }: any) {
 }
 
 function MultiSelect({ label, options, value, onChange }: any) {
-    // CRITICAL FIX: Prevent crashes if value is undefined/null
     const safeValue = Array.isArray(value) ? value : [];
-
     return (
         <div>
             <label className="text-sm font-medium mb-1 block text-gray-700">
@@ -1227,7 +1322,7 @@ function MultiSelect({ label, options, value, onChange }: any) {
                             onChange(
                                 safeValue.includes(o)
                                     ? safeValue.filter((v: string) => v !== o)
-                                    : [...safeValue, o]
+                                    : [...safeValue, o],
                             )
                         }
                         className={`px-3 py-1 border rounded text-sm transition-colors ${safeValue.includes(o) ? "bg-black text-white border-black" : "bg-white text-gray-700 hover:bg-gray-50"}`}
@@ -1271,7 +1366,7 @@ function TripleList({
                                 field,
                                 i,
                                 item.name !== undefined ? "name" : "title",
-                                e.target.value
+                                e.target.value,
                             )
                         }
                         className="flex-1 border px-3 py-2 rounded"
@@ -1289,7 +1384,7 @@ function TripleList({
                 onClick={() =>
                     addItem(
                         field,
-                        field === "features" ? { title: "" } : { name: "" }
+                        field === "features" ? { title: "" } : { name: "" },
                     )
                 }
             />

@@ -1,19 +1,194 @@
 "use client";
-import { Heart } from "lucide-react";
-import Link from "next/link";
 
 import { toast } from "@/components/ui/use-toast";
+import { Bell, Check, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
+/* ── Notify Me Modal ── */
+function NotifyMeModal({
+    resin,
+    onClose,
+}: {
+    resin: any;
+    onClose: () => void;
+}) {
+    const { data: session } = useSession();
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
+    const [phone, setPhone] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [done, setDone] = useState(false);
+
+    const handleSubmit = async () => {
+        if (!email.trim() || !phone.trim()) {
+            toast({
+                title: "Email and phone are required",
+                variant: "destructive",
+            });
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const res = await fetch("/api/stock-notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productId: resin.id,
+                    productName: resin.name,
+                    productType: "resin",
+                    email: email.trim(),
+                    phone: phone.trim(),
+                    name: name.trim() || null,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                toast({
+                    title: data.error || "Something went wrong",
+                    variant: "destructive",
+                });
+                return;
+            }
+            setDone(true);
+        } catch {
+            toast({ title: "Request failed", variant: "destructive" });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
+                <div className="flex items-start justify-between p-5 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
+                            <Bell size={16} className="text-orange-500" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-bold text-gray-900">
+                                Notify Me When Back
+                            </h2>
+                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                                {resin.name}
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-black mt-0.5"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="p-5">
+                    {done ? (
+                        <div className="flex flex-col items-center py-6 text-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                                <Check size={22} className="text-green-600" />
+                            </div>
+                            <p className="text-base font-bold text-gray-900">
+                                You're on the list!
+                            </p>
+                            <p className="text-sm text-gray-500 leading-relaxed">
+                                We'll notify you on{" "}
+                                <span className="font-semibold text-gray-700">
+                                    {email}
+                                </span>{" "}
+                                and{" "}
+                                <span className="font-semibold text-gray-700">
+                                    {phone}
+                                </span>{" "}
+                                as soon as this item is back in stock.
+                            </p>
+                            <button
+                                onClick={onClose}
+                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-3.5">
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                This resin is currently out of stock. Leave your
+                                details and we'll let you know the moment it's
+                                available.
+                            </p>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Name{" "}
+                                    <span className="text-gray-400 normal-case font-normal">
+                                        (optional)
+                                    </span>
+                                </label>
+                                <input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="Your name"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Email{" "}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="you@example.com"
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                                    Phone Number{" "}
+                                    <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="10-digit mobile number"
+                                    maxLength={15}
+                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
+                                />
+                            </div>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting}
+                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                            >
+                                {submitting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <Bell size={14} /> Notify Me
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ── Resin Card ── */
 interface ResinCardProps {
     resin: any;
     onSelect: () => void;
 }
+
 export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     const { data: session } = useSession();
-    const colour = resin.colours?.[0];
     const image = resin.cardImageUrl;
     const shortDescription = resin.shortDescription;
     const name = resin.name;
@@ -25,12 +200,15 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     const discount = resin.weights?.[0]?.discount;
     const slug = resin.slug;
     const technology = resin.technology;
-    const [isFavorite, setIsFavorite] = useState(false);
 
+    const isOutOfStock = resin.inStock === false;
+
+    const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
+
     useEffect(() => {
         if (!session || !resin?.id) return;
-
         async function checkWishlist() {
             try {
                 const res = await fetch(
@@ -42,7 +220,6 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
                 console.error("Wishlist check failed", err);
             }
         }
-
         checkWishlist();
     }, [session, resin?.id]);
 
@@ -70,35 +247,24 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
         }
 
         if (isWishlistLoading) return;
-
         setIsWishlistLoading(true);
-
         const wasInWishlist = isFavorite;
-
-        // ✅ Optimistic update
         setIsFavorite(!wasInWishlist);
 
         try {
             await fetch("/api/wishlist", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    resinId: resin.id,
-                }),
+                body: JSON.stringify({ resinId: resin.id }),
             });
-
             toast({
                 title: wasInWishlist
                     ? "Removed from wishlist"
                     : "Added to wishlist",
-                description: `${resin.name} has been ${
-                    wasInWishlist ? "removed from" : "added to"
-                } your wishlist.`,
+                description: `${resin.name} has been ${wasInWishlist ? "removed from" : "added to"} your wishlist.`,
             });
-        } catch (err) {
-            // 🔁 rollback on failure
+        } catch {
             setIsFavorite(wasInWishlist);
-
             toast({
                 title: "Error",
                 description: "Failed to update wishlist. Please try again.",
@@ -110,143 +276,127 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     };
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
-            {/* CARD LINK */}
-            <Link href={`/resins/${slug}`} className=" flex flex-col h-full">
-                {/* IMAGE */}
-                <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
-                    <Image
-                        src={image || "/images/placeholder-image.png"}
-                        alt={name}
-                        fill
-                        priority
-                        className="object-contain"
-                    />
+        <>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+                <Link href={`/resins/${slug}`} className="flex flex-col h-full">
+                    {/* IMAGE */}
+                    <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
+                        <Image
+                            src={image || "/images/placeholder-image.png"}
+                            alt={name}
+                            fill
+                            priority
+                            className="object-contain"
+                        />
 
-                    {/* WISHLIST */}
-                    <button
-                        onClick={handleToggleWishlist}
-                        disabled={isWishlistLoading}
-                        className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
-                    >
-                        {isWishlistLoading ? (
-                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
-                        ) : (
-                            <Heart
-                                className={`w-5 h-5 transition ${
-                                    isFavorite
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-400"
-                                }`}
-                            />
+                        {/* Out of Stock badge */}
+                        {isOutOfStock && (
+                            <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
+                                Out of Stock
+                            </div>
                         )}
-                    </button>
-                </div>
 
-                {/* CONTENT */}
-                <div className="p-5 flex-1">
-                    {/* TECHNOLOGY */}
-                    <span className="inline-block mb-3 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
-                        {material}
-                    </span>
+                        {/* WISHLIST */}
+                        <button
+                            onClick={handleToggleWishlist}
+                            disabled={isWishlistLoading}
+                            className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
+                        >
+                            {isWishlistLoading ? (
+                                <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                            ) : (
+                                <Heart
+                                    className={`w-5 h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                                />
+                            )}
+                        </button>
+                    </div>
 
-                    {/* NAME */}
-                    <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
-                        {name}
-                    </h3>
-
-                    {/* DESCRIPTION */}
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {shortDescription}
-                    </p>
-                    <div className="text-sm text-gray-700 space-y-1">
-                        <div>
-                            <strong>Technology:</strong> {technology}
-                        </div>
-
-                        <div className="line-clamp-2">
-                            <span className="font-semibold">
-                                UV Wavelength:
-                            </span>{" "}
-                            {"405 nm"}
+                    {/* CONTENT */}
+                    <div className="p-5 flex-1">
+                        <span className="inline-block mb-3 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
+                            {material}
+                        </span>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-2">
+                            {name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                            {shortDescription}
+                        </p>
+                        <div className="text-sm text-gray-700 space-y-1">
+                            <div>
+                                <strong>Technology:</strong> {technology}
+                            </div>
+                            <div className="line-clamp-2">
+                                <span className="font-semibold">
+                                    UV Wavelength:
+                                </span>{" "}
+                                {"405 nm"}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </Link>
+                </Link>
 
-            {/* FOOTER (LOCKED POSITION) */}
-            <div className="mt-auto px-5 pb-5">
-                <hr className="mb-4" />
+                {/* FOOTER */}
+                <div className="mt-auto px-5 pb-5">
+                    <hr className="mb-4" />
 
-                {/* PRICE ROW */}
-                <div className="flex items-center mt-1">
-                    {/* FINAL PRICE */}
-                    <span
-                        className="
-      text-[16px]
-      leading-[24px]
-      font-semibold
-      text-[#101828]
-    "
-                    >
-                        ₹{price.toLocaleString("en-IN")}
-                    </span>
-
-                    {/* ORIGINAL PRICE */}
-                    {originalPrice && (
-                        <span
-                            className="
-        ml-5
-
-        text-[14px]
-        leading-[20px]
-        font-normal
-        line-through
-        text-[#99A1AF]
-      "
-                        >
-                            ₹{originalPrice.toLocaleString("en-IN")}
+                    {/* PRICE ROW */}
+                    <div className="flex items-center mt-1">
+                        <span className="text-[16px] leading-[24px] font-semibold text-[#101828]">
+                            ₹{price?.toLocaleString("en-IN")}
                         </span>
+                        {originalPrice && (
+                            <span className="ml-5 text-[14px] leading-[20px] font-normal line-through text-[#99A1AF]">
+                                ₹{originalPrice.toLocaleString("en-IN")}
+                            </span>
+                        )}
+                        {discount && (
+                            <span className="ml-6 h-[22px] px-2 inline-flex items-center rounded-full text-[12px] leading-[16px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
+                                {discount}% OFF
+                            </span>
+                        )}
+                    </div>
+
+                    <p className="text-[14px] leading-[20px] text-[#667085] mt-1 mb-3">
+                        (incl. GST)
+                    </p>
+
+                    {/* Select Variants — hidden when OOS */}
+                    {!isOutOfStock && (
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                onSelect();
+                            }}
+                            className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition"
+                        >
+                            Select Variants
+                        </button>
                     )}
 
-                    {/* DISCOUNT */}
-                    {discount && (
-                        <span
-                            className="
-        ml-6
-        h-[22px]
-        px-2
-        inline-flex
-        items-center
-        rounded-full
-        text-[12px]
-        leading-[16px]
-        font-medium
-        text-[#008236]
-        bg-[#F0FDF4]
-        border
-        border-[#B9F8CF]
-      "
+                    {/* Notify Me — only when OOS */}
+                    {isOutOfStock && (
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setShowNotifyModal(true);
+                            }}
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
                         >
-                            {discount}% OFF
-                        </span>
+                            <Bell size={14} />
+                            Notify Me When Back in Stock
+                        </button>
                     )}
                 </div>
-
-                <p className="text-[14px] leading-[20px] text-[#667085] mt-1 mb-3">
-                    (incl. GST)
-                </p>
-
-                <button
-                    onClick={(e) => {
-                        e.preventDefault();
-                        onSelect();
-                    }}
-                    className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition"
-                >
-                    Select Variants
-                </button>
             </div>
-        </div>
+
+            {showNotifyModal && (
+                <NotifyMeModal
+                    resin={resin}
+                    onClose={() => setShowNotifyModal(false)}
+                />
+            )}
+        </>
     );
 }
