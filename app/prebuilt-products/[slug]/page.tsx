@@ -1042,7 +1042,7 @@ export default function PrebuiltProductPDP() {
             `• The estimated price`,
             `• The expected production time`,
             ``,
-            `Looking forward to hearing from you. Thank you!`,
+            `Looking forward to hear from you. Thank you!`,
         ]
             .filter((line) => line !== undefined && !(line === "" && false))
             .filter((_, i, arr) => !(arr[i] === "" && arr[i - 1] === ""))
