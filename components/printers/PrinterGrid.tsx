@@ -394,7 +394,7 @@ function PrinterCard({ printer }: { printer: any }) {
                     className="flex flex-col h-full"
                 >
                     {/* IMAGE */}
-                    <div className="relative h-[270px] md:h-[224px] w-full bg-[#F3F4F6] overflow-hidden">
+                    <div className="relative h-[270px] md:h-[224px] w-full bg-white overflow-hidden">
                         {printer.images?.[0]?.url && (
                             <Image
                                 src={
@@ -404,7 +404,7 @@ function PrinterCard({ printer }: { printer: any }) {
                                 alt={printer.name}
                                 fill
                                 priority
-                                className="object-contains"
+                                className="object-contain"
                             />
                         )}
 
