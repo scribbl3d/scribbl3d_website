@@ -1,13 +1,12 @@
 "use client";
 
 import { toast } from "@/components/ui/use-toast";
+import { getCardImageUrl } from "@/lib/cloudinary-url";
 import { useCart } from "@/providers/CartProvider";
 import { Bell, Check, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 /* ================= TYPES ================= */
 interface PrinterGridProps {
     printers: any[];
@@ -281,6 +280,11 @@ function PrinterCard({ printer }: { printer: any }) {
     const price = printer.price || 0;
     const originalPrice = printer.originalPrice || null;
 
+    // ── Resolve image URL ──
+    const imageUrl =
+        printer.images.find((img: any) => img.isMain)?.url ||
+        printer.images[0]?.url;
+
     const handleAddToCart = async () => {
         if (!printer || isCartLoading || isOutOfStock) return;
 
@@ -393,18 +397,15 @@ function PrinterCard({ printer }: { printer: any }) {
                     href={`/printers/${printer.slug}`}
                     className="flex flex-col h-full"
                 >
-                    {/* IMAGE */}
-                    <div className="relative h-[270px] md:h-[224px] w-full bg-white overflow-hidden">
-                        {printer.images?.[0]?.url && (
-                            <Image
-                                src={
-                                    printer.images.find((img) => img.isMain)
-                                        ?.url || printer.images[0].url
-                                }
+                    {/* IMAGE — square container, Elegoo-style */}
+                    <div className="relative aspect-square w-full bg-white overflow-hidden">
+                        {imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                                src={getCardImageUrl(imageUrl)}
                                 alt={printer.name}
-                                fill
-                                priority
-                                className="object-contain"
+                                className="w-full h-full object-contain"
+                                loading="eager"
                             />
                         )}
 
@@ -519,7 +520,7 @@ function PrinterCard({ printer }: { printer: any }) {
                     {isOutOfStock && (
                         <button
                             onClick={() => setShowNotifyModal(true)}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-blue-200 text-blue-500 hover:text-blue-700 transition-all flex items-center justify-center gap-2"
                         >
                             <Bell size={14} />
                             Notify Me When Back in Stock

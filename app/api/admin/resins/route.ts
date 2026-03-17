@@ -110,7 +110,20 @@ export async function POST(req: Request) {
             const uploadResult: any = await new Promise((resolve, reject) => {
                 cloudinary.uploader
                     .upload_stream(
-                        { folder: `resins/${slug}` },
+                        {
+                            folder: `resins/${slug}`,
+                            resource_type: "image",
+                            transformation: [
+                                {
+                                    width: 1600,
+                                    height: 1600,
+                                    crop: "pad",
+                                    background: "white",
+                                    quality: "auto:good",
+                                    fetch_format: "auto",
+                                },
+                            ],
+                        },
                         (error, result) => {
                             if (error) reject(error);
                             else resolve(result);
@@ -158,7 +171,20 @@ export async function POST(req: Request) {
                             (resolve, reject) => {
                                 cloudinary.uploader
                                     .upload_stream(
-                                        { folder: `resins/${slug}/gallery` },
+                                        {
+                                            folder: `resins/${slug}/gallery`,
+                                            resource_type: "image",
+                                            transformation: [
+                                                {
+                                                    width: 1600,
+                                                    height: 1600,
+                                                    crop: "pad",
+                                                    background: "white",
+                                                    quality: "auto:good",
+                                                    fetch_format: "auto",
+                                                },
+                                            ],
+                                        },
                                         (error, result) => {
                                             if (error) reject(error);
                                             else resolve(result);

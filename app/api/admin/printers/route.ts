@@ -186,7 +186,21 @@ export async function POST(request: NextRequest) {
             const uploadResult: any = await new Promise((resolve, reject) => {
                 cloudinary.uploader
                     .upload_stream(
-                        { folder: `printers/${slug}`, resource_type: "image" },
+                        {
+                            folder: `printers/${slug}`,
+                            resource_type: "image",
+
+                            transformation: [
+                                {
+                                    width: 1600,
+                                    height: 1600,
+                                    crop: "pad",
+                                    background: "white",
+                                    quality: "auto:good",
+                                    fetch_format: "auto",
+                                },
+                            ],
+                        },
                         (error, result) => {
                             if (error) reject(error);
                             else resolve(result);

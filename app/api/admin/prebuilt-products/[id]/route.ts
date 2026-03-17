@@ -141,6 +141,17 @@ export async function PUT(
                         {
                             folder: "prebuilt-products-new",
                             resource_type: "image",
+
+                            transformation: [
+                                {
+                                    width: 1600,
+                                    height: 1600,
+                                    crop: "pad",
+                                    background: "white",
+                                    quality: "auto:good",
+                                    fetch_format: "auto",
+                                },
+                            ],
                         },
                         (error, result) => {
                             if (error) reject(error);

@@ -3,10 +3,10 @@
 
 import SimilarPrintersCarousel from "@/components/printers/SimilarPrintersCarousel";
 import { toast } from "@/components/ui/use-toast";
+import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
 import { useCart } from "@/providers/CartProvider";
 import { ArrowLeft, Bell, Check, Download, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -451,7 +451,8 @@ export default function PrinterDetailPage() {
                             onTouchStart={onTouchStart}
                             onTouchEnd={onTouchEnd}
                         >
-                            <div className="relative w-full aspect-[4/3] sm:aspect-square bg-white rounded-xl overflow-hidden">
+                            {/* Square on all screens — consistent with card */}
+                            <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden">
                                 {printer.images && printer.images.length > 0 ? (
                                     <>
                                         <div
@@ -465,14 +466,17 @@ export default function PrinterDetailPage() {
                                                     key={image.id}
                                                     className="relative min-w-full h-full"
                                                 >
-                                                    <Image
-                                                        src={image.url}
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={getPdpImageUrl(
+                                                            image.url,
+                                                        )}
                                                         alt={
                                                             image.altText ||
                                                             printer.name
                                                         }
-                                                        fill
-                                                        className="object-contain"
+                                                        className="w-full h-full object-contain"
+                                                        loading="eager"
                                                     />
                                                 </div>
                                             ))}
@@ -522,16 +526,20 @@ export default function PrinterDetailPage() {
                                 <button
                                     key={image.id}
                                     onClick={() => setCurrent(index)}
-                                    className={`w-20 h-20 rounded-lg border-2 overflow-hidden transition flex-shrink-0 ${current === index ? "border-blue-600" : "border-gray-300"}`}
+                                    className={`w-20 h-20 rounded-lg border-2 overflow-hidden transition flex-shrink-0 ${
+                                        current === index
+                                            ? "border-blue-600"
+                                            : "border-gray-300"
+                                    }`}
                                 >
-                                    <Image
-                                        src={image.url}
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={getThumbnailUrl(image.url)}
                                         alt={
                                             image.altText || `View ${index + 1}`
                                         }
-                                        width={80}
-                                        height={80}
-                                        className="object-contain w-full h-full"
+                                        className="w-full h-full object-contain"
+                                        loading="lazy"
                                     />
                                 </button>
                             ))}
@@ -698,7 +706,7 @@ export default function PrinterDetailPage() {
                                 {isOutOfStock && (
                                     <button
                                         onClick={() => setShowNotifyModal(true)}
-                                        className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                                        className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2 border-blue-200 text-blue-500 hover:text-blue-700 transition-all flex items-center justify-center gap-2"
                                     >
                                         <Bell size={16} />
                                         Notify Me When Back in Stock
@@ -1144,7 +1152,7 @@ function PrinterDetailSkeleton() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
                     <div className="lg:self-start lg:sticky lg:top-28">
                         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-                            <div className="w-full h-[400px] bg-gray-200 rounded-lg"></div>
+                            <div className="w-full aspect-square bg-gray-200 rounded-lg"></div>
                         </div>
                         <div className="flex gap-2 justify-center">
                             {[1, 2, 3, 4].map((i) => (
