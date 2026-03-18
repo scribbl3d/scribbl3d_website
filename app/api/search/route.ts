@@ -9,18 +9,21 @@ export async function GET(request: Request) {
     if (!query) {
       return NextResponse.json({
         results: [],
+        count: 0,
         message: "No query provided",
       });
     }
 
     await prisma.$connect();
 
-    const [products, prebuiltProducts] = await Promise.all([
+    const [products, prebuiltProducts, resins, printers] = await Promise.all([
       prisma.product.findMany({
         where: {
           OR: [
             { name: { contains: query, mode: "insensitive" } },
             { color: { contains: query, mode: "insensitive" } },
+            { category: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
           ],
         },
         select: {
@@ -28,6 +31,8 @@ export async function GET(request: Request) {
           name: true,
           price: true,
           images: true,
+          category: true,
+          color: true,
         },
         take: 5,
       }),
@@ -35,20 +40,108 @@ export async function GET(request: Request) {
         where: {
           OR: [
             { name: { contains: query, mode: "insensitive" } },
+            { category: { contains: query, mode: "insensitive" } },
+            { shortDescription: { contains: query, mode: "insensitive" } },
           ],
         },
         select: {
           id: true,
           name: true,
-          images: true,
+          slug: true,
+          category: true,
+          images: { where: { isMain: true }, select: { url: true }, take: 1 },
+          variants: {
+            where: { isActive: true },
+            select: { price: true },
+            take: 1,
+            orderBy: { price: "asc" },
+          },
+        },
+        take: 5,
+      }),
+      prisma.resin.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { brand: { contains: query, mode: "insensitive" } },
+            { technology: { contains: query, mode: "insensitive" } },
+            { shortDescription: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          brand: true,
+          technology: true,
+          cardImageUrl: true,
+          weights: {
+            select: { price: true },
+            take: 1,
+            orderBy: { price: "asc" },
+          },
+        },
+        take: 5,
+      }),
+      prisma.printer.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { brand: { contains: query, mode: "insensitive" } },
+            { technology: { contains: query, mode: "insensitive" } },
+            { shortDescription: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          brand: true,
+          price: true,
+          technology: true,
+          images: { where: { isMain: true }, select: { url: true }, take: 1 },
         },
         take: 5,
       }),
     ]);
 
     const results = [
-      ...products.map((p) => ({ ...p, type: "product" })),
-      ...prebuiltProducts.map((p) => ({ ...p, type: "prebuilt" })),
+      ...products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image: p.images[0] || null,
+        subtitle: [p.category, p.color].filter(Boolean).join(" · "),
+        href: `/products/${p.id}`,
+        type: "product" as const,
+      })),
+      ...prebuiltProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.variants[0]?.price ?? null,
+        image: p.images[0]?.url || null,
+        subtitle: p.category,
+        href: `/prebuilt-products/${p.slug || p.id}`,
+        type: "prebuilt" as const,
+      })),
+      ...resins.map((r) => ({
+        id: r.id,
+        name: r.name,
+        price: r.weights[0]?.price ?? null,
+        image: r.cardImageUrl || null,
+        subtitle: [r.brand, r.technology].filter(Boolean).join(" · "),
+        href: `/resins/${r.slug}`,
+        type: "resin" as const,
+      })),
+      ...printers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        image: p.images[0]?.url || null,
+        subtitle: [p.brand, p.technology].filter(Boolean).join(" · "),
+        href: `/printers/${p.slug}`,
+        type: "printer" as const,
+      })),
     ];
 
     return NextResponse.json({
@@ -58,6 +151,7 @@ export async function GET(request: Request) {
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Unknown error occurred";
+    console.error("Search error:", errorMessage);
     return NextResponse.json(
       {
         error: true,

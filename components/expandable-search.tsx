@@ -10,9 +10,11 @@ import Image from "next/image";
 interface SearchResult {
   id: string;
   name: string;
-  type: "product" | "prebuilt";
-  price: number;
-  images: string[];
+  type: "product" | "prebuilt" | "resin" | "printer";
+  price: number | null;
+  image: string | null;
+  subtitle: string | null;
+  href: string;
 }
 
 export function ExpandableSearch() {
@@ -123,29 +125,35 @@ export function ExpandableSearch() {
             )}
           {searchResults.map((result) => (
             <Link
-              key={result.id}
-              href={
-                result.type === "product"
-                  ? `/products/${result.id}`
-                  : `/product/${result.id}`
-              }
+              key={`${result.type}-${result.id}`}
+              href={result.href}
               className="block px-4 py-2 hover:bg-gray-100"
             >
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-10 h-10 relative">
                   <Image
-                    src={result.images[0] || "/placeholder.svg"}
+                    src={result.image || "/placeholder.svg"}
                     alt={result.name}
                     fill
                     className="object-cover rounded-md"
-                    unoptimized={true} // Key prop
+                    unoptimized={true}
                   />
                 </div>
                 <div className="flex-grow">
                   <span className="text-sm font-medium text-gray-900">
                     {result.name}
                   </span>
+                  {result.subtitle && (
+                    <span className="block text-xs text-gray-500">
+                      {result.subtitle}
+                    </span>
+                  )}
                 </div>
+                {result.price != null && (
+                  <span className="text-sm font-semibold text-gray-700 flex-shrink-0">
+                    ₹{result.price.toLocaleString("en-IN")}
+                  </span>
+                )}
               </div>
             </Link>
           ))}
