@@ -99,18 +99,13 @@ const HeroContent = ({ onClick }: HeroContentProps) => {
 
 const PrinterHero = () => {
     return (
-        <div>
+        <div className="w-full">
             <Hero
-                content={
-                    <HeroContent
-                        onClick={() => {
-                            /*NOTHING FOR ON CLICK */
-                        }}
-                    />
-                }
+                content={<HeroContent onClick={() => {}} />}
                 url="https://res.cloudinary.com/dlbrgchrh/video/upload/v1767461878/printer-images/doef4s0pr9mzikpb6hzu.mp4"
                 type="video"
-                wrapperClass="xl:h-[830px] 2xl:h-screen"
+                wrapperClass="xl:h-[650px] 2xl:h-[650px]"
+                containerClass="!mb-0"
             />
         </div>
     );
