@@ -445,9 +445,6 @@ function PrinterCard({ printer }: { printer: any }) {
                         </h3>
 
                         {/* DESCRIPTION */}
-                        <p className="text-[14px] leading-[22.75px] tracking-[-0.15px] text-[#4A5565] mb-3 line-clamp-2">
-                            {printer.shortDescription || printer.description}
-                        </p>
 
                         {/* SPECS */}
                         <div className="text-sm text-gray-700 space-y-1">

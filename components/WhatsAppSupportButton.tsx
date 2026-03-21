@@ -37,10 +37,10 @@ export default function WhatsAppSupportButton({
             >
                 {/* Official WhatsApp icon */}
                 <img
-                    src="https://cdn.simpleicons.org/whatsapp/25D366"
+                    src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
                     alt="WhatsApp"
-                    width={22}
-                    height={22}
+                    width={24}
+                    height={24}
                 />
 
                 {/* Live dot */}
@@ -69,10 +69,10 @@ export default function WhatsAppSupportButton({
             >
                 {/* Official WhatsApp icon */}
                 <img
-                    src="https://cdn.simpleicons.org/whatsapp/25D366"
+                    src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
                     alt="WhatsApp"
-                    width={22}
-                    height={22}
+                    width={24}
+                    height={24}
                     className="flex-shrink-0"
                 />
 
