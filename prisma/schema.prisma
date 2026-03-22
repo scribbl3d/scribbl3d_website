@@ -205,11 +205,64 @@ model Blog {
   heroImage      String?  @db.VarChar(255)
 }
 
+model HeroBanner {
+  id        String  @id @default(cuid())
+
+  // Content
+  headline       String          // e.g. "INDUSTRIAL\nSTRENGTH."
+  headlineAccent String?         // e.g. "DESKTOP\nPRECISION." (the blue part)
+  subtext        String?         // e.g. "Engineered for reliability..."
+
+  // Media — paste Cloudinary URL directly (image or video)
+  mediaUrl  String              // Cloudinary URL for image or video
+  mediaType String @default("image") // "image" | "video"
+  altText   String?
+
+  // CTA Button
+  buttonText   String?          // e.g. "Explore Filaments"
+  buttonLink   String?          // e.g. "/filaments"
+
+  // Settings
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+  duration  Int     @default(5000) // Auto-advance in ms (ignored for video — uses video duration)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 model CarouselItem {
   id        String   @id @default(cuid())
   type      String
   src       String
   duration  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model CommunityImage {
+  id        String  @id @default(cuid())
+
+  imageUrl  String              // Cloudinary URL
+  altText   String?
+  linkPath  String?             // Optional — e.g. "/printers/xyz" or "/prebuilt-products/abc"
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model CustomerTestimonial {
+  id        String  @id @default(cuid())
+
+  quote     String
+  name      String              // "Marcus K."
+  role      String              // "Lead Engineer, Nexa Aero"
+  initials  String              // "MK"
+  rating    Int     @default(5) // 1-5 stars
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

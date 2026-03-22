@@ -40,10 +40,11 @@ export default function SelectedFiltersBar({
         // For array filters
         if (Array.isArray(value) && value.length > 0) {
             value.forEach((v) => {
+                const displayValue = v === "__all__" ? "All" : v;
                 chips.push({
                     key,
                     value: v,
-                    label: `${keyLabel}: ${v}`,
+                    label: `${keyLabel}: ${displayValue}`,
                 });
             });
         }

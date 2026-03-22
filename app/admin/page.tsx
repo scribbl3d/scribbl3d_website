@@ -30,6 +30,11 @@ export default function AdminPage() {
                         Orders
                     </Button>
                 </Link>{" "}
+                <Link href="/admin/landing" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Landing Page
+                    </Button>
+                </Link>
                 <Link href="/admin/products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Filaments
@@ -55,11 +60,6 @@ export default function AdminPage() {
                         Blogs
                     </Button>
                 </Link>
-                <Link href="/admin/carousel" className="block">
-                    <Button variant="outline" className="w-full h-24 text-lg">
-                        Carousel
-                    </Button>
-                </Link>
                 <Link href="/admin/small-batch-manufacturing" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Small Batch Manufacturing
@@ -83,11 +83,6 @@ export default function AdminPage() {
                 <Link href="/admin/announcements" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Manage Announcements
-                    </Button>
-                </Link>
-                <Link href="/admin/hero-images" className="block">
-                    <Button variant="outline" className="w-full h-24 text-lg">
-                        Manage Hero Images
                     </Button>
                 </Link>
                 <Link href="/admin/discounts" className="block">

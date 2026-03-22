@@ -8,19 +8,34 @@ import PrinterGrid from "@/components/printers/PrinterGrid";
 import PrinterHero from "@/components/printers/PrinterHero";
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const PAGE_LIMIT = 9;
 
 export default function PrintersPage() {
     const isInitialLoading = useAutoImageLoader();
+    const searchParams = useSearchParams();
+    const brandApplied = useRef(false);
+
     const [printers, setPrinters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
 
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<{
+        technology: string[];
+        brand: string[];
+        volumeCategory: string[];
+        material: string[];
+        recyclingRatio: string[];
+        chamberType: string[];
+        priceRange: any;
+        application: string[];
+        experience: string[];
+        connectivity: string[];
+    }>({
         technology: [],
         brand: [],
         volumeCategory: [],
@@ -33,7 +48,19 @@ export default function PrintersPage() {
         connectivity: [],
     });
 
-    const [selectedFilters, setSelectedFilters] = useState({
+    const [selectedFilters, setSelectedFilters] = useState<{
+        technology: string[];
+        brand: string[];
+        volumeCategory: string[];
+        material: string[];
+        recyclingRatio: string[];
+        chamberType: string[];
+        minPrice: string | null;
+        maxPrice: string | null;
+        application: string[];
+        experience: string[];
+        connectivity: string[];
+    }>({
         technology: [],
         brand: [],
         volumeCategory: [],
@@ -66,6 +93,24 @@ export default function PrintersPage() {
         );
     }, [selectedFilters]);
 
+    // ── Pre-select brand from URL query param ──
+    // Waits for filters.technology to load from the initial API call,
+    // then selects ALL technologies (to unlock brand filter) + the brand from URL.
+    // Runs only once via brandApplied ref.
+    useEffect(() => {
+        if (brandApplied.current) return;
+        const brandFromUrl = searchParams.get("brand");
+        if (!brandFromUrl) return;
+        if (!filters.technology || filters.technology.length === 0) return;
+
+        brandApplied.current = true;
+        setSelectedFilters((prev) => ({
+            ...prev,
+            technology: ["__all__"],
+            brand: [brandFromUrl],
+        }));
+    }, [searchParams, filters.technology]);
+
     useEffect(() => {
         fetchPrinters();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -80,18 +125,34 @@ export default function PrintersPage() {
         try {
             const params = new URLSearchParams();
             const arrayFilters = [
-                "technology", "brand", "volumeCategory", "material",
-                "recyclingRatio", "chamberType", "application", "experience", "connectivity",
+                "technology",
+                "brand",
+                "volumeCategory",
+                "material",
+                "recyclingRatio",
+                "chamberType",
+                "application",
+                "experience",
+                "connectivity",
             ];
             arrayFilters.forEach((key) => {
                 // @ts-ignore
-                if (selectedFilters[key]?.length > 0) {
-                    // @ts-ignore
-                    selectedFilters[key].forEach((val: string) => params.append(key, val));
-                }
+                const values = selectedFilters[key];
+                if (!values?.length) return;
+                // "__all__" means all technologies — skip sending to API (no filter = all)
+                if (
+                    key === "technology" &&
+                    values.length === 1 &&
+                    values[0] === "__all__"
+                )
+                    return;
+                // @ts-ignore
+                values.forEach((val: string) => params.append(key, val));
             });
-            if (selectedFilters.minPrice) params.append("minPrice", selectedFilters.minPrice);
-            if (selectedFilters.maxPrice) params.append("maxPrice", selectedFilters.maxPrice);
+            if (selectedFilters.minPrice)
+                params.append("minPrice", selectedFilters.minPrice);
+            if (selectedFilters.maxPrice)
+                params.append("maxPrice", selectedFilters.maxPrice);
             params.append("sortBy", sortBy);
             params.append("page", String(page));
             params.append("limit", String(PAGE_LIMIT));
@@ -114,9 +175,17 @@ export default function PrintersPage() {
 
     const resetFilters = () => {
         setSelectedFilters({
-            technology: [], brand: [], volumeCategory: [], material: [],
-            recyclingRatio: [], chamberType: [], minPrice: null, maxPrice: null,
-            application: [], experience: [], connectivity: [],
+            technology: [],
+            brand: [],
+            volumeCategory: [],
+            material: [],
+            recyclingRatio: [],
+            chamberType: [],
+            minPrice: null,
+            maxPrice: null,
+            application: [],
+            experience: [],
+            connectivity: [],
         });
     };
 
@@ -125,7 +194,10 @@ export default function PrintersPage() {
             // @ts-ignore
             const current = prev[filterKey];
             if (Array.isArray(current)) {
-                return { ...prev, [filterKey]: current.filter((v) => v !== value) };
+                return {
+                    ...prev,
+                    [filterKey]: current.filter((v) => v !== value),
+                };
             }
             return { ...prev, [filterKey]: null };
         });
@@ -155,9 +227,8 @@ export default function PrintersPage() {
 
                 {/* ── full-width gray background, content capped at 1400px ── */}
                 <div className="w-full bg-gray-50">
-<div className="w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
+                    <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
                         <div className="flex flex-col lg:flex-row gap-8">
-
                             {/* Sidebar */}
                             <div className="hidden lg:block lg:w-1/4">
                                 <FilterPanel
@@ -179,27 +250,48 @@ export default function PrintersPage() {
                                 <div className="hidden lg:flex mb-6 justify-between items-center">
                                     <p className="text-gray-600">
                                         Showing{" "}
-                                        <span className="font-semibold">{total}</span>{" "}
+                                        <span className="font-semibold">
+                                            {total}
+                                        </span>{" "}
                                         printer{total !== 1 ? "s" : ""}
                                     </p>
                                     <div className="relative min-w-[177px]">
                                         <select
                                             value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
+                                            onChange={(e) =>
+                                                setSortBy(e.target.value)
+                                            }
                                             className="w-full h-[38px] bg-white border border-[#D1D5DC] rounded-[10px] px-4 pr-10 text-sm text-gray-700 focus:outline-none appearance-none cursor-pointer"
                                         >
-                                            <option value="popularity">Sort by: Popularity</option>
-                                            <option value="new">New Arrivals</option>
-                                            <option value="price_asc">Price: Low to High</option>
-                                            <option value="price_desc">Price: High to Low</option>
-                                            <option value="discount_asc">Discount: Low to High</option>
-                                            <option value="discount_desc">Discount: High to Low</option>
+                                            <option value="popularity">
+                                                Sort by: Popularity
+                                            </option>
+                                            <option value="new">
+                                                New Arrivals
+                                            </option>
+                                            <option value="price_asc">
+                                                Price: Low to High
+                                            </option>
+                                            <option value="price_desc">
+                                                Price: High to Low
+                                            </option>
+                                            <option value="discount_asc">
+                                                Discount: Low to High
+                                            </option>
+                                            <option value="discount_desc">
+                                                Discount: High to Low
+                                            </option>
                                         </select>
                                         <svg
                                             className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                                            width="16" height="16" viewBox="0 0 24 24"
-                                            fill="none" stroke="#6B7280" strokeWidth="2"
-                                            strokeLinecap="round" strokeLinejoin="round"
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="#6B7280"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
                                         >
                                             <polyline points="6 9 12 15 18 9" />
                                         </svg>
@@ -210,7 +302,9 @@ export default function PrintersPage() {
                                 <div className="lg:hidden mb-4">
                                     <p className="text-sm text-gray-600">
                                         Showing{" "}
-                                        <span className="font-semibold">{total}</span>{" "}
+                                        <span className="font-semibold">
+                                            {total}
+                                        </span>{" "}
                                         printer{total !== 1 ? "s" : ""}
                                     </p>
                                 </div>
@@ -218,7 +312,9 @@ export default function PrintersPage() {
                                 {loading ? (
                                     <div className="text-center py-20">
                                         <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
-                                        <p className="mt-4 text-gray-600">Loading printers...</p>
+                                        <p className="mt-4 text-gray-600">
+                                            Loading printers...
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="pb-16 lg:pb-0">
