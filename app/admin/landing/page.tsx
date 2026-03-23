@@ -5,17 +5,20 @@ import {
     LayoutGrid,
     MessageSquareQuote,
     Sparkles,
+    Star,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import BestSellersTab from "./components/BestSellersTab";
 import CommunityShowcaseTab from "./components/CommunityShowcaseTab";
 import CustomerReviewsTab from "./components/CustomerReviewsTab";
 import HeroBannersTab from "./components/HeroBannersTab";
 
-type Tab = "hero" | "community" | "reviews";
+type Tab = "hero" | "community" | "reviews" | "bestsellers";
 
 const TABS: { key: Tab; label: string; icon: any }[] = [
     { key: "hero", label: "Hero Banners", icon: Sparkles },
+    { key: "bestsellers", label: "Best Sellers", icon: Star },
     { key: "community", label: "Community Showcase", icon: LayoutGrid },
     { key: "reviews", label: "Customer Reviews", icon: MessageSquareQuote },
 ];
@@ -68,6 +71,7 @@ export default function AdminLandingPage() {
 
                 {/* Tab content */}
                 {activeTab === "hero" && <HeroBannersTab />}
+                {activeTab === "bestsellers" && <BestSellersTab />}
                 {activeTab === "community" && <CommunityShowcaseTab />}
                 {activeTab === "reviews" && <CustomerReviewsTab />}
             </div>

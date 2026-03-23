@@ -11,6 +11,7 @@ async function getLandingData() {
         blogs,
         communityImages,
         testimonials,
+        bestSellers,
     ] = await Promise.all([
         prisma.heroBanner.findMany({
             where: { isActive: true },
@@ -151,6 +152,23 @@ async function getLandingData() {
                 rating: true,
             },
         }),
+
+        // Best Sellers
+        prisma.bestSeller.findMany({
+            where: { isActive: true },
+            orderBy: { sortOrder: "asc" },
+            select: {
+                id: true,
+                name: true,
+                variant: true,
+                price: true,
+                image: true,
+                href: true,
+                description: true,
+                specs: true,
+                isHero: true,
+            },
+        }),
     ]);
 
     // Build new arrivals — 1 from each type
@@ -230,12 +248,19 @@ async function getLandingData() {
         blogs: JSON.parse(JSON.stringify(blogs)),
         communityImages: JSON.parse(JSON.stringify(communityImages)),
         testimonials: JSON.parse(JSON.stringify(testimonials)),
+        bestSellers: JSON.parse(JSON.stringify(bestSellers)),
     };
 }
 
 export default async function Home() {
-    const { heroBanners, newArrivals, blogs, communityImages, testimonials } =
-        await getLandingData();
+    const {
+        heroBanners,
+        newArrivals,
+        blogs,
+        communityImages,
+        testimonials,
+        bestSellers,
+    } = await getLandingData();
 
     return (
         <main className="w-full">
@@ -245,6 +270,7 @@ export default async function Home() {
                 blogs={blogs}
                 communityImages={communityImages}
                 testimonials={testimonials}
+                bestSellers={bestSellers}
             />
         </main>
     );

@@ -266,6 +266,30 @@ model CustomerTestimonial {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+model BestSeller {
+  id          String   @id @default(cuid())
+
+  // Common fields (hero + small cards)
+  name        String
+  price       String              // stored as string e.g. "2323" — ₹ added by frontend
+  image       String              // Cloudinary URL
+  href        String              // e.g. "/printers/xyz"
+  isHero      Boolean  @default(false)
+
+  // Small card only
+  variant     String?             // e.g. "SHADOW BLACK"
+
+  // Hero card only
+  description String?             // shown below name on hero
+  specs       Json?               // [{ "label": "PRINT SPEED", "value": "500mm/s" }]
+
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 
 model FormResponse {
   id                  String   @id @default(cuid())

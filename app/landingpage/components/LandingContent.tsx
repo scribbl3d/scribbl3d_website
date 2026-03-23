@@ -20,6 +20,7 @@ interface LandingContentProps {
     blogs: any[];
     communityImages: any[];
     testimonials: any[];
+    bestSellers: any[];
 }
 
 export default function LandingContent({
@@ -28,6 +29,7 @@ export default function LandingContent({
     blogs,
     communityImages,
     testimonials,
+    bestSellers,
 }: LandingContentProps) {
     const isLoading = useAutoImageLoader();
     const [isReady, setIsReady] = useState(false);
@@ -53,7 +55,7 @@ export default function LandingContent({
                 <HeroBanner slides={heroBanners} animate={isReady} />
                 <BrowseByBrand />
                 <BrowseByEcosystem />
-                <BestSellers />
+                <BestSellers items={bestSellers} />
                 <NewArrivals items={newArrivals} />
                 <CustomPrinting />
                 <LearningHub blogs={blogs} />
