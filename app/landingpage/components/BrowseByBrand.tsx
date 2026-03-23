@@ -58,7 +58,7 @@ export default function BrowseByBrand({ animate = true }: BrowseByBrandProps) {
             <div className="max-w-[1400px] mx-auto">
                 <SplitText
                     as="p"
-                    className="text-sm sm:text-base font-semibold tracking-[0.3em] text-[#4f46e5] mb-2 uppercase justify-center text-center"
+                    className="text-base sm:text-lg font-semibold tracking-[0.3em] text-[#4f46e5] mb-2 uppercase justify-center text-center"
                     animate={animate}
                 >
                     Browse by Brand
@@ -85,7 +85,7 @@ export default function BrowseByBrand({ animate = true }: BrowseByBrandProps) {
                                 variants={logoVariant}
                                 src={brand.logo}
                                 alt={brand.name}
-                                className="h-20 sm:h-24 lg:h-[120px] w-auto object-contain group-hover:scale-110 transition-transform duration-300"
+                                className="h-28 sm:h-24 lg:h-[150px] w-auto object-contain  "
                             />
                         </Link>
                     ))}

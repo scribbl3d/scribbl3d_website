@@ -160,3 +160,18 @@
   margin: 6px 0 !important;
   line-height: 1.2 !important;
 }
+
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-33.33%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 15s linear infinite;
+}
