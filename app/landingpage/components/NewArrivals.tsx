@@ -159,25 +159,25 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                         </div>
                     </Link>
 
-                    {/* ── Selection List (right — 2/5) ── */}
-                    <div className="lg:col-span-6 flex flex-col justify-center gap-4">
+                    {/* ── Selection List (right) ── */}
+                    <div className="lg:col-span-6 flex flex-col justify-center gap-2">
                         {items.map((item, index) => (
                             <Link
                                 key={item.id}
                                 href={item.href}
                                 onMouseEnter={() => setActive(index)}
-                                className={`flex items-center gap-5 p-5 sm:p-6 rounded-3xl transition-all duration-300 border ${
+                                className={`flex items-center gap-5 p-4 rounded-2xl transition-all duration-300 border-2 ${
                                     active === index
-                                        ? "bg-white border-[#4f46e5] shadow-xl scale-[1.02]"
-                                        : "bg-transparent border-transparent hover:bg-white/50"
+                                        ? "bg-white border-[#4f46e5]/40 shadow-lg"
+                                        : "bg-transparent border-transparent hover:bg-white/40"
                                 }`}
                             >
-                                {/* Thumbnail */}
+                                {/* Thumbnail — bigger, rounded with subtle shadow */}
                                 <div
-                                    className={`w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-colors bg-gray-100 ${
+                                    className={`w-[72px] h-[72px] rounded-2xl overflow-hidden flex-shrink-0 bg-white shadow-sm transition-shadow ${
                                         active === index
-                                            ? "border-[#4f46e5]"
-                                            : "border-black/5"
+                                            ? "shadow-md ring-2 ring-[#4f46e5]/30"
+                                            : ""
                                     }`}
                                 >
                                     {item.image ? (
@@ -187,7 +187,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                             className="w-full h-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                                             <span className="text-[10px] text-gray-400">
                                                 No img
                                             </span>
@@ -195,38 +195,44 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                     )}
                                 </div>
 
-                                {/* Info */}
+                                {/* Info — name + description stacked */}
                                 <div className="flex-grow min-w-0">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <h4
-                                            className={`font-black transition-colors ${
-                                                active === index
-                                                    ? "text-[#4f46e5]"
-                                                    : "text-gray-900"
-                                            }`}
-                                        >
-                                            {item.name}
-                                        </h4>
-                                        <span className="text-[#4f46e5] font-mono font-bold flex-shrink-0 ml-3">
-                                            {formatPrice(item.price)}
-                                        </span>
-                                    </div>
+                                    <h4
+                                        className={`text-[15px] font-extrabold transition-colors truncate ${
+                                            active === index
+                                                ? "text-[#4f46e5]"
+                                                : "text-gray-900"
+                                        }`}
+                                    >
+                                        {item.name}
+                                    </h4>
                                     {item.description && (
-                                        <p className="text-xs text-gray-500 line-clamp-1">
+                                        <p className="text-[13px] text-gray-400 line-clamp-1 mt-0.5">
                                             {item.description}
                                         </p>
                                     )}
                                 </div>
+
+                                {/* Price — right aligned, mono style */}
+                                <span
+                                    className={`text-[17px] font-mono font-bold flex-shrink-0 ml-2 transition-colors ${
+                                        active === index
+                                            ? "text-[#4f46e5]"
+                                            : "text-[#4f46e5]/70"
+                                    }`}
+                                >
+                                    {formatPrice(item.price)}
+                                </span>
 
                                 {/* Arrow */}
                                 <div
                                     className={`transition-all duration-300 flex-shrink-0 ${
                                         active === index
                                             ? "translate-x-0 opacity-100"
-                                            : "-translate-x-3 opacity-0"
+                                            : "-translate-x-2 opacity-0"
                                     }`}
                                 >
-                                    <ChevronRight className="w-6 h-6 text-[#4f46e5]" />
+                                    <ChevronRight className="w-5 h-5 text-[#4f46e5]" />
                                 </div>
                             </Link>
                         ))}

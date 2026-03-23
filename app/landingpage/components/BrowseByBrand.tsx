@@ -53,7 +53,7 @@ export default function BrowseByBrand() {
     return (
         <section className="w-full bg-white border-y border-gray-100 py-5 sm:py-8 lg:py-10 overflow-hidden">
             <div className="max-w-[1400px] mx-auto px-6 sm:px-10 lg:px-16">
-                <p className="text-[10px] sm:text-sm lg:text-lg font-semibold tracking-[0.25em] sm:tracking-[0.3em] text-[#4f46e5] mb-1 sm:mb-2 uppercase text-center">
+                <p className="text-[10px] sm:text-sm lg:text-lg font-semibold tracking-[0.4em] sm:tracking-[0.5em] text-[#4f46e5] mb-1 sm:mb-2 uppercase text-center">
                     Browse by Brand
                 </p>
             </div>

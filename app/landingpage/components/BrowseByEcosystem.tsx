@@ -7,8 +7,7 @@ import { AnimatedSubtext, SplitText } from "./SplitText";
 const CATEGORIES = [
     {
         name: "Filaments",
-        description:
-            "Over 400+ colors and 12 materials in stock.\nShips within 24 hours.",
+        description: "Materials built for consistent, high-quality prints.",
         image: "/landing/ecosystem/filament.png",
         href: "/filaments",
         buttonText: "Explore Materials",
@@ -30,10 +29,10 @@ const CATEGORIES = [
     },
     {
         name: "Prebuilt Products",
-        description: "Custom on-demand printing for professionals.",
+        description: "Beautifully printed designs, ready to own.",
         image: "/landing/ecosystem/prebuilt.png",
         href: "/prebuilt-products",
-        buttonText: "LEARN MORE",
+        buttonText: "Discover Collection ",
         type: "wide", // wide card — col-span-2, left-aligned text
     },
 ];
