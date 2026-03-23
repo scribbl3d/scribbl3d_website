@@ -51,7 +51,7 @@ export default function LandingContent({
                 }}
             >
                 <HeroBanner slides={heroBanners} animate={isReady} />
-                <BrowseByBrand animate={isReady} />
+                <BrowseByBrand />
                 <BrowseByEcosystem />
                 <BestSellers />
                 <NewArrivals items={newArrivals} />

@@ -16,14 +16,14 @@ const CATEGORIES = [
     },
     {
         name: "Printers",
-        description: "Explore our extensive selection of 3D printers.",
+        description: "",
         image: "/landing/ecosystem/printer.png",
         href: "/printers",
         type: "small", // small card — centered text
     },
     {
         name: "Resins",
-        description: "Explore our extensive selection of resins",
+        description: "",
         image: "/landing/ecosystem/resin.png",
         href: "/resins",
         type: "small",
@@ -40,36 +40,46 @@ const CATEGORIES = [
 
 export default function BrowseByEcosystem() {
     return (
-        <section className="w-full bg-[#f5f5f5] py-16 sm:py-20 lg:py-24 px-6 sm:px-10 lg:px-16">
+        <section className="w-full bg-[#f5f5f5] py-10 sm:py-16 lg:py-24 px-4 sm:px-10 lg:px-16">
             <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
-                <div className="flex items-end justify-between mb-10 sm:mb-12">
+                <div className="flex items-end justify-between mb-6 sm:mb-10 lg:mb-12">
                     <div>
-                        <SplitText className="text-3xl sm:text-4xl font-black tracking-tight text-gray-900">
+                        <SplitText className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-gray-900">
                             Browse by Ecosystem
                         </SplitText>
-                        <AnimatedSubtext className="mt-2 text-sm sm:text-base text-gray-500">
+                        <AnimatedSubtext className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-500">
                             Everything you need from spool to final prototype.
                         </AnimatedSubtext>
                     </div>
                 </div>
 
-                {/* Bento grid — matching reference: 4 cols, 2 rows, fixed height */}
-                <div className="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-5 md:h-[650px] lg:h-[700px]">
+                {/* Bento grid — mobile: 2 cols; desktop: 4 cols, 2 rows */}
+                <div className="grid grid-cols-2 md:grid-cols-4 md:grid-rows-2 gap-3 sm:gap-5 md:h-[650px] lg:h-[700px]">
                     {CATEGORIES.map((cat) => {
                         // Grid span classes
+                        // Mobile: hero = full width (col-span-2), small = 1 col each, wide = full width (col-span-2)
+                        // Desktop: hero = 2×2, wide = 2×1, small = 1×1
                         const spanClass =
                             cat.type === "hero"
-                                ? "md:col-span-2 md:row-span-2"
+                                ? "col-span-2 md:row-span-2"
                                 : cat.type === "wide"
-                                  ? "md:col-span-2"
+                                  ? "col-span-2"
                                   : "";
+
+                        // Mobile heights: hero taller, small square-ish, wide shorter
+                        const heightClass =
+                            cat.type === "hero"
+                                ? "min-h-[240px] sm:min-h-[280px] md:min-h-0"
+                                : cat.type === "wide"
+                                  ? "min-h-[160px] sm:min-h-[200px] md:min-h-0"
+                                  : "min-h-[160px] sm:min-h-[200px] md:min-h-0";
 
                         return (
                             <Link
                                 key={cat.name}
                                 href={cat.href}
-                                className={`relative group overflow-hidden rounded-3xl bg-white shadow-sm min-h-[200px] ${spanClass}`}
+                                className={`relative group overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-sm ${spanClass} ${heightClass}`}
                             >
                                 {/* Image */}
                                 <img
@@ -90,35 +100,38 @@ export default function BrowseByEcosystem() {
                                 {/* Content */}
                                 {cat.type === "hero" ? (
                                     /* Hero card — bottom-left, large text */
-                                    <div className="absolute bottom-0 left-0 p-6 sm:p-8 lg:p-10">
-                                        <h3 className="text-white text-3xl sm:text-4xl font-extrabold mb-3">
+                                    <div className="absolute bottom-0 left-0 p-4 sm:p-8 lg:p-10">
+                                        <h3 className="text-white text-xl sm:text-3xl lg:text-4xl font-extrabold mb-1 sm:mb-3">
                                             {cat.name}
                                         </h3>
                                         {cat.description && (
-                                            <p className="text-white/80 text-base sm:text-lg mb-5 max-w-sm whitespace-pre-line">
+                                            <p className="text-white/80 text-xs sm:text-base lg:text-lg mb-3 sm:mb-5 max-w-sm whitespace-pre-line hidden sm:block">
                                                 {cat.description}
                                             </p>
                                         )}
                                         {cat.buttonText && (
-                                            <span className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-white bg-[#4f46e5] rounded-xl hover:bg-[#4338ca] transition-colors">
+                                            <span className="inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-bold text-white bg-[#4f46e5] rounded-lg sm:rounded-xl hover:bg-[#4338ca] transition-colors">
                                                 {cat.buttonText}{" "}
-                                                <ArrowRight size={20} />
+                                                <ArrowRight
+                                                    size={16}
+                                                    className="sm:w-5 sm:h-5"
+                                                />
                                             </span>
                                         )}
                                     </div>
                                 ) : cat.type === "wide" ? (
                                     /* Wide card — left-aligned, vertically centered */
-                                    <div className="absolute inset-y-0 left-0 p-6 sm:p-8 lg:p-10 flex flex-col justify-center">
-                                        <h3 className="text-white text-2xl sm:text-3xl font-extrabold mb-2">
+                                    <div className="absolute inset-y-0 left-0 p-4 sm:p-8 lg:p-10 flex flex-col justify-center">
+                                        <h3 className="text-white text-lg sm:text-2xl lg:text-3xl font-extrabold mb-1 sm:mb-2">
                                             {cat.name}
                                         </h3>
                                         {cat.description && (
-                                            <p className="text-white/80 text-sm mb-3 max-w-xs">
+                                            <p className="text-white/80 text-[11px] sm:text-sm mb-2 sm:mb-3 max-w-[200px] sm:max-w-xs">
                                                 {cat.description}
                                             </p>
                                         )}
                                         {cat.buttonText && (
-                                            <span className="text-[#a5b4fc] font-bold text-xs uppercase tracking-wider">
+                                            <span className="text-[#a5b4fc] font-bold text-[10px] sm:text-xs uppercase tracking-wider">
                                                 {cat.buttonText} →
                                             </span>
                                         )}
@@ -126,7 +139,7 @@ export default function BrowseByEcosystem() {
                                 ) : (
                                     /* Small cards — centered text */
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <h3 className="text-white text-xl sm:text-2xl font-bold">
+                                        <h3 className="text-white text-base sm:text-xl lg:text-2xl font-bold">
                                             {cat.name}
                                         </h3>
                                     </div>
@@ -135,8 +148,6 @@ export default function BrowseByEcosystem() {
                         );
                     })}
                 </div>
-
-                {/* Mobile link */}
             </div>
         </section>
     );

@@ -33,42 +33,43 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
     const current = items[active];
 
     return (
-        <section className="w-full bg-[#f5f5f5] py-16 px-6 sm:px-10 lg:px-16">
+        <section className="w-full bg-[#f5f5f5] py-10 sm:py-16 px-4 sm:px-10 lg:px-16">
             <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
-                <div className="mb-10">
-                    <SplitText className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-gray-900">
+                <div className="mb-6 sm:mb-10">
+                    <SplitText className="text-xl sm:text-2xl lg:text-4xl font-black tracking-tight text-gray-900">
                         New Arrivals
                     </SplitText>
-                    <AnimatedSubtext className="mt-2 text-sm text-gray-500">
+                    <AnimatedSubtext className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500">
                         The latest breakthroughs in 3D technology.
                     </AnimatedSubtext>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-4 items-center">
-                    {/* ── Spotlight Image (left — 3/5) ── */}
+                {/* ── Desktop: spotlight + list ── */}
+                <div className="hidden lg:grid lg:grid-cols-12 gap-10 items-center">
+                    {/* ── Spotlight Image (left — 7/12) ── */}
                     <Link
                         href={current.href}
-                        className="lg:col-span-3 relative rounded-3xl overflow-hidden bg-gradient-to-b from-gray-100 to-gray-200 group h-[350px] sm:h-[400px] lg:h-[430px]"
+                        className="lg:col-span-6 relative aspect-[4/3] rounded-[48px] overflow-hidden bg-gray-200 group"
                     >
-                        {/* Image — object-contain, anchored to top so bottom stays clear for text */}
+                        {/* Image — object-cover, fills the 4:3 container */}
                         <AnimatePresence initial={false}>
                             <motion.img
                                 key={current.id + "_img"}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
+                                initial={{ opacity: 0, scale: 1.1 }}
+                                animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.4 }}
+                                transition={{ duration: 0.6 }}
                                 src={current.image || ""}
                                 alt={current.name}
-                                className="absolute inset-0 w-full h-full object-contain object-top pt-4 px-4"
+                                className="absolute inset-0 w-full h-full object-cover"
                             />
                         </AnimatePresence>
 
-                        {/* Solid dark strip at bottom for text readability */}
-                        <div className="absolute bottom-0 left-0 right-0 h-[55%] bg-gradient-to-t from-[#111] via-[#111]/95 to-transparent" />
+                        {/* Gradient overlay for text */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+                        <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-10 lg:p-12">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={current.id + "_text"}
@@ -86,7 +87,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                     }}
                                 >
                                     {/* Name — word-by-word wave */}
-                                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-white mb-2 overflow-hidden">
+                                    <h3 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white mb-4 overflow-hidden">
                                         {current.name
                                             .split(" ")
                                             .map((word, i) => (
@@ -117,7 +118,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                     {/* Description — fade up */}
                                     {current.description && (
                                         <motion.p
-                                            className="text-white/70 text-sm max-w-sm mb-5 line-clamp-2"
+                                            className="text-white/80 text-base sm:text-xl max-w-md mb-8 line-clamp-2"
                                             variants={{
                                                 hidden: { y: 20, opacity: 0 },
                                                 visible: {
@@ -136,7 +137,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
 
                                     {/* Button — slide from left */}
                                     <motion.span
-                                        className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-[#4f46e5] rounded-lg hover:bg-[#4338ca] transition-colors"
+                                        className="inline-flex items-center gap-2 px-8 py-4 text-base font-bold text-white bg-[#4f46e5] rounded-2xl hover:bg-[#4338ca] transition-colors"
                                         variants={{
                                             hidden: { x: -30, opacity: 0 },
                                             visible: {
@@ -159,24 +160,24 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                     </Link>
 
                     {/* ── Selection List (right — 2/5) ── */}
-                    <div className="lg:col-span-2 flex flex-col justify-center gap-3">
+                    <div className="lg:col-span-6 flex flex-col justify-center gap-4">
                         {items.map((item, index) => (
                             <Link
                                 key={item.id}
                                 href={item.href}
                                 onMouseEnter={() => setActive(index)}
-                                className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 border ${
+                                className={`flex items-center gap-5 p-5 sm:p-6 rounded-3xl transition-all duration-300 border ${
                                     active === index
-                                        ? "bg-white border-[#4f46e5]/40 shadow-md"
-                                        : "bg-white/60 border-gray-200 hover:bg-white hover:border-gray-300 hover:shadow-sm"
+                                        ? "bg-white border-[#4f46e5] shadow-xl scale-[1.02]"
+                                        : "bg-transparent border-transparent hover:bg-white/50"
                                 }`}
                             >
                                 {/* Thumbnail */}
                                 <div
-                                    className={`w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-colors bg-gray-100 ${
+                                    className={`w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 border-2 transition-colors bg-gray-100 ${
                                         active === index
-                                            ? "border-[#4f46e5]/50"
-                                            : "border-gray-200"
+                                            ? "border-[#4f46e5]"
+                                            : "border-black/5"
                                     }`}
                                 >
                                     {item.image ? (
@@ -195,10 +196,10 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                 </div>
 
                                 {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2 mb-0.5">
+                                <div className="flex-grow min-w-0">
+                                    <div className="flex justify-between items-center mb-1">
                                         <h4
-                                            className={`text-sm font-bold transition-colors truncate ${
+                                            className={`font-black transition-colors ${
                                                 active === index
                                                     ? "text-[#4f46e5]"
                                                     : "text-gray-900"
@@ -206,12 +207,12 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                         >
                                             {item.name}
                                         </h4>
-                                        <span className="text-sm font-bold text-[#4f46e5] font-mono flex-shrink-0">
+                                        <span className="text-[#4f46e5] font-mono font-bold flex-shrink-0 ml-3">
                                             {formatPrice(item.price)}
                                         </span>
                                     </div>
                                     {item.description && (
-                                        <p className="text-xs text-gray-500 truncate">
+                                        <p className="text-xs text-gray-500 line-clamp-1">
                                             {item.description}
                                         </p>
                                     )}
@@ -225,7 +226,53 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                             : "-translate-x-3 opacity-0"
                                     }`}
                                 >
-                                    <ChevronRight className="w-5 h-5 text-[#4f46e5]" />
+                                    <ChevronRight className="w-6 h-6 text-[#4f46e5]" />
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ── Mobile/Tablet: 2×2 grid ── */}
+                <div className="lg:hidden">
+                    <div className="grid grid-cols-2 gap-3">
+                        {items.map((item) => (
+                            <Link
+                                key={item.id}
+                                href={item.href}
+                                className="bg-white rounded-2xl border border-gray-100 overflow-hidden group active:scale-[0.98] transition-transform"
+                            >
+                                {/* Image */}
+                                <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                                    {item.image ? (
+                                        <img
+                                            src={item.image}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                                            <span className="text-[10px] text-gray-400">
+                                                No image
+                                            </span>
+                                        </div>
+                                    )}
+                                    {/* Type badge */}
+                                    <span className="absolute top-2 left-2 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white bg-[#4f46e5]/90 rounded-md backdrop-blur-sm">
+                                        {item.type}
+                                    </span>
+                                </div>
+                                {/* Info */}
+                                <div className="p-3">
+                                    <h4 className="text-xs font-bold text-gray-900 truncate">
+                                        {item.name}
+                                    </h4>
+                                    <div className="flex items-center justify-between mt-1.5">
+                                        <span className="text-xs font-bold text-[#4f46e5]">
+                                            {formatPrice(item.price)}
+                                        </span>
+                                        <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+                                    </div>
                                 </div>
                             </Link>
                         ))}

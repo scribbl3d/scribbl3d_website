@@ -82,7 +82,7 @@ function SplitHeadline({ text, animate }: { text: string; animate: boolean }) {
             {...(animate
                 ? { whileInView: "visible", viewport: { margin: "-50px" } }
                 : {})}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[0.95] tracking-tight uppercase"
+            className="font-manrope text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold text-white leading-[0.9] tracking-tighter"
         >
             {lines.map((line, lineIndex) => (
                 <span key={lineIndex} className="block overflow-hidden">
@@ -166,7 +166,7 @@ export default function HeroBanner({
 
     return (
         <section
-            className="relative w-full h-[800vh] min-h-[580px] max-h-[900px] overflow-hidden bg-[#0a0a0f]"
+            className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[450px] max-h-[900px] overflow-hidden bg-[#0a0a0f]"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
@@ -195,7 +195,7 @@ export default function HeroBanner({
                             className="w-full h-full object-cover"
                         />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/20" />
                 </div>
             ))}
 
@@ -203,7 +203,7 @@ export default function HeroBanner({
             <AnimatePresence mode="wait">
                 <motion.div
                     key={slide.id}
-                    className="relative z-10 h-full flex flex-col justify-center px-6 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto"
+                    className="relative z-10 h-full flex flex-col justify-end pb-12 sm:pb-0 sm:justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto"
                 >
                     {/* Headline — word-by-word wave */}
                     <SplitHeadline
@@ -222,7 +222,7 @@ export default function HeroBanner({
                                       viewport: { margin: "-50px" },
                                   }
                                 : {})}
-                            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-[#4f46e5] leading-[0.95] tracking-tight uppercase mt-1"
+                            className="font-manrope text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold text-[#c4b5fd] leading-[0.9] tracking-tighter mt-1"
                         >
                             {slide.headlineAccent.split("\n").map((line, i) => (
                                 <span key={i} className="block">
@@ -243,7 +243,7 @@ export default function HeroBanner({
                                       viewport: { margin: "-50px" },
                                   }
                                 : {})}
-                            className="mt-6 text-base sm:text-lg text-gray-300 max-w-md leading-relaxed"
+                            className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed"
                         >
                             {slide.subtext}
                         </motion.p>
@@ -260,11 +260,11 @@ export default function HeroBanner({
                                       viewport: { margin: "-50px" },
                                   }
                                 : {})}
-                            className="mt-8"
+                            className="mt-6 sm:mt-10"
                         >
                             <Link
                                 href={slide.buttonLink}
-                                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white bg-[#4f46e5] rounded-lg hover:bg-[#4338ca] transition-colors"
+                                className="inline-flex items-center gap-2 sm:gap-3 px-5 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] rounded-xl shadow-lg shadow-[#4f46e5]/20 hover:scale-[1.02] transition-transform"
                             >
                                 {slide.buttonText}
                                 <svg
@@ -299,15 +299,15 @@ export default function HeroBanner({
 
             {/* Slide indicators */}
             {slides.length > 1 && (
-                <div className="absolute bottom-6 right-6 sm:right-10 lg:right-16 flex items-center gap-2 z-10">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:bottom-8 sm:right-12 lg:right-16 flex items-center gap-2 sm:gap-3 z-10">
                     {slides.map((_, i) => (
                         <button
                             key={i}
                             onClick={() => setCurrent(i)}
                             className={`h-1 rounded-full transition-all duration-300 ${
                                 i === current
-                                    ? "w-10 bg-white"
-                                    : "w-6 bg-white/40 hover:bg-white/60"
+                                    ? "w-8 sm:w-12 bg-white"
+                                    : "w-8 sm:w-12 bg-white/30 hover:bg-white/50"
                             }`}
                             aria-label={`Go to slide ${i + 1}`}
                         />
