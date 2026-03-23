@@ -429,23 +429,23 @@ export default function PrinterDetailPage() {
         <div className="min-h-screen bg-gray-50 pt-16">
             {/* Header */}
             <div className="bg-white border-b border-gray-200">
-                <div className="container mx-auto px-4 py-4 mt-3">
+                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 mt-3">
                     <Link
                         href="/printers"
-                        className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+                        className="inline-flex items-center text-xs sm:text-sm text-gray-600 hover:text-gray-900"
                     >
-                        <ArrowLeft className="w-4 h-2 mr-2" />
+                        <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-2 mr-1.5 sm:mr-2" />
                         Back to all printers
                     </Link>
                 </div>
             </div>
 
-            <div className="container mx-auto px-4 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
                     {/* Left Column - Images */}
                     <div className="lg:self-start lg:sticky lg:top-28">
                         <div
-                            className="bg-white rounded-lg border border-gray-200 p-4 mb-4"
+                            className="bg-white rounded-lg border border-gray-200 p-2 sm:p-4 mb-2 sm:mb-4"
                             onMouseEnter={() => setIsHovering(true)}
                             onMouseLeave={() => setIsHovering(false)}
                             onTouchStart={onTouchStart}
@@ -481,23 +481,24 @@ export default function PrinterDetailPage() {
                                                 </div>
                                             ))}
                                         </div>
-                                        {isHovering && totalImages > 1 && (
+                                        {/* Nav buttons - always visible on mobile for touch, hover on desktop */}
+                                        {totalImages > 1 && (
                                             <>
                                                 <button
                                                     onClick={prev}
                                                     aria-label="Previous image"
-                                                    className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:scale-110 group"
+                                                    className={`absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 bg-white/80 sm:bg-white rounded-full flex items-center justify-center shadow transition-all ${isHovering ? "opacity-100" : "opacity-60 sm:opacity-0"}`}
                                                 >
-                                                    <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                                    <span className="text-black text-sm sm:text-base">
                                                         <ArrowLefti />
                                                     </span>
                                                 </button>
                                                 <button
                                                     onClick={next}
                                                     aria-label="Next image"
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-transform duration-300 hover:scale-110 group"
+                                                    className={`absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 bg-white/80 sm:bg-white rounded-full flex items-center justify-center shadow transition-all ${isHovering ? "opacity-100" : "opacity-60 sm:opacity-0"}`}
                                                 >
-                                                    <span className="text-black transition-transform duration-300 group-hover:scale-125">
+                                                    <span className="text-black text-sm sm:text-base">
                                                         <ArrowRight />
                                                     </span>
                                                 </button>
@@ -505,7 +506,7 @@ export default function PrinterDetailPage() {
                                         )}
                                         {/* Out of Stock badge */}
                                         {isOutOfStock && (
-                                            <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full z-10">
+                                            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-1 sm:px-3 sm:py-1.5 rounded-full z-10">
                                                 Out of Stock
                                             </div>
                                         )}
@@ -521,12 +522,12 @@ export default function PrinterDetailPage() {
                         </div>
 
                         {/* Thumbnails */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center">
+                        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center">
                             {printer.images?.map((image, index) => (
                                 <button
                                     key={image.id}
                                     onClick={() => setCurrent(index)}
-                                    className={`w-20 h-20 rounded-lg border-2 overflow-hidden transition flex-shrink-0 ${
+                                    className={`w-14 h-14 sm:w-20 sm:h-20 rounded-lg border-2 overflow-hidden transition flex-shrink-0 ${
                                         current === index
                                             ? "border-blue-600"
                                             : "border-gray-300"
@@ -548,59 +549,59 @@ export default function PrinterDetailPage() {
 
                     {/* Right Column - Product Info */}
                     <div>
-                        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
-                            <p className="text-sm text-gray-600 mb-2">
+                        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 relative">
+                            <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">
                                 {printer.brand}
                             </p>
 
                             <button
                                 onClick={handleToggleWishlist}
                                 disabled={isWishlistLoading}
-                                className="absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow flex items-center justify-center"
+                                className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
                             >
                                 {isWishlistLoading ? (
-                                    <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                                 ) : (
                                     <Heart
-                                        className={`w-5 h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                                        className={`w-4 h-4 sm:w-5 sm:h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
                                     />
                                 )}
                             </button>
 
-                            <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-10">
                                 {printer.name}
                             </h1>
-                            <p className="text-gray-700 mb-4 break-words">
+                            <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 break-words">
                                 {printer.shortDescription}
                             </p>
 
-                            <div className="flex flex-wrap gap-2 mb-6">
-                                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
+                                <span className="px-2 py-0.5 sm:px-3 sm:py-1 bg-blue-100 text-blue-800 text-[10px] sm:text-xs font-semibold rounded-full">
                                     {printer.technology}
                                 </span>
-                                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                <span className="px-2 py-0.5 sm:px-3 sm:py-1 bg-green-100 text-green-800 text-[10px] sm:text-xs font-semibold rounded-full">
                                     High-Speed Printing
                                 </span>
                             </div>
 
                             {/* Price */}
-                            <div className="mb-6">
-                                <div className="flex items-baseline gap-3">
+                            <div className="mb-4 sm:mb-6">
+                                <div className="flex items-baseline gap-2 sm:gap-3">
                                     {printer.originalPrice && (
                                         <>
-                                            <span className="text-lg text-gray-400 line-through">
+                                            <span className="text-sm sm:text-lg text-gray-400 line-through">
                                                 ₹
                                                 {printer.originalPrice.toLocaleString(
                                                     "en-IN",
                                                 )}
                                             </span>
-                                            <span className="text-sm font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded">
+                                            <span className="text-xs sm:text-sm font-semibold text-green-600 bg-green-100 px-1.5 sm:px-2 py-0.5 rounded">
                                                 {printer.discount}% off
                                             </span>
                                         </>
                                     )}
                                 </div>
-                                <p className="text-4xl font-bold text-gray-900 mt-1">
+                                <p className="text-2xl sm:text-4xl font-bold text-gray-900 mt-1">
                                     ₹{printer.price.toLocaleString("en-IN")}
                                 </p>
                                 {printer.originalPrice && (
@@ -620,13 +621,13 @@ export default function PrinterDetailPage() {
 
                             {/* Quantity — only shown when in stock */}
                             {!isOutOfStock && (
-                                <div className="mb-6">
-                                    <p className="text-sm font-medium text-gray-700 mb-2">
+                                <div className="mb-4 sm:mb-6">
+                                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                                         Quantity
                                     </p>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 sm:gap-3">
                                         <button
-                                            className="w-10 h-10 flex items-center justify-center rounded-[10px] border-2 border-[#D1D5DC] text-xl text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                                            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg sm:rounded-[10px] border-2 border-[#D1D5DC] text-lg sm:text-xl text-gray-700 hover:bg-gray-100 disabled:opacity-50"
                                             onClick={() =>
                                                 setQuantity((q) =>
                                                     Math.max(1, q - 1),
@@ -654,10 +655,10 @@ export default function PrinterDetailPage() {
                                                     ),
                                                 );
                                             }}
-                                            className="w-[80px] h-[40px] border-2 border-[#D1D5DC] rounded-[10px] text-center text-base font-medium text-gray-900 focus:outline-none"
+                                            className="w-[60px] h-[32px] sm:w-[80px] sm:h-[40px] border-2 border-[#D1D5DC] rounded-lg sm:rounded-[10px] text-center text-sm sm:text-base font-medium text-gray-900 focus:outline-none"
                                         />
                                         <button
-                                            className="w-10 h-10 flex items-center justify-center rounded-[10px] border-2 border-[#D1D5DC] text-xl text-gray-700 hover:bg-gray-100"
+                                            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg sm:rounded-[10px] border-2 border-[#D1D5DC] text-lg sm:text-xl text-gray-700 hover:bg-gray-100"
                                             onClick={() =>
                                                 setQuantity((q) => q + 1)
                                             }
@@ -669,10 +670,10 @@ export default function PrinterDetailPage() {
                             )}
 
                             {/* CTA Buttons */}
-                            <div className="space-y-3 mb-6">
+                            <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                                 {/* Add to Cart / Out of Stock */}
                                 <button
-                                    className={`relative w-full py-3 font-semibold rounded-lg transition-colors flex items-center justify-center ${
+                                    className={`relative w-full py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg transition-colors flex items-center justify-center ${
                                         isOutOfStock
                                             ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                                             : "bg-blue-600 text-white hover:bg-blue-700"
@@ -716,7 +717,7 @@ export default function PrinterDetailPage() {
                                 {/* Contact Sales — hidden when out of stock */}
                                 {!isOutOfStock && (
                                     <button
-                                        className="w-full py-3 bg-white text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                                        className="w-full py-2.5 sm:py-3 bg-white text-sm sm:text-base text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
                                         onClick={() => {
                                             const message = `Hi, I'd like to request a custom quote for ${printer.name} based on my requirements.`;
                                             window.open(
@@ -732,7 +733,7 @@ export default function PrinterDetailPage() {
 
                             {/* Benefits — only when in stock */}
                             {!isOutOfStock && (
-                                <div className="flex items-center gap-4 text-sm text-gray-700 mb-6">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-700 mb-4 sm:mb-6">
                                     <div className="flex items-center gap-2">
                                         <Check className="w-4 h-4 text-green-600" />
                                         <span>Free installation support</span>
@@ -748,8 +749,8 @@ export default function PrinterDetailPage() {
                             )}
 
                             {/* Quick Specifications */}
-                            <div className="border-t border-gray-200 pt-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            <div className="border-t border-gray-200 pt-4 sm:pt-6">
+                                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                                     Quick Specifications
                                 </h3>
                                 <div className="space-y-3">
@@ -796,12 +797,12 @@ export default function PrinterDetailPage() {
                                         .map(({ label, value }) => (
                                             <div
                                                 key={label}
-                                                className="flex justify-between items-start gap-4 py-2 border-b border-gray-100 last:border-0"
+                                                className="flex justify-between items-start gap-2 sm:gap-4 py-1.5 sm:py-2 border-b border-gray-100 last:border-0"
                                             >
-                                                <span className="text-sm text-gray-500 shrink-0 max-w-[35%]">
+                                                <span className="text-xs sm:text-sm text-gray-500 shrink-0 max-w-[40%]">
                                                     {label}
                                                 </span>
-                                                <span className="text-sm font-medium text-gray-900 text-right max-w-[60%] break-words">
+                                                <span className="text-xs sm:text-sm font-medium text-gray-900 text-right max-w-[55%] break-words">
                                                     {value}
                                                 </span>
                                             </div>
@@ -815,7 +816,7 @@ export default function PrinterDetailPage() {
                 {/* Tabs Section */}
                 <div className="bg-white rounded-lg border border-gray-200">
                     <div className="border-b border-gray-200">
-                        <nav className="flex overflow-x-auto border-b px-4">
+                        <nav className="flex overflow-x-auto border-b px-2 sm:px-4 scrollbar-hide">
                             {[
                                 "specifications",
                                 "features",
@@ -826,7 +827,7 @@ export default function PrinterDetailPage() {
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-600 hover:text-gray-900"}`}
+                                    className={`px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-600 hover:text-gray-900"}`}
                                 >
                                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
                                 </button>
@@ -834,7 +835,7 @@ export default function PrinterDetailPage() {
                         </nav>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-3 sm:p-6">
                         {activeTab === "specifications" && (
                             <SpecificationsTab specifications={groupedSpecs} />
                         )}
@@ -846,17 +847,17 @@ export default function PrinterDetailPage() {
                         )}
                         {activeTab === "description" && (
                             <div>
-                                <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
                                     About {printer.name}
                                 </h3>
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="lg:col-span-2 bg-gray-50 rounded-xl p-6 border border-gray-100">
-                                        <p className="text-gray-700 leading-relaxed text-[15px]">
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                                    <div className="lg:col-span-2 bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-100">
+                                        <p className="text-gray-700 leading-relaxed text-sm sm:text-[15px]">
                                             {printer.description}
                                         </p>
                                     </div>
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center gap-4 bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+                                    <div className="flex lg:flex-col gap-2 sm:gap-3 overflow-x-auto lg:overflow-visible scrollbar-hide">
+                                        <div className="flex items-center gap-3 sm:gap-4 bg-blue-50 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 border border-blue-100 flex-shrink-0 min-w-[160px] lg:min-w-0">
                                             <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
                                                 <svg
                                                     className="w-5 h-5 text-blue-600"
@@ -881,7 +882,7 @@ export default function PrinterDetailPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4 bg-green-50 rounded-xl px-4 py-3 border border-green-100">
+                                        <div className="flex items-center gap-3 sm:gap-4 bg-green-50 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 border border-green-100 flex-shrink-0 min-w-[160px] lg:min-w-0">
                                             <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
                                                 <svg
                                                     className="w-5 h-5 text-green-600"
@@ -908,7 +909,7 @@ export default function PrinterDetailPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4 bg-purple-50 rounded-xl px-4 py-3 border border-purple-100">
+                                        <div className="flex items-center gap-3 sm:gap-4 bg-purple-50 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 border border-purple-100 flex-shrink-0 min-w-[160px] lg:min-w-0">
                                             <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
                                                 <svg
                                                     className="w-5 h-5 text-purple-600"
@@ -951,7 +952,7 @@ export default function PrinterDetailPage() {
                 </div>
 
                 {/* Similar Printers */}
-                <div className="mt-12">
+                <div className="mt-6 sm:mt-12">
                     <SimilarPrintersCarousel
                         currentPrinterId={printer.id}
                         technology={printer.technology}
@@ -1144,44 +1145,44 @@ function PrinterDetailSkeleton() {
     return (
         <div className="min-h-screen bg-gray-50 animate-pulse">
             <div className="bg-white border-b border-gray-200">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="h-5 w-40 bg-gray-200 rounded"></div>
+                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+                    <div className="h-4 sm:h-5 w-32 sm:w-40 bg-gray-200 rounded"></div>
                 </div>
             </div>
-            <div className="container mx-auto px-4 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
                     <div className="lg:self-start lg:sticky lg:top-28">
-                        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                        <div className="bg-white rounded-lg border border-gray-200 p-2 sm:p-4 mb-2 sm:mb-4">
                             <div className="w-full aspect-square bg-gray-200 rounded-lg"></div>
                         </div>
-                        <div className="flex gap-2 justify-center">
+                        <div className="flex gap-1.5 sm:gap-2 justify-center">
                             {[1, 2, 3, 4].map((i) => (
                                 <div
                                     key={i}
-                                    className="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0"
+                                    className="w-14 h-14 sm:w-20 sm:h-20 bg-gray-200 rounded-lg flex-shrink-0"
                                 ></div>
                             ))}
                         </div>
                     </div>
                     <div>
-                        <div className="bg-white rounded-lg border border-gray-200 p-6">
-                            <div className="h-4 w-24 bg-gray-200 rounded mb-2"></div>
-                            <div className="h-8 w-3/4 bg-gray-200 rounded mb-3"></div>
+                        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+                            <div className="h-3 sm:h-4 w-20 sm:w-24 bg-gray-200 rounded mb-2"></div>
+                            <div className="h-6 sm:h-8 w-3/4 bg-gray-200 rounded mb-3"></div>
                             <div className="space-y-2 mb-4">
-                                <div className="h-4 w-full bg-gray-200 rounded"></div>
-                                <div className="h-4 w-5/6 bg-gray-200 rounded"></div>
+                                <div className="h-3 sm:h-4 w-full bg-gray-200 rounded"></div>
+                                <div className="h-3 sm:h-4 w-5/6 bg-gray-200 rounded"></div>
                             </div>
-                            <div className="flex gap-2 mb-6">
-                                <div className="h-6 w-20 bg-gray-200 rounded-full"></div>
-                                <div className="h-6 w-32 bg-gray-200 rounded-full"></div>
+                            <div className="flex gap-2 mb-4 sm:mb-6">
+                                <div className="h-5 sm:h-6 w-16 sm:w-20 bg-gray-200 rounded-full"></div>
+                                <div className="h-5 sm:h-6 w-24 sm:w-32 bg-gray-200 rounded-full"></div>
                             </div>
-                            <div className="mb-6">
-                                <div className="h-4 w-12 bg-gray-200 rounded mb-1"></div>
-                                <div className="h-10 w-40 bg-gray-200 rounded mb-2"></div>
+                            <div className="mb-4 sm:mb-6">
+                                <div className="h-3 sm:h-4 w-12 bg-gray-200 rounded mb-1"></div>
+                                <div className="h-8 sm:h-10 w-32 sm:w-40 bg-gray-200 rounded mb-2"></div>
                             </div>
-                            <div className="space-y-3 mb-6">
-                                <div className="h-12 w-full bg-gray-200 rounded-lg"></div>
-                                <div className="h-12 w-full bg-gray-200 rounded-lg"></div>
+                            <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                                <div className="h-10 sm:h-12 w-full bg-gray-200 rounded-lg"></div>
+                                <div className="h-10 sm:h-12 w-full bg-gray-200 rounded-lg"></div>
                             </div>
                         </div>
                     </div>

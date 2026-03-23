@@ -29,10 +29,7 @@ type Printer = {
     imageUrl?: string;
     inStock?: boolean;
     images?: { url: string }[];
-    attributes?: {
-        attributeKey: string;
-        attributeValue: string;
-    }[];
+    attributes?: { attributeKey: string; attributeValue: string }[];
 };
 
 /* ── Notify Me Modal ── */
@@ -112,7 +109,6 @@ function NotifyMeModal({
                         <X size={18} />
                     </button>
                 </div>
-
                 <div className="p-5">
                     {done ? (
                         <div className="flex flex-col items-center py-6 text-center gap-3">
@@ -215,23 +211,19 @@ export default function SimilarPrintersCarousel({
 }: SimilarPrintersCarouselProps) {
     const [printers, setPrinters] = useState<Printer[]>([]);
     const [loading, setLoading] = useState(true);
-
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (!scrollRef.current || printers.length <= 1) return;
-
         const container = scrollRef.current;
-        const cardWidth = container.firstElementChild?.clientWidth || 0;
         container.scrollLeft = 0;
-
         const interval = setInterval(() => {
+            const cardWidth = container.firstElementChild?.clientWidth || 0;
             container.scrollBy({ left: cardWidth, behavior: "smooth" });
             if (container.scrollLeft >= container.scrollWidth / 2) {
                 container.scrollTo({ left: 0, behavior: "auto" });
             }
         }, 3000);
-
         return () => clearInterval(interval);
     }, [printers]);
 
@@ -253,51 +245,47 @@ export default function SimilarPrintersCarousel({
         }
     };
 
-    const scrollLeft = () => {
+    const scroll = (dir: "left" | "right") => {
         const container = scrollRef.current;
         if (!container) return;
         const cardWidth = container.firstElementChild?.clientWidth || 0;
-        container.scrollBy({ left: -cardWidth, behavior: "smooth" });
-    };
-
-    const scrollRight = () => {
-        const container = scrollRef.current;
-        if (!container) return;
-        const cardWidth = container.firstElementChild?.clientWidth || 0;
-        container.scrollBy({ left: cardWidth, behavior: "smooth" });
+        container.scrollBy({
+            left: dir === "left" ? -cardWidth : cardWidth,
+            behavior: "smooth",
+        });
     };
 
     if (loading || printers.length === 0) return null;
 
     return (
-        <div className="py-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="py-4 sm:py-8">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-6">
                 Similar Printers
             </h2>
 
             <div className="relative">
+                {/* Arrow buttons — hidden on mobile (swipe), visible on sm+ */}
                 <button
-                    onClick={scrollLeft}
-                    className="absolute left-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow flex items-center justify-center hover:bg-gray-100"
+                    onClick={() => scroll("left")}
+                    className="hidden sm:flex absolute left-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow items-center justify-center hover:bg-gray-100"
                 >
                     <ChevronLeft className="w-5 h-5" />
                 </button>
-
                 <button
-                    onClick={scrollRight}
-                    className="absolute right-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow flex items-center justify-center hover:bg-gray-100"
+                    onClick={() => scroll("right")}
+                    className="hidden sm:flex absolute right-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow items-center justify-center hover:bg-gray-100"
                 >
                     <ChevronRight className="w-5 h-5" />
                 </button>
 
                 <div
                     ref={scrollRef}
-                    className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-4"
+                    className="flex gap-3 sm:gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-2 sm:pb-4"
                 >
                     {[...printers, ...printers].map((printer, index) => (
                         <div
                             key={`${printer.id}-${index}`}
-                            className="snap-start flex-shrink-0 w-[85%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
+                            className="snap-start flex-shrink-0 w-[48%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
                         >
                             <SimilarPrinterCard printer={printer} />
                         </div>
@@ -315,21 +303,13 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
     const [isCartLoading, setIsCartLoading] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
-
     const { data: session } = useSession();
     const { addToCart } = useCart();
-
     const isOutOfStock = printer.inStock === false;
-
-    const materials =
-        printer.attributes
-            ?.filter((a) => a.attributeKey === "material")
-            .map((a) => a.attributeValue) || [];
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
         if (isOutOfStock) return;
-
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -346,7 +326,6 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
             });
             return;
         }
-
         try {
             setIsCartLoading(true);
             await addToCart({ printerId: printer.id, quantity: 1 });
@@ -364,7 +343,6 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
     ) => {
         e.preventDefault();
         e.stopPropagation();
-
         if (!session) {
             toast({
                 title: "Authentication required",
@@ -381,12 +359,10 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
             });
             return;
         }
-
         if (isWishlistLoading) return;
         setIsWishlistLoading(true);
         const wasInWishlist = isFavorite;
         setIsFavorite(!wasInWishlist);
-
         try {
             await fetch("/api/wishlist", {
                 method: "POST",
@@ -397,13 +373,12 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                 title: wasInWishlist
                     ? "Removed from wishlist"
                     : "Added to wishlist",
-                description: `${printer.name} has been ${wasInWishlist ? "removed from" : "added to"} your wishlist.`,
             });
         } catch {
             setIsFavorite(wasInWishlist);
             toast({
                 title: "Error",
-                description: "Failed to update wishlist. Please try again.",
+                description: "Failed to update wishlist.",
                 variant: "destructive",
             });
         } finally {
@@ -414,9 +389,9 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
     return (
         <>
             <Link href={`/printers/${printer.slug}`} className="block h-full">
-                <div className="bg-white rounded-xl border overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+                <div className="bg-white rounded-lg sm:rounded-xl border overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                     {/* IMAGE */}
-                    <div className="relative h-[220px] bg-gray-100 overflow-hidden">
+                    <div className="relative aspect-square bg-gray-100 overflow-hidden">
                         {(printer.imageUrl || printer.images?.[0]?.url) && (
                             <Image
                                 src={printer.imageUrl || printer.images![0].url}
@@ -425,63 +400,58 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                                 className="object-contain"
                             />
                         )}
-
-                        {/* Out of Stock badge */}
                         {isOutOfStock && (
-                            <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
+                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full z-10">
                                 Out of Stock
                             </div>
                         )}
-
                         <button
                             onClick={handleToggleWishlist}
-                            className="absolute top-4 right-4 w-9 h-9 bg-white rounded-full shadow flex items-center justify-center z-10"
+                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-9 sm:h-9 bg-white rounded-full shadow flex items-center justify-center z-10"
                         >
                             {isWishlistLoading ? (
-                                <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                <div className="w-3 h-3 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                             ) : (
                                 <Heart
-                                    className={`w-5 h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                                    className={`w-3 h-3 sm:w-5 sm:h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
                                 />
                             )}
                         </button>
                     </div>
 
                     {/* CONTENT */}
-                    <div className="p-4 flex-1">
-                        <span className="inline-block mb-2 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
+                    <div className="px-2.5 pt-2 sm:p-4 flex-1">
+                        <span className="inline-block mb-1 sm:mb-2 px-1.5 py-px sm:px-3 sm:py-1 text-[9px] sm:text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
                             {printer.technology}
                         </span>
-                        <h3 className="font-bold text-gray-900 mb-1 line-clamp-2">
+                        <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
                             {printer.name}
                         </h3>
-                        <p className="text-xs text-gray-600 mb-3 line-clamp-2">
+                        {/* Description — hidden on mobile */}
+                        <p className="hidden sm:block text-xs text-gray-600 mt-1 mb-2 line-clamp-2">
                             {printer.shortDescription || printer.description}
                         </p>
-                        <div className="text-xs text-gray-700 space-y-1">
+                        {/* Specs — hidden on mobile */}
+                        <div className="hidden sm:block text-xs text-gray-700 space-y-1">
                             <div>
                                 <b>Build Volume:</b> {printer.volumeLength} ×{" "}
                                 {printer.volumeWidth} × {printer.volumeHeight}{" "}
                                 mm
                             </div>
-                            {materials.length > 0 && (
-                                <div className="line-clamp-2">
-                                    <b>Materials:</b> {materials.join(", ")}
-                                </div>
-                            )}
                         </div>
                     </div>
 
                     {/* FOOTER */}
-                    <div className="px-5 pb-5">
-                        <hr className="mb-4" />
+                    <div className="mt-auto px-2.5 pb-2.5 sm:px-4 sm:pb-4">
+                        <hr className="hidden sm:block mb-3" />
 
-                        <div className="flex items-center">
-                            <span className="text-[16px] font-semibold text-[#101828]">
+                        {/* Price */}
+                        <div className="flex items-baseline gap-1.5 flex-wrap mt-1 sm:mt-0">
+                            <span className="text-[13px] sm:text-[16px] font-bold text-[#101828]">
                                 ₹{printer.price.toLocaleString("en-IN")}
                             </span>
                             {printer.originalPrice && (
-                                <span className="ml-5 text-sm line-through text-gray-400">
+                                <span className="text-[10px] sm:text-sm line-through text-gray-400">
                                     ₹
                                     {printer.originalPrice.toLocaleString(
                                         "en-IN",
@@ -489,42 +459,45 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                                 </span>
                             )}
                             {printer.discount && (
-                                <span className="ml-6 px-2 py-0.5 text-xs rounded-full text-green-700 bg-green-50 border border-green-200">
+                                <span className="h-[14px] sm:h-auto px-1 sm:px-2 sm:py-0.5 inline-flex items-center rounded-full text-[8px] sm:text-xs text-green-700 bg-green-50 border border-green-200">
                                     {printer.discount}% OFF
                                 </span>
                             )}
                         </div>
 
-                        <p className="text-sm text-gray-500 mt-1 mb-3">
+                        <p className="text-[9px] sm:text-sm text-gray-500 mb-1.5 sm:mt-1 sm:mb-3">
                             (incl. GST)
                         </p>
 
-                        {/* Add to Cart — hidden when out of stock */}
+                        {/* Add to Cart */}
                         {!isOutOfStock && (
                             <button
                                 onClick={handleAddToCart}
                                 disabled={isCartLoading}
-                                className="w-full h-12 bg-black text-white font-semibold rounded-lg hover:bg-gray-900 transition"
+                                className="w-full h-8 sm:h-12 text-[11px] sm:text-base bg-black text-white font-semibold rounded-md sm:rounded-lg hover:bg-gray-900 transition"
                             >
                                 {isCartLoading ? (
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                                    <div className="w-3.5 h-3.5 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                                 ) : (
                                     "Add to Cart"
                                 )}
                             </button>
                         )}
 
-                        {/* Notify Me — only when out of stock */}
+                        {/* Notify Me */}
                         {isOutOfStock && (
                             <button
                                 onClick={(e) => {
                                     e.preventDefault();
                                     setShowNotifyModal(true);
                                 }}
-                                className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                                className="w-full h-8 sm:py-2.5 rounded-md sm:rounded-[10px] text-[10px] sm:text-sm font-semibold border-2 border-blue-200 text-blue-500 hover:text-blue-700 transition-all flex items-center justify-center gap-1"
                             >
-                                <Bell size={14} />
-                                Notify Me When Back in Stock
+                                <Bell
+                                    size={10}
+                                    className="sm:w-[14px] sm:h-[14px]"
+                                />
+                                Notify Me
                             </button>
                         )}
                     </div>

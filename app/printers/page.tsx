@@ -9,14 +9,26 @@ import PrinterHero from "@/components/printers/PrinterHero";
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const PAGE_LIMIT = 9;
+// Responsive page limit: 10 on mobile (5 rows × 2 cols), 9 on desktop (3 rows × 3 cols)
+function usePageLimit() {
+    const [limit, setLimit] = useState(9);
+    useEffect(() => {
+        const update = () => setLimit(window.innerWidth < 1280 ? 10 : 9);
+        update();
+        window.addEventListener("resize", update);
+        return () => window.removeEventListener("resize", update);
+    }, []);
+    return limit;
+}
 
 export default function PrintersPage() {
     const isInitialLoading = useAutoImageLoader();
     const searchParams = useSearchParams();
     const brandApplied = useRef(false);
+    const gridRef = useRef<HTMLDivElement>(null);
+    const PAGE_LIMIT = usePageLimit();
 
     const [printers, setPrinters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -76,6 +88,14 @@ export default function PrintersPage() {
 
     const [sortBy, setSortBy] = useState<string>("new");
     const [page, setPage] = useState<number>(1);
+    const [isReady, setIsReady] = useState(false);
+
+    useEffect(() => {
+        if (!isInitialLoading) {
+            const timer = setTimeout(() => setIsReady(true), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isInitialLoading]);
 
     const hasActiveFilters = useMemo(() => {
         return (
@@ -93,10 +113,6 @@ export default function PrintersPage() {
         );
     }, [selectedFilters]);
 
-    // ── Pre-select brand from URL query param ──
-    // Waits for filters.technology to load from the initial API call,
-    // then selects ALL technologies (to unlock brand filter) + the brand from URL.
-    // Runs only once via brandApplied ref.
     useEffect(() => {
         if (brandApplied.current) return;
         const brandFromUrl = searchParams.get("brand");
@@ -114,7 +130,7 @@ export default function PrintersPage() {
     useEffect(() => {
         fetchPrinters();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedFilters, sortBy, page]);
+    }, [selectedFilters, sortBy, page, PAGE_LIMIT]);
 
     useEffect(() => {
         setPage(1);
@@ -139,7 +155,6 @@ export default function PrintersPage() {
                 // @ts-ignore
                 const values = selectedFilters[key];
                 if (!values?.length) return;
-                // "__all__" means all technologies — skip sending to API (no filter = all)
                 if (
                     key === "technology" &&
                     values.length === 1 &&
@@ -168,6 +183,19 @@ export default function PrintersPage() {
             setLoading(false);
         }
     };
+
+    // Scroll to top of grid on page change (skip first load)
+    const isFirstLoad = useRef(true);
+    const handlePageChange = useCallback((newPage: number) => {
+        setPage(newPage);
+        if (!isFirstLoad.current && gridRef.current) {
+            gridRef.current.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }
+        isFirstLoad.current = false;
+    }, []);
 
     const handleFilterChange = (filterKey: string, value: any) => {
         setSelectedFilters((prev) => ({ ...prev, [filterKey]: value }));
@@ -203,6 +231,10 @@ export default function PrintersPage() {
         });
     };
 
+    // "Showing x–y of z"
+    const startItem = total > 0 ? (page - 1) * PAGE_LIMIT + 1 : 0;
+    const endItem = Math.min(page * PAGE_LIMIT, total);
+
     return (
         <main className="w-full">
             {isInitialLoading && <Loader />}
@@ -214,7 +246,7 @@ export default function PrintersPage() {
                     transition: "opacity 0.8s ease-in-out",
                 }}
             >
-                <PrinterHero />
+                <PrinterHero animate={isReady} />
 
                 <MobileFilterSheet
                     isOpen={isMobileFilterOpen}
@@ -225,7 +257,6 @@ export default function PrintersPage() {
                     onReset={resetFilters}
                 />
 
-                {/* ── full-width gray background, content capped at 1400px ── */}
                 <div className="w-full bg-gray-50">
                     <div className="w-full max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
                         <div className="flex flex-col lg:flex-row gap-8">
@@ -240,7 +271,7 @@ export default function PrintersPage() {
                             </div>
 
                             {/* Grid */}
-                            <div className="w-full lg:w-3/4">
+                            <div className="w-full lg:w-3/4" ref={gridRef}>
                                 <SelectedFiltersBar
                                     selectedFilters={selectedFilters}
                                     onRemove={removeFilter}
@@ -250,6 +281,10 @@ export default function PrintersPage() {
                                 <div className="hidden lg:flex mb-6 justify-between items-center">
                                     <p className="text-gray-600">
                                         Showing{" "}
+                                        <span className="font-semibold">
+                                            {startItem}–{endItem}
+                                        </span>{" "}
+                                        of{" "}
                                         <span className="font-semibold">
                                             {total}
                                         </span>{" "}
@@ -303,6 +338,10 @@ export default function PrintersPage() {
                                     <p className="text-sm text-gray-600">
                                         Showing{" "}
                                         <span className="font-semibold">
+                                            {startItem}–{endItem}
+                                        </span>{" "}
+                                        of{" "}
+                                        <span className="font-semibold">
                                             {total}
                                         </span>{" "}
                                         printer{total !== 1 ? "s" : ""}
@@ -323,7 +362,7 @@ export default function PrintersPage() {
                                             page={page}
                                             total={total}
                                             limit={PAGE_LIMIT}
-                                            onPageChange={setPage}
+                                            onPageChange={handlePageChange}
                                         />
                                     </div>
                                 )}

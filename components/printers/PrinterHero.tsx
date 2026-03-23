@@ -1,114 +1,93 @@
+"use client";
+
 import { motion } from "framer-motion";
-import Container from "./Container";
-import H3 from "./H3";
-import Hero from "./Hero";
-import SplitText from "./SplitText";
-type HeroContentProps = {
-    onClick: () => void;
-};
-const translateContainer = {
-    initial: {
-        opacity: 0,
-    },
-    animate: {
-        opacity: 1,
-        transition: {
-            duration: 0.1,
-            when: "beforeChildren",
-            staggerChildren: 0.2,
-        },
+
+const staggerContainer = {
+    hidden: {},
+    visible: {
+        transition: { staggerChildren: 0.08, delayChildren: 0.2 },
     },
 };
-const container = {
-    initial: {
-        opacity: 0,
-    },
-    animate: {
-        opacity: 1,
-        transition: {
-            duration: 0.1,
-            when: "beforeChildren",
-            staggerChildren: 0.2,
-        },
-    },
-};
-const headingsTwo = {
-    initial: { y: -20, opacity: 0 },
-    animate: {
+
+const wordVariant = {
+    hidden: { y: 60, opacity: 0 },
+    visible: {
         y: 0,
         opacity: 1,
-        transition: {
-            duration: 1,
-            type: "tween",
-        },
+        transition: { type: "spring", damping: 15, stiffness: 100 },
     },
 };
 
-const wavyHeadings = {
-    initial: { y: "100%" },
-    animate: {
+const subtextVariant = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
         y: 0,
-        transition: {
-            duration: 0.5,
-            type: "tween",
-        },
+        opacity: 1,
+        transition: { duration: 0.6, ease: "easeOut", delay: 1.2 },
     },
 };
 
-const HeroContent = ({ onClick }: HeroContentProps) => {
-    return (
-        <Container>
-            <div
-                style={{
-                    paddingTop:
-                        "clamp(3rem, calc((100vw - 1439px) * 80), 5rem)",
-                }}
-            >
-                <motion.div
-                    initial="initial"
-                    whileInView="animate"
-                    variants={translateContainer}
-                    className="text-white w-full 
-                2xs:w-[94%] sm:w-[600px] md:w-[680px] lg:w-[700px] xl:w-[810px] 2xl:w-[1100px] 3xl:w-[1200px]
-                "
-                >
-                    <SplitText
-                        className="flex flex-wrap gap-x-2 sm:gap-x-3 text-white"
-                        variants={wavyHeadings}
-                    >
-                        Discover&nbsp;Cutting-Edge 3D Printers
-                    </SplitText>
-                </motion.div>
+interface PrinterHeroProps {
+    animate?: boolean;
+}
 
-                <motion.div
-                    initial="initial"
-                    whileInView="animate"
-                    variants={container}
-                    className="overflow-x-hidden"
-                >
-                    <motion.div variants={headingsTwo}>
-                        <H3 className="font-normal text-white mt-0.8 sm:mt-2.4 xl:mt-5 sm:text-[2.6rem] lg:text-5xl">
-                            Explore our extensive selection of 3D printers.
-                        </H3>
-                    </motion.div>
-                </motion.div>
-            </div>
-        </Container>
-    );
-};
+export default function PrinterHero({ animate = true }: PrinterHeroProps) {
+    const headline = "Discover Cutting-Edge 3D Printers";
+    const subheading = "Explore our extensive selection of 3D printers.";
 
-const PrinterHero = () => {
     return (
-        <div className="w-full">
-            <Hero
-                content={<HeroContent onClick={() => {}} />}
-                url="https://res.cloudinary.com/dlbrgchrh/video/upload/v1767461878/printer-images/doef4s0pr9mzikpb6hzu.mp4"
-                type="video"
-                wrapperClass="xl:h-[650px] 2xl:h-[650px]"
-                containerClass="!mb-0"
+        <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[450px] max-h-[900px] overflow-hidden bg-[#0a0a0f]">
+            {/* Background video */}
+            <video
+                src="https://res.cloudinary.com/dlbrgchrh/video/upload/v1767461878/printer-images/doef4s0pr9mzikpb6hzu.mp4"
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
             />
-        </div>
-    );
-};
+            <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/10" />
 
-export default PrinterHero;
+            {/* Content */}
+            <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto">
+                {/* Headline — word-by-word spring wave, gated by animate prop */}
+                <motion.h1
+                    variants={staggerContainer}
+                    initial="hidden"
+                    {...(animate
+                        ? {
+                              whileInView: "visible",
+                              viewport: { once: false, amount: 0.2 },
+                          }
+                        : {})}
+                    className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight"
+                >
+                    {headline.split(" ").map((word, i) => (
+                        <motion.span
+                            key={i}
+                            variants={wordVariant}
+                            className="inline-block mr-[0.25em]"
+                        >
+                            {word}
+                        </motion.span>
+                    ))}
+                </motion.h1>
+
+                {/* Subheading — fade up, gated by animate prop */}
+                <motion.h3
+                    variants={subtextVariant}
+                    initial="hidden"
+                    {...(animate
+                        ? {
+                              whileInView: "visible",
+                              viewport: { once: false, amount: 0.2 },
+                          }
+                        : {})}
+                    className="mt-2 sm:mt-4 text-lg sm:text-2xl md:text-3xl lg:text-4xl font-normal text-white/90 leading-snug"
+                >
+                    {subheading}
+                </motion.h3>
+            </div>
+        </section>
+    );
+}
