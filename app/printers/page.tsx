@@ -188,17 +188,19 @@ export default function PrintersPage() {
 
     // Scroll to top of grid on page change (skip first load)
     const isFirstLoad = useRef(true);
-    const handlePageChange = useCallback((newPage: number) => {
-        setPage(newPage);
-        if (!isFirstLoad.current && gridRef.current) {
-            gridRef.current.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-            });
-        }
-        isFirstLoad.current = false;
-    }, []);
+    // Track if page changed (not first load)
+    const prevPage = useRef(page);
 
+    const handlePageChange = useCallback((newPage: number) => {
+        if (gridRef.current) {
+            const top =
+                gridRef.current.getBoundingClientRect().top +
+                window.scrollY -
+                80;
+            window.scrollTo({ top, behavior: "instant" });
+        }
+        setPage(newPage);
+    }, []);
     const handleFilterChange = (filterKey: string, value: any) => {
         setSelectedFilters((prev) => ({ ...prev, [filterKey]: value }));
     };
