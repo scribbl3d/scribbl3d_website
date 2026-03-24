@@ -454,8 +454,8 @@ function PrinterCard({ printer }: { printer: any }) {
                 <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
                     <hr className="hidden sm:block my-3" />
 
-                    {/* Price — all inline on mobile */}
-                    <div className="flex items-baseline gap-1.5 flex-wrap sm:gap-0 mt-1 sm:mt-0">
+                    {/* Line 1: Actual price + Original price */}
+                    <div className="flex items-baseline gap-3 sm:gap-0 sm:justify-start mt-1 ">
                         <span className="text-[13px] sm:text-[16px] font-bold text-[#101828]">
                             ₹{price.toLocaleString("en-IN")}
                         </span>
@@ -464,18 +464,25 @@ function PrinterCard({ printer }: { printer: any }) {
                                 ₹{originalPrice.toLocaleString("en-IN")}
                             </span>
                         )}
+                        {/* Discount — desktop only inline with prices */}
                         {printer.discount && (
-                            <span className="sm:ml-2 h-[14px] sm:h-[22px] px-1 sm:px-2 inline-flex items-center rounded-full text-[8px] sm:text-[12px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
+                            <span className="hidden sm:inline-flex sm:ml-2 h-[22px] px-2 items-center rounded-full text-[12px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
                                 {printer.discount}% OFF
                             </span>
                         )}
                     </div>
 
-                    <p className="text-[9px] sm:text-[13px] text-[#667085] mb-1.5 sm:mb-2.5">
-                        (incl. GST)
-                    </p>
-
-                    {/* Add to Cart */}
+                    {/* Line 2: GST + Discount on mobile */}
+                    <div className="flex items-center gap-3 sm:gap-2.5 mb-0.5 sm:mb-2.5 sm:justify-start">
+                        <p className="text-[9px] sm:text-[13px] text-[#667085]">
+                            (incl. GST)
+                        </p>
+                        {printer.discount && (
+                            <span className="sm:hidden h-[14px] px-1 inline-flex items-center rounded-full text-[8px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
+                                {printer.discount}% OFF
+                            </span>
+                        )}
+                    </div>
                     {!isOutOfStock && (
                         <button
                             onClick={handleAddToCart}
@@ -494,10 +501,10 @@ function PrinterCard({ printer }: { printer: any }) {
                     {isOutOfStock && (
                         <button
                             onClick={() => setShowNotifyModal(true)}
-                            className="w-full rounded-md sm:rounded-[10px] h-8 sm:py-2.5 text-[10px] sm:text-sm font-semibold border-2 border-blue-200 text-blue-500 hover:text-blue-700 transition-all flex items-center justify-center gap-1"
+                            className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center gap-1.5 border-2 border-blue-200 text-blue-500 hover:text-blue-700"
                         >
                             <Bell
-                                size={10}
+                                size={12}
                                 className="sm:w-[14px] sm:h-[14px]"
                             />
                             Notify Me

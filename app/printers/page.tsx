@@ -13,7 +13,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 // Responsive page limit: 10 on mobile (5 rows × 2 cols), 9 on desktop (3 rows × 3 cols)
 function usePageLimit() {
-    const [limit, setLimit] = useState(9);
+    const [limit, setLimit] = useState(() =>
+        typeof window !== "undefined" && window.innerWidth < 1280 ? 10 : 9,
+    );
     useEffect(() => {
         const update = () => setLimit(window.innerWidth < 1280 ? 10 : 9);
         update();
