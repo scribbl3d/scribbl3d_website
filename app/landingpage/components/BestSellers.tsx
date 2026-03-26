@@ -134,7 +134,11 @@ function useWishlist(productHref: string) {
     const toggle = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-
+        console.log("[Wishlist] toggle called", {
+            productId,
+            info: info?.type,
+            href: productHref,
+        });
         if (!session) {
             toast({
                 title: "Authentication required",
@@ -345,14 +349,14 @@ function HeroCard({ product }: { product: BestSellerProduct }) {
     return (
         <Link
             href={product.href}
-            className="md:col-span-2 md:row-span-2 relative group overflow-hidden rounded-[32px] bg-[#0a0a0f] border border-black/5 shadow-sm hover:shadow-xl transition-all duration-500 block h-full w-full"
+            className="md:col-span-2 md:row-span-2 relative group overflow-hidden rounded-[32px] bg-[#0a0a0f] shadow-sm hover:shadow-xl transition-all duration-500 block h-full w-full"
         >
             <img
                 src={product.image}
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 from-0% via-black/30 via-40% to-transparent to-70%" />
 
             <div className="absolute top-6 left-6 lg:top-8 lg:left-8 z-10">
                 <span className="bg-[#4f46e5] text-white px-3.5 py-1.5 rounded-full text-[10px] lg:text-[11px] font-black uppercase tracking-widest shadow-md">
@@ -528,7 +532,7 @@ function MobileHeroCard({ product }: { product: BestSellerProduct }) {
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 from-0% via-black/25 via-45% to-transparent to-75%" />
             <span className="absolute top-3 left-3 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white bg-[#4f46e5] rounded-md z-10">
                 #1 BEST SELLER
             </span>
