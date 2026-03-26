@@ -426,15 +426,16 @@ export default function PrinterDetailPage() {
     }, {});
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="min-h-screen bg-gray-50 pt-20">
             {/* Header */}
-            <div className="bg-white border-b border-gray-200">
-                <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 mt-3">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 sticky top-16 z-40 sm:static">
+                <div className="container mx-auto px-4 py-3.5 sm:py-5">
                     <Link
                         href="/printers"
-                        className="inline-flex items-center text-xs sm:text-sm text-gray-600 hover:text-gray-900"
+                        className="inline-flex items-center text-sm sm:text-base font-medium text-gray-700 hover:text-gray-900 transition-colors"
                     >
-                        <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-2 mr-1.5 sm:mr-2" />
+                        <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                         Back to all printers
                     </Link>
                 </div>

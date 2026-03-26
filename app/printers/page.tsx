@@ -34,6 +34,7 @@ export default function PrintersPage() {
 
     const [printers, setPrinters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [initialLoad, setInitialLoad] = useState(true);
     const [total, setTotal] = useState(0);
 
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -139,7 +140,7 @@ export default function PrintersPage() {
     }, [selectedFilters, sortBy]);
 
     const fetchPrinters = async () => {
-        setLoading(true);
+        if (initialLoad) setLoading(true);
         try {
             const params = new URLSearchParams();
             const arrayFilters = [
@@ -183,24 +184,14 @@ export default function PrintersPage() {
             console.error("Error fetching printers:", err);
         } finally {
             setLoading(false);
+            if (initialLoad) setInitialLoad(false);
         }
     };
 
-    // Scroll to top of grid on page change (skip first load)
-    const isFirstLoad = useRef(true);
-    // Track if page changed (not first load)
-    const prevPage = useRef(page);
-
     const handlePageChange = useCallback((newPage: number) => {
-        if (gridRef.current) {
-            const top =
-                gridRef.current.getBoundingClientRect().top +
-                window.scrollY -
-                80;
-            window.scrollTo({ top, behavior: "instant" });
-        }
         setPage(newPage);
     }, []);
+
     const handleFilterChange = (filterKey: string, value: any) => {
         setSelectedFilters((prev) => ({ ...prev, [filterKey]: value }));
     };
@@ -352,7 +343,7 @@ export default function PrintersPage() {
                                     </p>
                                 </div>
 
-                                {loading ? (
+                                {loading && initialLoad ? (
                                     <div className="text-center py-20">
                                         <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent" />
                                         <p className="mt-4 text-gray-600">

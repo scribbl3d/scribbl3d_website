@@ -1,7 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface TestimonialItem {
     id: string;
@@ -85,7 +85,7 @@ function ReviewCard({ t, compact }: { t: TestimonialItem; compact?: boolean }) {
     );
 }
 
-/* ── Auto-scrolling carousel ── */
+/* ── Auto-scrolling carousel with smooth pause/resume + drag/swipe ── */
 function ReviewCarousel({
     testimonials,
     compact,
@@ -94,45 +94,189 @@ function ReviewCarousel({
     compact?: boolean;
 }) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const [isPaused, setIsPaused] = useState(false);
+    const isPausedRef = useRef(false);
+    const speedRef = useRef(0.5); // current animated speed (eases to 0 on pause)
+    const targetSpeedRef = useRef(0.5); // what we're easing toward
+    const animationRef = useRef<number>(0);
+
+    // Drag / swipe state
+    const isDraggingRef = useRef(false);
+    const dragStartXRef = useRef(0);
+    const dragScrollLeftRef = useRef(0);
+    const dragVelocityRef = useRef(0);
+    const lastDragXRef = useRef(0);
+    const lastDragTimeRef = useRef(0);
+
+    const BASE_SPEED = 0.5;
+    const EASE_FACTOR = 0.03; // how fast speed ramps up/down (lower = smoother)
 
     // Triple the items for seamless infinite scroll
     const tripled = [...testimonials, ...testimonials, ...testimonials];
+
+    const resetScrollIfNeeded = useCallback((container: HTMLDivElement) => {
+        const oneThird = container.scrollWidth / 3;
+        if (container.scrollLeft >= oneThird * 2) {
+            container.scrollLeft -= oneThird;
+        } else if (container.scrollLeft <= 0) {
+            container.scrollLeft += oneThird;
+        }
+    }, []);
 
     useEffect(() => {
         const container = scrollRef.current;
         if (!container || testimonials.length <= 1) return;
 
-        const speed = 0.5; // px per frame
-        let animationId: number;
+        // Start from the middle third
+        const oneThird = container.scrollWidth / 3;
+        container.scrollLeft = oneThird;
 
-        const scroll = () => {
-            if (!isPaused && container) {
-                container.scrollLeft += speed;
-                // Reset to middle third when we've scrolled past the first third
-                const oneThird = container.scrollWidth / 3;
-                if (container.scrollLeft >= oneThird * 2) {
-                    container.scrollLeft -= oneThird;
-                }
+        const animate = () => {
+            if (!container) return;
+
+            // Smoothly ease current speed toward target
+            const target =
+                isPausedRef.current || isDraggingRef.current ? 0 : BASE_SPEED;
+            targetSpeedRef.current = target;
+            speedRef.current +=
+                (targetSpeedRef.current - speedRef.current) * EASE_FACTOR;
+
+            // Apply momentum from drag release
+            if (
+                !isDraggingRef.current &&
+                Math.abs(dragVelocityRef.current) > 0.1
+            ) {
+                container.scrollLeft -= dragVelocityRef.current;
+                dragVelocityRef.current *= 0.95; // friction
+            } else {
+                dragVelocityRef.current = 0;
             }
-            animationId = requestAnimationFrame(scroll);
+
+            // Only scroll if speed is meaningful
+            if (Math.abs(speedRef.current) > 0.01) {
+                container.scrollLeft += speedRef.current;
+            }
+
+            resetScrollIfNeeded(container);
+            animationRef.current = requestAnimationFrame(animate);
         };
 
-        // Start from the middle third
-        container.scrollLeft = container.scrollWidth / 3;
-        animationId = requestAnimationFrame(scroll);
+        animationRef.current = requestAnimationFrame(animate);
 
-        return () => cancelAnimationFrame(animationId);
-    }, [isPaused, testimonials.length]);
+        return () => cancelAnimationFrame(animationRef.current);
+    }, [testimonials.length, resetScrollIfNeeded]);
+
+    /* ── Hover handlers ── */
+    const handleMouseEnter = () => {
+        isPausedRef.current = true;
+    };
+
+    const handleMouseLeave = () => {
+        if (!isDraggingRef.current) {
+            isPausedRef.current = false;
+        }
+    };
+
+    /* ── Drag (mouse) handlers ── */
+    const handleMouseDown = (e: React.MouseEvent) => {
+        const container = scrollRef.current;
+        if (!container) return;
+
+        isDraggingRef.current = true;
+        dragStartXRef.current = e.pageX;
+        dragScrollLeftRef.current = container.scrollLeft;
+        lastDragXRef.current = e.pageX;
+        lastDragTimeRef.current = Date.now();
+        dragVelocityRef.current = 0;
+        container.style.cursor = "grabbing";
+        container.style.userSelect = "none";
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDraggingRef.current) return;
+        const container = scrollRef.current;
+        if (!container) return;
+
+        e.preventDefault();
+        const x = e.pageX;
+        const walk = x - dragStartXRef.current;
+        container.scrollLeft = dragScrollLeftRef.current - walk;
+
+        // Track velocity for momentum
+        const now = Date.now();
+        const dt = now - lastDragTimeRef.current;
+        if (dt > 0) {
+            dragVelocityRef.current = ((x - lastDragXRef.current) / dt) * 16; // normalize to ~per frame
+        }
+        lastDragXRef.current = x;
+        lastDragTimeRef.current = now;
+    };
+
+    const handleMouseUp = () => {
+        isDraggingRef.current = false;
+        const container = scrollRef.current;
+        if (container) {
+            container.style.cursor = "grab";
+            container.style.userSelect = "";
+        }
+    };
+
+    /* ── Touch (swipe) handlers ── */
+    const handleTouchStart = (e: React.TouchEvent) => {
+        const container = scrollRef.current;
+        if (!container) return;
+
+        isPausedRef.current = true;
+        isDraggingRef.current = true;
+        dragStartXRef.current = e.touches[0].pageX;
+        dragScrollLeftRef.current = container.scrollLeft;
+        lastDragXRef.current = e.touches[0].pageX;
+        lastDragTimeRef.current = Date.now();
+        dragVelocityRef.current = 0;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDraggingRef.current) return;
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const x = e.touches[0].pageX;
+        const walk = x - dragStartXRef.current;
+        container.scrollLeft = dragScrollLeftRef.current - walk;
+
+        // Track velocity
+        const now = Date.now();
+        const dt = now - lastDragTimeRef.current;
+        if (dt > 0) {
+            dragVelocityRef.current = ((x - lastDragXRef.current) / dt) * 16;
+        }
+        lastDragXRef.current = x;
+        lastDragTimeRef.current = now;
+    };
+
+    const handleTouchEnd = () => {
+        isDraggingRef.current = false;
+        // Resume auto-scroll after a short delay
+        setTimeout(() => {
+            isPausedRef.current = false;
+        }, 2000);
+    };
 
     return (
         <div
             ref={scrollRef}
             className="flex gap-4 overflow-x-hidden"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            onTouchStart={() => setIsPaused(true)}
-            onTouchEnd={() => setTimeout(() => setIsPaused(false), 2000)}
+            style={{ cursor: "grab" }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={(e) => {
+                handleMouseUp();
+                handleMouseLeave();
+            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
         >
             {tripled.map((t, i) => (
                 <ReviewCard key={`${t.id}-${i}`} t={t} compact={compact} />
