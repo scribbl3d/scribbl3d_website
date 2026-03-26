@@ -85,10 +85,11 @@ export default function LearningHub({ blogs }: LearningHubProps) {
                 <div className="flex items-start justify-between mb-5 sm:mb-8">
                     <div>
                         <SplitText className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                            Learning Hub
+                            Explore 3D Printing Knowledge
                         </SplitText>
                         <AnimatedSubtext className="mt-1 text-xs sm:text-sm text-gray-500">
-                            Master the art of additive manufacturing.
+                            Tutorials, guides, material insights, and product
+                            comparisons.
                         </AnimatedSubtext>
                     </div>
                     <Link

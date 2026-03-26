@@ -15,7 +15,6 @@ async function uploadToCloudinary(
     try {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-
         const result = await new Promise<any>((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
                 {
@@ -31,7 +30,6 @@ async function uploadToCloudinary(
             );
             stream.end(buffer);
         });
-
         return result.secure_url;
     } catch (error) {
         console.error("Cloudinary upload error:", error);
@@ -39,7 +37,6 @@ async function uploadToCloudinary(
     }
 }
 
-// GET — list all banners
 export async function GET() {
     try {
         const banners = await prisma.heroBanner.findMany({
@@ -55,25 +52,21 @@ export async function GET() {
     }
 }
 
-// POST — create banner (accepts FormData with file)
 export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
-
         const mediaType = (formData.get("mediaType") as string) || "image";
         const file = formData.get("file") as File | null;
 
         let mediaUrl = "";
-
         if (file && file.size > 0) {
             const resourceType = mediaType === "video" ? "video" : "image";
             const url = await uploadToCloudinary(file, resourceType);
-            if (!url) {
+            if (!url)
                 return NextResponse.json(
                     { error: "File upload failed" },
                     { status: 500 },
                 );
-            }
             mediaUrl = url;
         } else {
             return NextResponse.json(
@@ -96,6 +89,11 @@ export async function POST(req: NextRequest) {
                 sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
                 isActive: formData.get("isActive") === "true",
                 duration: parseInt(formData.get("duration") as string) || 5000,
+                buttonGradientFrom:
+                    (formData.get("buttonGradientFrom") as string) || "#4f46e5",
+                buttonGradientTo:
+                    (formData.get("buttonGradientTo") as string) || "#7c3aed",
+                textColor: (formData.get("textColor") as string) || "#ffffff",
             },
         });
 

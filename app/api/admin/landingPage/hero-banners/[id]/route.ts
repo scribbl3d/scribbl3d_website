@@ -88,6 +88,11 @@ export async function PUT(
             sortOrder: parseInt(formData.get("sortOrder") as string) || 0,
             isActive: formData.get("isActive") === "true",
             duration: parseInt(formData.get("duration") as string) || 5000,
+            buttonGradientFrom:
+                (formData.get("buttonGradientFrom") as string) || "#4f46e5",
+            buttonGradientTo:
+                (formData.get("buttonGradientTo") as string) || "#7c3aed",
+            textColor: (formData.get("textColor") as string) || "#ffffff",
         };
         if (mediaUrl) updateData.mediaUrl = mediaUrl;
 

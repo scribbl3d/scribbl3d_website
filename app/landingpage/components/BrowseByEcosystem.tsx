@@ -48,7 +48,8 @@ export default function BrowseByEcosystem() {
                             Browse by Ecosystem
                         </SplitText>
                         <AnimatedSubtext className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-500">
-                            Everything you need from spool to final prototype.
+                            Printers, materials, and products — all in one
+                            place.
                         </AnimatedSubtext>
                     </div>
                 </div>

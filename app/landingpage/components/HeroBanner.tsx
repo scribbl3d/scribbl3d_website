@@ -15,23 +15,19 @@ interface HeroBannerSlide {
     buttonText?: string | null;
     buttonLink?: string | null;
     duration: number;
+    buttonGradientFrom?: string | null;
+    buttonGradientTo?: string | null;
+    textColor?: string | null;
 }
 
 interface HeroBannerProps {
     slides: HeroBannerSlide[];
-    animate?: boolean; // controlled by parent — true once loader is done
+    animate?: boolean;
 }
-
-// ── Animation variants ──────────────────────────────────────────
 
 const staggerContainer = {
     hidden: {},
-    visible: {
-        transition: {
-            staggerChildren: 0.08,
-            delayChildren: 0.15,
-        },
-    },
+    visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
 };
 
 const wordVariant = {
@@ -70,11 +66,16 @@ const ctaVariant = {
     },
 };
 
-// ── SplitText ───────────────────────────────────────────────────
-
-function SplitHeadline({ text, animate }: { text: string; animate: boolean }) {
+function SplitHeadline({
+    text,
+    animate,
+    color,
+}: {
+    text: string;
+    animate: boolean;
+    color: string;
+}) {
     const lines = text.split("\n");
-
     return (
         <motion.h1
             variants={staggerContainer}
@@ -82,7 +83,8 @@ function SplitHeadline({ text, animate }: { text: string; animate: boolean }) {
             {...(animate
                 ? { whileInView: "visible", viewport: { margin: "-50px" } }
                 : {})}
-            className="font-manrope text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold text-white leading-[0.9] tracking-tighter"
+            className="font-manrope text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-extrabold leading-[0.9] tracking-tighter"
+            style={{ color }}
         >
             {lines.map((line, lineIndex) => (
                 <span key={lineIndex} className="block overflow-hidden">
@@ -101,8 +103,6 @@ function SplitHeadline({ text, animate }: { text: string; animate: boolean }) {
     );
 }
 
-// ── Main component ──────────────────────────────────────────────
-
 export default function HeroBanner({
     slides,
     animate = true,
@@ -110,28 +110,18 @@ export default function HeroBanner({
     const [current, setCurrent] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const videoRefs = useRef<Map<number, HTMLVideoElement>>(new Map());
-
-    // Track if it's the first slide (initial load) — needs to wait for `animate` prop.
-    // Subsequent slides (carousel advance) should animate immediately.
     const [hasAnimatedFirst, setHasAnimatedFirst] = useState(false);
 
-    // Once parent says animate, mark first slide as ready
     useEffect(() => {
-        if (animate && !hasAnimatedFirst) {
-            setHasAnimatedFirst(true);
-        }
+        if (animate && !hasAnimatedFirst) setHasAnimatedFirst(true);
     }, [animate, hasAnimatedFirst]);
 
-    // Should the current slide animate?
-    // First slide: only when `animate` is true (loader done)
-    // Subsequent slides: always true (carousel is already visible)
     const shouldAnimate = hasAnimatedFirst || animate;
 
     const next = useCallback(() => {
         setCurrent((prev) => (prev + 1) % slides.length);
     }, [slides.length]);
 
-    // Auto-advance: only start timer after animations are ready
     useEffect(() => {
         const slide = slides[current];
         if (!slide || slides.length <= 1 || !shouldAnimate) return;
@@ -150,7 +140,6 @@ export default function HeroBanner({
         return () => clearTimeout(timer);
     }, [current, isPaused, next, slides, shouldAnimate]);
 
-    // Pause non-current videos
     useEffect(() => {
         videoRefs.current.forEach((video, index) => {
             if (index !== current) {
@@ -163,6 +152,9 @@ export default function HeroBanner({
     if (!slides.length) return null;
 
     const slide = slides[current];
+    const textColor = slide.textColor || "#ffffff";
+    const gradFrom = slide.buttonGradientFrom || "#4f46e5";
+    const gradTo = slide.buttonGradientTo || "#7c3aed";
 
     return (
         <section
@@ -203,15 +195,14 @@ export default function HeroBanner({
             <AnimatePresence mode="wait">
                 <motion.div
                     key={slide.id}
-                    className="relative z-10 h-full flex flex-col justify-end pb-12 sm:pb-0 sm:justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto"
+                    className="relative z-10 h-full flex flex-col justify-end pb-16 sm:pb-0 sm:justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto"
                 >
-                    {/* Headline — word-by-word wave */}
                     <SplitHeadline
                         text={slide.headline}
                         animate={shouldAnimate}
+                        color={textColor}
                     />
 
-                    {/* Accent headline — slides from left */}
                     {slide.headlineAccent && (
                         <motion.h2
                             variants={accentVariant}
@@ -232,7 +223,6 @@ export default function HeroBanner({
                         </motion.h2>
                     )}
 
-                    {/* Subtext — fades up */}
                     {slide.subtext && (
                         <motion.p
                             variants={subtextVariant}
@@ -243,13 +233,13 @@ export default function HeroBanner({
                                       viewport: { margin: "-50px" },
                                   }
                                 : {})}
-                            className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl text-white/80 max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed"
+                            className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed"
+                            style={{ color: `${textColor}cc` }}
                         >
                             {slide.subtext}
                         </motion.p>
                     )}
 
-                    {/* CTA — slides from left */}
                     {slide.buttonText && slide.buttonLink && (
                         <motion.div
                             variants={ctaVariant}
@@ -264,7 +254,11 @@ export default function HeroBanner({
                         >
                             <Link
                                 href={slide.buttonLink}
-                                className="inline-flex items-center gap-2 sm:gap-3 px-5 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-[#4f46e5] to-[#7c3aed] rounded-xl shadow-lg shadow-[#4f46e5]/20 hover:scale-[1.02] transition-transform"
+                                className="inline-flex items-center gap-2 sm:gap-3 px-5 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg hover:scale-[1.02] transition-transform"
+                                style={{
+                                    background: `linear-gradient(to right, ${gradFrom}, ${gradTo})`,
+                                    boxShadow: `0 10px 25px ${gradFrom}33`,
+                                }}
                             >
                                 {slide.buttonText}
                                 <svg
@@ -297,9 +291,9 @@ export default function HeroBanner({
                 </motion.div>
             </AnimatePresence>
 
-            {/* Slide indicators */}
+            {/* Slide indicators — centered bottom */}
             {slides.length > 1 && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:bottom-8 sm:right-12 lg:right-16 flex items-center gap-2 sm:gap-3 z-10">
+                <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 z-10">
                     {slides.map((_, i) => (
                         <button
                             key={i}

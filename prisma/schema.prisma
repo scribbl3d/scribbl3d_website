@@ -206,29 +206,26 @@ model Blog {
 }
 
 model HeroBanner {
-  id        String  @id @default(cuid())
+  id                 String   @id @default(cuid())
+  headline           String
+  headlineAccent     String?
+  subtext            String?
+  mediaUrl           String
+  mediaType          String   @default("image")
+  altText            String?
+  buttonText         String?
+  buttonLink         String?
+  sortOrder          Int      @default(0)
+  isActive           Boolean  @default(true)
+  duration           Int      @default(5000)
 
-  // Content
-  headline       String          // e.g. "INDUSTRIAL\nSTRENGTH."
-  headlineAccent String?         // e.g. "DESKTOP\nPRECISION." (the blue part)
-  subtext        String?         // e.g. "Engineered for reliability..."
+  // NEW: configurable colors
+  buttonGradientFrom String?  @default("#4f46e5")
+  buttonGradientTo   String?  @default("#7c3aed")
+  textColor          String?  @default("#ffffff")
 
-  // Media — paste Cloudinary URL directly (image or video)
-  mediaUrl  String              // Cloudinary URL for image or video
-  mediaType String @default("image") // "image" | "video"
-  altText   String?
-
-  // CTA Button
-  buttonText   String?          // e.g. "Explore Filaments"
-  buttonLink   String?          // e.g. "/filaments"
-
-  // Settings
-  sortOrder Int     @default(0)
-  isActive  Boolean @default(true)
-  duration  Int     @default(5000) // Auto-advance in ms (ignored for video — uses video duration)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 model CarouselItem {
   id        String   @id @default(cuid())

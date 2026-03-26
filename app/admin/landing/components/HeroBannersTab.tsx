@@ -29,6 +29,9 @@ interface HeroBanner {
     sortOrder: number;
     isActive: boolean;
     duration: number;
+    buttonGradientFrom: string | null;
+    buttonGradientTo: string | null;
+    textColor: string | null;
 }
 
 interface FormData {
@@ -42,6 +45,9 @@ interface FormData {
     sortOrder: number;
     isActive: boolean;
     duration: number;
+    buttonGradientFrom: string;
+    buttonGradientTo: string;
+    textColor: string;
 }
 
 const EMPTY_FORM: FormData = {
@@ -55,6 +61,9 @@ const EMPTY_FORM: FormData = {
     sortOrder: 0,
     isActive: true,
     duration: 5000,
+    buttonGradientFrom: "#4f46e5",
+    buttonGradientTo: "#7c3aed",
+    textColor: "#ffffff",
 };
 
 export default function HeroBannersTab() {
@@ -144,6 +153,9 @@ export default function HeroBannersTab() {
             body.append("sortOrder", String(form.sortOrder));
             body.append("isActive", String(form.isActive));
             body.append("duration", String(form.duration));
+            body.append("buttonGradientFrom", form.buttonGradientFrom);
+            body.append("buttonGradientTo", form.buttonGradientTo);
+            body.append("textColor", form.textColor);
             if (selectedFile) body.append("file", selectedFile);
             const url = editId
                 ? `/api/admin/landingPage/hero-banners/${editId}`
@@ -184,6 +196,12 @@ export default function HeroBannersTab() {
         body.append("sortOrder", String(banner.sortOrder));
         body.append("isActive", String(!banner.isActive));
         body.append("duration", String(banner.duration));
+        body.append(
+            "buttonGradientFrom",
+            banner.buttonGradientFrom || "#4f46e5",
+        );
+        body.append("buttonGradientTo", banner.buttonGradientTo || "#7c3aed");
+        body.append("textColor", banner.textColor || "#ffffff");
         await fetch(`/api/admin/landingPage/hero-banners/${banner.id}`, {
             method: "PUT",
             body,
@@ -204,6 +222,9 @@ export default function HeroBannersTab() {
             sortOrder: banner.sortOrder,
             isActive: banner.isActive,
             duration: banner.duration,
+            buttonGradientFrom: banner.buttonGradientFrom || "#4f46e5",
+            buttonGradientTo: banner.buttonGradientTo || "#7c3aed",
+            textColor: banner.textColor || "#ffffff",
         });
         setExistingMediaUrl(banner.mediaUrl);
         setSelectedFile(null);
@@ -580,6 +601,119 @@ export default function HeroBannersTab() {
                                         placeholder="/filaments"
                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent outline-none"
                                     />
+                                </div>
+                            </div>
+                            {/* Colors */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Colors
+                                </label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] text-gray-500 mb-1">
+                                            Button From
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="color"
+                                                value={form.buttonGradientFrom}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        buttonGradientFrom:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                className="w-8 h-8 rounded border border-gray-300 cursor-pointer p-0.5"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={form.buttonGradientFrom}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        buttonGradientFrom:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] text-gray-500 mb-1">
+                                            Button To
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="color"
+                                                value={form.buttonGradientTo}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        buttonGradientTo:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                className="w-8 h-8 rounded border border-gray-300 cursor-pointer p-0.5"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={form.buttonGradientTo}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        buttonGradientTo:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] text-gray-500 mb-1">
+                                            Text Color
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="color"
+                                                value={form.textColor}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        textColor:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                className="w-8 h-8 rounded border border-gray-300 cursor-pointer p-0.5"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={form.textColor}
+                                                onChange={(e) =>
+                                                    setForm((p) => ({
+                                                        ...p,
+                                                        textColor:
+                                                            e.target.value,
+                                                    }))
+                                                }
+                                                className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Preview swatch */}
+                                <div className="mt-2 flex items-center gap-2">
+                                    <div
+                                        className="h-6 w-20 rounded-md"
+                                        style={{
+                                            background: `linear-gradient(to right, ${form.buttonGradientFrom}, ${form.buttonGradientTo})`,
+                                        }}
+                                    />
+                                    <span className="text-[10px] text-gray-400">
+                                        Button preview
+                                    </span>
                                 </div>
                             </div>
                             {/* Settings */}

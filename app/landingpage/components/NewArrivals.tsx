@@ -38,10 +38,10 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                 {/* Header */}
                 <div className="mb-6 sm:mb-8 lg:mb-10">
                     <SplitText className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-gray-900">
-                        New Arrivals
+                        Latest in 3D printing
                     </SplitText>
                     <AnimatedSubtext className="mt-1 sm:mt-1.5 text-xs sm:text-[13px] text-gray-500">
-                        The latest breakthroughs in 3D technology.
+                        Discover new printers, materials, and tools.
                     </AnimatedSubtext>
                 </div>
 
