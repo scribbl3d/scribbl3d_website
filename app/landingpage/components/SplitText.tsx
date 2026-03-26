@@ -69,7 +69,7 @@ export function SplitText({
                 {children.split(" ").map((word, i) => (
                     <span
                         key={i}
-                        className="overflow-hidden"
+                        className="overflow-hidden pb-[0.15em]"
                         style={{ lineHeight: "inherit" }}
                     >
                         <motion.span

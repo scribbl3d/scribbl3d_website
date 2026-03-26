@@ -5,9 +5,9 @@ import Link from "next/link";
 import { AnimatedSubtext, SplitText } from "./SplitText";
 
 const FEATURES = [
-    "Material Selection Guidance",
-    "Post-Processing & Finishing",
-    "Global Shipping & Fulfillment",
+    "Material Expertise (PLA to High-Temp Engineering Polymers)",
+    "Precision Printing + Post-Processing",
+    "Reliable Turnaround & Pan-India Fulfilment",
 ];
 
 export default function CustomPrinting() {
@@ -20,8 +20,8 @@ export default function CustomPrinting() {
                         {/* Image 1 */}
                         <div className="w-[45%] aspect-[3/4] rounded-xl sm:rounded-2xl overflow-hidden bg-[#0a0a0f]">
                             <img
-                                src="/images/landing/custom-heart.jpg"
-                                alt="3D printed anatomical heart"
+                                src="/landing/proto/proto1.png"
+                                alt="3D printed precision part"
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -30,8 +30,8 @@ export default function CustomPrinting() {
                         <div className="w-[50%] flex flex-col gap-3 sm:gap-4">
                             <div className="flex-1 rounded-xl sm:rounded-2xl overflow-hidden bg-[#0a0a0f]">
                                 <img
-                                    src="/images/landing/custom-building.jpg"
-                                    alt="3D printed architectural model"
+                                    src="/landing/proto/proto2.png"
+                                    alt="3D printed engineering component"
                                     className="w-full h-full object-cover"
                                 />
                             </div>
@@ -41,8 +41,7 @@ export default function CustomPrinting() {
                                     24h
                                 </p>
                                 <p className="text-[11px] sm:text-sm text-blue-200 mt-0.5 sm:mt-1">
-                                    Average quote time for industrial
-                                    prototypes.
+                                    Average quote turnaround for complex parts.
                                 </p>
                             </div>
                         </div>
@@ -52,18 +51,18 @@ export default function CustomPrinting() {
                     <div>
                         <h2 className="text-2xl sm:text-3xl lg:text-5xl font-bold leading-tight">
                             <SplitText as="p" className="text-gray-900">
-                                Your Digital Design,
+                                From CAD to Physical —
                             </SplitText>
                             <SplitText as="p" className="text-[#4f46e5]">
-                                Our Precision Hardware.
+                                Engineered for Precision.
                             </SplitText>
                         </h2>
 
                         <AnimatedSubtext className="mt-3 sm:mt-5 text-xs sm:text-sm lg:text-base text-gray-600 leading-relaxed max-w-lg">
-                            Upload your .STL or .OBJ files and let our
-                            state-of-the-art print farm handle the rest. We
-                            specialize in high-temp engineering plastics and
-                            medical-grade resins.
+                            Upload your STL/OBJ files and get production-grade
+                            parts manufactured with industrial accuracy. From
+                            rapid prototyping to functional end-use components —
+                            we deliver, fast.
                         </AnimatedSubtext>
 
                         {/* Feature list */}
@@ -83,10 +82,10 @@ export default function CustomPrinting() {
 
                         {/* CTA */}
                         <Link
-                            href="/personalise"
+                            href="/services"
                             className="inline-flex items-center gap-2 mt-5 sm:mt-8 px-5 py-3 sm:px-7 sm:py-3.5 text-xs sm:text-sm font-semibold text-white bg-[#4f46e5] rounded-lg hover:bg-[#4338ca] transition-colors"
                         >
-                            Get an Instant Quote{" "}
+                            Get Instant Quote{" "}
                             <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Link>
                     </div>
