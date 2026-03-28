@@ -50,9 +50,9 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                     {/* ── Spotlight Image (left — 6/12) ── */}
                     <Link
                         href={current.href}
-                        className="lg:col-span-6 xl:col-span-7 relative h-[440px] lg:h-[480px] rounded-[32px] lg:rounded-[40px] bg-white border border-black/5 p-3 lg:p-4 group block shadow-sm hover:shadow-lg transition-all duration-500"
+                        className="lg:col-span-6 xl:col-span-7 relative h-[440px] lg:h-[480px] rounded-[32px] lg:rounded-[40px] overflow-hidden group block shadow-sm hover:shadow-lg transition-all duration-500"
                     >
-                        <div className="relative w-full h-full rounded-[24px] lg:rounded-[28px] overflow-hidden bg-[#f4f5f7] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                        <div className="relative w-full h-full overflow-hidden">
                             <AnimatePresence initial={false}>
                                 <motion.img
                                     key={current.id + "_img"}
@@ -62,8 +62,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                     transition={{ duration: 0.6 }}
                                     src={current.image || ""}
                                     alt={current.name}
-                                    /* REDUCED Y-AXIS PADDING: Changed from p-8 lg:p-12 to px-8 py-2 lg:px-12 lg:py-4 to make image bigger */
-                                    className="absolute inset-0 w-full h-full object-contain px-8 py-2 lg:px-12 lg:py-4 mix-blend-multiply"
+                                    className="absolute inset-0 w-full h-full object-contain mix-blend-multiply"
                                 />
                             </AnimatePresence>
 
@@ -156,7 +155,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                                 },
                                             }}
                                         >
-                                            View Details{" "}
+                                            View Details
                                             <ArrowRight className="w-3.5 h-3.5" />
                                         </motion.span>
                                     </motion.div>

@@ -16,21 +16,13 @@ interface CustomerReviewsProps {
     testimonials: TestimonialItem[];
 }
 
-function StarRating({
-    count,
-    size = "normal",
-}: {
-    count: number;
-    size?: "small" | "normal";
-}) {
-    const cls = size === "small" ? "w-3 h-3" : "w-4 h-4";
-
+function StarRating({ count }: { count: number }) {
     return (
         <div className="flex gap-0.5">
             {[...Array(5)].map((_, i) => (
                 <Star
                     key={i}
-                    className={`${cls} ${
+                    className={`w-3 h-3 ${
                         i < count
                             ? "fill-amber-400 text-amber-400"
                             : "text-gray-200"
@@ -41,11 +33,10 @@ function StarRating({
     );
 }
 
-/* ── MOBILE STYLE CARD ── */
 function ReviewCard({ t }: { t: TestimonialItem }) {
     return (
         <div className="bg-[#f9f9f9] rounded-xl border border-gray-100 p-4 flex gap-3 w-[260px] sm:w-[280px] md:w-[300px] flex-shrink-0">
-            <div className="w-9 h-9 rounded-full bg-[#4f46e5] flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded-full bg-[#4f46e5] flex items-center justify-center text-[10px] font-bold text-white">
                 {t.initials}
             </div>
 
@@ -57,10 +48,10 @@ function ReviewCard({ t }: { t: TestimonialItem }) {
                         </p>
                         <p className="text-[10px] text-gray-500">{t.role}</p>
                     </div>
-                    <StarRating count={t.rating} size="small" />
+                    <StarRating count={t.rating} />
                 </div>
 
-                <p className="mt-2 text-xs text-gray-600 leading-relaxed italic line-clamp-3">
+                <p className="mt-2 text-xs text-gray-600 italic line-clamp-3">
                     &ldquo;{t.quote}&rdquo;
                 </p>
             </div>
@@ -68,191 +59,36 @@ function ReviewCard({ t }: { t: TestimonialItem }) {
     );
 }
 
-/* ── CAROUSEL ── */
 function ReviewCarousel({ testimonials }: { testimonials: TestimonialItem[] }) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const isPausedRef = useRef(false);
-    const speedRef = useRef(0.5);
-    const targetSpeedRef = useRef(0.5);
     const animationRef = useRef<number>(0);
-
-    const isDraggingRef = useRef(false);
-    const dragStartXRef = useRef(0);
-    const dragScrollLeftRef = useRef(0);
-    const dragVelocityRef = useRef(0);
-    const lastDragXRef = useRef(0);
-    const lastDragTimeRef = useRef(0);
-
-    const BASE_SPEED = 0.5;
-    const EASE_FACTOR = 0.03;
 
     const tripled = [...testimonials, ...testimonials, ...testimonials];
 
-    const resetScrollIfNeeded = useCallback((container: HTMLDivElement) => {
-        const oneThird = container.scrollWidth / 3;
-        if (container.scrollLeft >= oneThird * 2) {
-            container.scrollLeft -= oneThird;
-        } else if (container.scrollLeft <= 0) {
-            container.scrollLeft += oneThird;
-        }
+    const resetScroll = useCallback((el: HTMLDivElement) => {
+        const third = el.scrollWidth / 3;
+        if (el.scrollLeft >= third * 2) el.scrollLeft -= third;
+        if (el.scrollLeft <= 0) el.scrollLeft += third;
     }, []);
 
     useEffect(() => {
-        const container = scrollRef.current;
-        if (!container || testimonials.length <= 1) return;
+        const el = scrollRef.current;
+        if (!el) return;
 
-        const oneThird = container.scrollWidth / 3;
-        container.scrollLeft = oneThird;
+        el.scrollLeft = el.scrollWidth / 3;
 
         const animate = () => {
-            if (!container) return;
-
-            const target =
-                isPausedRef.current || isDraggingRef.current ? 0 : BASE_SPEED;
-
-            targetSpeedRef.current = target;
-            speedRef.current +=
-                (targetSpeedRef.current - speedRef.current) * EASE_FACTOR;
-
-            if (
-                !isDraggingRef.current &&
-                Math.abs(dragVelocityRef.current) > 0.1
-            ) {
-                container.scrollLeft -= dragVelocityRef.current;
-                dragVelocityRef.current *= 0.95;
-            } else {
-                dragVelocityRef.current = 0;
-            }
-
-            if (Math.abs(speedRef.current) > 0.01) {
-                container.scrollLeft += speedRef.current;
-            }
-
-            resetScrollIfNeeded(container);
+            el.scrollLeft += 0.5;
+            resetScroll(el);
             animationRef.current = requestAnimationFrame(animate);
         };
 
         animationRef.current = requestAnimationFrame(animate);
-
         return () => cancelAnimationFrame(animationRef.current);
-    }, [testimonials.length, resetScrollIfNeeded]);
-
-    /* Hover */
-    const handleMouseEnter = () => {
-        isPausedRef.current = true;
-    };
-
-    const handleMouseLeave = () => {
-        if (!isDraggingRef.current) {
-            isPausedRef.current = false;
-        }
-    };
-
-    /* Drag */
-    const handleMouseDown = (e: React.MouseEvent) => {
-        const container = scrollRef.current;
-        if (!container) return;
-
-        isDraggingRef.current = true;
-        dragStartXRef.current = e.pageX;
-        dragScrollLeftRef.current = container.scrollLeft;
-        lastDragXRef.current = e.pageX;
-        lastDragTimeRef.current = Date.now();
-        dragVelocityRef.current = 0;
-
-        container.style.cursor = "grabbing";
-        container.style.userSelect = "none";
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDraggingRef.current) return;
-        const container = scrollRef.current;
-        if (!container) return;
-
-        e.preventDefault();
-
-        const x = e.pageX;
-        const walk = x - dragStartXRef.current;
-        container.scrollLeft = dragScrollLeftRef.current - walk;
-
-        const now = Date.now();
-        const dt = now - lastDragTimeRef.current;
-        if (dt > 0) {
-            dragVelocityRef.current = ((x - lastDragXRef.current) / dt) * 16;
-        }
-
-        lastDragXRef.current = x;
-        lastDragTimeRef.current = now;
-    };
-
-    const handleMouseUp = () => {
-        isDraggingRef.current = false;
-        const container = scrollRef.current;
-
-        if (container) {
-            container.style.cursor = "grab";
-            container.style.userSelect = "";
-        }
-    };
-
-    /* Touch */
-    const handleTouchStart = (e: React.TouchEvent) => {
-        const container = scrollRef.current;
-        if (!container) return;
-
-        isPausedRef.current = true;
-        isDraggingRef.current = true;
-
-        dragStartXRef.current = e.touches[0].pageX;
-        dragScrollLeftRef.current = container.scrollLeft;
-        lastDragXRef.current = e.touches[0].pageX;
-        lastDragTimeRef.current = Date.now();
-        dragVelocityRef.current = 0;
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        if (!isDraggingRef.current) return;
-        const container = scrollRef.current;
-        if (!container) return;
-
-        const x = e.touches[0].pageX;
-        const walk = x - dragStartXRef.current;
-        container.scrollLeft = dragScrollLeftRef.current - walk;
-
-        const now = Date.now();
-        const dt = now - lastDragTimeRef.current;
-        if (dt > 0) {
-            dragVelocityRef.current = ((x - lastDragXRef.current) / dt) * 16;
-        }
-
-        lastDragXRef.current = x;
-        lastDragTimeRef.current = now;
-    };
-
-    const handleTouchEnd = () => {
-        isDraggingRef.current = false;
-        setTimeout(() => {
-            isPausedRef.current = false;
-        }, 2000);
-    };
+    }, [resetScroll]);
 
     return (
-        <div
-            ref={scrollRef}
-            className="flex gap-4 overflow-x-hidden"
-            style={{ cursor: "grab" }}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={(e) => {
-                handleMouseUp();
-                handleMouseLeave();
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-        >
+        <div ref={scrollRef} className="flex gap-4 overflow-x-hidden">
             {tripled.map((t, i) => (
                 <ReviewCard key={`${t.id}-${i}`} t={t} />
             ))}
@@ -260,26 +96,25 @@ function ReviewCarousel({ testimonials }: { testimonials: TestimonialItem[] }) {
     );
 }
 
-/* ── MAIN ── */
 export default function CustomerReviews({
     testimonials,
 }: CustomerReviewsProps) {
     if (!testimonials?.length) return null;
 
     return (
-        <section className="w-full bg-white py-8 sm:py-12 overflow-hidden">
-            {/* HEADER */}
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-10 lg:px-16 mb-6 sm:mb-8">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                    What Our Customers Say
-                </h2>
-                <p className="mt-1 text-xs sm:text-sm text-gray-500">
-                    Trusted by makers, engineers, and creators worldwide.
-                </p>
-            </div>
+        <section className="w-full bg-white py-10 sm:py-16 lg:py-24 px-4 sm:px-10 lg:px-16">
+            <div className="max-w-[1400px] mx-auto">
+                {/* Header */}
+                <div className="mb-6 sm:mb-10 lg:mb-12">
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+                        What Our Customers Say
+                    </h2>
+                    <p className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-500">
+                        Trusted by makers, engineers, and creators worldwide.
+                    </p>
+                </div>
 
-            {/* CAROUSEL INSIDE SAME CONTAINER */}
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-10 lg:px-16">
+                {/* Carousel */}
                 <ReviewCarousel testimonials={testimonials} />
             </div>
         </section>

@@ -298,6 +298,7 @@ function HeroCard({ product }: { product: BestSellerProduct }) {
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+
         if (!session) {
             toast({
                 title: "Authentication Required",
@@ -314,22 +315,26 @@ function HeroCard({ product }: { product: BestSellerProduct }) {
             });
             return;
         }
+
         setIsCartLoading(true);
+
         try {
-            // Try adding by printerId if href is a printer link
             if (product.href.startsWith("/printers/")) {
                 const slug = product.href.split("/printers/")[1];
                 const res = await fetch(`/api/printers/${slug}`);
+
                 if (res.ok) {
                     const printer = await res.json();
                     await addToCart({ printerId: printer.id, quantity: 1 });
+
                     toast({
                         title: "Added to Cart",
-                        description: `${product.name} has been added to your cart.`,
+                        description: `${product.name} added to cart.`,
                     });
                     return;
                 }
             }
+
             toast({
                 title: "Visit product page",
                 description:
@@ -349,41 +354,48 @@ function HeroCard({ product }: { product: BestSellerProduct }) {
     return (
         <Link
             href={product.href}
-            className="md:col-span-2 md:row-span-2 relative group overflow-hidden rounded-[32px] bg-[#0a0a0f] shadow-sm hover:shadow-xl transition-all duration-500 block h-full w-full"
+            className="md:col-span-2 md:row-span-2 relative group overflow-hidden rounded-[28px] lg:rounded-[32px] bg-[#0a0a0f] shadow-sm hover:shadow-xl transition-all duration-500 block h-full w-full"
         >
+            {/* Image */}
             <img
                 src={product.image}
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 from-0% via-black/30 via-40% to-transparent to-70%" />
 
-            <div className="absolute top-6 left-6 lg:top-8 lg:left-8 z-10">
-                <span className="bg-[#4f46e5] text-white px-3.5 py-1.5 rounded-full text-[10px] lg:text-[11px] font-black uppercase tracking-widest shadow-md">
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+            {/* Badge */}
+            <div className="absolute top-5 left-5 lg:top-6 lg:left-6 z-10">
+                <span className="bg-[#4f46e5] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md">
                     #1 Best Seller
                 </span>
             </div>
 
-            <div className="absolute bottom-0 left-0 p-6 lg:p-8 xl:p-10 w-full z-10">
-                <div className="flex flex-col xl:flex-row xl:justify-between xl:items-end gap-5 lg:gap-6">
-                    <div className="max-w-[18rem] lg:max-w-md">
-                        <h3 className="text-white text-3xl lg:text-4xl font-black mb-2 lg:mb-3 leading-tight">
+            {/* Content */}
+            <div className="absolute bottom-0 left-0 w-full p-5 lg:p-6 xl:p-8 z-10">
+                <div className="flex flex-col xl:flex-row xl:justify-between xl:items-end gap-4 lg:gap-5">
+                    {/* Left */}
+                    <div className="max-w-[16rem] lg:max-w-md">
+                        <h3 className="text-white text-2xl lg:text-3xl font-black mb-2 leading-tight">
                             {product.name}
                         </h3>
+
                         {product.description && (
-                            <p className="text-white/70 text-sm lg:text-[15px] mb-4 xl:mb-6 line-clamp-2">
+                            <p className="text-white/70 text-sm mb-4 line-clamp-2">
                                 {product.description}
                             </p>
                         )}
 
-                        {product.specs && product.specs.length > 0 && (
-                            <div className="flex gap-6 lg:gap-8 mb-2 xl:mb-0">
+                        {product.specs && (
+                            <div className="flex gap-5 lg:gap-6">
                                 {product.specs.map((spec) => (
                                     <div key={spec.label}>
-                                        <p className="text-white/40 text-[9px] lg:text-[10px] uppercase font-bold tracking-widest mb-1">
+                                        <p className="text-white/40 text-[9px] uppercase font-bold tracking-widest mb-1">
                                             {spec.label}
                                         </p>
-                                        <p className="text-white font-mono text-base lg:text-xl font-bold">
+                                        <p className="text-white font-mono text-base lg:text-lg font-bold">
                                             {spec.value}
                                         </p>
                                     </div>
@@ -392,20 +404,23 @@ function HeroCard({ product }: { product: BestSellerProduct }) {
                         )}
                     </div>
 
+                    {/* Right */}
                     <div className="text-left xl:text-right shrink-0">
-                        <p className="text-[#818cf8] text-2xl lg:text-3xl font-black mb-3 lg:mb-4">
+                        <p className="text-[#818cf8] text-xl lg:text-2xl font-black mb-3">
                             {formatPrice(product.price)}
                         </p>
+
                         <button
-                            className="bg-white text-gray-900 px-6 py-3 lg:px-8 lg:py-4 rounded-xl lg:rounded-2xl text-sm lg:text-base font-bold hover:bg-gray-100 transition-all flex items-center gap-2 shadow-xl disabled:opacity-60"
+                            className="bg-white text-gray-900 px-5 py-2.5 lg:px-6 lg:py-3 rounded-xl text-sm font-bold hover:bg-gray-100 transition-all flex items-center gap-2 shadow-lg disabled:opacity-60"
                             onClick={handleAddToCart}
                             disabled={isCartLoading}
                         >
                             {isCartLoading ? (
-                                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
                             ) : (
                                 <>
-                                    Add to Cart <ShoppingCart size={18} />
+                                    Add to Cart
+                                    <ShoppingCart size={16} />
                                 </>
                             )}
                         </button>
