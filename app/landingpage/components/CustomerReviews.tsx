@@ -67,15 +67,19 @@ function ReviewCarousel({ testimonials }: { testimonials: TestimonialItem[] }) {
 
     const resetScroll = useCallback((el: HTMLDivElement) => {
         const third = el.scrollWidth / 3;
-        if (el.scrollLeft >= third * 2) el.scrollLeft -= third;
-        if (el.scrollLeft <= 0) el.scrollLeft += third;
+
+        if (el.scrollLeft >= third * 2) {
+            el.scrollLeft -= third;
+        }
+
+        if (el.scrollLeft <= 0) {
+            el.scrollLeft += third;
+        }
     }, []);
 
-    useEffect(() => {
+    const startAnimation = useCallback(() => {
         const el = scrollRef.current;
         if (!el) return;
-
-        el.scrollLeft = el.scrollWidth / 3;
 
         const animate = () => {
             el.scrollLeft += 0.5;
@@ -84,15 +88,46 @@ function ReviewCarousel({ testimonials }: { testimonials: TestimonialItem[] }) {
         };
 
         animationRef.current = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(animationRef.current);
     }, [resetScroll]);
 
+    const stopAnimation = () => {
+        cancelAnimationFrame(animationRef.current);
+    };
+
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+
+        el.scrollLeft = el.scrollWidth / 3;
+        startAnimation();
+
+        return () => cancelAnimationFrame(animationRef.current);
+    }, [startAnimation]);
+
     return (
-        <div ref={scrollRef} className="flex gap-4 overflow-x-hidden">
-            {tripled.map((t, i) => (
-                <ReviewCard key={`${t.id}-${i}`} t={t} />
-            ))}
-        </div>
+        <>
+            {/* Inline scrollbar hide */}
+            <style jsx>{`
+                .hide-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+            `}</style>
+
+            <div
+                ref={scrollRef}
+                onMouseEnter={stopAnimation}
+                onMouseLeave={startAnimation}
+                className="hide-scrollbar flex gap-4 overflow-x-auto cursor-grab active:cursor-grabbing"
+                style={{
+                    scrollbarWidth: "none",
+                    msOverflowStyle: "none",
+                }}
+            >
+                {tripled.map((t, i) => (
+                    <ReviewCard key={`${t.id}-${i}`} t={t} />
+                ))}
+            </div>
+        </>
     );
 }
 
