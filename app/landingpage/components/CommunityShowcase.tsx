@@ -63,13 +63,14 @@ export default function CommunityShowcase({ images }: CommunityShowcaseProps) {
                     <SplitText className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-gray-900 justify-center">
                         Powered by Scribbl3D.
                     </SplitText>
+
                     <AnimatedSubtext className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-500 max-w-xs sm:max-w-lg mx-auto">
                         Join thousands of makers worldwide pushing the limits of
                         desktop manufacturing.
                     </AnimatedSubtext>
                 </div>
 
-                {/* Grid */}
+                {/* Desktop Grid */}
                 <div className="hidden md:grid grid-cols-4 grid-rows-3 gap-3 sm:gap-5 lg:gap-5 md:h-[600px] lg:h-[650px]">
                     {img0 && (
                         <ImageCard
@@ -77,13 +78,42 @@ export default function CommunityShowcase({ images }: CommunityShowcaseProps) {
                             className="col-span-2 row-span-2"
                         />
                     )}
+
                     {img1 && <ImageCard img={img1} />}
+
                     {img3 && <ImageCard img={img3} className="row-span-2" />}
+
                     {img2 && <ImageCard img={img2} />}
+
                     {img4 && <ImageCard img={img4} />}
                     {img5 && <ImageCard img={img5} />}
                     {img6 && <ImageCard img={img6} />}
                     {img7 && <ImageCard img={img7} />}
+                </div>
+
+                {/* Mobile Layout */}
+                <div className="flex flex-col gap-3 md:hidden">
+                    {img0 && (
+                        <ImageCard img={img0} className="w-full aspect-[4/3]" />
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3">
+                        {img1 && (
+                            <ImageCard img={img1} className="aspect-square" />
+                        )}
+                        {img2 && (
+                            <ImageCard img={img2} className="aspect-square" />
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        {img3 && (
+                            <ImageCard img={img4} className="aspect-square" />
+                        )}
+                        {img4 && (
+                            <ImageCard img={img5} className="aspect-square" />
+                        )}
+                    </div>
                 </div>
             </div>
         </section>
