@@ -102,10 +102,10 @@ export default function CustomerReviews({
     if (!testimonials?.length) return null;
 
     return (
-        <section className="w-full bg-white py-10 sm:py-16 lg:py-24 px-4 sm:px-10 lg:px-16">
+        <section className="w-full bg-white py-6 sm:py-8 lg:py-10 px-4 sm:px-10 lg:px-16">
             <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
-                <div className="mb-6 sm:mb-10 lg:mb-12">
+                <div className="mb-4 sm:mb-6 lg:mb-8">
                     <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
                         What Our Customers Say
                     </h2>

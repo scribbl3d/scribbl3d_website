@@ -53,10 +53,10 @@ export default function CommunityShowcase({ images }: CommunityShowcaseProps) {
     const [img0, img1, img2, img3, img4, img5, img6, img7] = sorted;
 
     return (
-        <section className="w-full bg-white py-10 sm:py-16 lg:py-24 px-4 sm:px-10 lg:px-16">
+        <section className="w-full bg-white pt-6 sm:pt-8 lg:pt-10 pb-2 sm:pb-4 lg:pb-6 px-4 sm:px-10 lg:px-16">
             <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
-                <div className="text-center mb-6 sm:mb-10 lg:mb-12">
+                <div className="text-center mb-4 sm:mb-6 lg:mb-8">
                     <SplitText className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-gray-900 justify-center">
                         Printed by You.
                     </SplitText>
@@ -69,65 +69,21 @@ export default function CommunityShowcase({ images }: CommunityShowcaseProps) {
                     </AnimatedSubtext>
                 </div>
 
-                {/* Desktop Grid */}
-                <div className="hidden md:grid grid-cols-4 grid-rows-3 gap-3 sm:gap-5 lg:gap-5 md:h-[650px] lg:h-[700px]">
+                {/* Grid */}
+                <div className="hidden md:grid grid-cols-4 grid-rows-3 gap-3 sm:gap-5 lg:gap-5 md:h-[600px] lg:h-[650px]">
                     {img0 && (
                         <ImageCard
                             img={img0}
                             className="col-span-2 row-span-2"
                         />
                     )}
-
-                    {img1 && (
-                        <ImageCard
-                            img={img1}
-                            className="col-span-1 row-span-1"
-                        />
-                    )}
-
-                    {img3 && (
-                        <ImageCard
-                            img={img3}
-                            className="col-span-1 row-span-2"
-                        />
-                    )}
-
-                    {img2 && (
-                        <ImageCard
-                            img={img2}
-                            className="col-span-1 row-span-1"
-                        />
-                    )}
-
+                    {img1 && <ImageCard img={img1} />}
+                    {img3 && <ImageCard img={img3} className="row-span-2" />}
+                    {img2 && <ImageCard img={img2} />}
                     {img4 && <ImageCard img={img4} />}
                     {img5 && <ImageCard img={img5} />}
                     {img6 && <ImageCard img={img6} />}
                     {img7 && <ImageCard img={img7} />}
-                </div>
-
-                {/* Mobile Layout */}
-                <div className="flex flex-col gap-3 md:hidden">
-                    {img0 && (
-                        <ImageCard img={img0} className="w-full aspect-[4/3]" />
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3">
-                        {img1 && (
-                            <ImageCard img={img1} className="aspect-square" />
-                        )}
-                        {img2 && (
-                            <ImageCard img={img2} className="aspect-square" />
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        {img3 && (
-                            <ImageCard img={img4} className="aspect-square" />
-                        )}
-                        {img4 && (
-                            <ImageCard img={img5} className="aspect-square" />
-                        )}
-                    </div>
                 </div>
             </div>
         </section>
