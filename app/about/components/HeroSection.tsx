@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { BRAND } from "./constants";
 
 const staggerContainer = {
@@ -69,13 +70,65 @@ function SplitHeadline({ text }: { text: string }) {
     );
 }
 
+// Define the interface based on the database schema
+interface HeroData {
+    headline: string;
+    headlineAccent?: string | null;
+    subtext?: string | null;
+    mediaUrl: string;
+    buttonText?: string | null;
+    buttonLink?: string | null;
+}
+
 export default function HeroSection() {
+    const [heroData, setHeroData] = useState<HeroData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchHero = async () => {
+            try {
+                const res = await fetch("/api/about-hero");
+                if (res.ok) {
+                    const data = await res.json();
+                    // Ensure we don't set empty objects if DB is empty
+                    if (data && data.headline) {
+                        setHeroData(data);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch hero data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchHero();
+    }, []);
+
+    // Show a blank dark background while fetching to prevent flickering text
+    if (isLoading) {
+        return (
+            <section className="w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[500px] bg-[#0a0a0f] animate-pulse" />
+        );
+    }
+
+    // Apply fallbacks just in case the database is empty or a field is missing
+    const headline =
+        heroData?.headline || "Building the Future of Manufacturing";
+    const headlineAccent = heroData?.headlineAccent || "Powered by 3D Printing";
+    const subtext =
+        heroData?.subtext ||
+        "At Scribbl3D, we're on a mission to make advanced manufacturing accessible, scalable, and reliable.";
+    const mediaUrl = heroData?.mediaUrl || "/about/hero.jpg";
+    const buttonText = heroData?.buttonText || "Browse Catalog";
+    const buttonLink = heroData?.buttonLink || "#ecosystem";
+
     return (
         <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[500px] overflow-hidden bg-[#0a0a0f]">
             {/* Background */}
             <img
-                src="/about/hero.jpg"
-                alt="hero"
+                src={mediaUrl}
+                alt="hero background"
                 className="absolute inset-0 w-full h-full object-cover"
             />
 
@@ -84,74 +137,79 @@ export default function HeroSection() {
 
             {/* Content */}
             <div className="relative z-10 h-full flex flex-col justify-end sm:justify-center px-5 sm:px-10 lg:px-16 pt-[90px] pb-16 sm:pb-0 max-w-[1400px] mx-auto">
-                {/* Headline - Removed explicit \n to allow natural wrapping */}
-                <SplitHeadline text="Building the Future of Manufacturing" />
+                {/* Headline */}
+                <SplitHeadline text={headline} />
 
-                {/* Accent line */}
-                <motion.h2
-                    variants={accentVariant}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    className="font-manrope font-extrabold text-blue-500 leading-tight text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-3 sm:mt-4"
-                >
-                    Powered by 3D Printing
-                </motion.h2>
-
-                {/* Subtext */}
-                <motion.p
-                    variants={subtextVariant}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed text-white/80"
-                >
-                    At Scribbl3D, we're on a mission to make advanced
-                    manufacturing accessible, scalable, and reliable.
-                </motion.p>
-
-                {/* CTA */}
-                <motion.div
-                    variants={ctaVariant}
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true }}
-                    className="mt-6 sm:mt-10"
-                >
-                    <a
-                        href="#ecosystem"
-                        className="inline-flex items-center gap-2 sm:gap-3 px-5 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg hover:scale-[1.02] transition-transform"
-                        style={{
-                            background: BRAND.blue,
-                            boxShadow: "0 10px 25px rgba(37,99,235,0.35)",
-                        }}
+                {/* Accent line (Conditionally Rendered) */}
+                {headlineAccent && (
+                    <motion.h2
+                        variants={accentVariant}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        className="font-manrope font-extrabold text-blue-500 leading-tight text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-3 sm:mt-4"
                     >
-                        Browse Catalog
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 13 14"
-                            fill="none"
-                            className="w-4 h-4"
+                        {headlineAccent}
+                    </motion.h2>
+                )}
+
+                {/* Subtext (Conditionally Rendered) */}
+                {subtext && (
+                    <motion.p
+                        variants={subtextVariant}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed text-white/80"
+                    >
+                        {subtext}
+                    </motion.p>
+                )}
+
+                {/* CTA (Conditionally Rendered if both text and link exist) */}
+                {buttonText && buttonLink && (
+                    <motion.div
+                        variants={ctaVariant}
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        className="mt-6 sm:mt-10"
+                    >
+                        <a
+                            href={buttonLink}
+                            className="inline-flex items-center gap-2 sm:gap-3 px-5 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg hover:scale-[1.02] transition-transform"
+                            style={{
+                                background: BRAND.blue || "#2563EB",
+                                boxShadow: "0 10px 25px rgba(37,99,235,0.35)",
+                            }}
                         >
-                            <rect
-                                x="0.38"
-                                y="0.99"
-                                width="12.03"
-                                height="12.03"
-                                rx="6.01"
-                                stroke="currentColor"
-                                strokeWidth="0.76"
-                            />
-                            <path
-                                d="M4 9.39L8.79 4.6M8.79 4.6H4.48M8.79 4.6V8.92"
-                                stroke="currentColor"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </a>
-                </motion.div>
+                            {buttonText}
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 13 14"
+                                fill="none"
+                                className="w-4 h-4"
+                            >
+                                <rect
+                                    x="0.38"
+                                    y="0.99"
+                                    width="12.03"
+                                    height="12.03"
+                                    rx="6.01"
+                                    stroke="currentColor"
+                                    strokeWidth="0.76"
+                                />
+                                <path
+                                    d="M4 9.39L8.79 4.6M8.79 4.6H4.48M8.79 4.6V8.92"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </a>
+                    </motion.div>
+                )}
             </div>
         </section>
     );

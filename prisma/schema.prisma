@@ -122,7 +122,16 @@ model WishlistItem {
   resin              Resin?           @relation(fields: [resinId], references: [id])
 }
 
-
+model AboutHero {
+  id             String   @id @default(cuid())
+  headline       String
+  headlineAccent String?
+  subtext        String?
+  mediaUrl       String
+  buttonText     String?
+  buttonLink     String?
+  updatedAt      DateTime @updatedAt
+}
 
 model Cart {
   id     String     @id @default(cuid())

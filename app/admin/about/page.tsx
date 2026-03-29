@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AboutHeroAdmin from "./components/AboutHeroAdmin";
 import TrustedByAdmin from "./components/TrustedByAdmin";
 
 export default function AboutAdminPage() {
@@ -38,7 +39,7 @@ export default function AboutAdminPage() {
                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                     }`}
                 >
-                    Hero Section (Placeholder)
+                    Hero Section
                 </button>
             </div>
 
@@ -46,13 +47,7 @@ export default function AboutAdminPage() {
             <div className="bg-transparent">
                 {activeTab === "trusted-by" && <TrustedByAdmin />}
 
-                {activeTab === "hero-section" && (
-                    <div className="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-dashed border-gray-300">
-                        <p className="text-gray-500 font-medium">
-                            Hero section admin controls will go here.
-                        </p>
-                    </div>
-                )}
+                {activeTab === "hero-section" && <AboutHeroAdmin />}
             </div>
         </div>
     );
