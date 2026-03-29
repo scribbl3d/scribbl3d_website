@@ -204,14 +204,18 @@ model OTP {
 
 model Blog {
   id             String   @id @default(cuid())
+  slug           String?  @unique @db.VarChar(255)  // SEO-friendly URLs /blog/my-post-title
   title          String   @db.VarChar(255)
   content        String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  keywords       String   @db.VarChar(255)
   description    String?  @db.VarChar(500)
+  keywords       String   @db.VarChar(255)
   thumbnailImage String?  @db.VarChar(255)
   heroImage      String?  @db.VarChar(255)
+  published      Boolean  @default(false)           // draft vs live control
+  publishedAt    DateTime?                           // track when it went live
+  featured       Boolean  @default(false)            // pin one to the featured hero slot
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model HeroBanner {
