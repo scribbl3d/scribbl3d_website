@@ -71,6 +71,11 @@ export default function StatsSection() {
     const ref = useRef<HTMLElement>(null);
     const [active, setActive] = useState(false);
 
+    // Calculate dynamic years of experience
+    const currentYear = new Date().getFullYear();
+    const baseYear = 2022;
+    const dynamicYearsOfExperience = currentYear - baseYear;
+
     useEffect(() => {
         const obs = new IntersectionObserver(
             ([entry]) => {
@@ -97,27 +102,48 @@ export default function StatsSection() {
                     margin: "0 auto",
                     padding: "24px",
                     display: "grid",
-                    gridTemplateColumns: "repeat(2, 1fr)", // ✅ mobile bento grid
+                    gridTemplateColumns: "repeat(2, 1fr)",
                     gap: "16px",
                 }}
             >
-                {STATS.map((s) => (
-                    <div
-                        key={s.label}
-                        style={{
-                            background: "#F8FAFC",
-                            borderRadius: 16,
-                            padding: "24px 16px",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            minHeight: 140,
-                        }}
-                    >
-                        <StatCard {...s} active={active} />
-                    </div>
-                ))}
+                {STATS.map((s) => {
+                    // ✅ Looks for "experience" to match your constants.ts file
+                    const isExperienceStat = s.label
+                        .toLowerCase()
+                        .includes("experience");
+                    const displayValue = isExperienceStat
+                        ? dynamicYearsOfExperience
+                        : s.value;
+
+                    // ✅ Forces the text shown on screen to be "Years of Experience"
+                    const displayLabel = isExperienceStat
+                        ? "Years of Experience"
+                        : s.label;
+
+                    return (
+                        <div
+                            key={s.label}
+                            style={{
+                                background: "#F8FAFC",
+                                borderRadius: 16,
+                                padding: "24px 16px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                minHeight: 140,
+                            }}
+                        >
+                            <StatCard
+                                icon={s.icon}
+                                value={displayValue}
+                                suffix={s.suffix}
+                                label={displayLabel}
+                                active={active}
+                            />
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Desktop layout */}
