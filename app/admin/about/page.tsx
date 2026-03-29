@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import AboutHeroAdmin from "./components/AboutHeroAdmin";
 import TrustedByAdmin from "./components/TrustedByAdmin";
@@ -10,6 +11,16 @@ export default function AboutAdminPage() {
 
     return (
         <div className="p-8 max-w-[1240px] mx-auto min-h-screen bg-gray-50">
+            {/* 🔙 Back Button */}
+            <div className="mb-6">
+                <Link
+                    href="/admin"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                    ← Back to Admin
+                </Link>
+            </div>
+
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
                     About Page Content
@@ -46,7 +57,6 @@ export default function AboutAdminPage() {
             {/* ── Tab Content Container ── */}
             <div className="bg-transparent">
                 {activeTab === "trusted-by" && <TrustedByAdmin />}
-
                 {activeTab === "hero-section" && <AboutHeroAdmin />}
             </div>
         </div>
