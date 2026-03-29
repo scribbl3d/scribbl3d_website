@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link"; // Added Next.js Link import
 import { useEffect, useState } from "react";
 import { BRAND } from "./constants";
 
@@ -121,7 +122,7 @@ export default function HeroSection() {
         "At Scribbl3D, we're on a mission to make advanced manufacturing accessible, scalable, and reliable.";
     const mediaUrl = heroData?.mediaUrl || "/about/hero.jpg";
     const buttonText = heroData?.buttonText || "Browse Catalog";
-    const buttonLink = heroData?.buttonLink || "#ecosystem";
+    const buttonLink = heroData?.buttonLink || "/#ecosystem"; // Defaults to the anchor link format
 
     return (
         <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[500px] overflow-hidden bg-[#0a0a0f]">
@@ -175,7 +176,8 @@ export default function HeroSection() {
                         viewport={{ once: true }}
                         className="mt-6 sm:mt-10"
                     >
-                        <a
+                        {/* Changed <a> to Next.js <Link> */}
+                        <Link
                             href={buttonLink}
                             className="inline-flex items-center gap-2 sm:gap-3 px-5 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-bold text-white rounded-xl shadow-lg hover:scale-[1.02] transition-transform"
                             style={{
@@ -207,7 +209,7 @@ export default function HeroSection() {
                                     strokeLinejoin="round"
                                 />
                             </svg>
-                        </a>
+                        </Link>
                     </motion.div>
                 )}
             </div>

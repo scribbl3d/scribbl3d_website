@@ -1,13 +1,17 @@
 "use client";
 
 import { ReactNode, useState } from "react";
+import {
+    AnimatedSubtext,
+    SplitText,
+} from "../../landingpage/components/SplitText";
 import { MARKETPLACES } from "./constants";
+
 const LOGOS: Record<string, ReactNode> = {
     amazon: (
         <img
             src="/about/amazon.png"
             alt="Amazon"
-            // Bumped up to 90%
             className="w-[90%] h-[90%] object-contain"
         />
     ),
@@ -22,7 +26,6 @@ const LOGOS: Record<string, ReactNode> = {
         <img
             src="/about/mart.png"
             alt="IndiaMart"
-            // Using scale-[1.3] to magnify it by 30% and ignore the image's internal white borders
             className="w-full h-full object-contain scale-[1.3]"
         />
     ),
@@ -35,29 +38,23 @@ const LOGOS: Record<string, ReactNode> = {
     ),
 };
 
+const LINKS: Record<string, string> = {
+    amazon: "https://www.amazon.in/stores/Scribbl3d/page/9311E60A-3B9C-451E-9F0D-3DE38D818BEC?lp_asin=B0D9GY5KMT&ref_=ast_bln",
+    indiamart: "https://www.indiamart.com/scribbl3d/profile.html",
+    flipkart: "#", // Add your Flipkart link here
+    etsy: "#", // Add your Etsy link here
+};
+
 export default function GlobalPresenceSection() {
     const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
     return (
         <section className="bg-white px-6 py-16 lg:py-[120px]">
-            <div className="max-w-[1240px] mx-auto flex flex-col lg:flex-row gap-[48px] lg:gap-[96px] items-center lg:items-start">
+            <div className="max-w-[1240px] mx-auto flex flex-col lg:flex-row gap-12 lg:gap-24 items-center lg:items-start">
                 {/* ── Left text column ── */}
                 <div className="w-full lg:w-[578px] flex-shrink-0">
                     {/* Badge */}
-                    <span
-                        className="font-['Inter'] uppercase inline-flex items-center"
-                        style={{
-                            gap: "8px",
-                            background: "#EFF6FF",
-                            borderRadius: "9999px",
-                            padding: "6px 14px",
-                            fontSize: "10px",
-                            fontWeight: 900,
-                            letterSpacing: "1.12px",
-                            color: "#1D4ED8",
-                            marginBottom: "24px",
-                        }}
-                    >
+                    <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
                         <svg
                             width="14"
                             height="14"
@@ -76,65 +73,28 @@ export default function GlobalPresenceSection() {
                     </span>
 
                     {/* Headline */}
-                    <h2
-                        className="font-['Inter'] m-0"
-                        style={{
-                            fontSize: "clamp(32px, 4vw, 36px)",
-                            fontWeight: 800,
-                            color: "#101828",
-                            lineHeight: "45px",
-                            letterSpacing: "0.37px",
-                            marginBottom: "24px",
-                        }}
-                    >
-                        Beyond Our Site: <br className="hidden sm:block" />
-                        <span style={{ color: "#2563EB" }}>
-                            Find Us <br className="hidden sm:block" />
-                            Everywhere.
-                        </span>
-                    </h2>
+                    <div className="mb-6 text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+                        <SplitText className="text-gray-900 inline-block mr-2">
+                            Beyond Our Platform:
+                        </SplitText>
+                        <br className="hidden sm:block" />
+                        <SplitText className="text-blue-600 inline-block">
+                            Find Us Everywhere
+                        </SplitText>
+                    </div>
 
                     {/* Paragraph */}
-                    <p
-                        className="font-['Inter'] m-0"
-                        style={{
-                            fontSize: "18px",
-                            color: "#4A5565",
-                            lineHeight: "29.25px",
-                            fontWeight: 400,
-                            letterSpacing: "-0.44px",
-                            marginBottom: "32px",
-                        }}
-                    >
-                        While our direct portal offers the best technical
-                        support and exclusive B2B pricing, we maintain a strong
-                        presence on major global and local marketplaces to
-                        ensure you can reach us through your preferred platform.
-                    </p>
+                    <AnimatedSubtext className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8">
+                        While our direct platform offers the best technical
+                        support and exclusive B2B pricing, Scribbl3D is also
+                        available across leading global and local marketplaces —
+                        ensuring you can connect, explore, and purchase through
+                        the platform you trust.
+                    </AnimatedSubtext>
 
                     {/* Verified Badge Card */}
-                    <div
-                        className="w-full flex items-center"
-                        style={{
-                            background: "#F9FAFB",
-                            border: "1px solid #E5E7EB",
-                            borderRadius: "24px",
-                            padding: "20px",
-                            gap: "16px",
-                        }}
-                    >
-                        <div
-                            className="flex items-center justify-center shrink-0"
-                            style={{
-                                width: "48px",
-                                height: "48px",
-                                borderRadius: "14px",
-                                background: "#2563EB",
-                                color: "white",
-                                boxShadow:
-                                    "0 10px 15px -3px rgba(37,99,235,0.2), 0 4px 6px -4px rgba(37,99,235,0.2)",
-                            }}
-                        >
+                    <div className="w-full flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-3xl p-5">
+                        <div className="flex items-center justify-center shrink-0 w-12 h-12 rounded-2xl bg-blue-600 text-white shadow-[0_10px_15px_-3px_rgba(37,99,235,0.2),0_4px_6px_-4px_rgba(37,99,235,0.2)]">
                             <svg
                                 width="20"
                                 height="20"
@@ -150,100 +110,55 @@ export default function GlobalPresenceSection() {
                             </svg>
                         </div>
 
-                        <div className="flex flex-col gap-[2px]">
-                            <span
-                                className="font-['Inter']"
-                                style={{
-                                    fontSize: "14px",
-                                    fontWeight: 700,
-                                    color: "#101828",
-                                    lineHeight: "20px",
-                                    letterSpacing: "-0.15px",
-                                }}
-                            >
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-bold text-gray-900">
                                 Verified Merchant
                             </span>
-                            <span
-                                className="font-['Inter']"
-                                style={{
-                                    fontSize: "12px",
-                                    fontWeight: 400,
-                                    color: "#6A7282",
-                                    lineHeight: "16px",
-                                }}
-                            >
-                                Official Storefront on All Platforms
+                            <span className="text-xs text-gray-500">
+                                Official storefront across all major platforms
                             </span>
                         </div>
                     </div>
                 </div>
 
                 {/* ── Marketplace cards grid ── */}
-                <div className="w-full lg:flex-1 grid grid-cols-2 lg:grid-cols-4 gap-[16px] place-items-center sm:place-items-stretch">
+                <div className="w-full lg:flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 place-items-center sm:place-items-stretch mt-8 lg:mt-0">
                     {MARKETPLACES.map((m) => {
                         const isHovered = hoveredCard === m.name;
 
                         return (
-                            <div
+                            <a
                                 key={m.name}
-                                className="group flex flex-col items-center bg-white relative transition-all duration-300 w-full max-w-[150px]"
+                                href={LINKS[m.name.toLowerCase()] || "#"}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group flex flex-col items-center bg-white relative transition-all duration-300 w-full max-w-[150px] rounded-[32px] pt-[34px] pb-6 px-3"
                                 style={{
                                     height: "286px",
-                                    borderRadius: "32px",
-                                    padding: "34px 12px 24px 12px",
-                                    cursor: "pointer",
-                                    // CONDITIONAL STYLES:
-                                    background: "#FFFFFF", // Always white
                                     border: isHovered
                                         ? `2px solid ${m.bg}`
-                                        : "2px solid #F3F4F6", // Border changes to brand color
+                                        : "2px solid #F3F4F6",
                                     transform: isHovered
                                         ? "translateY(-8px)"
                                         : "translateY(0)",
                                     boxShadow: isHovered
-                                        ? `0 12px 30px ${m.bg}25` // Soft shadow tinted with brand color
+                                        ? `0 12px 30px ${m.bg}25`
                                         : "0px 1px 3px 0px rgba(0,0,0,0.10), 0px 1px 2px -1px rgba(0,0,0,0.10)",
                                 }}
                                 onMouseEnter={() => setHoveredCard(m.name)}
                                 onMouseLeave={() => setHoveredCard(null)}
                             >
                                 {/* Top Logo Container */}
-                                <div
-                                    className="flex items-center justify-center shrink-0 overflow-hidden"
-                                    style={{
-                                        width: "80px",
-                                        height: "80px",
-                                        borderRadius: "8px", // Reduced rounding to match the images provided
-                                    }}
-                                >
+                                <div className="flex items-center justify-center shrink-0 overflow-hidden w-20 h-20 rounded-lg">
                                     {LOGOS[m.logo]}
                                 </div>
 
                                 {/* Middle Text Area */}
-                                <div className="text-center w-full mt-[20px]">
-                                    <h4
-                                        className="font-['Inter'] m-0"
-                                        style={{
-                                            fontSize: "20px",
-                                            fontWeight: 900,
-                                            lineHeight: "28px",
-                                            letterSpacing: "-0.45px",
-                                            color: "#101828", // Always dark
-                                        }}
-                                    >
+                                <div className="text-center w-full mt-5">
+                                    <h4 className="text-xl font-black tracking-tight text-gray-900 mb-1">
                                         {m.name}
                                     </h4>
-                                    <p
-                                        className="font-['Inter'] uppercase mx-auto m-0 mt-[4px]"
-                                        style={{
-                                            fontSize: "10px",
-                                            fontWeight: 700,
-                                            letterSpacing: "1.12px",
-                                            lineHeight: "15px",
-                                            maxWidth: "85px",
-                                            color: "#99A1AF", // Always grey
-                                        }}
-                                    >
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mx-auto max-w-[85px] leading-tight">
                                         {m.sub ? m.sub.split(" ")[0] : ""}
                                         <br />
                                         {m.sub
@@ -259,7 +174,6 @@ export default function GlobalPresenceSection() {
                                 <div
                                     className="mt-auto transition-colors duration-300"
                                     style={{
-                                        // CONDITIONAL STYLE: Icon takes brand color on hover
                                         color: isHovered ? m.bg : "#D1D5DB",
                                     }}
                                 >
@@ -283,7 +197,7 @@ export default function GlobalPresenceSection() {
                                         ></line>
                                     </svg>
                                 </div>
-                            </div>
+                            </a>
                         );
                     })}
                 </div>

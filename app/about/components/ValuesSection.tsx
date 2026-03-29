@@ -1,76 +1,39 @@
 "use client";
 
+import { SplitText } from "../../landingpage/components/SplitText"; // Adjust import path if needed
 import { VALUES } from "./constants";
 
 export default function ValuesSection() {
     return (
-        <section
-            className="px-6 py-10 lg:py-16"
-            style={{ background: "#F8FAFC" }}
-        >
+        <section className="px-6 py-10 lg:py-16 bg-slate-50">
             <div className="max-w-[1240px] mx-auto">
-                <h2
-                    className="text-center font-['Inter'] mb-[32px] lg:mb-[48px]"
-                    style={{
-                        fontSize: "clamp(28px, 4vw, 36px)",
-                        fontWeight: 900,
-                        lineHeight: "40px",
-                        letterSpacing: "0.37px",
-                        color: "#101828",
-                    }}
-                >
-                    The Values that Drive Us
-                </h2>
+                {/* ── Animated Header ── */}
+                <div className="text-center mb-8 lg:mb-12">
+                    <SplitText className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-gray-900">
+                        The Values that Drive Us
+                    </SplitText>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[24px]">
+                {/* ── Cards Grid ── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {VALUES.map((v) => (
                         <div
                             key={v.title}
-                            className="bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                            style={{
-                                borderRadius: "24px",
-                                border: "1px solid #F3F4F6",
-                                padding: "40px 32px",
-                                boxShadow: "0 10px 30px rgba(0,0,0,0.03)",
-                            }}
+                            className="bg-white rounded-3xl border border-gray-100 p-8 sm:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.03)] hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                         >
-                            <div
-                                className="flex items-center justify-center mb-[32px]"
-                                style={{
-                                    width: "56px",
-                                    height: "56px",
-                                    borderRadius: "16px",
-                                    background: "#1D4ED8",
-                                }}
-                            >
-                                <span className="flex items-center justify-center w-[28px] h-[28px] text-white [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current">
+                            {/* Icon Container */}
+                            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-700 mb-8">
+                                <span className="flex items-center justify-center w-7 h-7 text-white [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current">
                                     {v.icon}
                                 </span>
                             </div>
 
-                            <h3
-                                className="font-['Inter'] mb-[12px]"
-                                style={{
-                                    fontSize: "20px",
-                                    fontWeight: 700,
-                                    lineHeight: "28px",
-                                    letterSpacing: "-0.45px",
-                                    color: "#101828",
-                                }}
-                            >
+                            {/* Text Content */}
+                            <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-3">
                                 {v.title}
                             </h3>
 
-                            <p
-                                className="font-['Inter'] m-0"
-                                style={{
-                                    fontSize: "16px",
-                                    fontWeight: 400,
-                                    lineHeight: "26px",
-                                    letterSpacing: "-0.31px",
-                                    color: "#6A7282",
-                                }}
-                            >
+                            <p className="text-sm sm:text-base text-gray-500 leading-relaxed">
                                 {v.desc}
                             </p>
                         </div>

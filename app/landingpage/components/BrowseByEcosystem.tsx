@@ -39,7 +39,10 @@ const CATEGORIES = [
 
 export default function BrowseByEcosystem() {
     return (
-        <section className="w-full bg-[#f5f5f5] py-10 sm:py-16 lg:py-24 px-4 sm:px-10 lg:px-16">
+        <section
+            id="ecosystem"
+            className="w-full bg-[#f5f5f5] py-10 sm:py-16 lg:py-24 px-4 sm:px-10 lg:px-16"
+        >
             <div className="max-w-[1400px] mx-auto">
                 {/* Header */}
                 <div className="flex items-end justify-between mb-6 sm:mb-10 lg:mb-12">

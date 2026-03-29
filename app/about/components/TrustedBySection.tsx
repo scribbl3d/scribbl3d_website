@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-// The static badges remain the same
+import {
+    AnimatedSubtext,
+    SplitText,
+} from "../../landingpage/components/SplitText";
+
 const BADGES = [
     {
         text: "Enterprise Support",
@@ -52,7 +56,6 @@ const BADGES = [
     },
 ];
 
-// Define the type for our fetched data
 type Partner = {
     id: string;
     name: string;
@@ -61,11 +64,9 @@ type Partner = {
 };
 
 export default function TrustedBySection() {
-    // 1. Add state to hold the API data
     const [partners, setPartners] = useState<Partner[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // 2. Fetch the data when the component mounts
     useEffect(() => {
         const fetchPartners = async () => {
             try {
@@ -109,56 +110,31 @@ export default function TrustedBySection() {
             {/* ── Main Container ── */}
             <div className="max-w-[1240px] mx-auto flex flex-col items-center px-6">
                 {/* ── Header ── */}
-                <div className="text-center w-full max-w-[762px] mb-[48px]">
-                    <div
-                        className="inline-flex items-center gap-2 mb-[12px]"
-                        style={{
-                            background: "#EEF2FF",
-                            color: "#2563EB",
-                            padding: "6px 12px",
-                            borderRadius: "999px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                        }}
-                    >
-                        <span className="w-[6px] h-[6px] rounded-full bg-[#2563EB]" />
-                        TRUSTED NETWORK
+                <div className="text-center w-full max-w-[762px] mb-12">
+                    <div className="inline-flex items-center gap-2 mb-3 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        Trusted Network
                     </div>
 
-                    <h2
-                        className="font-['Inter'] m-0 mb-[16px]"
-                        style={{
-                            fontSize: "clamp(26px, 4vw, 30px)",
-                            fontWeight: 800,
-                            color: "#101828",
-                            lineHeight: "36px",
-                            letterSpacing: "0.4px",
-                        }}
-                    >
-                        Trusted by{" "}
-                        <span style={{ color: "#2563EB" }}>
+                    {/* Fixed Typography Section */}
+                    <div className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 flex flex-wrap justify-center gap-x-2">
+                        <SplitText className="text-gray-900">
+                            Trusted by
+                        </SplitText>
+                        <SplitText className="text-blue-600">
                             Industry Leaders
-                        </span>
-                    </h2>
+                        </SplitText>
+                    </div>
 
-                    <p
-                        className="font-['Inter'] m-0"
-                        style={{
-                            fontSize: "16px",
-                            color: "#4A5565",
-                            lineHeight: "24px",
-                            fontWeight: 400,
-                            letterSpacing: "-0.31px",
-                        }}
-                    >
+                    <AnimatedSubtext className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-500">
                         Powering innovation across automotive, aerospace,
                         medical, and consumer product industries worldwide
-                    </p>
+                    </AnimatedSubtext>
                 </div>
 
                 {/* ── Carousel ── */}
                 <div
-                    className="w-full relative mb-[64px] overflow-hidden"
+                    className="w-full relative mb-16 overflow-hidden"
                     style={{
                         maskImage:
                             "linear-gradient(to right, transparent, black 12%, black 88%, transparent)",
@@ -166,7 +142,6 @@ export default function TrustedBySection() {
                             "linear-gradient(to right, transparent, black 12%, black 88%, transparent)",
                     }}
                 >
-                    {/* 3. Show a loading state or the marquee */}
                     {isLoading ? (
                         <div className="flex justify-center items-center h-[246px] text-gray-400">
                             Loading partners...
@@ -178,21 +153,14 @@ export default function TrustedBySection() {
                     ) : (
                         <div className="animate-marquee">
                             {[1, 2].map((set) => (
-                                <div
-                                    key={set}
-                                    className="flex gap-[16px] pr-[16px]"
-                                >
-                                    {/* 4. Map over the fetched 'partners' state instead of INDUSTRIES */}
+                                <div key={set} className="flex gap-4 pr-4">
                                     {partners.map((ind) => (
                                         <div
-                                            key={ind.id + "-" + set} // Use DB ID + set number for unique key
-                                            className="bg-white flex flex-col items-center transition-all duration-300 hover:-translate-y-1 shrink-0"
+                                            key={ind.id + "-" + set}
+                                            className="bg-white flex flex-col items-center transition-all duration-300 hover:-translate-y-1 shrink-0 p-6 rounded-2xl border border-gray-200"
                                             style={{
                                                 width: "210px",
                                                 height: "246px",
-                                                border: "1px solid #E5E7EB",
-                                                borderRadius: "16px",
-                                                padding: "25px",
                                                 cursor: "pointer",
                                                 boxShadow:
                                                     "0 4px 20px rgba(0,0,0,0.03)",
@@ -200,14 +168,10 @@ export default function TrustedBySection() {
                                         >
                                             {/* Image */}
                                             <div
-                                                className="shrink-0"
+                                                className="shrink-0 bg-gray-100 rounded-xl overflow-hidden mb-4"
                                                 style={{
                                                     width: "160px",
                                                     height: "120px",
-                                                    borderRadius: "14px",
-                                                    overflow: "hidden",
-                                                    marginBottom: "16px",
-                                                    background: "#F3F4F6",
                                                 }}
                                             >
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -220,28 +184,10 @@ export default function TrustedBySection() {
 
                                             {/* Text */}
                                             <div className="text-center w-full">
-                                                <p
-                                                    className="font-['Inter'] m-0 mb-[4px] w-full truncate"
-                                                    style={{
-                                                        fontSize: "14px",
-                                                        fontWeight: 700,
-                                                        color: "#101828",
-                                                        lineHeight: "20px",
-                                                        letterSpacing:
-                                                            "-0.15px",
-                                                    }}
-                                                >
+                                                <h3 className="text-sm sm:text-base font-extrabold text-gray-900 mb-1 w-full truncate">
                                                     {ind.name}
-                                                </p>
-                                                <p
-                                                    className="font-['Inter'] m-0 w-full truncate"
-                                                    style={{
-                                                        fontSize: "12px",
-                                                        fontWeight: 400,
-                                                        color: "#6A7282",
-                                                        lineHeight: "16px",
-                                                    }}
-                                                >
+                                                </h3>
+                                                <p className="text-xs sm:text-sm text-gray-500 w-full truncate">
                                                     {ind.sub}
                                                 </p>
                                             </div>
@@ -255,50 +201,23 @@ export default function TrustedBySection() {
 
                 {/* ── Footer ── */}
                 <div className="flex flex-col items-center">
-                    <p
-                        className="font-['Inter'] m-0 mb-[24px]"
-                        style={{
-                            fontSize: "14px",
-                            fontWeight: 400,
-                            color: "#6A7282",
-                            lineHeight: "20px",
-                        }}
-                    >
+                    <p className="text-sm sm:text-base text-gray-500 mb-6">
                         Join 50+ companies already using Scribbl3D technology
                     </p>
 
-                    <div className="flex flex-wrap justify-center gap-[24px]">
+                    <div className="flex flex-wrap justify-center gap-6">
                         {BADGES.map((b) => (
                             <div
                                 key={b.text}
-                                className="flex items-center"
-                                style={{ gap: "8px" }}
+                                className="flex items-center gap-2"
                             >
-                                <div
-                                    className="flex items-center justify-center shrink-0"
-                                    style={{
-                                        width: "32px",
-                                        height: "32px",
-                                        borderRadius: "100px",
-                                        background: "#DBEAFE",
-                                        color: "#2563EB",
-                                    }}
-                                >
-                                    <span className="flex items-center justify-center w-[16px] h-[16px] [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current">
+                                <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600">
+                                    <span className="flex items-center justify-center w-4 h-4 [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current">
                                         {b.icon}
                                     </span>
                                 </div>
 
-                                <span
-                                    className="font-['Inter'] m-0"
-                                    style={{
-                                        fontSize: "12px",
-                                        fontWeight: 500,
-                                        color: "#364153",
-                                        lineHeight: "16px",
-                                        letterSpacing: "0px",
-                                    }}
-                                >
+                                <span className="text-xs sm:text-sm font-bold text-gray-700">
                                     {b.text}
                                 </span>
                             </div>
