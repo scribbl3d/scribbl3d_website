@@ -1,3 +1,50 @@
+import {
+    Droplets,
+    Layers,
+    PackageCheck,
+    Printer,
+    ShieldCheck,
+    Workflow,
+} from "lucide-react";
+
+export const ECOSYSTEM_CARDS = [
+    {
+        title: "Industrial 3D Printers",
+        tag: "Equipment",
+        desc: "High-performance FDM, SLA, and SLS machines from globally trusted brands — built for precision, speed, and reliability.",
+        icon: <Printer />,
+    },
+    {
+        title: "Premium Resins",
+        tag: "Consumables",
+        desc: "Engineered UV resins for dental, jewelry, and engineering applications — delivering exceptional detail and surface finish.",
+        icon: <Droplets />,
+    },
+    {
+        title: "High-Grade Filaments",
+        tag: "Consumables",
+        desc: "Advanced materials including Carbon Fiber, Nylon, and ESD-safe filaments — designed for strong, functional parts.",
+        icon: <Layers />,
+    },
+    {
+        title: "Pre-built Products",
+        tag: "Ready-to-Use",
+        desc: "Fully assembled and tested 3D printed products — ready for immediate deployment and real-world use.",
+        icon: <PackageCheck />,
+    },
+    {
+        title: "Additive Services",
+        tag: "Support",
+        desc: "On-demand manufacturing, rapid prototyping, and expert design support — from concept to production.",
+        icon: <Workflow />,
+    },
+    {
+        title: "Maintenance & Parts",
+        tag: "Lifecycle",
+        desc: "Genuine spare parts and PAN-India technical support — ensuring maximum uptime and long-term performance.",
+        icon: <ShieldCheck />,
+    },
+];
 export const BRAND = {
     blue: "#2563EB",
     blueLight: "#3B82F6",
@@ -204,114 +251,4 @@ export const MARKETPLACES = [
         bg: "#C0392B",
     },
     { name: "Etsy", sub: "Artisan Designs", logo: "etsy", bg: "#F56400" },
-];
-export const ECOSYSTEM_CARDS = [
-    {
-        tag: "Equipment",
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-                <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-                <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
-            </svg>
-        ),
-        title: "Industrial 3D Printers",
-        desc: "A curated selection of high-speed FDM, SLA, and SLS machines from world-leading brands.",
-    },
-    {
-        tag: "Consumables",
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <circle cx="12" cy="12" r="10" />
-                <circle cx="12" cy="12" r="6" />
-                <circle cx="12" cy="12" r="2" />
-            </svg>
-        ),
-        title: "Premium Resins",
-        desc: "Specialized UV resins for dental, jewelry, and engineering applications with 8K precision.",
-    },
-    {
-        tag: "Consumables",
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-        ),
-        title: "High-Grade Filaments",
-        desc: "Industrial filaments including Carbon Fiber, Nylon, and ESD-safe materials for functional parts.",
-    },
-    {
-        tag: "Ready-to-Use",
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="m9 12 2 2 4-4" />
-            </svg>
-        ),
-        title: "Pre-built Products",
-        desc: "Fully assembled, tested, and optimized 3D printed products ready for immediate deployment.",
-    },
-    {
-        tag: "Support",
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-        ),
-        title: "Additive Services",
-        desc: "On-demand manufacturing, rapid prototyping, and industrial design consultation services.",
-    },
-    {
-        tag: "Lifecycle",
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-        ),
-        title: "Maintenance & Parts",
-        desc: "Official spare parts and PAN-India technical support to ensure zero downtime for your operations.",
-    },
 ];
