@@ -1,7 +1,8 @@
 "use client";
 
-import { INDUSTRIES } from "./constants";
+import { useEffect, useState } from "react";
 
+// The static badges remain the same
 const BADGES = [
     {
         text: "Enterprise Support",
@@ -51,7 +52,38 @@ const BADGES = [
     },
 ];
 
+// Define the type for our fetched data
+type Partner = {
+    id: string;
+    name: string;
+    sub: string;
+    image: string;
+};
+
 export default function TrustedBySection() {
+    // 1. Add state to hold the API data
+    const [partners, setPartners] = useState<Partner[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // 2. Fetch the data when the component mounts
+    useEffect(() => {
+        const fetchPartners = async () => {
+            try {
+                const res = await fetch("/api/partners");
+                if (res.ok) {
+                    const data = await res.json();
+                    setPartners(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch partners:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPartners();
+    }, []);
+
     return (
         <section className="bg-white overflow-hidden py-12 lg:pt-[48px] lg:pb-[100px]">
             {/* ── CSS for Auto-Scrolling Infinite Carousel ── */}
@@ -78,7 +110,6 @@ export default function TrustedBySection() {
             <div className="max-w-[1240px] mx-auto flex flex-col items-center px-6">
                 {/* ── Header ── */}
                 <div className="text-center w-full max-w-[762px] mb-[48px]">
-                    {/* 🔥 Upper Pill Added */}
                     <div
                         className="inline-flex items-center gap-2 mb-[12px]"
                         style={{
@@ -129,84 +160,97 @@ export default function TrustedBySection() {
                 <div
                     className="w-full relative mb-[64px] overflow-hidden"
                     style={{
-                        // ✅ LIGHTER FADE FIXED
                         maskImage:
                             "linear-gradient(to right, transparent, black 12%, black 88%, transparent)",
                         WebkitMaskImage:
                             "linear-gradient(to right, transparent, black 12%, black 88%, transparent)",
                     }}
                 >
-                    <div className="animate-marquee">
-                        {[1, 2].map((set) => (
-                            <div
-                                key={set}
-                                className="flex gap-[16px] pr-[16px]"
-                            >
-                                {INDUSTRIES.map((ind) => (
-                                    <div
-                                        key={ind.name + set}
-                                        className="bg-white flex flex-col items-center transition-all duration-300 hover:-translate-y-1 shrink-0"
-                                        style={{
-                                            width: "210px",
-                                            height: "246px",
-                                            border: "1px solid #E5E7EB",
-                                            borderRadius: "16px",
-                                            padding: "25px",
-                                            cursor: "pointer",
-                                            boxShadow:
-                                                "0 4px 20px rgba(0,0,0,0.03)",
-                                        }}
-                                    >
-                                        {/* Image */}
+                    {/* 3. Show a loading state or the marquee */}
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-[246px] text-gray-400">
+                            Loading partners...
+                        </div>
+                    ) : partners.length === 0 ? (
+                        <div className="flex justify-center items-center h-[246px] text-gray-400">
+                            No partners to display yet.
+                        </div>
+                    ) : (
+                        <div className="animate-marquee">
+                            {[1, 2].map((set) => (
+                                <div
+                                    key={set}
+                                    className="flex gap-[16px] pr-[16px]"
+                                >
+                                    {/* 4. Map over the fetched 'partners' state instead of INDUSTRIES */}
+                                    {partners.map((ind) => (
                                         <div
-                                            className="shrink-0"
+                                            key={ind.id + "-" + set} // Use DB ID + set number for unique key
+                                            className="bg-white flex flex-col items-center transition-all duration-300 hover:-translate-y-1 shrink-0"
                                             style={{
-                                                width: "160px",
-                                                height: "120px",
-                                                borderRadius: "14px",
-                                                overflow: "hidden",
-                                                marginBottom: "16px",
-                                                background: "#F3F4F6",
+                                                width: "210px",
+                                                height: "246px",
+                                                border: "1px solid #E5E7EB",
+                                                borderRadius: "16px",
+                                                padding: "25px",
+                                                cursor: "pointer",
+                                                boxShadow:
+                                                    "0 4px 20px rgba(0,0,0,0.03)",
                                             }}
                                         >
-                                            <img
-                                                src={ind.image}
-                                                alt={ind.name}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
+                                            {/* Image */}
+                                            <div
+                                                className="shrink-0"
+                                                style={{
+                                                    width: "160px",
+                                                    height: "120px",
+                                                    borderRadius: "14px",
+                                                    overflow: "hidden",
+                                                    marginBottom: "16px",
+                                                    background: "#F3F4F6",
+                                                }}
+                                            >
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={ind.image}
+                                                    alt={ind.name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
 
-                                        {/* Text */}
-                                        <div className="text-center w-full">
-                                            <p
-                                                className="font-['Inter'] m-0 mb-[4px] w-full truncate"
-                                                style={{
-                                                    fontSize: "14px",
-                                                    fontWeight: 700,
-                                                    color: "#101828",
-                                                    lineHeight: "20px",
-                                                    letterSpacing: "-0.15px",
-                                                }}
-                                            >
-                                                {ind.name}
-                                            </p>
-                                            <p
-                                                className="font-['Inter'] m-0 w-full truncate"
-                                                style={{
-                                                    fontSize: "12px",
-                                                    fontWeight: 400,
-                                                    color: "#6A7282",
-                                                    lineHeight: "16px",
-                                                }}
-                                            >
-                                                {ind.sub}
-                                            </p>
+                                            {/* Text */}
+                                            <div className="text-center w-full">
+                                                <p
+                                                    className="font-['Inter'] m-0 mb-[4px] w-full truncate"
+                                                    style={{
+                                                        fontSize: "14px",
+                                                        fontWeight: 700,
+                                                        color: "#101828",
+                                                        lineHeight: "20px",
+                                                        letterSpacing:
+                                                            "-0.15px",
+                                                    }}
+                                                >
+                                                    {ind.name}
+                                                </p>
+                                                <p
+                                                    className="font-['Inter'] m-0 w-full truncate"
+                                                    style={{
+                                                        fontSize: "12px",
+                                                        fontWeight: 400,
+                                                        color: "#6A7282",
+                                                        lineHeight: "16px",
+                                                    }}
+                                                >
+                                                    {ind.sub}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* ── Footer ── */}

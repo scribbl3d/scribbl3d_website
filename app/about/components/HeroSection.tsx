@@ -3,8 +3,6 @@
 import { motion } from "framer-motion";
 import { BRAND } from "./constants";
 
-/* EXACT SAME animation system as HeroBanner */
-
 const staggerContainer = {
     hidden: {},
     visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
@@ -46,36 +44,31 @@ const ctaVariant = {
     },
 };
 
-/* SAME SplitHeadline logic (fixed clipping) */
 function SplitHeadline({ text }: { text: string }) {
-    const lines = text.split("\n");
+    // Splitting by space handles natural line breaks responsively
+    const words = text.split(" ");
 
     return (
         <motion.h1
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
-            viewport={{ margin: "-50px" }}
-            className="font-manrope font-extrabold tracking-tight leading-[1.05] sm:leading-[0.95] text-white text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl"
+            viewport={{ once: true, margin: "-50px" }}
+            className="font-manrope font-extrabold tracking-tight leading-[1.05] sm:leading-[0.95] text-white text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl flex flex-wrap"
         >
-            {lines.map((line, i) => (
-                <span key={i} className="block overflow-visible">
-                    {line.split(" ").map((word, j) => (
-                        <motion.span
-                            key={j}
-                            variants={wordVariant}
-                            className="inline-block mr-[0.25em]"
-                        >
-                            {word}
-                        </motion.span>
-                    ))}
-                </span>
+            {words.map((word, i) => (
+                <motion.span
+                    key={i}
+                    variants={wordVariant}
+                    className="inline-block mr-[0.25em] overflow-visible"
+                >
+                    {word}
+                </motion.span>
             ))}
         </motion.h1>
     );
 }
 
-/* MAIN */
 export default function HeroSection() {
     return (
         <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[500px] overflow-hidden bg-[#0a0a0f]">
@@ -91,19 +84,18 @@ export default function HeroSection() {
 
             {/* Content */}
             <div className="relative z-10 h-full flex flex-col justify-end sm:justify-center px-5 sm:px-10 lg:px-16 pt-[90px] pb-16 sm:pb-0 max-w-[1400px] mx-auto">
-                {/* Headline */}
-                <SplitHeadline
-                    text={`Revolutionizing\nthrough 3D\nInnovation.`}
-                />
+                {/* Headline - Removed explicit \n to allow natural wrapping */}
+                <SplitHeadline text="Building the Future of Manufacturing" />
 
                 {/* Accent line */}
                 <motion.h2
                     variants={accentVariant}
                     initial="hidden"
                     whileInView="visible"
-                    className="font-manrope font-extrabold text-blue-500 leading-[1.05] sm:leading-[0.95] text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl mt-1"
+                    viewport={{ once: true }}
+                    className="font-manrope font-extrabold text-blue-500 leading-tight text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-3 sm:mt-4"
                 >
-                    Manufacturing
+                    Powered by 3D Printing
                 </motion.h2>
 
                 {/* Subtext */}
@@ -111,12 +103,11 @@ export default function HeroSection() {
                     variants={subtextVariant}
                     initial="hidden"
                     whileInView="visible"
+                    viewport={{ once: true }}
                     className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed text-white/80"
                 >
-                    Scribbl3D is India's leading industrial additive
-                    manufacturing partner, providing high-end 3D printers,
-                    premium resins, filaments, and end-to-end production
-                    services.
+                    At Scribbl3D, we're on a mission to make advanced
+                    manufacturing accessible, scalable, and reliable.
                 </motion.p>
 
                 {/* CTA */}
@@ -124,6 +115,7 @@ export default function HeroSection() {
                     variants={ctaVariant}
                     initial="hidden"
                     whileInView="visible"
+                    viewport={{ once: true }}
                     className="mt-6 sm:mt-10"
                 >
                     <a

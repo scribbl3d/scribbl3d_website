@@ -131,56 +131,56 @@ export const INDUSTRIES = [
 
 export const VALUES = [
     {
-        icon: (
-            <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.33"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            >
-                <circle cx="12" cy="8" r="6" />
-                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
-            </svg>
-        ),
         title: "Precision First",
-        desc: "In industrial 3D printing, microns matter. We ensure every printer and resin meets rigorous industrial standards.",
-    },
-    {
+        desc: "In 3D printing, accuracy isn’t optional. We ensure every printer, material, and output meets strict industrial standards — delivering consistent, high-quality results.",
         icon: (
             <svg
+                xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="2.33"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
             >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
             </svg>
         ),
+    },
+    {
         title: "Reliability",
-        desc: "Our B2B partners depend on uptime. We provide the support and spare parts ecosystem to keep production running.",
-    },
-    {
+        desc: "Production depends on uptime. With strong after-sales support and readily available parts, we keep your operations running without interruption.",
         icon: (
             <svg
+                xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="2.33"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
             >
-                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
-                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
-                <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
-                <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
         ),
+    },
+    {
         title: "Innovation",
-        desc: "We constantly update our catalog with next-gen materials and technologies like SLS and high-speed FDM.",
+        desc: "We continuously bring in advanced technologies and materials — enabling faster, stronger, and more efficient manufacturing.",
+        icon: (
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            >
+                <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.9 1.2 1.5 1.5 2.5"></path>
+                <path d="M9 18h6"></path>
+                <path d="M10 22h4"></path>
+            </svg>
+        ),
     },
 ];
 

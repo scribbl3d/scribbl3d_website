@@ -60,6 +60,11 @@ export default function AdminPage() {
                         Blogs
                     </Button>
                 </Link>
+                <Link href="/admin/about" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        About us
+                    </Button>
+                </Link>
                 <Link href="/admin/small-batch-manufacturing" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Small Batch Manufacturing

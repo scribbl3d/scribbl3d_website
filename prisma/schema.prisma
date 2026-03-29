@@ -286,7 +286,14 @@ model BestSeller {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
+model Partner {
+  id        String   @id @default(cuid())
+  name      String   // The Heading (e.g., Acme Corp)
+  sub       String   // The Subheading (e.g., Aerospace)
+  image     String   // The Image URL
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 model FormResponse {
   id                  String   @id @default(cuid())

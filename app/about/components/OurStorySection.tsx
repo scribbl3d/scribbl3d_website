@@ -3,16 +3,17 @@
 import { BRAND } from "./constants";
 
 const CHECKS = [
-    "Official OEM Partners",
-    "PAN-India Service Support",
-    "In-house Quality Control",
-    "Custom Training Programs",
+    "OEM Partnerships",
+    "PAN-India Support",
+    "End-to-End Solutions",
+    "After-Sales Excellence",
 ];
 
 export default function OurStorySection() {
     return (
         <section className="bg-white px-6 py-10 lg:py-16">
-            <div className="max-w-[1280px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-[96px]">
+            {/* Reduced lg:gap-[96px] to lg:gap-[64px] to give text more horizontal room */}
+            <div className="max-w-[1280px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-[64px]">
                 {/* ── Text column ── */}
                 <div className="w-full lg:flex-1 lg:min-w-[500px]">
                     {/* Badge */}
@@ -29,7 +30,7 @@ export default function OurStorySection() {
                             fontWeight: 700,
                             letterSpacing: "0.06em",
                             color: BRAND.blue,
-                            marginBottom: 24,
+                            marginBottom: 16, // Reduced from 24px
                             textTransform: "uppercase",
                             fontFamily: "'Inter', sans-serif",
                         }}
@@ -48,76 +49,95 @@ export default function OurStorySection() {
                             <circle cx="12" cy="12" r="6"></circle>
                             <circle cx="12" cy="12" r="2"></circle>
                         </svg>
-                        Our Story
+                        OUR STORY
                     </span>
 
                     {/* Headline */}
                     <h2
                         style={{
-                            fontSize: "clamp(36px, 8vw, 48px)",
+                            fontSize: "clamp(32px, 6vw, 44px)", // Slightly reduced max size
                             fontWeight: 800,
-                            lineHeight: 1.25,
+                            lineHeight: 1.2,
                             color: "#101828",
-                            margin: "0 0 24px",
+                            margin: "0 0 16px", // Reduced from 24px
                             fontFamily: "'Inter', sans-serif",
                             letterSpacing: "0.35px",
                         }}
                     >
-                        From a small workshop
-                        <br className="hidden lg:block" /> to an{" "}
+                        From a Small Office
+                        <br className="hidden lg:block" /> to Powering Modern
+                        Manufacturing{" "}
                         <span
                             style={{ color: BRAND.blue, whiteSpace: "nowrap" }}
                         >
-                            Industry Leader.
+                            Across India.
                         </span>
                     </h2>
 
-                    {/* Paragraphs */}
+                    {/* Paragraphs - Reduced font size to 16px and tightened line height/margins */}
                     <p
                         style={{
-                            fontSize: 18,
+                            fontSize: 16,
                             color: "#4A5565",
-                            lineHeight: "29.25px",
-                            margin: "0 0 24px",
+                            lineHeight: "26px",
+                            margin: "0 0 16px",
                             fontFamily: "'Inter', sans-serif",
                             fontWeight: 400,
-                            letterSpacing: "-0.44px",
+                            letterSpacing: "-0.2px",
                         }}
                     >
-                        Founded in 2014, Scribbl3D began with a simple mission:
-                        to make industrial-grade 3D printing accessible to
-                        Indian enterprises and engineers. We saw the potential
-                        of additive manufacturing to bypass traditional
-                        manufacturing constraints.
+                        Scribbl3D started as a small office with a clear vision
+                        — to make industrial-grade 3D printing accessible in
+                        India. Founded with a hands-on, problem-solving
+                        approach, we set out to bridge the gap between advanced
+                        manufacturing technology and real-world application.
                     </p>
 
                     <p
                         style={{
-                            fontSize: 18,
+                            fontSize: 16,
                             color: "#4A5565",
-                            lineHeight: "29.25px",
-                            margin: "0 0 40px",
+                            lineHeight: "26px",
+                            margin: "0 0 16px",
                             fontFamily: "'Inter', sans-serif",
                             fontWeight: 400,
-                            letterSpacing: "-0.44px",
+                            letterSpacing: "-0.2px",
                         }}
                     >
-                        Today, we are more than just an e-commerce platform. We
-                        are a comprehensive 3D ecosystem, partnering with global
-                        leaders like Bambu Lab, Elegoo, and Formlabs to bring
-                        the latest technology to your factory floor.
+                        Today, we serve 500+ customers across industries,
+                        working closely with manufacturers and educational
+                        institutions to deliver reliable, production-ready
+                        solutions. From high-performance 3D printers to complete
+                        end-to-end manufacturing workflows, we enable faster,
+                        smarter execution from idea to production.
+                    </p>
+
+                    <p
+                        style={{
+                            fontSize: 16,
+                            color: "#4A5565",
+                            lineHeight: "26px",
+                            margin: "0 0 28px", // Reduced from 40px
+                            fontFamily: "'Inter', sans-serif",
+                            fontWeight: 400,
+                            letterSpacing: "-0.2px",
+                        }}
+                    >
+                        With a strong nationwide presence and partnerships with
+                        global leaders, Scribbl3D continues to scale additive
+                        manufacturing across India.
                     </p>
 
                     {/* Checklist Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-10 lg:mb-0 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 lg:mb-0 mb-4">
                         {CHECKS.map((c) => (
                             <div
                                 key={c}
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 12,
-                                    fontSize: 16,
+                                    gap: 10,
+                                    fontSize: 15, // Slightly scaled down checklist text
                                     fontWeight: 700,
                                     lineHeight: "24px",
                                     color: "#101828",
@@ -131,14 +151,14 @@ export default function OurStorySection() {
                                         alignItems: "center",
                                         justifyContent: "center",
                                         color: "#059669",
-                                        width: 20,
-                                        height: 20,
+                                        width: 18,
+                                        height: 18,
                                         flexShrink: 0,
                                     }}
                                 >
                                     <svg
-                                        width="20"
-                                        height="20"
+                                        width="18"
+                                        height="18"
                                         viewBox="0 0 24 24"
                                         fill="none"
                                         stroke="currentColor"
