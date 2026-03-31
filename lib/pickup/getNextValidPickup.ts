@@ -1,4 +1,4 @@
-import { PickupInfo } from "@/app/admin/orders/types";
+import { PickupInfo } from "@/app/ops/control/orders/types";
 
 export function getNextValidPickup(
     pickups?: PickupInfo[] | null,

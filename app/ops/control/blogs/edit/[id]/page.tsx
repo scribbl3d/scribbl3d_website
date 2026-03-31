@@ -1,4 +1,4 @@
-import BlogForm from "@/app/admin/blogs/components/BlogForm";
+import BlogForm from "@/app/ops/control/blogs/components/BlogForm";
 
 export default async function EditBlogPage({
   params,

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Discount } from "@/app/admin/discounts/types";
+import type { Discount } from "@/app/ops/control/discounts/types";
 import { calculateDiscount } from "@/app/cart/utils/calculateDiscount";
 import WishlistModal from "@/app/profile/_components/wishlist-modal";
 import { Button } from "@/components/ui/button";

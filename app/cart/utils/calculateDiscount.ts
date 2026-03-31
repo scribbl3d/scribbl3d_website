@@ -1,4 +1,4 @@
-import { Discount } from "@/app/admin/discounts/types";
+import { Discount } from "@/app/ops/control/discounts/types";
 
 export function calculateDiscount(
     discount: Discount,
