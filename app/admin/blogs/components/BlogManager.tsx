@@ -88,7 +88,9 @@ export default function BlogManager() {
         // --- SEARCH ---
         if (searchTerm.trim()) {
             temp = temp.filter((b) =>
-                b[searchField]?.toLowerCase().includes(searchTerm.toLowerCase())
+                b[searchField]
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()),
             );
         }
 
@@ -97,13 +99,13 @@ export default function BlogManager() {
             temp.sort(
                 (a, b) =>
                     new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
+                    new Date(a.createdAt).getTime(),
             );
         } else if (sortOption === "oldest") {
             temp.sort(
                 (a, b) =>
                     new Date(a.createdAt).getTime() -
-                    new Date(b.createdAt).getTime()
+                    new Date(b.createdAt).getTime(),
             );
         } else if (sortOption === "az") {
             temp.sort((a, b) => a.title.localeCompare(b.title));
@@ -121,7 +123,7 @@ export default function BlogManager() {
         <div>
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">Manage Blogs</h2>
-                <Button onClick={() => router.push("/admin/blogs/new")}>
+                <Button onClick={() => router.push("/ops/control/blogs/new")}>
                     Create New Blog
                 </Button>
             </div>
@@ -169,7 +171,7 @@ export default function BlogManager() {
                                 <TableCell>{blog.description}</TableCell>
                                 <TableCell>
                                     {new Date(
-                                        blog.createdAt
+                                        blog.createdAt,
                                     ).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell>
@@ -179,7 +181,7 @@ export default function BlogManager() {
                                         className="mr-2"
                                         onClick={() =>
                                             router.push(
-                                                `/admin/blogs/edit/${blog.id}`
+                                                `/ops/control/blogs/edit/${blog.id}`,
                                             )
                                         }
                                     >

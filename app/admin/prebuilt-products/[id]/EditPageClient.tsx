@@ -1,5 +1,3 @@
-// PATH: app/admin/prebuilt-products/[id]/EditPageClient.tsx
-
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -19,7 +17,7 @@ export default function EditPageClient({ productId, defaultValues }: Props) {
             mode="edit"
             productId={productId}
             defaultValues={defaultValues}
-            onSuccess={() => router.push("/admin/prebuilt-products")}
+            onSuccess={() => router.push("/ops/control/prebuilt-products")}
         />
     );
 }

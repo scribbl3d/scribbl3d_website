@@ -52,7 +52,7 @@ export default function NewDiscountPage() {
             }),
         });
 
-        router.push("/admin/discounts");
+        router.push("/ops/control/discounts");
     }
 
     return (

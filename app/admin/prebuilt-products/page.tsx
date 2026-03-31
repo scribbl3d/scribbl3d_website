@@ -89,7 +89,7 @@ export default function PrebuiltProductsPage() {
                 <div className="max-w-screen-xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Link
-                            href="/admin"
+                            href="/ops/control"
                             className="text-gray-400 hover:text-gray-700 transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
@@ -104,7 +104,7 @@ export default function PrebuiltProductsPage() {
                         </div>
                     </div>
                     <Link
-                        href="/admin/prebuilt-products/new"
+                        href="/ops/control/prebuilt-products/new"
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
                     >
                         <Plus className="w-4 h-4" />
@@ -195,7 +195,7 @@ export default function PrebuiltProductsPage() {
                                         >
                                             No products found.{" "}
                                             <Link
-                                                href="/admin/prebuilt-products/new"
+                                                href="/ops/control/prebuilt-products/new"
                                                 className="text-blue-500 underline"
                                             >
                                                 Add a product
@@ -268,7 +268,7 @@ export default function PrebuiltProductsPage() {
                                                 <td className="px-5 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <Link
-                                                            href={`/admin/prebuilt-products/${product.id}`}
+                                                            href={`/ops/control/prebuilt-products/${product.id}`}
                                                             className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-800 transition-colors"
                                                             title="Edit"
                                                         >

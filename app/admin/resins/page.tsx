@@ -91,7 +91,7 @@ export default function AdminResinsPage() {
             <div className="bg-white border-b">
                 <div className="max-w-7xl mx-auto px-6 py-6 flex items-center gap-4">
                     <Link
-                        href="/admin"
+                        href="/ops/control"
                         className="text-gray-600 hover:text-black"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -106,7 +106,7 @@ export default function AdminResinsPage() {
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Resins List</h2>
                     <Link
-                        href="/admin/resins/new"
+                        href="/ops/control/resins/new"
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" />
@@ -207,7 +207,7 @@ export default function AdminResinsPage() {
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500">
                                                 {new Date(
-                                                    r.updatedAt
+                                                    r.updatedAt,
                                                 ).toLocaleDateString("en-IN", {
                                                     day: "numeric",
                                                     month: "short",
@@ -219,7 +219,7 @@ export default function AdminResinsPage() {
                                             <td className="px-6 py-4">
                                                 <div className="flex gap-3">
                                                     <Link
-                                                        href={`/admin/resins/${r.id}/edit`}
+                                                        href={`/ops/control/resins/${r.id}/edit`}
                                                         className="text-black hover:text-blue-700"
                                                     >
                                                         <Edit className="w-5 h-10" />
@@ -256,7 +256,7 @@ export default function AdminResinsPage() {
 
                             {Array.from(
                                 { length: totalPages },
-                                (_, i) => i + 1
+                                (_, i) => i + 1,
                             ).map((page) => (
                                 <button
                                     key={page}
@@ -275,7 +275,7 @@ export default function AdminResinsPage() {
                                 disabled={currentPage === totalPages}
                                 onClick={() =>
                                     setCurrentPage((p) =>
-                                        Math.min(totalPages, p + 1)
+                                        Math.min(totalPages, p + 1),
                                     )
                                 }
                                 className="px-3 py-1 border rounded disabled:opacity-50"

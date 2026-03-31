@@ -412,7 +412,7 @@ export default function ResinFormPage() {
                 throw new Error(err.error || "Save failed");
             }
 
-            router.push("/admin/resins");
+            router.push("/ops/control/resins");
         } catch (err: any) {
             console.error(err);
             alert(`Failed to save: ${err.message}`);

@@ -51,7 +51,7 @@ export default function EditDiscountPage() {
             }),
         });
 
-        router.push("/admin/discounts");
+        router.push("/ops/control/discounts");
     }
 
     return (

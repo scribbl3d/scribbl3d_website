@@ -93,7 +93,7 @@ export default function AdminPrintersPage() {
             <div className="bg-white border-b">
                 <div className="max-w-7xl mx-auto px-6 py-6 flex items-center gap-4">
                     <Link
-                        href="/admin"
+                        href="/ops/control"
                         className="text-gray-600 hover:text-black"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -108,7 +108,7 @@ export default function AdminPrintersPage() {
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Printers List</h2>
                     <Link
-                        href="/admin/printers/new"
+                        href="/ops/control/printers/new"
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" />
@@ -205,13 +205,13 @@ export default function AdminPrintersPage() {
                                             <td className="px-6 py-4">
                                                 ₹
                                                 {p.price.toLocaleString(
-                                                    "en-IN"
+                                                    "en-IN",
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 ₹
                                                 {p.originalPrice.toLocaleString(
-                                                    "en-IN"
+                                                    "en-IN",
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
@@ -222,7 +222,7 @@ export default function AdminPrintersPage() {
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500">
                                                 {new Date(
-                                                    p.updatedAt
+                                                    p.updatedAt,
                                                 ).toLocaleDateString("en-IN", {
                                                     day: "numeric",
                                                     month: "short",
@@ -234,7 +234,7 @@ export default function AdminPrintersPage() {
                                             <td className="px-6 py-4">
                                                 <div className="flex gap-3">
                                                     <Link
-                                                        href={`/admin/printers/${p.id}/edit`}
+                                                        href={`/ops/control/printers/${p.id}/edit`}
                                                         className="text-black hover:text-blue-700"
                                                     >
                                                         <Edit className="w-5 h-10" />
@@ -271,7 +271,7 @@ export default function AdminPrintersPage() {
 
                             {Array.from(
                                 { length: totalPages },
-                                (_, i) => i + 1
+                                (_, i) => i + 1,
                             ).map((page) => (
                                 <button
                                     key={page}
@@ -290,7 +290,7 @@ export default function AdminPrintersPage() {
                                 disabled={currentPage === totalPages}
                                 onClick={() =>
                                     setCurrentPage((p) =>
-                                        Math.min(totalPages, p + 1)
+                                        Math.min(totalPages, p + 1),
                                     )
                                 }
                                 className="px-3 py-1 border rounded disabled:opacity-50"

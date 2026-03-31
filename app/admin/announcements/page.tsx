@@ -38,7 +38,7 @@ export default function AnnouncementsAdmin() {
         } catch (error) {
             setError(
                 "Error fetching announcements: " +
-                    (error instanceof Error ? error.message : String(error))
+                    (error instanceof Error ? error.message : String(error)),
             );
         } finally {
             setIsLoading(false);
@@ -70,7 +70,7 @@ export default function AnnouncementsAdmin() {
         } catch (error) {
             setError(
                 "Error adding announcement: " +
-                    (error instanceof Error ? error.message : String(error))
+                    (error instanceof Error ? error.message : String(error)),
             );
         } finally {
             setIsLoading(false);
@@ -93,7 +93,7 @@ export default function AnnouncementsAdmin() {
         } catch (error) {
             setError(
                 "Error deleting announcement: " +
-                    (error instanceof Error ? error.message : String(error))
+                    (error instanceof Error ? error.message : String(error)),
             );
         } finally {
             setIsLoading(false);
@@ -103,7 +103,7 @@ export default function AnnouncementsAdmin() {
     return (
         <div className="container mx-auto p-4">
             <div className="flex items-center mt-6">
-                <Link href="/admin">
+                <Link href="/ops/control">
                     <Button variant="ghost" className="mr-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
@@ -156,7 +156,7 @@ export default function AnnouncementsAdmin() {
                                         size="icon"
                                         onClick={() =>
                                             handleDeleteAnnouncement(
-                                                announcement.id
+                                                announcement.id,
                                             )
                                         }
                                     >

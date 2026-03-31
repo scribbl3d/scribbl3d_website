@@ -1,6 +1,3 @@
-// PATH: app/admin/prebuilt-products/[id]/page.tsx
-// THIS IS A SERVER COMPONENT (no "use client")
-
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import type { ProductFormData } from "../PrebuiltProductForm";

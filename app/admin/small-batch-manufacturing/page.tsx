@@ -115,7 +115,7 @@ export default function SmallBatchManufacturingPage() {
         <div className="container mx-auto p-6 space-y-6 animate-in fade-in duration-500">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Link href="/admin">
+                    <Link href="/ops/control">
                         <Button
                             variant="ghost"
                             className="p-0 hover:bg-transparent"

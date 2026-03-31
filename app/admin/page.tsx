@@ -10,7 +10,7 @@ export default function AdminPage() {
     const handleLogout = async () => {
         const response = await fetch("/api/admin/logout", { method: "POST" });
         if (response.ok) {
-            router.push("/admin/login");
+            router.push("/ops/control/login");
         } else {
             console.error("Logout failed");
         }
@@ -25,77 +25,83 @@ export default function AdminPage() {
                 </Button>
             </div>
             <nav className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link href="/admin/orders" className="block">
+                <Link href="/ops/control/orders" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Orders
                     </Button>
                 </Link>{" "}
-                <Link href="/admin/landing" className="block">
+                <Link href="/ops/control/landing" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Landing Page
                     </Button>
                 </Link>
-                <Link href="/admin/products" className="block">
+                <Link href="/ops/control/products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Filaments
                     </Button>
                 </Link>
-                <Link href="/admin/prebuilt-products" className="block">
+                <Link href="/ops/control/prebuilt-products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Prebuilt Products
                     </Button>
                 </Link>
-                <Link href="/admin/printers" className="block">
+                <Link href="/ops/control/printers" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Printers
                     </Button>
                 </Link>
-                <Link href="/admin/resins" className="block">
+                <Link href="/ops/control/resins" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Resins
                     </Button>
                 </Link>
-                <Link href="/admin/blogs" className="block">
+                <Link href="/ops/control/blogs" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Blogs
                     </Button>
                 </Link>
-                <Link href="/admin/about" className="block">
+                <Link href="/ops/control/about" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         About us
                     </Button>
                 </Link>
-                <Link href="/admin/small-batch-manufacturing" className="block">
+                <Link
+                    href="/ops/control/small-batch-manufacturing"
+                    className="block"
+                >
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Small Batch Manufacturing
                     </Button>
                 </Link>
-                <Link href="/admin/prototyping-request" className="block">
+                <Link href="/ops/control/prototyping-request" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Prototyping Requests
                     </Button>
                 </Link>
-                <Link href="/admin/personalise-responses" className="block">
+                <Link
+                    href="/ops/control/personalise-responses"
+                    className="block"
+                >
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Personalise Form Responses
                     </Button>
                 </Link>
-                <Link href="/admin/form3d-responses" className="block">
+                <Link href="/ops/control/form3d-responses" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         3D Printing Requests
                     </Button>
                 </Link>
-                <Link href="/admin/announcements" className="block">
+                <Link href="/ops/control/announcements" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Manage Announcements
                     </Button>
                 </Link>
-                <Link href="/admin/discounts" className="block">
+                <Link href="/ops/control/discounts" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Discounts
                     </Button>
                 </Link>
-                <Link href="/admin/stock-notifications" className="block">
+                <Link href="/ops/control/stock-notifications" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Out of Stock Notifications
                     </Button>

@@ -47,7 +47,7 @@ export default function PersonaliseResponsesPage() {
     return (
         <div className="container mx-auto p-6">
             <div className="mb-6">
-                <Link href="/admin">
+                <Link href="/ops/control">
                     <Button variant="ghost" className="p-0">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
@@ -84,7 +84,7 @@ export default function PersonaliseResponsesPage() {
                                     <TableCell>{response.wantMore}</TableCell>
                                     <TableCell>
                                         {new Date(
-                                            response.createdAt
+                                            response.createdAt,
                                         ).toLocaleString()}
                                     </TableCell>
                                 </TableRow>

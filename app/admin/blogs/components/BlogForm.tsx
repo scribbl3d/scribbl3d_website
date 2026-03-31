@@ -236,7 +236,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
             if (!response.ok)
                 throw new Error(data.error || "Failed to save blog post");
 
-            router.push("/admin/blogs");
+            router.push("/ops/control/blogs");
             router.refresh();
         } catch (err) {
             setErrors({
@@ -622,7 +622,7 @@ export default function BlogForm({ blogId }: BlogFormProps) {
 
                 <button
                     type="button"
-                    onClick={() => router.push("/admin/blogs")}
+                    onClick={() => router.push("/ops/control/blogs")}
                     style={{
                         background: "transparent",
                         color: "#888",

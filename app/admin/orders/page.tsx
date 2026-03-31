@@ -232,7 +232,7 @@ export default function OrdersPage() {
             {/* ===== HEADER ===== */}
             <div className="space-y-2">
                 <Link
-                    href="/admin"
+                    href="/ops/control"
                     className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
                 >
                     ← Back to Admin

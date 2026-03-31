@@ -14,7 +14,7 @@ export default function AboutAdminPage() {
             {/* 🔙 Back Button */}
             <div className="mb-6">
                 <Link
-                    href="/admin"
+                    href="/ops/control"
                     className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
                 >
                     ← Back to Admin

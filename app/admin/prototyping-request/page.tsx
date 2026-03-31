@@ -107,7 +107,7 @@ export default function PrototypingRequestsPage() {
     return (
         <div className="container mx-auto p-6 space-y-6">
             <div className="flex items-center gap-4">
-                <Link href="/admin">
+                <Link href="/ops/control">
                     <Button variant="ghost">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back

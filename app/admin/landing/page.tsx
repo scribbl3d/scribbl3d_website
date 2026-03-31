@@ -33,7 +33,7 @@ export default function AdminLandingPage() {
                 {/* Header */}
                 <div className="flex items-center gap-3 mb-6">
                     <button
-                        onClick={() => router.push("/admin")}
+                        onClick={() => router.push("/ops/control")}
                         className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                         <ChevronLeft className="w-5 h-5" />

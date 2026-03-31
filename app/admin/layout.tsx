@@ -11,7 +11,7 @@ export default function AdminLayout({
         <div className="min-h-screen bg-background">
             <header className="border-b">
                 <div className="container mx-auto px-4 py-4 flex items-center">
-                    <Link href="/admin" passHref>
+                    <Link href="/ops/control" passHref>
                         <Button variant="ghost" className="mr-4">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back

@@ -381,7 +381,7 @@ export default function PrinterFormPage() {
                 const err = await response.json();
                 throw new Error(err.error || "Failed to save");
             }
-            router.push("/admin/printers");
+            router.push("/ops/control/printers");
         } catch (error: any) {
             console.error(error);
             alert(`Error: ${error.message}`);

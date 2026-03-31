@@ -34,11 +34,11 @@ export default function DiscountsPage() {
     return (
         <div className="max-w-4xl mx-auto p-6 space-y-6">
             <div className="flex items-center gap-4">
-                <Link href="/admin">
+                <Link href="/ops/control">
                     <Button variant="outline">← Back</Button>
                 </Link>
                 <h1 className="text-2xl font-semibold">Discounts</h1>
-                <Link href="/admin/discounts/new" className="ml-auto">
+                <Link href="/ops/control/discounts/new" className="ml-auto">
                     <Button>Add Discount</Button>
                 </Link>
             </div>
@@ -98,7 +98,7 @@ export default function DiscountsPage() {
 
                         <div className="flex flex-col gap-2 items-end">
                             <div className="flex gap-2">
-                                <Link href={`/admin/discounts/${d.id}`}>
+                                <Link href={`/ops/control/discounts/${d.id}`}>
                                     <Button size="sm" variant="outline">
                                         Edit
                                     </Button>

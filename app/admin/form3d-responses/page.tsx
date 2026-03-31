@@ -178,7 +178,7 @@ export default function Form3DResponsesPage() {
         <div className="container mx-auto p-6 space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Link href="/admin">
+                    <Link href="/ops/control">
                         <Button variant="ghost" className="p-0">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back

@@ -1,5 +1,3 @@
-// PATH: app/admin/prebuilt-products/new/page.tsx
-
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -11,7 +9,7 @@ export default function NewPrebuiltProductPage() {
     return (
         <PrebuiltProductForm
             mode="create"
-            onSuccess={() => router.push("/admin/prebuilt-products")}
+            onSuccess={() => router.push("/ops/control/prebuilt-products")}
         />
     );
 }

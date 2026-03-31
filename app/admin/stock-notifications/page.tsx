@@ -199,7 +199,7 @@ export default function StockNotificationsPage() {
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push("/admin")}
+                            onClick={() => router.push("/ops/control")}
                             className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-900 transition px-3 py-2 rounded-lg hover:bg-gray-100"
                         >
                             <ChevronLeft size={16} />

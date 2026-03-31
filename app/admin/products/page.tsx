@@ -14,7 +14,7 @@ export default function ProductsPage() {
         <div className="container mx-auto py-6 space-y-6">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
-                    <Link href="/admin" passHref>
+                    <Link href="/ops/control" passHref>
                         <Button variant="ghost" className="mr-4">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back

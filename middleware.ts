@@ -74,16 +74,18 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
     }
 
-    const isAdminRoute = pathname.startsWith("/admin");
+    const isAdminRoute = pathname.startsWith("/ops/control");
     const adminToken = request.cookies.get("admin_token")?.value;
 
     if (isAdminRoute) {
-        if (pathname === "/admin/login") {
+        if (pathname === "/ops/control/login") {
             return response;
         }
 
         if (!adminToken) {
-            return NextResponse.redirect(new URL("/admin/login", request.url));
+            return NextResponse.redirect(
+                new URL("/ops/control/login", request.url),
+            );
         }
     }
 
@@ -100,6 +102,6 @@ export const config = {
         "/dashboard/:path*",
         "/login",
         "/register",
-        "/admin/:path*",
+        "/ops/control/:path*",
     ],
 };
