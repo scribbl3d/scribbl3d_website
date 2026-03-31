@@ -17,8 +17,8 @@ import { useEffect, useState } from "react";
 import ProductForm from "./ProductForm";
 
 // reusable search + sort component
-import Pagination from "@/app/admin/_components/Pagination";
-import SearchSortControl from "@/app/admin/_components/SearchSortControl";
+import Pagination from "@/app/ops/control/_components/Pagination";
+import SearchSortControl from "@/app/ops/control/_components/SearchSortControl";
 
 export default function ProductList() {
     const [products, setProducts] = useState<Product[]>([]);
