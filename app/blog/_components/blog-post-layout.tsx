@@ -159,7 +159,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                         style={{
                             width: 48,
                             height: 3,
-                            background: "#F5A524",
+                            background: "#4f46e5",
                             borderRadius: 99,
                             margin: "0 auto",
                             animation: "pulse 1.4s ease-in-out infinite",
@@ -211,7 +211,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                     style={{
                         height: "100%",
                         width: `${scrollProgress}%`,
-                        background: "#F5A524",
+                        background: "#4f46e5",
                         transition: "width 0.15s ease",
                         borderRadius: "0 99px 99px 0",
                     }}
@@ -314,7 +314,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                     fontWeight: 800,
                                     textTransform: "uppercase",
                                     letterSpacing: "0.3em",
-                                    color: "#F5A524",
+                                    color: "#4f46e5",
                                 }}
                             >
                                 Contents
@@ -370,16 +370,16 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                         paddingLeft: item.level === 3 ? 28 : 12,
                                         color:
                                             activeSection === item.id
-                                                ? "#F5A524"
+                                                ? "#4f46e5"
                                                 : "#333",
                                         background:
                                             activeSection === item.id
-                                                ? "#FFFDF7"
+                                                ? "#eef2ff"
                                                 : "transparent",
                                         textDecoration: "none",
                                         borderLeft:
                                             activeSection === item.id
-                                                ? "3px solid #F5A524"
+                                                ? "3px solid #4f46e5"
                                                 : "3px solid transparent",
                                     }}
                                 >
@@ -459,7 +459,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                     <span
                                         key={kw}
                                         style={{
-                                            background: "#F5A524",
+                                            background: "#4f46e5",
                                             color: "#fff",
                                             borderRadius: 6,
                                             padding: "4px 11px",
@@ -596,7 +596,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                             Contents
                             <span
                                 style={{
-                                    background: "#F5A524",
+                                    background: "#4f46e5",
                                     borderRadius: 99,
                                     padding: "1px 7px",
                                     fontSize: 10,
@@ -706,13 +706,13 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                     onMouseEnter={(e) => {
                                         (
                                             e.currentTarget as HTMLButtonElement
-                                        ).style.background = "#F5A524";
+                                        ).style.background = "#4f46e5";
                                         (
                                             e.currentTarget as HTMLButtonElement
                                         ).style.color = "#fff";
                                         (
                                             e.currentTarget as HTMLButtonElement
-                                        ).style.borderColor = "#F5A524";
+                                        ).style.borderColor = "#4f46e5";
                                     }}
                                     onMouseLeave={(e) => {
                                         (
@@ -745,13 +745,13 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                     onMouseEnter={(e) => {
                                         (
                                             e.currentTarget as HTMLButtonElement
-                                        ).style.background = "#F5A524";
+                                        ).style.background = "#4f46e5";
                                         (
                                             e.currentTarget as HTMLButtonElement
                                         ).style.color = "#fff";
                                         (
                                             e.currentTarget as HTMLButtonElement
-                                        ).style.borderColor = "#F5A524";
+                                        ).style.borderColor = "#4f46e5";
                                     }}
                                     onMouseLeave={(e) => {
                                         (
@@ -772,7 +772,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                         style={{
                                             fontSize: 11,
                                             fontWeight: 700,
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                         }}
                                     >
                                         Link copied!
@@ -808,7 +808,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             flexDirection: "column",
                                             gap: 6,
                                         }}
-                                        className="hover:border-[#F5A524] hover:shadow-md"
+                                        className="hover:border-[#4f46e5] hover:shadow-md"
                                     >
                                         <div
                                             style={{
@@ -870,7 +870,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             flexDirection: "column",
                                             gap: 6,
                                         }}
-                                        className="hover:border-[#F5A524] hover:shadow-md sm:text-right"
+                                        className="hover:border-[#4f46e5] hover:shadow-md sm:text-right"
                                     >
                                         <div
                                             style={{
@@ -928,7 +928,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             fontWeight: 800,
                                             textTransform: "uppercase",
                                             letterSpacing: "0.3em",
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             marginBottom: 14,
                                         }}
                                     >
@@ -1002,7 +1002,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                             color: "#111",
                                                             lineHeight: 1.35,
                                                         }}
-                                                        className="group-hover:text-[#F5A524] transition-colors line-clamp-2"
+                                                        className="group-hover:text-[#4f46e5] transition-colors line-clamp-2"
                                                     >
                                                         {related.title}
                                                     </p>
@@ -1048,7 +1048,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             fontWeight: 800,
                                             textTransform: "uppercase",
                                             letterSpacing: "0.3em",
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             marginBottom: 14,
                                         }}
                                     >
@@ -1073,16 +1073,16 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                     borderRadius: 10,
                                                     background:
                                                         b.id === blog.id
-                                                            ? "#FFFDF7"
+                                                            ? "#eef2ff"
                                                             : "transparent",
                                                     border:
                                                         b.id === blog.id
-                                                            ? "1.5px solid #F5A524"
+                                                            ? "1.5px solid #4f46e5"
                                                             : "1.5px solid transparent",
                                                     textDecoration: "none",
                                                     transition: "all .2s",
                                                 }}
-                                                className="group hover:bg-[#FFFDF7]"
+                                                className="group hover:bg-[#eef2ff]"
                                             >
                                                 <div
                                                     style={{
@@ -1091,7 +1091,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                         borderRadius: "50%",
                                                         background:
                                                             b.id === blog.id
-                                                                ? "#F5A524"
+                                                                ? "#4f46e5"
                                                                 : "#E8E3D9",
                                                         flexShrink: 0,
                                                     }}
@@ -1105,11 +1105,11 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                                 : 600,
                                                         color:
                                                             b.id === blog.id
-                                                                ? "#F5A524"
+                                                                ? "#4f46e5"
                                                                 : "#444",
                                                         lineHeight: 1.35,
                                                     }}
-                                                    className="line-clamp-1 group-hover:text-[#F5A524] transition-colors"
+                                                    className="line-clamp-1 group-hover:text-[#4f46e5] transition-colors"
                                                 >
                                                     {b.title}
                                                 </span>
@@ -1128,7 +1128,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             borderTop: "1px solid #F0EDE8",
                                             fontSize: 11,
                                             fontWeight: 800,
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             textTransform: "uppercase",
                                             letterSpacing: "0.15em",
                                             textDecoration: "none",
@@ -1159,7 +1159,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             fontWeight: 800,
                                             textTransform: "uppercase",
                                             letterSpacing: "0.3em",
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             marginBottom: 18,
                                         }}
                                     >
@@ -1202,19 +1202,19 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                     color:
                                                         activeSection ===
                                                         item.id
-                                                            ? "#F5A524"
+                                                            ? "#4f46e5"
                                                             : "#555",
                                                     background:
                                                         activeSection ===
                                                         item.id
-                                                            ? "#FFFDF7"
+                                                            ? "#eef2ff"
                                                             : "transparent",
                                                     textDecoration: "none",
                                                     transition: "all .2s",
                                                     borderLeft:
                                                         activeSection ===
                                                         item.id
-                                                            ? "3px solid #F5A524"
+                                                            ? "3px solid #4f46e5"
                                                             : "3px solid transparent",
                                                 }}
                                             >
@@ -1253,7 +1253,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             fontWeight: 800,
                                             textTransform: "uppercase",
                                             letterSpacing: "0.3em",
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             marginBottom: 18,
                                         }}
                                     >
@@ -1278,16 +1278,16 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                     borderRadius: 12,
                                                     background:
                                                         b.id === blog.id
-                                                            ? "#FFFDF7"
+                                                            ? "#eef2ff"
                                                             : "transparent",
                                                     border:
                                                         b.id === blog.id
-                                                            ? "1.5px solid #F5A524"
+                                                            ? "1.5px solid #4f46e5"
                                                             : "1.5px solid transparent",
                                                     textDecoration: "none",
                                                     transition: "all .2s",
                                                 }}
-                                                className="group hover:bg-[#FFFDF7]"
+                                                className="group hover:bg-[#eef2ff]"
                                             >
                                                 <div
                                                     style={{
@@ -1296,7 +1296,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                         borderRadius: "50%",
                                                         background:
                                                             b.id === blog.id
-                                                                ? "#F5A524"
+                                                                ? "#4f46e5"
                                                                 : "#E8E3D9",
                                                         flexShrink: 0,
                                                     }}
@@ -1310,11 +1310,11 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                                 : 600,
                                                         color:
                                                             b.id === blog.id
-                                                                ? "#F5A524"
+                                                                ? "#4f46e5"
                                                                 : "#444",
                                                         lineHeight: 1.35,
                                                     }}
-                                                    className="line-clamp-2 group-hover:text-[#F5A524] transition-colors"
+                                                    className="line-clamp-2 group-hover:text-[#4f46e5] transition-colors"
                                                 >
                                                     {b.title}
                                                 </span>
@@ -1333,7 +1333,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             borderTop: "1px solid #F0EDE8",
                                             fontSize: 11,
                                             fontWeight: 800,
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             textTransform: "uppercase",
                                             letterSpacing: "0.15em",
                                             textDecoration: "none",
@@ -1352,7 +1352,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             fontWeight: 800,
                                             textTransform: "uppercase",
                                             letterSpacing: "0.3em",
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             marginBottom: 18,
                                         }}
                                     >
@@ -1426,7 +1426,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                             color: "#111",
                                                             lineHeight: 1.4,
                                                         }}
-                                                        className="group-hover:text-[#F5A524] transition-colors line-clamp-2"
+                                                        className="group-hover:text-[#4f46e5] transition-colors line-clamp-2"
                                                     >
                                                         {related.title}
                                                     </p>
@@ -1483,18 +1483,18 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                     color: inherit;
                 }
                 .blog-content a {
-                    color: #F5A524;
+                    color: #4f46e5;
                     font-weight: 700;
                     text-decoration: underline;
-                    text-decoration-color: rgba(245,165,36,0.35);
+                    text-decoration-color: rgba(79,70,229,0.35);
                     text-underline-offset: 3px;
                     transition: text-decoration-color .2s;
                 }
-                .blog-content a:hover { text-decoration-color: #F5A524; }
+                .blog-content a:hover { text-decoration-color: #4f46e5; }
                 .blog-content blockquote {
                     margin: 2.5em 0 !important;
                     padding: 0 0 0 clamp(16px, 3vw, 28px) !important;
-                    border-left: 4px solid #F5A524 !important;
+                    border-left: 4px solid #4f46e5 !important;
                     font-size: clamp(1.1rem, 2.5vw, 1.3rem);
                     font-weight: 900;
                     font-style: italic;
