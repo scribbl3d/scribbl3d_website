@@ -37,10 +37,12 @@ export function Confirmation() {
     /* ---------- Safety: Context ---------- */
     if (!checkout) {
         return (
-            <Card>
-                <CardContent className="p-6 flex flex-col items-center text-center text-red-600 gap-2">
+            <Card className="rounded-xl sm:rounded-2xl">
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center text-red-600 gap-2">
                     <AlertCircle className="w-6 h-6" />
-                    <p>Checkout session not initialized.</p>
+                    <p className="text-sm sm:text-base">
+                        Checkout session not initialized.
+                    </p>
                 </CardContent>
             </Card>
         );
@@ -52,13 +54,18 @@ export function Confirmation() {
     /* ---------- Missing Shipping Details ---------- */
     if (!shippingDetails) {
         return (
-            <Card>
-                <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+            <Card className="rounded-xl sm:rounded-2xl">
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-4">
                     <AlertCircle className="w-6 h-6 text-yellow-600" />
-                    <p className="text-gray-700">
+                    <p className="text-sm sm:text-base text-gray-700">
                         Shipping details are missing. Please enter your address.
                     </p>
-                    <Button onClick={prevStep}>Go Back</Button>
+                    <Button
+                        onClick={prevStep}
+                        className="h-11 sm:h-10 rounded-xl sm:rounded-lg"
+                    >
+                        Go Back
+                    </Button>
                 </CardContent>
             </Card>
         );
@@ -67,13 +74,18 @@ export function Confirmation() {
     /* ---------- Missing Shipping Method ---------- */
     if (!selectedShipping) {
         return (
-            <Card>
-                <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+            <Card className="rounded-xl sm:rounded-2xl">
+                <CardContent className="p-4 sm:p-6 flex flex-col items-center text-center gap-4">
                     <AlertCircle className="w-6 h-6 text-yellow-600" />
-                    <p className="text-gray-700">
+                    <p className="text-sm sm:text-base text-gray-700">
                         Please select a shipping method to continue.
                     </p>
-                    <Button onClick={prevStep}>Select Shipping</Button>
+                    <Button
+                        onClick={prevStep}
+                        className="h-11 sm:h-10 rounded-xl sm:rounded-lg"
+                    >
+                        Select Shipping
+                    </Button>
                 </CardContent>
             </Card>
         );
@@ -112,22 +124,20 @@ export function Confirmation() {
             content: [
                 {
                     text: isFreeShipping ? (
-                        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
-                            <span className="font-medium text-green-700">
+                        <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-green-50 border border-green-200">
+                            <span className="font-medium text-green-700 text-sm sm:text-base">
                                 Free Shipping Applied
                             </span>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-1">
-                            <p className="font-medium">
+                            <p className="font-medium text-sm sm:text-base">
                                 {selectedShipping.name}
                             </p>
-
-                            <p className="text-sm text-gray-500">
+                            <p className="text-xs sm:text-sm text-gray-500">
                                 {selectedShipping.description}
                             </p>
-
-                            <p className="font-semibold">
+                            <p className="font-semibold text-sm sm:text-base">
                                 {formatPrice(selectedShipping.price)}
                             </p>
                         </div>
@@ -145,12 +155,12 @@ export function Confirmation() {
             content: [
                 {
                     text: (
-                        <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1.5 p-2.5 sm:p-3 rounded-lg bg-blue-50 border border-blue-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                                 <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
                                     GSTIN
                                 </span>
-                                <span className="font-mono font-semibold text-blue-900">
+                                <span className="font-mono font-semibold text-blue-900 text-sm sm:text-base break-all">
                                     {shippingDetails.gstin}
                                 </span>
                             </div>
@@ -166,7 +176,7 @@ export function Confirmation() {
                                 <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
                                     Registered Address
                                 </span>
-                                <p className="text-sm text-gray-700">
+                                <p className="text-xs sm:text-sm text-gray-700">
                                     {shippingDetails.gstAddress}
                                 </p>
                             </div>
@@ -177,16 +187,16 @@ export function Confirmation() {
         });
     }
 
-    const totalAmount = selectedShipping.price;
-
     /* ===================== UI ===================== */
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Review Your Order</CardTitle>
+        <Card className="rounded-xl sm:rounded-2xl border border-gray-100 shadow-none">
+            <CardHeader className="px-4 sm:px-6 pb-2 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg font-bold">
+                    Review Your Order
+                </CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
                 {sections.map((section, index) => {
                     const Icon = section.icon;
                     return (
@@ -196,26 +206,26 @@ export function Confirmation() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.08 }}
                         >
-                            <div className="space-y-3">
+                            <div className="space-y-2 sm:space-y-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="p-2 rounded-full bg-primary/10 text-primary">
-                                        <Icon className="w-5 h-5" />
+                                    <div className="p-1.5 sm:p-2 rounded-full bg-primary/10 text-primary flex-shrink-0">
+                                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <h3 className="text-lg font-medium">
+                                    <h3 className="text-sm sm:text-lg font-medium text-gray-900">
                                         {section.title}
                                     </h3>
                                 </div>
 
-                                <div className="ml-9 pl-2 border-l-2 border-gray-100 space-y-2">
+                                <div className="ml-8 sm:ml-9 pl-2 border-l-2 border-gray-100 space-y-1.5 sm:space-y-2">
                                     {section.content.map((item, i) => (
                                         <div
                                             key={i}
                                             className="flex gap-2 items-start"
                                         >
                                             {item.icon && (
-                                                <item.icon className="w-4 h-4 mt-1 text-gray-500" />
+                                                <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 mt-0.5 sm:mt-1 text-gray-500 flex-shrink-0" />
                                             )}
-                                            <div className="text-gray-700">
+                                            <div className="text-sm sm:text-base text-gray-700 min-w-0 break-words">
                                                 {item.text}
                                             </div>
                                         </div>
@@ -224,18 +234,18 @@ export function Confirmation() {
                             </div>
 
                             {index < sections.length - 1 && (
-                                <Separator className="my-4" />
+                                <Separator className="my-3 sm:my-4" />
                             )}
                         </motion.div>
                     );
                 })}
 
-                {/* ===================== TOTAL ===================== */}
-                <div className="pt-6 space-y-4">
+                {/* ===================== BACK BUTTON ===================== */}
+                <div className="pt-4 sm:pt-6">
                     <Button
                         variant="outline"
                         onClick={prevStep}
-                        className="flex items-center"
+                        className="h-11 sm:h-10 rounded-xl sm:rounded-lg w-full sm:w-auto"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Shipping

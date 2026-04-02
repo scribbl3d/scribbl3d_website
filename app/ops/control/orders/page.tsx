@@ -204,24 +204,35 @@ export default function OrdersPage() {
 
     async function handleDownloadInvoice(order: Order) {
         try {
-            const res = await fetch(`/api/orders/${order.id}/invoice`);
-            if (!res.ok) throw new Error("Failed to download invoice");
+            const res = await fetch(`/api/orders/${order.id}/invoice`, {
+                credentials: "include",
+            });
+
+            if (!res.ok) {
+                const text = await res.text(); // better debugging
+                console.error("Invoice API error:", text);
+                throw new Error("Failed to download invoice");
+            }
 
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
+
             const a = document.createElement("a");
             a.href = url;
 
+            // Extract filename safely
             const disposition = res.headers.get("Content-Disposition");
             const match = disposition?.match(/filename="(.+)"/);
+
             a.download = match?.[1] || `Invoice_${order.id}.pdf`;
 
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+
             URL.revokeObjectURL(url);
         } catch (err) {
-            console.error("Invoice download failed:", err);
+            console.error("❌ Invoice download failed:", err);
             alert("Failed to download invoice. Please try again.");
         }
     }

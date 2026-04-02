@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { Bell, Check, X } from "lucide-react";
+import { Bell, Check, Loader2, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -134,6 +134,13 @@ export default function WishlistModal({
     const [quantity, setQuantity] = useState(1);
 
     /* =====================
+       ADD TO CART STATE
+    ===================== */
+    const [addingState, setAddingState] = useState<
+        "idle" | "loading" | "success"
+    >("idle");
+
+    /* =====================
        VALIDATION
     ===================== */
     const canAddToCart =
@@ -166,28 +173,45 @@ export default function WishlistModal({
             return;
         }
 
-        if (item.itemType === "resin") {
-            await addToCart({
-                ...item.cartPayload,
-                resinColourId: selectedColourId ?? undefined,
-                resinWeightId: selectedWeightId ?? undefined,
-                quantity,
+        setAddingState("loading");
+
+        try {
+            if (item.itemType === "resin") {
+                await addToCart({
+                    ...item.cartPayload,
+                    resinColourId: selectedColourId ?? undefined,
+                    resinWeightId: selectedWeightId ?? undefined,
+                    quantity,
+                });
+            }
+
+            if (item.itemType === "prebuilt" && selectedVariant) {
+                await addToCart({
+                    prebuiltProductId: item.cartPayload.prebuiltProductId,
+                    prebuiltVariantId: selectedVariant.id,
+                    quantity,
+                });
+            }
+
+            setAddingState("success");
+
+            toast({
+                title: "Added to Cart",
+                description: `${item.title} has been added to your cart.`,
+            });
+
+            // Show success briefly then close
+            setTimeout(() => {
+                onClose();
+            }, 800);
+        } catch {
+            setAddingState("idle");
+            toast({
+                title: "Failed to add item",
+                description: "Something went wrong. Please try again.",
+                variant: "destructive",
             });
         }
-
-        if (item.itemType === "prebuilt" && selectedVariant) {
-            await addToCart({
-                prebuiltProductId: item.cartPayload.prebuiltProductId,
-                prebuiltVariantId: selectedVariant.id,
-                quantity,
-            });
-        }
-
-        onClose();
-        toast({
-            title: "Added to Cart",
-            description: `${item.title} has been added to your cart.`,
-        });
     };
 
     const goToPDP = () => {
@@ -532,7 +556,8 @@ export default function WishlistModal({
                                     onClick={() =>
                                         setQuantity((q) => Math.max(1, q - 1))
                                     }
-                                    className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                                    disabled={addingState !== "idle"}
+                                    className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     −
                                 </button>
@@ -541,7 +566,8 @@ export default function WishlistModal({
                                 </div>
                                 <button
                                     onClick={() => setQuantity((q) => q + 1)}
-                                    className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl"
+                                    disabled={addingState !== "idle"}
+                                    className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     +
                                 </button>
@@ -560,17 +586,34 @@ export default function WishlistModal({
                         </button>
                     ) : (
                         <Button
-                            disabled={!canAddToCart}
+                            disabled={!canAddToCart || addingState !== "idle"}
                             onClick={handleAddToCart}
-                            className="w-full h-[48px] mt-8 bg-black text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            className={`w-full h-[48px] mt-8 font-semibold transition-all duration-200 ${
+                                addingState === "success"
+                                    ? "bg-green-600 text-white hover:bg-green-600"
+                                    : "bg-black text-white hover:bg-gray-800"
+                            } disabled:bg-gray-300 disabled:cursor-not-allowed`}
                         >
-                            Add to Cart
+                            {addingState === "loading" ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Adding to Cart…
+                                </>
+                            ) : addingState === "success" ? (
+                                <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Added to Cart!
+                                </>
+                            ) : (
+                                "Add to Cart"
+                            )}
                         </Button>
                     )}
 
                     <button
                         onClick={goToPDP}
-                        className="w-full text-sm mt-3 text-gray-500 hover:text-black"
+                        disabled={addingState === "loading"}
+                        className="w-full text-sm mt-3 text-gray-500 hover:text-black disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         View full details →
                     </button>

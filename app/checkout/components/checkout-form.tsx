@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useCheckout } from "@/providers/CheckoutProvider";
 import type { ShippingDetails } from "@/types/checkout";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -133,7 +134,6 @@ const formSchema = z
     })
     .superRefine((data, ctx) => {
         if (data.wantsGstInvoice) {
-            // Validate GSTIN format: 2-digit state code + 10-char PAN + 1 entity + 1 Z + 1 check
             if (
                 !data.gstin ||
                 !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(
@@ -189,13 +189,11 @@ export default function CheckoutForm() {
         },
     });
 
-    // Watch the GSTIN checkbox to conditionally show fields
     const wantsGstInvoice = useWatch({ control, name: "wantsGstInvoice" });
 
     const hasHydratedRef = useRef(false);
     useEffect(() => {
         if (!session?.user) return;
-
         if (hasHydratedRef.current) return;
 
         setValue("email", session.user.email || "");
@@ -218,7 +216,6 @@ export default function CheckoutForm() {
                 setValue("state", address.state || "");
                 setValue("pincode", address.pincode || address.zipCode || "");
 
-                // Hydrate GSTIN details if previously saved
                 if (address.gstin) {
                     setValue("wantsGstInvoice", true);
                     setValue("gstin", address.gstin || "");
@@ -236,12 +233,9 @@ export default function CheckoutForm() {
             setIsLoading(true);
 
             if (data.saveInfo) {
-                // Save shipping details to user profile
                 const response = await fetch("/api/user/shipping-details", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(data),
                 });
 
@@ -274,20 +268,26 @@ export default function CheckoutForm() {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
-            <Card>
-                <CardContent className="space-y-6 pt-4">
-                    {/* Contact Details Section */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">
+            <Card className="rounded-xl sm:rounded-2xl border border-gray-100 shadow-none">
+                <CardContent className="space-y-5 sm:space-y-6 pt-4 sm:pt-6 px-4 sm:px-6">
+                    {/* Contact Details */}
+                    <div className="space-y-3 sm:space-y-4">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                             Contact Information
                         </h3>
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="fullName">Full Name</Label>
+                        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                            <div className="space-y-1.5 sm:space-y-2">
+                                <Label
+                                    htmlFor="fullName"
+                                    className="text-sm font-medium"
+                                >
+                                    Full Name
+                                </Label>
                                 <Input
                                     id="fullName"
                                     placeholder="Enter your full name"
                                     maxLength={50}
+                                    className="h-11 sm:h-10 text-base sm:text-sm"
                                     {...register("fullName")}
                                     onInput={(e) => {
                                         const input =
@@ -299,13 +299,18 @@ export default function CheckoutForm() {
                                     }}
                                 />
                                 {errors.fullName && (
-                                    <p className="text-sm text-red-500">
+                                    <p className="text-xs sm:text-sm text-red-500">
                                         {errors.fullName.message}
                                     </p>
                                 )}
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Mobile Number</Label>
+                            <div className="space-y-1.5 sm:space-y-2">
+                                <Label
+                                    htmlFor="phone"
+                                    className="text-sm font-medium"
+                                >
+                                    Mobile Number
+                                </Label>
                                 <Input
                                     id="phone"
                                     type="tel"
@@ -313,6 +318,7 @@ export default function CheckoutForm() {
                                     maxLength={10}
                                     pattern="[6-9]{1}[0-9]{9}"
                                     inputMode="numeric"
+                                    className="h-11 sm:h-10 text-base sm:text-sm"
                                     {...register("phone")}
                                     onInput={(e) => {
                                         const input =
@@ -323,22 +329,28 @@ export default function CheckoutForm() {
                                     }}
                                 />
                                 {errors.phone && (
-                                    <p className="text-sm text-red-500">
+                                    <p className="text-xs sm:text-sm text-red-500">
                                         {errors.phone.message}
                                     </p>
                                 )}
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
+                        <div className="space-y-1.5 sm:space-y-2">
+                            <Label
+                                htmlFor="email"
+                                className="text-sm font-medium"
+                            >
+                                Email Address
+                            </Label>
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="you@example.com"
+                                className="h-11 sm:h-10 text-base sm:text-sm"
                                 {...register("email")}
                             />
                             {errors.email && (
-                                <p className="text-sm text-red-500">
+                                <p className="text-xs sm:text-sm text-red-500">
                                     {errors.email.message}
                                 </p>
                             )}
@@ -346,16 +358,22 @@ export default function CheckoutForm() {
                     </div>
 
                     {/* Address Section */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">
+                    <div className="space-y-3 sm:space-y-4">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                             Delivery Address
                         </h3>
-                        <div className="space-y-2">
-                            <Label htmlFor="address">Street Address</Label>
+                        <div className="space-y-1.5 sm:space-y-2">
+                            <Label
+                                htmlFor="address"
+                                className="text-sm font-medium"
+                            >
+                                Street Address
+                            </Label>
                             <Input
                                 id="address"
                                 placeholder="House number, street name, area"
                                 maxLength={100}
+                                className="h-11 sm:h-10 text-base sm:text-sm"
                                 {...register("address")}
                                 onInput={(e) => {
                                     const input = e.target as HTMLInputElement;
@@ -366,20 +384,24 @@ export default function CheckoutForm() {
                                 }}
                             />
                             {errors.address && (
-                                <p className="text-sm text-red-500">
+                                <p className="text-xs sm:text-sm text-red-500">
                                     {errors.address.message}
                                 </p>
                             )}
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="landmark">
+                        <div className="space-y-1.5 sm:space-y-2">
+                            <Label
+                                htmlFor="landmark"
+                                className="text-sm font-medium"
+                            >
                                 Landmark (Optional)
                             </Label>
                             <Input
                                 id="landmark"
                                 placeholder="Nearby landmark, building, etc."
                                 maxLength={50}
+                                className="h-11 sm:h-10 text-base sm:text-sm"
                                 {...register("landmark")}
                                 onInput={(e) => {
                                     const input = e.target as HTMLInputElement;
@@ -391,15 +413,21 @@ export default function CheckoutForm() {
                             />
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="pincode">PIN Code</Label>
+                        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+                            <div className="space-y-1.5 sm:space-y-2">
+                                <Label
+                                    htmlFor="pincode"
+                                    className="text-sm font-medium"
+                                >
+                                    PIN Code
+                                </Label>
                                 <Input
                                     id="pincode"
                                     placeholder="6-digit PIN code"
                                     maxLength={6}
                                     pattern="[1-9]{1}[0-9]{5}"
                                     inputMode="numeric"
+                                    className="h-11 sm:h-10 text-base sm:text-sm"
                                     {...register("pincode")}
                                     onInput={(e) => {
                                         const input =
@@ -410,17 +438,23 @@ export default function CheckoutForm() {
                                     }}
                                 />
                                 {errors.pincode && (
-                                    <p className="text-sm text-red-500">
+                                    <p className="text-xs sm:text-sm text-red-500">
                                         {errors.pincode.message}
                                     </p>
                                 )}
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="city">City</Label>
+                            <div className="space-y-1.5 sm:space-y-2">
+                                <Label
+                                    htmlFor="city"
+                                    className="text-sm font-medium"
+                                >
+                                    City
+                                </Label>
                                 <Input
                                     id="city"
                                     placeholder="Enter your city"
                                     maxLength={50}
+                                    className="h-11 sm:h-10 text-base sm:text-sm"
                                     {...register("city")}
                                     onInput={(e) => {
                                         const input =
@@ -432,15 +466,20 @@ export default function CheckoutForm() {
                                     }}
                                 />
                                 {errors.city && (
-                                    <p className="text-sm text-red-500">
+                                    <p className="text-xs sm:text-sm text-red-500">
                                         {errors.city.message}
                                     </p>
                                 )}
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="state">State</Label>
+                        <div className="space-y-1.5 sm:space-y-2">
+                            <Label
+                                htmlFor="state"
+                                className="text-sm font-medium"
+                            >
+                                State
+                            </Label>
                             <Controller
                                 name="state"
                                 control={control}
@@ -452,19 +491,16 @@ export default function CheckoutForm() {
                                     >
                                         <SelectTrigger
                                             id="state"
-                                            className={
-                                                errors.state
-                                                    ? "border-red-500"
-                                                    : ""
-                                            }
+                                            className={`h-11 sm:h-10 text-base sm:text-sm ${errors.state ? "border-red-500" : ""}`}
                                         >
                                             <SelectValue placeholder="Select your state" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="max-h-[40vh]">
                                             {states.map((state) => (
                                                 <SelectItem
                                                     key={state}
                                                     value={state}
+                                                    className="text-sm"
                                                 >
                                                     {state}
                                                 </SelectItem>
@@ -474,7 +510,7 @@ export default function CheckoutForm() {
                                 )}
                             />
                             {errors.state && (
-                                <p className="text-sm text-red-500">
+                                <p className="text-xs sm:text-sm text-red-500">
                                     {errors.state.message}
                                 </p>
                             )}
@@ -482,8 +518,8 @@ export default function CheckoutForm() {
                     </div>
 
                     {/* GSTIN Invoice Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center space-x-2">
+                    <div className="space-y-3 sm:space-y-4">
+                        <div className="flex items-start sm:items-center space-x-2">
                             <Controller
                                 name="wantsGstInvoice"
                                 control={control}
@@ -492,34 +528,40 @@ export default function CheckoutForm() {
                                         id="wantsGstInvoice"
                                         checked={field.value}
                                         onCheckedChange={field.onChange}
+                                        className="mt-0.5 sm:mt-0"
                                     />
                                 )}
                             />
                             <Label
                                 htmlFor="wantsGstInvoice"
-                                className="text-sm font-medium"
+                                className="text-sm font-medium leading-snug"
                             >
                                 I need a GST invoice for this order
                             </Label>
                         </div>
 
                         {wantsGstInvoice && (
-                            <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+                            <div className="space-y-3 sm:space-y-4 rounded-lg border border-gray-200 bg-gray-50/50 p-3 sm:p-4">
                                 <h4 className="text-sm font-semibold text-gray-700">
                                     GST Billing Details
                                 </h4>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="gstin">GSTIN</Label>
+                                <div className="space-y-1.5 sm:space-y-2">
+                                    <Label
+                                        htmlFor="gstin"
+                                        className="text-sm font-medium"
+                                    >
+                                        GSTIN
+                                    </Label>
                                     <Input
                                         id="gstin"
                                         placeholder="e.g. 29ABCDE1234F1Z5"
                                         maxLength={15}
+                                        className="h-11 sm:h-10 text-base sm:text-sm font-mono"
                                         {...register("gstin")}
                                         onInput={(e) => {
                                             const input =
                                                 e.target as HTMLInputElement;
-                                            // Auto uppercase and remove invalid chars
                                             input.value = input.value
                                                 .toUpperCase()
                                                 .replace(/[^A-Z0-9]/g, "")
@@ -527,41 +569,49 @@ export default function CheckoutForm() {
                                         }}
                                     />
                                     {errors.gstin && (
-                                        <p className="text-sm text-red-500">
+                                        <p className="text-xs sm:text-sm text-red-500">
                                             {errors.gstin.message}
                                         </p>
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="gstCompanyName">
+                                <div className="space-y-1.5 sm:space-y-2">
+                                    <Label
+                                        htmlFor="gstCompanyName"
+                                        className="text-sm font-medium"
+                                    >
                                         Registered Company Name
                                     </Label>
                                     <Input
                                         id="gstCompanyName"
                                         placeholder="Company name as per GST registration"
                                         maxLength={100}
+                                        className="h-11 sm:h-10 text-base sm:text-sm"
                                         {...register("gstCompanyName")}
                                     />
                                     {errors.gstCompanyName && (
-                                        <p className="text-sm text-red-500">
+                                        <p className="text-xs sm:text-sm text-red-500">
                                             {errors.gstCompanyName.message}
                                         </p>
                                     )}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="gstAddress">
+                                <div className="space-y-1.5 sm:space-y-2">
+                                    <Label
+                                        htmlFor="gstAddress"
+                                        className="text-sm font-medium"
+                                    >
                                         Registered Address
                                     </Label>
                                     <Input
                                         id="gstAddress"
                                         placeholder="Registered business address as per GST"
                                         maxLength={200}
+                                        className="h-11 sm:h-10 text-base sm:text-sm"
                                         {...register("gstAddress")}
                                     />
                                     {errors.gstAddress && (
-                                        <p className="text-sm text-red-500">
+                                        <p className="text-xs sm:text-sm text-red-500">
                                             {errors.gstAddress.message}
                                         </p>
                                     )}
@@ -570,9 +620,9 @@ export default function CheckoutForm() {
                         )}
                     </div>
 
-                    {/* Additional Options */}
-                    <div className="space-y-4 pt-4">
-                        <div className="flex items-center space-x-2">
+                    {/* Save info */}
+                    <div className="space-y-4 pt-2 sm:pt-4">
+                        <div className="flex items-start sm:items-center space-x-2">
                             <Controller
                                 name="saveInfo"
                                 control={control}
@@ -581,12 +631,13 @@ export default function CheckoutForm() {
                                         id="saveInfo"
                                         checked={field.value}
                                         onCheckedChange={field.onChange}
+                                        className="mt-0.5 sm:mt-0"
                                     />
                                 )}
                             />
                             <Label
                                 htmlFor="saveInfo"
-                                className="text-sm text-muted-foreground"
+                                className="text-sm text-muted-foreground leading-snug"
                             >
                                 Save this information for faster checkout next
                                 time
@@ -596,10 +647,17 @@ export default function CheckoutForm() {
 
                     <Button
                         type="submit"
-                        className="w-full"
+                        className="w-full h-12 sm:h-11 text-base sm:text-sm font-semibold rounded-xl sm:rounded-lg"
                         disabled={isLoading}
                     >
-                        {isLoading ? "Saving..." : "Continue to Shipping"}
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            "Continue to Shipping"
+                        )}
                     </Button>
                 </CardContent>
             </Card>

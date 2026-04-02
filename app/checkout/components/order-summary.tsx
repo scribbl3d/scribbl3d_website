@@ -25,7 +25,7 @@ export default function OrderSummary() {
     const { state } = useCheckout();
     const searchParams = useSearchParams();
 
-    const mode = searchParams?.get("mode"); // "buynow" | null
+    const mode = searchParams?.get("mode");
     const productId = searchParams?.get("productId");
     const type = searchParams?.get("type");
 
@@ -45,16 +45,13 @@ export default function OrderSummary() {
             setLoadingItems(true);
 
             try {
-                // BUY NOW
                 if (mode === "buynow" && productId && type) {
                     const res = await fetch(
                         `/api/buynow?type=${type}&productId=${productId}`,
                     );
                     const item = await res.json();
                     setItems([{ ...item, quantity: 1 }]);
-                }
-                // CART
-                else {
+                } else {
                     const res = await fetch("/api/cart");
                     const data = await res.json();
                     setItems(data.items || []);
@@ -71,14 +68,14 @@ export default function OrderSummary() {
     }, [mode, productId, type]);
 
     if (!isClient || loadingItems) {
-        return <Skeleton className="w-full h-[600px] rounded-lg" />;
+        return (
+            <Skeleton className="w-full h-[350px] sm:h-[450px] lg:h-[600px] rounded-xl sm:rounded-2xl" />
+        );
     }
 
     /* =========================
        PRICE CALCULATIONS
     ========================= */
-
-    // Fallback subtotal (only if pricing not locked yet – eg buy now edge case)
     const computedSubtotal = items.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0,
@@ -100,22 +97,24 @@ export default function OrderSummary() {
     const total = subtotal + shippingCost - discountAmount;
 
     return (
-        <Card className="bg-white border shadow-sm">
-            <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+        <Card className="bg-white border border-gray-100 shadow-none rounded-xl sm:rounded-2xl lg:sticky lg:top-4">
+            <CardHeader className="px-4 sm:px-6 pb-2 sm:pb-4">
+                <CardTitle className="text-base sm:text-lg font-bold">
+                    Order Summary
+                </CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4 px-4 sm:px-6">
                 {/* =========================
                     ITEMS
                 ========================= */}
-                <div className="space-y-2">
+                <div className="space-y-2.5 sm:space-y-3 max-h-[200px] sm:max-h-[280px] overflow-y-auto pr-1">
                     {items.map((item) => (
                         <div
                             key={item.id}
-                            className="flex items-start space-x-3"
+                            className="flex items-start gap-2.5 sm:gap-3"
                         >
-                            <div className="relative w-16 h-16 border rounded-lg overflow-hidden">
+                            <div className="relative w-12 h-12 sm:w-16 sm:h-16 border rounded-lg overflow-hidden flex-shrink-0">
                                 {item.images?.[0] ? (
                                     <Image
                                         src={item.images[0]}
@@ -127,36 +126,47 @@ export default function OrderSummary() {
                                 ) : (
                                     <div className="w-full h-full bg-gray-100" />
                                 )}
-                                <span className="absolute top-0 right-0 bg-gray-900/75 text-white w-5 h-5 flex items-center justify-center text-xs rounded-bl-lg">
+                                <span className="absolute top-0 right-0 bg-gray-900/75 text-white w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center text-[10px] sm:text-xs rounded-bl-lg">
                                     {item.quantity}
                                 </span>
                             </div>
 
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-medium truncate">
+                                <h3 className="font-medium text-sm sm:text-base truncate text-gray-900">
                                     {item.name}
                                 </h3>
                                 {item.customization && (
-                                    <span className="inline-flex mt-1 px-2 py-1 text-xs rounded-full bg-blue-50 text-blue-700">
+                                    <span className="inline-flex mt-0.5 sm:mt-1 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs rounded-full bg-blue-50 text-blue-700">
                                         Customized
                                     </span>
                                 )}
                             </div>
 
-                            <div className="text-right font-medium">
-                                ₹{(item.price * item.quantity).toFixed(2)}
+                            <div className="text-right font-medium text-sm sm:text-base text-gray-900 flex-shrink-0">
+                                ₹
+                                {(item.price * item.quantity).toLocaleString(
+                                    "en-IN",
+                                    { minimumFractionDigits: 2 },
+                                )}
                             </div>
                         </div>
                     ))}
                 </div>
+
+                <Separator />
 
                 {/* =========================
                     COST BREAKDOWN
                 ========================= */}
                 <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                        <span>Subtotal</span>
-                        <span>₹{subtotal.toFixed(2)}</span>
+                        <span className="text-gray-600">Subtotal</span>
+                        <span className="text-gray-900">
+                            ₹
+                            {subtotal.toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                            })}
+                        </span>
                     </div>
 
                     {discountAmount > 0 && appliedDiscountCode && (
@@ -165,23 +175,39 @@ export default function OrderSummary() {
                             animate={{ opacity: 1, height: "auto" }}
                             className="flex justify-between text-green-600"
                         >
-                            <span>Discount ({appliedDiscountCode})</span>
-                            <span>-₹{discountAmount.toFixed(2)}</span>
+                            <span className="truncate mr-2">
+                                Discount ({appliedDiscountCode})
+                            </span>
+                            <span className="flex-shrink-0">
+                                -₹
+                                {discountAmount.toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                })}
+                            </span>
                         </motion.div>
                     )}
 
                     <div className="flex justify-between">
-                        <span>Shipping</span>
-                        <span>
+                        <span className="text-gray-600">Shipping</span>
+                        <span className="text-gray-900">
                             {state.step === 1
                                 ? "Calculated at shipping"
-                                : `₹${shippingCost.toFixed(2)}`}
+                                : shippingCost === 0
+                                  ? "Free"
+                                  : `₹${shippingCost.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`}
                         </span>
                     </div>
 
                     <div className="flex justify-between">
-                        <span>GST (18%) included</span>
-                        <span>₹{gstAmount.toFixed(2)}</span>
+                        <span className="text-gray-600">
+                            GST (18%) included
+                        </span>
+                        <span className="text-gray-900">
+                            ₹
+                            {gstAmount.toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                            })}
+                        </span>
                     </div>
                 </div>
 
@@ -190,9 +216,16 @@ export default function OrderSummary() {
                 {/* =========================
                     TOTAL
                 ========================= */}
-                <div className="flex justify-between font-medium text-lg">
-                    <span>Total</span>
-                    <span>₹{total.toFixed(2)}</span>
+                <div className="flex justify-between items-baseline">
+                    <span className="font-semibold text-base sm:text-lg text-gray-900">
+                        Total
+                    </span>
+                    <span className="font-bold text-lg sm:text-xl text-gray-900">
+                        ₹
+                        {total.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                        })}
+                    </span>
                 </div>
 
                 {/* =========================
@@ -206,7 +239,7 @@ export default function OrderSummary() {
                         >
                             <Button
                                 disabled
-                                className="w-full bg-gray-100 text-gray-500"
+                                className="w-full h-11 sm:h-10 bg-gray-100 text-gray-500 rounded-xl sm:rounded-lg text-sm"
                             >
                                 <Lock className="w-4 h-4 mr-2" />
                                 Complete shipping details

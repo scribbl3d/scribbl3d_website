@@ -132,7 +132,9 @@ export async function GET(
     const { orderId } = await context.params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const adminToken = req.cookies.get("admin_token")?.value;
+
+    if (!session?.user && !adminToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -142,11 +144,16 @@ export async function GET(
             include: { user: true },
         });
 
-        if (!order || order.userId !== session.user.id) {
+        if (!order) {
             return NextResponse.json(
                 { error: "Order not found" },
                 { status: 404 },
             );
+        }
+
+        // ✅ Only restrict for USER (not admin)
+        if (session?.user && order.userId !== session.user.id) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         /* ─────────── ENSURE INVOICE EXISTS ─────────── */

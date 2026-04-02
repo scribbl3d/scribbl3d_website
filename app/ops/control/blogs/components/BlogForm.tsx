@@ -3,6 +3,7 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
+    ArrowLeft,
     FileText,
     Globe,
     Loader2,
@@ -254,8 +255,8 @@ export default function BlogForm({ blogId }: BlogFormProps) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "80px 0",
-                    gap: 12,
+                    padding: "50px 0",
+                    gap: 8,
                     color: "#aaa",
                     fontFamily: "'Lato', sans-serif",
                 }}
@@ -276,6 +277,45 @@ export default function BlogForm({ blogId }: BlogFormProps) {
                 gap: 20,
             }}
         >
+            {/* ── Back button ── */}
+            <div>
+                <button
+                    type="button"
+                    onClick={() => router.push("/ops/control/blogs")}
+                    style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: "transparent",
+                        border: "1.5px solid #E8E3D9",
+                        borderRadius: 10,
+                        padding: "8px 16px",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#555",
+                        cursor: "pointer",
+                        transition: "border-color .2s, color .2s",
+                    }}
+                    onMouseEnter={(e) => {
+                        (
+                            e.currentTarget as HTMLButtonElement
+                        ).style.borderColor = "#F5A524";
+                        (e.currentTarget as HTMLButtonElement).style.color =
+                            "#F5A524";
+                    }}
+                    onMouseLeave={(e) => {
+                        (
+                            e.currentTarget as HTMLButtonElement
+                        ).style.borderColor = "#E8E3D9";
+                        (e.currentTarget as HTMLButtonElement).style.color =
+                            "#555";
+                    }}
+                >
+                    <ArrowLeft size={14} />
+                    Back to Blogs
+                </button>
+            </div>
+
             {/* ── Submitting overlay ── */}
             <Dialog open={isSubmitting}>
                 <DialogContent

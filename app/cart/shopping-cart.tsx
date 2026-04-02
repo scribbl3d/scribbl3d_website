@@ -1,7 +1,7 @@
 "use client";
 
-import type { Discount } from "@/app/ops/control/discounts/types";
 import { calculateDiscount } from "@/app/cart/utils/calculateDiscount";
+import type { Discount } from "@/app/ops/control/discounts/types";
 import WishlistModal from "@/app/profile/_components/wishlist-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,10 +14,12 @@ import { useCheckout } from "@/providers/CheckoutProvider";
 import {
     AlertCircle,
     ArrowLeft,
+    Check,
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
     ChevronUp,
+    Loader2,
     Minus,
     Plus,
     ShoppingCart as ShoppingCartIcon,
@@ -142,6 +144,28 @@ function getRecommendationParams(cartItems: CartItem[]): {
         groups.push({ itemType: "prebuilt", limit: 1 });
     }
     return { groups, excludeIds };
+}
+
+/* =================================================================
+   COMPONENT: DiscountAmountDisplay
+================================================================= */
+
+function DiscountAmountDisplay({
+    isRecalculating,
+    children,
+}: {
+    isRecalculating: boolean;
+    children: React.ReactNode;
+}) {
+    if (isRecalculating) {
+        return (
+            <span className="inline-flex items-center gap-1.5 text-gray-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span className="text-xs font-medium">Updating…</span>
+            </span>
+        );
+    }
+    return <>{children}</>;
 }
 
 /* =================================================================
@@ -460,11 +484,17 @@ function CouponModal({
 function ProductSuggestionCard({
     product,
     onAddToCart,
+    buttonState,
 }: {
     product: ProductSuggestion;
     onAddToCart: (product: ProductSuggestion) => void;
+    buttonState: "idle" | "loading" | "success";
 }) {
     const hasDiscount = product.mrp && product.mrp > product.price;
+    const isResinOrPrebuilt =
+        product.itemType?.toLowerCase() === "resin" ||
+        product.itemType?.toLowerCase() === "prebuilt";
+
     return (
         <div className="flex-shrink-0 w-[180px] sm:w-[200px] bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow duration-200 snap-start">
             <div className="relative aspect-square bg-gray-50 overflow-hidden">
@@ -521,18 +551,43 @@ function ProductSuggestionCard({
                 </div>
                 <Button
                     onClick={() => onAddToCart(product)}
-                    className="w-full mt-3 h-9 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition-colors"
+                    disabled={buttonState !== "idle"}
+                    className={`w-full mt-3 h-9 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        buttonState === "success"
+                            ? "bg-green-600 text-white hover:bg-green-600"
+                            : "bg-gray-900 text-white hover:bg-gray-800"
+                    } disabled:opacity-80`}
                 >
-                    <Plus className="w-4 h-4 mr-1" />
-                    {product.itemType?.toLowerCase() === "resin" ||
-                    product.itemType?.toLowerCase() === "prebuilt" ? (
-                        "Add to Cart"
+                    {buttonState === "loading" ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            <span className="sm:hidden">
+                                {isResinOrPrebuilt ? "Loading…" : "Adding…"}
+                            </span>
+                            <span className="hidden sm:inline">
+                                {isResinOrPrebuilt
+                                    ? "Loading Options…"
+                                    : "Adding…"}
+                            </span>
+                        </>
+                    ) : buttonState === "success" ? (
+                        <>
+                            <Check className="w-4 h-4 mr-1" />
+                            Added!
+                        </>
                     ) : (
                         <>
-                            <span className="sm:hidden">Add</span>
-                            <span className="hidden sm:inline">
-                                Add to Cart
-                            </span>
+                            <Plus className="w-4 h-4 mr-1" />
+                            {isResinOrPrebuilt ? (
+                                "Add to Cart"
+                            ) : (
+                                <>
+                                    <span className="sm:hidden">Add</span>
+                                    <span className="hidden sm:inline">
+                                        Add to Cart
+                                    </span>
+                                </>
+                            )}
                         </>
                     )}
                 </Button>
@@ -550,11 +605,13 @@ function ProductCarousel({
     subtitle,
     products,
     onAddToCart,
+    buttonStates,
 }: {
     title: string;
     subtitle: string;
     products: ProductSuggestion[];
     onAddToCart: (product: ProductSuggestion) => void;
+    buttonStates: Record<string, "idle" | "loading" | "success">;
 }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -650,6 +707,7 @@ function ProductCarousel({
                             key={product.id}
                             product={product}
                             onAddToCart={onAddToCart}
+                            buttonState={buttonStates[product.id] ?? "idle"}
                         />
                     ))}
                 </div>
@@ -673,7 +731,6 @@ function CartItemCard({
 }) {
     const lineTotal = item.price * item.quantity;
 
-    // ✅ Updated: prebuiltColour/prebuiltSize removed, use color/size from CartItem
     const displayColor = item.color ?? null;
     const displayColorHex = item.colorHex ?? null;
 
@@ -810,6 +867,7 @@ export default function ShoppingCart() {
         appliedDiscountCode,
         applyDiscountCode,
         clearDiscount,
+        isRecalculatingDiscount,
     } = useCart();
     const { setPricing } = useCheckout();
 
@@ -826,6 +884,21 @@ export default function ShoppingCart() {
     >([]);
     const [mobileExpanded, setMobileExpanded] = useState(false);
     const [activeModalItem, setActiveModalItem] = useState<any>(null);
+
+    /* Per-product button states for suggestion cards */
+    const [suggestionButtonStates, setSuggestionButtonStates] = useState<
+        Record<string, "idle" | "loading" | "success">
+    >({});
+
+    const setButtonState = useCallback(
+        (productId: string, state: "idle" | "loading" | "success") => {
+            setSuggestionButtonStates((prev) => ({
+                ...prev,
+                [productId]: state,
+            }));
+        },
+        [],
+    );
 
     const cartKey = localCart
         .map((i) => i.id)
@@ -1051,11 +1124,12 @@ export default function ShoppingCart() {
         await removeFromCart(id);
     };
 
-    /* ✅ Updated handleAddSuggestion — prebuilt now uses availableVariants */
     const handleAddSuggestion = async (product: ProductSuggestion) => {
         const type = product.itemType?.toLowerCase();
+        const pid = product.id;
 
         if (type === "resin" || type === "prebuilt") {
+            setButtonState(pid, "loading");
             try {
                 if (type === "resin") {
                     let slug = product.slug;
@@ -1084,6 +1158,7 @@ export default function ShoppingCart() {
                                 "Please add this resin from the Resins page",
                             variant: "destructive",
                         });
+                        setButtonState(pid, "idle");
                         return;
                     }
                     const res = await fetch(`/api/resins/${slug}`);
@@ -1119,10 +1194,9 @@ export default function ShoppingCart() {
                             })) ?? [],
                     });
                 } else {
-                    // ✅ PREBUILT: use correct endpoint + build availableVariants
                     const endpoint = product.slug
                         ? `/api/prebuilt-products/${product.slug}`
-                        : `/api/prebuilt-products/id/${product.id}`; // fallback
+                        : `/api/prebuilt-products/id/${product.id}`;
 
                     const res = await fetch(endpoint);
                     if (!res.ok) throw new Error("Product not found");
@@ -1150,7 +1224,6 @@ export default function ShoppingCart() {
                         requiresOptions: variants.length > 0,
                         slug: prebuiltData.slug ?? null,
                         cartPayload: { prebuiltProductId: prebuiltData.id },
-                        // ✅ availableVariants replaces old prebuiltColours + prebuiltSizes
                         availableVariants: variants.map((v: any) => ({
                             id: v.id,
                             colorName: v.colorName ?? null,
@@ -1162,16 +1235,20 @@ export default function ShoppingCart() {
                         })),
                     });
                 }
+                // Modal opened — reset to idle
+                setButtonState(pid, "idle");
             } catch {
                 toast({
                     title: "Failed to load options",
                     variant: "destructive",
                 });
+                setButtonState(pid, "idle");
             }
             return;
         }
 
-        // Printer & Product — direct add
+        // Printer & Product — direct add with loading → success → idle
+        setButtonState(pid, "loading");
         try {
             const payload: Record<string, string | number> = { quantity: 1 };
             if (type === "printer") {
@@ -1182,9 +1259,13 @@ export default function ShoppingCart() {
             await addToCart(
                 payload as unknown as Parameters<typeof addToCart>[0],
             );
+            setButtonState(pid, "success");
             toast({ title: `${product.name} added to cart` });
+            // Show success for 1.5s then reset
+            setTimeout(() => setButtonState(pid, "idle"), 1500);
         } catch {
             toast({ title: "Failed to add item", variant: "destructive" });
+            setButtonState(pid, "idle");
         }
     };
 
@@ -1281,6 +1362,7 @@ export default function ShoppingCart() {
                         subtitle="Add these to your cart to get started"
                         products={emptySuggestions}
                         onAddToCart={handleAddSuggestion}
+                        buttonStates={suggestionButtonStates}
                     />
                 )}
             </div>
@@ -1325,6 +1407,7 @@ export default function ShoppingCart() {
                                     subtitle="Frequently bought together with your cart items"
                                     products={suggestions}
                                     onAddToCart={handleAddSuggestion}
+                                    buttonStates={suggestionButtonStates}
                                 />
                             </div>
                         )}
@@ -1374,12 +1457,18 @@ export default function ShoppingCart() {
                                             Coupon Discount
                                         </span>
                                         {couponDiscount > 0 ? (
-                                            <span className="font-medium text-green-600">
-                                                -₹
-                                                {couponDiscount.toLocaleString(
-                                                    "en-IN",
-                                                )}
-                                            </span>
+                                            <DiscountAmountDisplay
+                                                isRecalculating={
+                                                    isRecalculatingDiscount
+                                                }
+                                            >
+                                                <span className="font-medium text-green-600">
+                                                    -₹
+                                                    {couponDiscount.toLocaleString(
+                                                        "en-IN",
+                                                    )}
+                                                </span>
+                                            </DiscountAmountDisplay>
                                         ) : (
                                             <button
                                                 type="button"
@@ -1396,9 +1485,18 @@ export default function ShoppingCart() {
                                         <span className="text-gray-600">
                                             Tax (GST)
                                         </span>
-                                        <span className="font-medium text-gray-900">
-                                            ₹{gstAmount.toLocaleString("en-IN")}
-                                        </span>
+                                        <DiscountAmountDisplay
+                                            isRecalculating={
+                                                isRecalculatingDiscount
+                                            }
+                                        >
+                                            <span className="font-medium text-gray-900">
+                                                ₹
+                                                {gstAmount.toLocaleString(
+                                                    "en-IN",
+                                                )}
+                                            </span>
+                                        </DiscountAmountDisplay>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">
@@ -1415,10 +1513,18 @@ export default function ShoppingCart() {
                                         Grand Total
                                     </span>
                                     <div className="text-right">
-                                        <span className="text-2xl font-bold text-gray-900">
-                                            ₹
-                                            {grandTotal.toLocaleString("en-IN")}
-                                        </span>
+                                        <DiscountAmountDisplay
+                                            isRecalculating={
+                                                isRecalculatingDiscount
+                                            }
+                                        >
+                                            <span className="text-2xl font-bold text-gray-900">
+                                                ₹
+                                                {grandTotal.toLocaleString(
+                                                    "en-IN",
+                                                )}
+                                            </span>
+                                        </DiscountAmountDisplay>
                                         <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
                                             Inclusive of all taxes
                                         </p>
@@ -1426,8 +1532,12 @@ export default function ShoppingCart() {
                                 </div>
                                 <Button
                                     onClick={handleCheckout}
-                                    className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800 transition-colors"
+                                    disabled={isRecalculatingDiscount}
+                                    className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
+                                    {isRecalculatingDiscount ? (
+                                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                    ) : null}
                                     Proceed to Checkout{" "}
                                     <ChevronRight className="w-5 h-5 ml-1" />
                                 </Button>
@@ -1464,6 +1574,7 @@ export default function ShoppingCart() {
                             subtitle="Frequently bought together with your cart items"
                             products={suggestions}
                             onAddToCart={handleAddSuggestion}
+                            buttonStates={suggestionButtonStates}
                         />
                     </div>
                 )}
@@ -1509,12 +1620,18 @@ export default function ShoppingCart() {
                                         Coupon Discount
                                     </span>
                                     {couponDiscount > 0 ? (
-                                        <span className="font-medium text-green-600">
-                                            -₹
-                                            {couponDiscount.toLocaleString(
-                                                "en-IN",
-                                            )}
-                                        </span>
+                                        <DiscountAmountDisplay
+                                            isRecalculating={
+                                                isRecalculatingDiscount
+                                            }
+                                        >
+                                            <span className="font-medium text-green-600">
+                                                -₹
+                                                {couponDiscount.toLocaleString(
+                                                    "en-IN",
+                                                )}
+                                            </span>
+                                        </DiscountAmountDisplay>
                                     ) : (
                                         <button
                                             type="button"
@@ -1531,9 +1648,15 @@ export default function ShoppingCart() {
                                     <span className="text-gray-600">
                                         Tax (GST)
                                     </span>
-                                    <span className="font-medium">
-                                        ₹{gstAmount.toLocaleString("en-IN")}
-                                    </span>
+                                    <DiscountAmountDisplay
+                                        isRecalculating={
+                                            isRecalculatingDiscount
+                                        }
+                                    >
+                                        <span className="font-medium">
+                                            ₹{gstAmount.toLocaleString("en-IN")}
+                                        </span>
+                                    </DiscountAmountDisplay>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">
@@ -1548,9 +1671,16 @@ export default function ShoppingCart() {
                                     Grand Total
                                 </span>
                                 <div className="text-right">
-                                    <span className="text-2xl font-bold text-gray-900">
-                                        ₹{grandTotal.toLocaleString("en-IN")}
-                                    </span>
+                                    <DiscountAmountDisplay
+                                        isRecalculating={
+                                            isRecalculatingDiscount
+                                        }
+                                    >
+                                        <span className="text-2xl font-bold text-gray-900">
+                                            ₹
+                                            {grandTotal.toLocaleString("en-IN")}
+                                        </span>
+                                    </DiscountAmountDisplay>
                                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
                                         Inclusive of all taxes
                                     </p>
@@ -1558,8 +1688,12 @@ export default function ShoppingCart() {
                             </div>
                             <Button
                                 onClick={handleCheckout}
-                                className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800"
+                                disabled={isRecalculatingDiscount}
+                                className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
+                                {isRecalculatingDiscount ? (
+                                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                ) : null}
                                 Proceed to Checkout{" "}
                                 <ChevronRight className="w-5 h-5 ml-1" />
                             </Button>
@@ -1603,16 +1737,25 @@ export default function ShoppingCart() {
                                 <span className="text-gray-600">
                                     Coupon Discount
                                 </span>
-                                <span className="text-green-600 font-medium">
-                                    -₹{couponDiscount.toLocaleString("en-IN")}
-                                </span>
+                                <DiscountAmountDisplay
+                                    isRecalculating={isRecalculatingDiscount}
+                                >
+                                    <span className="text-green-600 font-medium">
+                                        -₹
+                                        {couponDiscount.toLocaleString("en-IN")}
+                                    </span>
+                                </DiscountAmountDisplay>
                             </div>
                         )}
                         <div className="flex justify-between">
                             <span className="text-gray-600">Tax (GST)</span>
-                            <span className="font-medium">
-                                ₹{gstAmount.toLocaleString("en-IN")}
-                            </span>
+                            <DiscountAmountDisplay
+                                isRecalculating={isRecalculatingDiscount}
+                            >
+                                <span className="font-medium">
+                                    ₹{gstAmount.toLocaleString("en-IN")}
+                                </span>
+                            </DiscountAmountDisplay>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Shipping</span>
@@ -1634,14 +1777,22 @@ export default function ShoppingCart() {
                                 className={`w-3 h-3 text-gray-400 transition-transform ${mobileExpanded ? "rotate-180" : ""}`}
                             />
                         </button>
-                        <p className="text-xl font-bold text-gray-900">
-                            ₹{grandTotal.toLocaleString("en-IN")}
-                        </p>
+                        <DiscountAmountDisplay
+                            isRecalculating={isRecalculatingDiscount}
+                        >
+                            <p className="text-xl font-bold text-gray-900">
+                                ₹{grandTotal.toLocaleString("en-IN")}
+                            </p>
+                        </DiscountAmountDisplay>
                     </div>
                     <Button
                         onClick={handleCheckout}
-                        className="h-12 px-8 rounded-2xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800"
+                        disabled={isRecalculatingDiscount}
+                        className="h-12 px-8 rounded-2xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
+                        {isRecalculatingDiscount ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                        ) : null}
                         Checkout <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                 </div>

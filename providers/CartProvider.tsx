@@ -1,13 +1,14 @@
 "use client";
 
-import type { Discount } from "@/app/ops/control/discounts/types";
 import { calculateDiscount } from "@/app/cart/utils/calculateDiscount";
+import type { Discount } from "@/app/ops/control/discounts/types";
 import { useSession } from "next-auth/react";
 import React, {
     createContext,
     useCallback,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -50,6 +51,7 @@ type CartContextType = {
     /* 🔒 PRICING */
     discountAmount: number;
     appliedDiscountCode?: string;
+    isRecalculatingDiscount: boolean;
 
     /* ACTIONS */
     applyDiscountCode: (code: string) => Promise<void>;
@@ -89,6 +91,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     const [appliedDiscountCode, setAppliedDiscountCode] = useState<
         string | undefined
     >(undefined);
+    const [appliedDiscount, setAppliedDiscount] = useState<Discount | null>(
+        null,
+    );
+    const [isRecalculatingDiscount, setIsRecalculatingDiscount] =
+        useState(false);
+
+    const recalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { data: session } = useSession();
 
@@ -116,6 +125,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     }, [fetchCart]);
 
     /* =========================
+       CLEAR DISCOUNT
+    ========================= */
+
+    const clearDiscount = useCallback(() => {
+        setDiscountAmount(0);
+        setAppliedDiscountCode(undefined);
+        setAppliedDiscount(null);
+        setIsRecalculatingDiscount(false);
+    }, []);
+
+    /* =========================
        APPLY DISCOUNT
     ========================= */
 
@@ -130,8 +150,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const discount: Discount = await res.json();
 
-        // For scoped discounts (item_type), only calculate on matching items
-        // discount.itemTypes is an array of { itemType: "printer" | "product" | ... }
         let applicableSubtotal: number;
 
         if (discount.scope === "item_type" && discount.itemTypes?.length > 0) {
@@ -154,30 +172,79 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
             throw new Error("This coupon is not applicable to your order");
         }
 
+        setAppliedDiscount(discount);
         setDiscountAmount(amount);
         setAppliedDiscountCode(discount.code);
     };
 
-    const clearDiscount = () => {
-        setDiscountAmount(0);
-        setAppliedDiscountCode(undefined);
-    };
-
     /* =========================
-       RESET DISCOUNT ON CART CHANGE
+       RECALCULATE DISCOUNT ON CART CHANGE
     ========================= */
 
     useEffect(() => {
         if (!cart.length) {
             clearDiscount();
+            return;
         }
-    }, [cart]);
+
+        if (!appliedDiscount) return;
+
+        // Show recalculating state immediately
+        setIsRecalculatingDiscount(true);
+
+        // Clear any pending timer
+        if (recalcTimerRef.current) {
+            clearTimeout(recalcTimerRef.current);
+        }
+
+        // Small debounce so rapid qty taps don't flash the loader
+        recalcTimerRef.current = setTimeout(() => {
+            let applicableSubtotal: number;
+
+            if (
+                appliedDiscount.scope === "item_type" &&
+                appliedDiscount.itemTypes?.length > 0
+            ) {
+                const allowedTypes = appliedDiscount.itemTypes.map(
+                    (t: { itemType: string }) => t.itemType,
+                );
+                applicableSubtotal = cart
+                    .filter((item) => allowedTypes.includes(item.itemType))
+                    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+            } else {
+                applicableSubtotal = cart.reduce(
+                    (sum, item) => sum + item.price * item.quantity,
+                    0,
+                );
+            }
+
+            const amount = calculateDiscount(
+                appliedDiscount,
+                applicableSubtotal,
+            );
+
+            if (amount === 0) {
+                clearDiscount();
+            } else {
+                setDiscountAmount(amount);
+                setIsRecalculatingDiscount(false);
+            }
+        }, 300);
+
+        return () => {
+            if (recalcTimerRef.current) {
+                clearTimeout(recalcTimerRef.current);
+            }
+        };
+    }, [cart, appliedDiscount, clearDiscount]);
 
     /* =========================
        ADD TO CART
     ========================= */
 
     const addToCart = async (payload: AddToCartPayload) => {
+        if (appliedDiscount) setIsRecalculatingDiscount(true);
+
         const res = await fetch("/api/cart", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -188,6 +255,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         });
 
         if (!res.ok) {
+            if (appliedDiscount) setIsRecalculatingDiscount(false);
             const err = await res.json();
             throw new Error(err.error || "Add to cart failed");
         }
@@ -200,6 +268,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     ========================= */
 
     const removeFromCart = async (id: string) => {
+        if (appliedDiscount) setIsRecalculatingDiscount(true);
+
         const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
         if (res.ok) {
             setCart((prev) => prev.filter((i) => i.id !== id));
@@ -211,6 +281,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     ========================= */
 
     const updateQuantity = async (id: string, quantity: number) => {
+        if (appliedDiscount) setIsRecalculatingDiscount(true);
+
         const res = await fetch(`/api/cart/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -264,6 +336,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
                 cart,
                 discountAmount,
                 appliedDiscountCode,
+                isRecalculatingDiscount,
                 applyDiscountCode,
                 clearDiscount,
                 addToCart,

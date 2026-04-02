@@ -128,7 +128,7 @@ function PostCardCompact({ post }: { post: BlogPost }) {
                                 fontWeight: 700,
                                 textTransform: "uppercase",
                                 letterSpacing: "0.1em",
-                                color: "#F5A524",
+                                color: "#4f46e5",
                                 marginBottom: 4,
                                 fontStyle: "italic",
                             }}
@@ -136,7 +136,7 @@ function PostCardCompact({ post }: { post: BlogPost }) {
                             {post.keywords.split(",")[0].trim()}
                         </span>
                         <h3
-                            className="line-clamp-2 group-hover:text-[#F5A524] transition-colors"
+                            className="line-clamp-2 group-hover:text-[#4f46e5] transition-colors"
                             style={{
                                 fontSize: 13,
                                 fontWeight: 800,
@@ -159,7 +159,7 @@ function PostCardCompact({ post }: { post: BlogPost }) {
                         </time>
                         <div
                             className="flex items-center gap-0.5 font-bold group-hover:gap-1.5 transition-all"
-                            style={{ fontSize: 10, color: "#F5A524" }}
+                            style={{ fontSize: 10, color: "#4f46e5" }}
                         >
                             Read <ArrowRight size={10} />
                         </div>
@@ -251,7 +251,7 @@ export default function BlogList() {
                     <div>
                         <p
                             className="uppercase tracking-[0.35em] text-xs mb-2"
-                            style={{ color: "#F5A524", fontWeight: 700 }}
+                            style={{ color: "#4f46e5", fontWeight: 700 }}
                         >
                             Our Editorial
                         </p>
@@ -287,7 +287,7 @@ export default function BlogList() {
                             size={15}
                             className="absolute left-4 top-1/2 -translate-y-1/2"
                             style={{
-                                color: searchFocused ? "#F5A524" : "#aaa",
+                                color: searchFocused ? "#4f46e5" : "#aaa",
                                 transition: "color .2s",
                             }}
                         />
@@ -305,7 +305,7 @@ export default function BlogList() {
                                 paddingTop: 13,
                                 paddingBottom: 13,
                                 border: searchFocused
-                                    ? "1.5px solid #F5A524"
+                                    ? "1.5px solid #4f46e5"
                                     : "1.5px solid #E8E3D9",
                                 borderRadius: 14,
                                 background: "#fff",
@@ -338,13 +338,13 @@ export default function BlogList() {
                                 style={{
                                     background:
                                         activeKeyword === kw
-                                            ? "#F5A524"
+                                            ? "#4f46e5"
                                             : "#fff",
                                     color:
                                         activeKeyword === kw ? "#fff" : "#555",
                                     border:
                                         activeKeyword === kw
-                                            ? "1.5px solid #F5A524"
+                                            ? "1.5px solid #4f46e5"
                                             : "1.5px solid #E8E3D9",
                                     whiteSpace: "nowrap",
                                 }}
@@ -425,7 +425,7 @@ export default function BlogList() {
                                     style={{
                                         background:
                                             activeKeyword === kw
-                                                ? "#F5A524"
+                                                ? "#4f46e5"
                                                 : "#FAFAF7",
                                         color:
                                             activeKeyword === kw
@@ -433,7 +433,7 @@ export default function BlogList() {
                                                 : "#444",
                                         border:
                                             activeKeyword === kw
-                                                ? "1.5px solid #F5A524"
+                                                ? "1.5px solid #4f46e5"
                                                 : "1.5px solid #E8E3D9",
                                     }}
                                 >
@@ -460,7 +460,7 @@ export default function BlogList() {
                         >
                             <p
                                 className="uppercase tracking-widest text-xs mb-4 font-bold"
-                                style={{ color: "#F5A524" }}
+                                style={{ color: "#4f46e5" }}
                             >
                                 Filter by Topic
                             </p>
@@ -510,11 +510,11 @@ export default function BlogList() {
                                 <div className="flex items-center gap-2 mb-5">
                                     <TrendingUp
                                         size={14}
-                                        style={{ color: "#F5A524" }}
+                                        style={{ color: "#4f46e5" }}
                                     />
                                     <p
                                         className="uppercase tracking-widest text-xs font-bold"
-                                        style={{ color: "#F5A524" }}
+                                        style={{ color: "#4f46e5" }}
                                     >
                                         Trending
                                     </p>
@@ -537,7 +537,7 @@ export default function BlogList() {
                                                         flexShrink: 0,
                                                         transition: "color .2s",
                                                     }}
-                                                    className="group-hover:text-[#F5A524]"
+                                                    className="group-hover:text-[#4f46e5]"
                                                 >
                                                     0{idx + 1}
                                                 </span>
@@ -549,7 +549,7 @@ export default function BlogList() {
                                                             lineHeight: 1.4,
                                                             color: "#222",
                                                         }}
-                                                        className="group-hover:text-[#F5A524] transition-colors line-clamp-2"
+                                                        className="group-hover:text-[#4f46e5] transition-colors line-clamp-2"
                                                     >
                                                         {post.title}
                                                     </p>
@@ -582,11 +582,11 @@ export default function BlogList() {
                             <div className="flex items-center gap-2 mb-3">
                                 <TrendingUp
                                     size={13}
-                                    style={{ color: "#F5A524" }}
+                                    style={{ color: "#4f46e5" }}
                                 />
                                 <p
                                     className="uppercase tracking-widest text-xs font-bold"
-                                    style={{ color: "#F5A524" }}
+                                    style={{ color: "#4f46e5" }}
                                 >
                                     Trending
                                 </p>
@@ -617,7 +617,7 @@ export default function BlogList() {
                                                 flexShrink: 0,
                                                 transition: "color .2s",
                                             }}
-                                            className="group-hover:text-[#F5A524]"
+                                            className="group-hover:text-[#4f46e5]"
                                         >
                                             0{idx + 1}
                                         </span>
@@ -629,7 +629,7 @@ export default function BlogList() {
                                                     lineHeight: 1.4,
                                                     color: "#222",
                                                 }}
-                                                className="group-hover:text-[#F5A524] transition-colors line-clamp-2"
+                                                className="group-hover:text-[#4f46e5] transition-colors line-clamp-2"
                                             >
                                                 {post.title}
                                             </p>
@@ -682,7 +682,7 @@ export default function BlogList() {
                                 <div className="absolute top-4 sm:top-6 left-4 sm:left-6">
                                     <span
                                         style={{
-                                            background: "#F5A524",
+                                            background: "#4f46e5",
                                             color: "#fff",
                                             borderRadius: 8,
                                             padding: "5px 12px",
@@ -767,9 +767,17 @@ export default function BlogList() {
                                         <div
                                             className="ml-auto flex items-center gap-1.5 font-bold group-hover:gap-2.5 transition-all"
                                             style={{
-                                                color: "#F5A524",
+                                                color: "#fff",
                                                 fontSize:
                                                     "clamp(11px, 1.5vw, 14px)",
+                                                background:
+                                                    "rgba(79, 70, 229, 0.75)",
+                                                backdropFilter: "blur(8px)",
+                                                WebkitBackdropFilter:
+                                                    "blur(8px)",
+                                                padding: "7px 16px",
+                                                borderRadius: 10,
+                                                border: "1px solid rgba(255,255,255,0.15)",
                                             }}
                                         >
                                             Read Article{" "}
@@ -815,7 +823,7 @@ export default function BlogList() {
                                         style={{
                                             fontSize: 11,
                                             fontWeight: 700,
-                                            color: "#F5A524",
+                                            color: "#4f46e5",
                                             background: "none",
                                             border: "none",
                                             cursor: "pointer",
@@ -864,8 +872,8 @@ export default function BlogList() {
                                     setActiveKeyword("All");
                                 }}
                                 style={{
-                                    border: "2px solid #F5A524",
-                                    color: "#F5A524",
+                                    border: "2px solid #4f46e5",
+                                    color: "#4f46e5",
                                     background: "transparent",
                                     borderRadius: 12,
                                     padding: "10px 24px",
@@ -926,9 +934,9 @@ export default function BlogList() {
                                                     <span
                                                         style={{
                                                             background:
-                                                                "#FFFDF7",
-                                                            border: "1px solid #F5A524",
-                                                            color: "#7F7F7F",
+                                                                "#eef2ff",
+                                                            border: "1px solid #4f46e5",
+                                                            color: "#6366f1",
                                                             borderRadius: 6,
                                                             padding: "4px 9px",
                                                             fontSize: 8,
@@ -956,7 +964,7 @@ export default function BlogList() {
                                             }}
                                         >
                                             <h3
-                                                className="group-hover:text-[#F5A524] transition-colors line-clamp-2"
+                                                className="group-hover:text-[#4f46e5] transition-colors line-clamp-2"
                                                 style={{
                                                     fontSize: 15,
                                                     fontWeight: 800,
@@ -998,7 +1006,7 @@ export default function BlogList() {
                                                         gap: 5,
                                                     }}
                                                 >
-                                                    <FourPointStar className="w-3 h-3 text-yellow-400" />
+                                                    <FourPointStar className="w-3 h-3 text-indigo-400" />
                                                     <time
                                                         style={{
                                                             fontSize: 10,
@@ -1014,7 +1022,7 @@ export default function BlogList() {
                                                 </div>
                                                 <div
                                                     className="flex items-center gap-1 font-bold text-xs group-hover:gap-2 transition-all"
-                                                    style={{ color: "#F5A524" }}
+                                                    style={{ color: "#4f46e5" }}
                                                 >
                                                     Read{" "}
                                                     <ArrowRight size={11} />
@@ -1086,7 +1094,7 @@ export default function BlogList() {
                                     <div
                                         style={{
                                             height: "100%",
-                                            background: "#F5A524",
+                                            background: "#4f46e5",
                                             borderRadius: 99,
                                             width: `${(Math.min(visiblePosts, rest.length) / rest.length) * 100}%`,
                                             transition: "width .4s ease",
@@ -1111,8 +1119,8 @@ export default function BlogList() {
                                     setVisiblePosts((v) => v + PAGE_SIZE)
                                 }
                                 style={{
-                                    border: "2px solid #F5A524",
-                                    color: "#F5A524",
+                                    border: "2px solid #4f46e5",
+                                    color: "#4f46e5",
                                     background: "transparent",
                                     borderRadius: 14,
                                     padding: "13px 32px",
@@ -1127,7 +1135,7 @@ export default function BlogList() {
                                 onMouseEnter={(e) => {
                                     (
                                         e.target as HTMLButtonElement
-                                    ).style.background = "#F5A524";
+                                    ).style.background = "#4f46e5";
                                     (
                                         e.target as HTMLButtonElement
                                     ).style.color = "#fff";
@@ -1138,7 +1146,7 @@ export default function BlogList() {
                                     ).style.background = "transparent";
                                     (
                                         e.target as HTMLButtonElement
-                                    ).style.color = "#F5A524";
+                                    ).style.color = "#4f46e5";
                                 }}
                             >
                                 Load More Articles
@@ -1166,7 +1174,7 @@ export default function BlogList() {
                         top: "50%",
                         transform: "translateY(-50%)",
                         fontSize: "clamp(80px, 20vw, 200px)",
-                        color: "rgba(245,165,36,0.06)",
+                        color: "rgba(79,70,229,0.08)",
                         fontWeight: 900,
                         pointerEvents: "none",
                         userSelect: "none",
@@ -1178,7 +1186,7 @@ export default function BlogList() {
                 <div style={{ position: "relative", zIndex: 1, maxWidth: 600 }}>
                     <p
                         style={{
-                            color: "#F5A524",
+                            color: "#a5b4fc",
                             fontSize: 11,
                             fontWeight: 800,
                             textTransform: "uppercase",
@@ -1199,7 +1207,7 @@ export default function BlogList() {
                         }}
                     >
                         NEVER MISS A{" "}
-                        <span style={{ color: "#F5A524" }}>GREAT READ.</span>
+                        <span style={{ color: "#818cf8" }}>GREAT READ.</span>
                     </h2>
                     <p
                         style={{
@@ -1230,7 +1238,7 @@ export default function BlogList() {
                         />
                         <button
                             style={{
-                                background: "#F5A524",
+                                background: "#4f46e5",
                                 color: "#fff",
                                 border: "none",
                                 borderRadius: 14,
