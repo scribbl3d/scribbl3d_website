@@ -887,7 +887,7 @@ function ProductCard({ product }: { product: any }) {
             : "One size";
 
     const uniqueColors: { hex: string; name: string }[] = Array.from(
-        new Map(
+        new Map<string, { hex: string; name: string }>(
             product.variants
                 ?.filter((v: any) => v.colorHex)
                 .map((v: any) => [
