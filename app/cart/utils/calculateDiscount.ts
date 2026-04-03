@@ -43,5 +43,8 @@ export function calculateDiscount(
     // Never discount more than the applicable subtotal
     discountAmount = Math.min(discountAmount, subtotal);
 
-    return Math.max(0, Math.round(discountAmount));
+    // Round to 2 decimal places (keeps small amounts like ₹0.70 visible for testing)
+    discountAmount = Math.round(discountAmount * 100) / 100;
+
+    return Math.max(0, discountAmount);
 }

@@ -9,7 +9,8 @@ export default function DiscountsPage() {
     const [discounts, setDiscounts] = useState<any[]>([]);
 
     useEffect(() => {
-        fetch("/api/discounts")
+        // Fetch with admin=true to get ALL discounts unfiltered
+        fetch("/api/discounts?admin=true")
             .then((res) => res.json())
             .then(setDiscounts);
     }, []);
@@ -43,12 +44,19 @@ export default function DiscountsPage() {
                 </Link>
             </div>
 
+            {discounts.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                    No discounts created yet.
+                </div>
+            )}
+
             {discounts.map((d) => {
                 const expired =
                     d.expiresAt && new Date(d.expiresAt) < new Date();
                 const itemTypeNames = (d.itemTypes ?? [])
                     .map((t: { itemType: string }) => t.itemType)
                     .join(", ");
+                const totalUsages = d._count?.usages ?? 0;
 
                 return (
                     <Card
@@ -58,7 +66,10 @@ export default function DiscountsPage() {
                         <div>
                             <div className="font-semibold">{d.name}</div>
                             <div className="text-sm text-muted-foreground">
-                                {d.code} • {d.valueType} • {d.value}
+                                {d.code} •{" "}
+                                {d.valueType === "percentage"
+                                    ? `${d.value}%`
+                                    : `₹${d.value}`}
                             </div>
 
                             {/* Scope and item types */}
@@ -81,6 +92,13 @@ export default function DiscountsPage() {
                                     ]
                                         .filter(Boolean)
                                         .join(" • ")}
+                                </div>
+                            )}
+
+                            {/* Total usage count */}
+                            {totalUsages > 0 && (
+                                <div className="text-sm text-muted-foreground mt-0.5">
+                                    Total redemptions: {totalUsages}
                                 </div>
                             )}
 

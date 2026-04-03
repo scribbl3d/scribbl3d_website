@@ -56,6 +56,14 @@ export async function PUT(
     if (body.expiresAt !== undefined)
         updateData.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
 
+    // ── NEW: Usage restriction fields ──
+    if (body.firstOrderOnly !== undefined)
+        updateData.firstOrderOnly = body.firstOrderOnly;
+
+    if (body.maxUsesPerUser !== undefined)
+        updateData.maxUsesPerUser =
+            body.maxUsesPerUser === null ? null : Number(body.maxUsesPerUser);
+
     /* ---------- ITEM TYPES ---------- */
     if ("itemTypes" in body) {
         await prisma.discountItemType.deleteMany({

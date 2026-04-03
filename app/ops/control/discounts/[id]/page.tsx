@@ -26,8 +26,10 @@ export default function EditDiscountPage() {
                     maxDiscount: d.maxDiscount ?? "",
                     expiresAt: d.expiresAt ? d.expiresAt.split("T")[0] : "",
                     firstOrderOnly: d.firstOrderOnly ?? false,
-                    maxUsesPerUser: d.maxUsesPerUser ?? "",
-                    // Extract itemType strings from the relation objects
+                    maxUsesPerUser:
+                        d.maxUsesPerUser != null
+                            ? String(d.maxUsesPerUser)
+                            : "",
                     itemTypes: (d.itemTypes ?? []).map(
                         (t: { itemType: string }) => t.itemType,
                     ),
@@ -42,13 +44,17 @@ export default function EditDiscountPage() {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                ...form,
+                name: form.name,
+                scope: form.scope,
+                valueType: form.valueType,
                 value: Number(form.value),
                 minOrderValue: form.minOrderValue
                     ? Number(form.minOrderValue)
                     : null,
                 maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : null,
                 expiresAt: form.expiresAt ? new Date(form.expiresAt) : null,
+                isActive: form.isActive,
+                isHidden: form.isHidden,
                 firstOrderOnly: form.firstOrderOnly,
                 maxUsesPerUser: form.maxUsesPerUser
                     ? Number(form.maxUsesPerUser)
