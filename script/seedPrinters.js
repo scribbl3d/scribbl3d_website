@@ -1,7 +1,6 @@
 // scripts/seedPrintersDetailed.js
-import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const detailedPrintersData = [
     {
@@ -3302,7 +3301,7 @@ async function main() {
         });
 
         console.log(
-            `✅ Created: ${printer.name} with ${printer.specifications.length} specifications`
+            `✅ Created: ${printer.name} with ${printer.specifications.length} specifications`,
         );
     }
 

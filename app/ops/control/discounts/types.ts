@@ -16,6 +16,8 @@ export type Discount = {
     expiresAt: string | null;
     isHidden: boolean;
     isActive: boolean;
+    firstOrderOnly: boolean;
+    maxUsesPerUser: number | null;
     itemTypes: DiscountItemType[];
     createdAt: string;
     updatedAt: string;

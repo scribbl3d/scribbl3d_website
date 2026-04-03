@@ -25,6 +25,8 @@ export default function EditDiscountPage() {
                     minOrderValue: d.minOrderValue ?? "",
                     maxDiscount: d.maxDiscount ?? "",
                     expiresAt: d.expiresAt ? d.expiresAt.split("T")[0] : "",
+                    firstOrderOnly: d.firstOrderOnly ?? false,
+                    maxUsesPerUser: d.maxUsesPerUser ?? "",
                     // Extract itemType strings from the relation objects
                     itemTypes: (d.itemTypes ?? []).map(
                         (t: { itemType: string }) => t.itemType,
@@ -47,6 +49,10 @@ export default function EditDiscountPage() {
                     : null,
                 maxDiscount: form.maxDiscount ? Number(form.maxDiscount) : null,
                 expiresAt: form.expiresAt ? new Date(form.expiresAt) : null,
+                firstOrderOnly: form.firstOrderOnly,
+                maxUsesPerUser: form.maxUsesPerUser
+                    ? Number(form.maxUsesPerUser)
+                    : null,
                 itemTypes: form.scope === "item_type" ? form.itemTypes : [],
             }),
         });
@@ -268,9 +274,60 @@ export default function EditDiscountPage() {
                         />
                     </div>
 
+                    {/* USAGE RESTRICTIONS */}
+                    <div className="border rounded-lg p-4 space-y-4">
+                        <Label className="text-base font-semibold">
+                            Usage Restrictions
+                        </Label>
+
+                        <label className="flex gap-2 items-start">
+                            <input
+                                type="checkbox"
+                                checked={form.firstOrderOnly}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        firstOrderOnly: e.target.checked,
+                                    })
+                                }
+                            />
+                            <div>
+                                <div className="font-medium">
+                                    First order only
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                    Only customers who have never placed an
+                                    order can use this coupon
+                                </div>
+                            </div>
+                        </label>
+
+                        <div>
+                            <Label>Max uses per customer (optional)</Label>
+                            <Input
+                                type="number"
+                                min="1"
+                                placeholder="Leave blank for unlimited"
+                                value={form.maxUsesPerUser}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        maxUsesPerUser: e.target.value,
+                                    })
+                                }
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                How many times a single customer can redeem this
+                                coupon. Leave blank for unlimited.
+                            </p>
+                        </div>
+                    </div>
+
                     {/* VISIBILITY */}
                     <div className="border rounded-lg p-4 space-y-3">
-                        <Label>Visibility</Label>
+                        <Label className="text-base font-semibold">
+                            Visibility
+                        </Label>
 
                         <label className="flex gap-2 items-start">
                             <input

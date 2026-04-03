@@ -2,7 +2,7 @@
 const { PrismaClient } = require("@prisma/client");
 const fs = require("fs");
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 function toDate(v) {
     if (!v) return undefined;
@@ -54,7 +54,7 @@ async function upsertAll(modelName, items) {
             if (!item.id) {
                 console.warn(
                     `⚠️ Skipping item without id in ${modelName}:`,
-                    item
+                    item,
                 );
                 continue;
             }
@@ -67,7 +67,7 @@ async function upsertAll(modelName, items) {
         } catch (err) {
             console.error(
                 `❌ Failed to upsert into ${modelName} id=${item.id}:`,
-                err.message || err
+                err.message || err,
             );
             // continue with next item
         }
@@ -83,12 +83,12 @@ async function main() {
     // Adjust keys according to your backup keys if they differ
     await upsertAll(
         "prebuiltProduct",
-        data.prebuiltProduct || data.prebuiltProducts || []
+        data.prebuiltProduct || data.prebuiltProducts || [],
     );
     await upsertAll("product", data.product || data.products || []);
     await upsertAll(
         "productColor",
-        data.productColor || data.productColors || []
+        data.productColor || data.productColors || [],
     );
     await upsertAll("productSize", data.productSize || data.productSizes || []);
 

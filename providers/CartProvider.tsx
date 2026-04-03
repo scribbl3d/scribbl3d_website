@@ -21,6 +21,7 @@ export type CartItem = {
     sourceId?: string;
     itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
     name: string;
+    slug?: string | null;
     price: number;
     quantity: number;
     images: string[];
@@ -66,6 +67,39 @@ type CartContextType = {
 };
 
 /* =========================
+   HELPERS
+========================= */
+
+/** Safely coerce a value to a finite number, defaulting to 0 */
+function safeNum(val: unknown): number {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : 0;
+}
+
+/** Sanitise cart items coming from the API — ensure price/quantity are valid numbers */
+function sanitiseCartItems(items: any[]): CartItem[] {
+    if (!Array.isArray(items)) return [];
+    return items
+        .filter((item) => item && typeof item === "object" && item.id)
+        .map((item) => ({
+            ...item,
+            price: safeNum(item.price),
+            quantity: Math.max(1, Math.round(safeNum(item.quantity))),
+        }));
+}
+
+/** Calculate the subtotal for a set of cart items, optionally filtered by allowed item types */
+function calcSubtotal(cart: CartItem[], allowedTypes?: string[]): number {
+    const items = allowedTypes
+        ? cart.filter((item) => allowedTypes.includes(item.itemType))
+        : cart;
+    return items.reduce(
+        (sum, item) => sum + safeNum(item.price) * safeNum(item.quantity),
+        0,
+    );
+}
+
+/* =========================
    CONTEXT
 ========================= */
 
@@ -99,6 +133,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const recalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // ── Keep a ref to the latest cart so async functions never use stale data ──
+    const cartRef = useRef<CartItem[]>(cart);
+    useEffect(() => {
+        cartRef.current = cart;
+    }, [cart]);
+
     const { data: session } = useSession();
 
     /* =========================
@@ -113,10 +153,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
             if (!res.ok) return;
 
             const data = await res.json();
-            setCart(data.items ?? []);
+            const sanitised = sanitiseCartItems(data.items ?? []);
+            setCart(sanitised);
+            cartRef.current = sanitised;
         } catch (err) {
             console.error("Failed to fetch cart:", err);
             setCart([]);
+            cartRef.current = [];
         }
     }, [session]);
 
@@ -145,28 +188,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         );
 
         if (!res.ok) {
-            throw new Error("Invalid discount code");
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.message || "Invalid discount code");
         }
 
         const discount: Discount = await res.json();
 
-        let applicableSubtotal: number;
+        const allowedTypes =
+            discount.scope === "item_type" && discount.itemTypes?.length > 0
+                ? discount.itemTypes.map(
+                      (t: { itemType: string }) => t.itemType,
+                  )
+                : undefined;
 
-        if (discount.scope === "item_type" && discount.itemTypes?.length > 0) {
-            const allowedTypes = discount.itemTypes.map(
-                (t: { itemType: string }) => t.itemType,
-            );
-            applicableSubtotal = cart
-                .filter((item) => allowedTypes.includes(item.itemType))
-                .reduce((sum, item) => sum + item.price * item.quantity, 0);
-        } else {
-            applicableSubtotal = cart.reduce(
-                (sum, item) => sum + item.price * item.quantity,
-                0,
-            );
-        }
-
-        const amount = calculateDiscount(discount, applicableSubtotal);
+        // ── Use cartRef.current instead of stale `cart` closure ──
+        const currentCart = cartRef.current;
+        const applicableSubtotal = calcSubtotal(currentCart, allowedTypes);
+        const amount = safeNum(calculateDiscount(discount, applicableSubtotal));
 
         if (amount === 0) {
             throw new Error("This coupon is not applicable to your order");
@@ -199,28 +237,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // Small debounce so rapid qty taps don't flash the loader
         recalcTimerRef.current = setTimeout(() => {
-            let applicableSubtotal: number;
-
-            if (
+            const allowedTypes =
                 appliedDiscount.scope === "item_type" &&
                 appliedDiscount.itemTypes?.length > 0
-            ) {
-                const allowedTypes = appliedDiscount.itemTypes.map(
-                    (t: { itemType: string }) => t.itemType,
-                );
-                applicableSubtotal = cart
-                    .filter((item) => allowedTypes.includes(item.itemType))
-                    .reduce((sum, item) => sum + item.price * item.quantity, 0);
-            } else {
-                applicableSubtotal = cart.reduce(
-                    (sum, item) => sum + item.price * item.quantity,
-                    0,
-                );
-            }
+                    ? appliedDiscount.itemTypes.map(
+                          (t: { itemType: string }) => t.itemType,
+                      )
+                    : undefined;
 
-            const amount = calculateDiscount(
-                appliedDiscount,
-                applicableSubtotal,
+            const applicableSubtotal = calcSubtotal(cart, allowedTypes);
+            const amount = safeNum(
+                calculateDiscount(appliedDiscount, applicableSubtotal),
             );
 
             if (amount === 0) {

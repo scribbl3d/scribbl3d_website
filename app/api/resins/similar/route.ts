@@ -1,8 +1,7 @@
 // app/api/resins/similar/route.ts
-import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
     try {
@@ -15,7 +14,7 @@ export async function GET(req: NextRequest) {
         if (!technology) {
             return NextResponse.json(
                 { error: "technology is required" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -65,7 +64,7 @@ export async function GET(req: NextRequest) {
         console.error("Error fetching similar resins:", error);
         return NextResponse.json(
             { error: "Failed to fetch similar resins" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

@@ -1,4 +1,10 @@
+// ─── app/api/discounts/apply/route.ts ───
+
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
+import { validateDiscountEligibility } from "@/app/cart/utils/validateDiscountEligibility";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
@@ -28,6 +34,21 @@ export async function GET(req: Request) {
             { message: "Invalid or expired discount" },
             { status: 404 },
         );
+    }
+
+    // ── Check user-level eligibility (first-order / usage limit) ──
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string };
+    } | null;
+    const userId = session?.user?.id ?? null;
+
+    const { eligible, reason } = await validateDiscountEligibility(
+        discount.id,
+        userId,
+    );
+
+    if (!eligible) {
+        return NextResponse.json({ message: reason }, { status: 400 });
     }
 
     return NextResponse.json(discount);

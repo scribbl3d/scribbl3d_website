@@ -1,11 +1,10 @@
 import { OTP_CONFIG, getOTPEmailTemplate } from "@/lib/otp-config";
 import { rateLimit } from "@/lib/rate-limit";
-import { PrismaClient } from "@prisma/client";
 import sgMail from "@sendgrid/mail";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const apiKey = process.env.SENDGRID_API_KEY;
 
@@ -28,7 +27,7 @@ export async function POST(req: Request) {
         if (!body || typeof body !== "object") {
             return NextResponse.json(
                 { error: "Invalid request body" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -39,7 +38,7 @@ export async function POST(req: Request) {
         if (!email || typeof email !== "string") {
             return NextResponse.json(
                 { error: "Valid email is required" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -49,14 +48,14 @@ export async function POST(req: Request) {
         if (!success) {
             return NextResponse.json(
                 { error: "Rate limit exceeded" },
-                { status: 429 }
+                { status: 429 },
             );
         }
 
         const otp = generateOTP();
         const hashedOtp = await hash(otp, 10);
         const expiresAt = new Date(
-            Date.now() + OTP_CONFIG.OTP.EXPIRY_MINUTES * 60 * 1000
+            Date.now() + OTP_CONFIG.OTP.EXPIRY_MINUTES * 60 * 1000,
         );
 
         try {
@@ -71,7 +70,7 @@ export async function POST(req: Request) {
             console.error("Database error:", dbError);
             return NextResponse.json(
                 { error: "Database error occurred" },
-                { status: 500 }
+                { status: 500 },
             );
         }
 
@@ -107,13 +106,13 @@ export async function POST(req: Request) {
             if (sendGridError.code === 401 || sendGridError.code === 403) {
                 return NextResponse.json(
                     { error: "Email service configuration error" },
-                    { status: 500 }
+                    { status: 500 },
                 );
             }
 
             return NextResponse.json(
                 { error: "Failed to send OTP email" },
-                { status: 500 }
+                { status: 500 },
             );
         }
     } catch (error) {
@@ -139,7 +138,7 @@ export async function POST(req: Request) {
                 message: errorMessage,
                 details: errorDetails,
             },
-            { status: 500 }
+            { status: 500 },
         );
     } finally {
         await prisma.$disconnect();

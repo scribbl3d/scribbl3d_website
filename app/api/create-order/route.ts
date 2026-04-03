@@ -1,8 +1,9 @@
+import { recordDiscountUsage } from "@/app/cart/utils/validateDiscountEligibility";
+import { calculateExpressShipping } from "@/app/checkout/components/expressShipping";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "../auth/[...nextauth]/options";
-import { calculateExpressShipping } from "@/app/checkout/components/expressShipping";
 
 /* =========================
    CREATE ORDER
@@ -132,14 +133,12 @@ export async function POST(req: Request) {
                             /* ── Prebuilt ── */
                             prebuiltProduct: {
                                 include: {
-                                    // ✅ images is a relation, not a string array
                                     images: {
                                         where: { isMain: true },
                                         take: 1,
                                     },
                                 },
                             },
-                            // ✅ variant holds price, color, size — replaces productSize/productColor for prebuilt
                             prebuiltVariant: true,
 
                             /* ── Resin ── */
@@ -197,13 +196,10 @@ export async function POST(req: Request) {
                         itemType: "prebuilt",
                         name: item.prebuiltProduct.name,
                         quantity: item.quantity,
-                        // ✅ price from variant — PrebuiltProducts has no price field
                         price: item.prebuiltVariant?.price ?? 0,
-                        // ✅ color/size from variant — no more productColor/productSize for prebuilt
                         color: item.prebuiltVariant?.colorName ?? null,
                         colorHex: item.prebuiltVariant?.colorHex ?? null,
                         size: item.prebuiltVariant?.sizeName ?? null,
-                        // ✅ images is a Prisma relation with a url field
                         image: item.prebuiltProduct.images?.[0]?.url ?? null,
                     };
                 }
@@ -262,6 +258,32 @@ export async function POST(req: Request) {
                 transactionId,
             },
         });
+
+        /* ---------- RECORD DISCOUNT USAGE ---------- */
+        if (discountCode && session.user.id) {
+            try {
+                const discount = await prisma.discount.findFirst({
+                    where: {
+                        code: discountCode.toUpperCase(),
+                        isActive: true,
+                    },
+                });
+
+                if (discount) {
+                    await recordDiscountUsage(
+                        discount.id,
+                        session.user.id,
+                        order.id,
+                    );
+                }
+            } catch (usageError) {
+                // Log but don't fail the order — usage tracking is non-critical
+                console.error(
+                    "[Create Order] Failed to record discount usage:",
+                    usageError,
+                );
+            }
+        }
 
         return NextResponse.json({ orderId: order.id, status: order.status });
     } catch (error) {

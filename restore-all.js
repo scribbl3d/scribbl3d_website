@@ -2,7 +2,7 @@
 const { PrismaClient } = require("@prisma/client");
 const fs = require("fs");
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 function toDate(v) {
     if (!v) return undefined;
@@ -37,7 +37,7 @@ async function upsertMany(prismaModelName, items) {
             if (!item.id) {
                 console.warn(
                     `⚠️ Skipping ${prismaModelName} row without id:`,
-                    item
+                    item,
                 );
                 continue;
             }
@@ -70,7 +70,7 @@ async function upsertMany(prismaModelName, items) {
         } catch (err) {
             console.error(
                 `❌ ${prismaModelName} id=${item.id} failed:`,
-                err.message || err
+                err.message || err,
             );
         }
     }

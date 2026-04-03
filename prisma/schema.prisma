@@ -158,16 +158,17 @@ model CartItem {
   customization String?
 
   cart            Cart              @relation(fields: [cartId], references: [id])
-  product         Product?          @relation(fields: [productId], references: [id])
-  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
-  prebuiltVariant PrebuiltVariants? @relation(fields: [prebuiltVariantId], references: [id])
-  printer         Printer?          @relation(fields: [printerId], references: [id])
+  product         Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id], onDelete: SetNull)
+  prebuiltVariant PrebuiltVariants? @relation(fields: [prebuiltVariantId], references: [id], onDelete: SetNull)
+  printer         Printer?          @relation(fields: [printerId], references: [id], onDelete: SetNull)
   resin           Resin?            @relation(fields: [resinId], references: [id], onDelete: Cascade)
-  resinColour     ResinColour?      @relation(fields: [resinColourId], references: [id])
-  resinWeight     ResinWeight?      @relation(fields: [resinWeightId], references: [id])
+  resinColour     ResinColour?      @relation(fields: [resinColourId], references: [id], onDelete: SetNull)
+  resinWeight     ResinWeight?      @relation(fields: [resinWeightId], references: [id], onDelete: SetNull)
 
   @@unique([cartId, productId, prebuiltVariantId, productSizeId, productColorId, printerId, resinId, resinColourId, resinWeightId])
 }
+
 
 model Address {
   id        String   @id @default(cuid())
@@ -578,44 +579,65 @@ model Discount {
   id            String   @id @default(cuid())
   name          String
   code          String   @unique
-
+ 
   scope         DiscountScope
   valueType     DiscountValueType
   value         Float
-
+ 
   minOrderValue Float?
   maxDiscount   Float?
-
+ 
   expiresAt     DateTime?
   isHidden      Boolean  @default(false)
   isActive      Boolean  @default(true)
-
+ 
+  // ── NEW FIELDS ──────────────────────────────────
+  firstOrderOnly  Boolean  @default(false)   // only applies if user has zero completed orders
+  maxUsesPerUser  Int?                        // null = unlimited, 1 = one-time, n = n times
+  // ────────────────────────────────────────────────
+ 
   itemTypes     DiscountItemType[]
-
+  usages        DiscountUsage[]               // tracks per-user redemptions
+ 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
-
+ 
+// NEW MODEL — tracks every time a user redeems a discount
+model DiscountUsage {
+  id         String   @id @default(cuid())
+  discountId String
+  userId     String
+  orderId    String?                          // link to the order where it was used
+ 
+  discount   Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+ 
+  usedAt     DateTime @default(now())
+ 
+  @@index([discountId, userId])               // fast lookup for validation
+}
+ 
+// Existing models stay the same
 model DiscountItemType {
   id         String   @id @default(cuid())
   discountId String
   itemType   ItemType
-
+ 
   discount   Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
-
+ 
   @@unique([discountId, itemType])
 }
-
+ 
 enum DiscountScope {
   cart
   item_type
 }
-
+ 
 enum DiscountValueType {
   percentage
   flat
 }
-
+ 
 enum ItemType {
   product
   prebuilt

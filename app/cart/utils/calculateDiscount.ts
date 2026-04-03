@@ -43,5 +43,5 @@ export function calculateDiscount(
     // Never discount more than the applicable subtotal
     discountAmount = Math.min(discountAmount, subtotal);
 
-    return Math.max(0, Math.floor(discountAmount));
+    return Math.max(0, Math.round(discountAmount));
 }

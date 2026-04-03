@@ -1,11 +1,10 @@
-import { PrismaClient } from "@prisma/client";
 import {
     generateRandomFeatures,
     generateRandomProductDesc,
     generateRandomProductDetails,
 } from "./helpers";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const prebuiltProducts = [
     {

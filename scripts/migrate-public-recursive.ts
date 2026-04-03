@@ -1,9 +1,8 @@
-import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 import cloudinary from "../lib/cloudinary";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 const PUBLIC_DIR = path.join(process.cwd(), "public");
 
 const ROOT_FOLDERS = ["filaments"];

@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 async function restore() {
     console.log("🔗 DB:", process.env.DATABASE_URL);

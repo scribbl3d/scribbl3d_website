@@ -1,9 +1,8 @@
 // restore-users.ts
-import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 import fs from "fs";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 function randomPasswordHash() {
     // Create a random string to satisfy non-null password columns.

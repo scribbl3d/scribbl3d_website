@@ -4,150 +4,37 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
 /* =========================
-   ADD TO CART
+   TYPES
 ========================= */
-export async function POST(req: Request) {
-    try {
-        const session = (await getServerSession(authOptions as any)) as {
-            user?: { id?: string; name?: string; email?: string };
-        } | null;
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 },
-            );
-        }
-
-        const body = await req.json();
-        const {
-            productId,
-            prebuiltProductId,
-            prebuiltVariantId, // ✅ replaces prebuiltColour + prebuiltSize
-            printerId,
-            resinId,
-            resinColourId,
-            resinWeightId,
-            quantity = 1,
-        } = body;
-
-        if (!productId && !prebuiltProductId && !printerId && !resinId) {
-            return NextResponse.json(
-                { error: "Invalid cart item" },
-                { status: 400 },
-            );
-        }
-
-        /* ---------- PREBUILT VALIDATION ---------- */
-        if (prebuiltProductId) {
-            if (!prebuiltVariantId) {
-                return NextResponse.json(
-                    { error: "Prebuilt variant required" },
-                    { status: 400 },
-                );
-            }
-
-            // ✅ Validate variant belongs to the product
-            const variant = await prisma.prebuiltVariants.findFirst({
-                where: {
-                    id: prebuiltVariantId,
-                    prebuildProductId: prebuiltProductId,
-                    isActive: true,
-                },
-                select: { id: true },
-            });
-
-            if (!variant) {
-                return NextResponse.json(
-                    { error: "Invalid or inactive prebuilt variant" },
-                    { status: 400 },
-                );
-            }
-        }
-
-        /* ---------- RESIN VALIDATION ---------- */
-        if (resinId) {
-            if (!resinColourId || !resinWeightId) {
-                return NextResponse.json(
-                    { error: "Resin colour & weight required" },
-                    { status: 400 },
-                );
-            }
-
-            const weightExists = await prisma.resinWeight.findUnique({
-                where: { id: resinWeightId },
-                select: { id: true },
-            });
-
-            if (!weightExists) {
-                return NextResponse.json(
-                    { error: "Invalid resin weight" },
-                    { status: 400 },
-                );
-            }
-        }
-
-        /* ---------- GET OR CREATE CART ---------- */
-        let cart = await prisma.cart.findFirst({
-            where: { userId: session.user.id },
-        });
-
-        if (!cart) {
-            cart = await prisma.cart.create({
-                data: { userId: session.user.id },
-            });
-        }
-
-        /* ---------- MERGE LOGIC ---------- */
-        const whereClause: any = { cartId: cart.id };
-
-        if (productId) whereClause.productId = productId;
-        if (prebuiltVariantId)
-            whereClause.prebuiltVariantId = prebuiltVariantId; // ✅
-        if (printerId) whereClause.printerId = printerId;
-        if (resinId) {
-            whereClause.resinId = resinId;
-            whereClause.resinColourId = resinColourId;
-            whereClause.resinWeightId = resinWeightId;
-        }
-
-        const existingItem = await prisma.cartItem.findFirst({
-            where: whereClause,
-        });
-
-        if (existingItem) {
-            await prisma.cartItem.update({
-                where: { id: existingItem.id },
-                data: { quantity: existingItem.quantity + quantity },
-            });
-        } else {
-            await prisma.cartItem.create({
-                data: {
-                    cartId: cart.id,
-                    quantity,
-                    productId,
-                    prebuiltProductId,
-                    prebuiltVariantId, // ✅
-                    printerId,
-                    resinId,
-                    resinColourId,
-                    resinWeightId,
-                },
-            });
-        }
-
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error("POST /api/cart error:", error);
-        return NextResponse.json(
-            { error: "Failed to add to cart" },
-            { status: 500 },
-        );
-    }
-}
+type CartResponseItem = {
+    id: string;
+    sourceId?: string;
+    itemType: string;
+    name: string;
+    slug?: string | null;
+    price: number;
+    quantity: number;
+    images: string[];
+    size?: string | null;
+    color?: string | null;
+    colorHex?: string | null;
+    weight?: string | null;
+    customization?: string | null;
+    machineDimensionLength?: number | null;
+    machineDimensionWidth?: number | null;
+    machineDimensionHeight?: number | null;
+    _orphaned?: boolean;
+    _error?: boolean;
+};
 
 /* =========================
-   HELPER: Extract machine dimensions
+   HELPERS
 ========================= */
+function safeNum(val: unknown): number {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : 0;
+}
+
 function extractMachineDimensions(specifications: any[]): {
     length: number | null;
     width: number | null;
@@ -156,7 +43,6 @@ function extractMachineDimensions(specifications: any[]): {
     for (const spec of specifications || []) {
         const labelLower = (spec.label || "").trim().toLowerCase();
         const value = spec.value || "";
-
         if (
             labelLower === "machine dimensions" ||
             labelLower.includes("machine dimension") ||
@@ -180,7 +66,207 @@ function extractMachineDimensions(specifications: any[]): {
 }
 
 /* =========================
+   ORPHAN RESOLVERS
+   
+   Only called when the Prisma include returned null
+   for a relation that should exist (FK is set but
+   record was deleted). Runs sequentially to avoid
+   connection storms.
+========================= */
+
+async function healResinWeight(
+    resinId: string,
+    cartItemId: string,
+): Promise<any> {
+    const replacement = await prisma.resinWeight.findFirst({
+        where: { resinId },
+        orderBy: { weightInGrams: "asc" },
+    });
+    if (replacement) {
+        await prisma.cartItem
+            .update({
+                where: { id: cartItemId },
+                data: { resinWeightId: replacement.id },
+            })
+            .catch(() => {});
+    }
+    return replacement;
+}
+
+async function healResinColour(
+    resinId: string,
+    cartItemId: string,
+): Promise<any> {
+    const replacement = await prisma.resinColour.findFirst({
+        where: { resinId },
+        include: { images: { orderBy: { sortOrder: "asc" } } },
+    });
+    if (replacement) {
+        await prisma.cartItem
+            .update({
+                where: { id: cartItemId },
+                data: { resinColourId: replacement.id },
+            })
+            .catch(() => {});
+    }
+    return replacement;
+}
+
+async function healPrebuiltVariant(
+    prebuiltProductId: string,
+    cartItemId: string,
+): Promise<any> {
+    const replacement = await prisma.prebuiltVariants.findFirst({
+        where: { prebuildProductId: prebuiltProductId, isActive: true },
+    });
+    if (replacement) {
+        await prisma.cartItem
+            .update({
+                where: { id: cartItemId },
+                data: { prebuiltVariantId: replacement.id },
+            })
+            .catch(() => {});
+    }
+    return replacement;
+}
+
+/* =========================
+   ADD TO CART
+========================= */
+export async function POST(req: Request) {
+    try {
+        const session = (await getServerSession(authOptions as any)) as {
+            user?: { id?: string; name?: string; email?: string };
+        } | null;
+        if (!session?.user?.id) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 },
+            );
+        }
+
+        const body = await req.json();
+        const {
+            productId,
+            prebuiltProductId,
+            prebuiltVariantId,
+            printerId,
+            resinId,
+            resinColourId,
+            resinWeightId,
+            quantity = 1,
+        } = body;
+
+        if (!productId && !prebuiltProductId && !printerId && !resinId) {
+            return NextResponse.json(
+                { error: "Invalid cart item" },
+                { status: 400 },
+            );
+        }
+
+        if (prebuiltProductId) {
+            if (!prebuiltVariantId) {
+                return NextResponse.json(
+                    { error: "Prebuilt variant required" },
+                    { status: 400 },
+                );
+            }
+            const variant = await prisma.prebuiltVariants.findFirst({
+                where: {
+                    id: prebuiltVariantId,
+                    prebuildProductId: prebuiltProductId,
+                    isActive: true,
+                },
+                select: { id: true },
+            });
+            if (!variant) {
+                return NextResponse.json(
+                    { error: "Invalid or inactive prebuilt variant" },
+                    { status: 400 },
+                );
+            }
+        }
+
+        if (resinId) {
+            if (!resinColourId || !resinWeightId) {
+                return NextResponse.json(
+                    { error: "Resin colour & weight required" },
+                    { status: 400 },
+                );
+            }
+            const weightExists = await prisma.resinWeight.findUnique({
+                where: { id: resinWeightId },
+                select: { id: true },
+            });
+            if (!weightExists) {
+                return NextResponse.json(
+                    { error: "Invalid resin weight" },
+                    { status: 400 },
+                );
+            }
+        }
+
+        let cart = await prisma.cart.findFirst({
+            where: { userId: session.user.id },
+        });
+        if (!cart) {
+            cart = await prisma.cart.create({
+                data: { userId: session.user.id },
+            });
+        }
+
+        const whereClause: any = { cartId: cart.id };
+        if (productId) whereClause.productId = productId;
+        if (prebuiltVariantId)
+            whereClause.prebuiltVariantId = prebuiltVariantId;
+        if (printerId) whereClause.printerId = printerId;
+        if (resinId) {
+            whereClause.resinId = resinId;
+            whereClause.resinColourId = resinColourId;
+            whereClause.resinWeightId = resinWeightId;
+        }
+
+        const existingItem = await prisma.cartItem.findFirst({
+            where: whereClause,
+        });
+
+        if (existingItem) {
+            await prisma.cartItem.update({
+                where: { id: existingItem.id },
+                data: { quantity: existingItem.quantity + quantity },
+            });
+        } else {
+            await prisma.cartItem.create({
+                data: {
+                    cartId: cart.id,
+                    quantity,
+                    productId,
+                    prebuiltProductId,
+                    prebuiltVariantId,
+                    printerId,
+                    resinId,
+                    resinColourId,
+                    resinWeightId,
+                },
+            });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("POST /api/cart error:", error);
+        return NextResponse.json(
+            { error: "Failed to add to cart" },
+            { status: 500 },
+        );
+    }
+}
+
+/* =========================
    GET CART
+   
+   Uses a single Prisma include query (1 connection,
+   batched SQL) for the happy path. Only fires extra
+   queries for orphaned items.
 ========================= */
 export async function GET() {
     const session = (await getServerSession(authOptions as any)) as {
@@ -191,6 +277,7 @@ export async function GET() {
     }
 
     try {
+        // Single query with includes — Prisma batches this efficiently
         const cart = await prisma.cart.findFirst({
             where: { userId: session.user.id },
             include: {
@@ -200,12 +287,12 @@ export async function GET() {
                         prebuiltProduct: {
                             include: {
                                 images: {
-                                    where: { isMain: true }, // ✅ only main image
+                                    where: { isMain: true },
                                     take: 1,
                                 },
                             },
                         },
-                        prebuiltVariant: true, // ✅ include variant
+                        prebuiltVariant: true,
                         printer: {
                             include: {
                                 images: { orderBy: { sortOrder: "asc" } },
@@ -226,85 +313,230 @@ export async function GET() {
 
         if (!cart) return NextResponse.json({ items: [] });
 
-        const items = cart.items.map((item) => {
-            /* ---------- RESIN ---------- */
-            if (item.resin) {
-                return {
-                    id: item.id,
-                    sourceId: item.resin.id,
-                    itemType: "resin",
-                    name: item.resin.name,
-                    price: item.resinWeight?.price ?? 0,
-                    quantity: item.quantity,
-                    images: item.resinColour?.images?.map((i) => i.url) ?? [],
-                    size: item.resinWeight
-                        ? `${item.resinWeight.weightInGrams}g`
-                        : null,
-                    color: item.resinColour?.name ?? null,
-                    colorHex: item.resinColour?.hexCode ?? null,
-                };
-            }
+        // Process items — use included data first, heal orphans only if needed
+        // Use a for...of loop instead of Promise.all to avoid connection storms
+        const items: CartResponseItem[] = [];
 
-            /* ---------- PRINTER ---------- */
-            if (item.printer) {
-                const machineDims = extractMachineDimensions(
-                    item.printer.specifications as any[],
+        for (const item of cart.items) {
+            try {
+                /* ---------- RESIN ---------- */
+                if (item.resinId) {
+                    let resin = item.resin;
+                    let resinWeight = item.resinWeight;
+                    let resinColour = item.resinColour as any;
+
+                    // If resin itself is gone, item is orphaned
+                    if (!resin) {
+                        items.push({
+                            id: item.id,
+                            itemType: "unknown",
+                            name: "Product no longer available",
+                            price: 0,
+                            quantity: item.quantity,
+                            images: [],
+                            _orphaned: true,
+                        });
+                        continue;
+                    }
+
+                    // Heal orphaned weight (FK set but record deleted)
+                    if (!resinWeight && item.resinWeightId) {
+                        resinWeight = await healResinWeight(
+                            item.resinId,
+                            item.id,
+                        );
+                    }
+                    // Heal null weight (FK cleared by onDelete: SetNull)
+                    if (!resinWeight && !item.resinWeightId) {
+                        resinWeight = await healResinWeight(
+                            item.resinId,
+                            item.id,
+                        );
+                    }
+
+                    // Heal orphaned colour
+                    if (!resinColour && item.resinColourId) {
+                        resinColour = await healResinColour(
+                            item.resinId,
+                            item.id,
+                        );
+                    }
+                    if (!resinColour && !item.resinColourId) {
+                        resinColour = await healResinColour(
+                            item.resinId,
+                            item.id,
+                        );
+                    }
+
+                    const colourImages =
+                        resinColour?.images?.map((i: any) => i.url) ?? [];
+                    const fallbackImage = (resin as any)?.cardImageUrl;
+                    const images =
+                        colourImages.length > 0
+                            ? colourImages
+                            : fallbackImage
+                              ? [fallbackImage]
+                              : [];
+
+                    items.push({
+                        id: item.id,
+                        sourceId: resin.id,
+                        itemType: "resin",
+                        name: resin.name,
+                        slug: (resin as any).slug ?? null,
+                        price: safeNum(resinWeight?.price),
+                        quantity: item.quantity,
+                        images,
+                        size: resinWeight
+                            ? `${resinWeight.weightInGrams}g`
+                            : null,
+                        color: resinColour?.name ?? null,
+                        colorHex: resinColour?.hexCode ?? null,
+                    });
+                    continue;
+                }
+
+                /* ---------- PRINTER ---------- */
+                if (item.printerId) {
+                    const printer = item.printer;
+
+                    if (!printer) {
+                        items.push({
+                            id: item.id,
+                            itemType: "unknown",
+                            name: "Product no longer available",
+                            price: 0,
+                            quantity: item.quantity,
+                            images: [],
+                            _orphaned: true,
+                        });
+                        continue;
+                    }
+
+                    const machineDims = extractMachineDimensions(
+                        (printer as any).specifications as any[],
+                    );
+
+                    items.push({
+                        id: item.id,
+                        sourceId: printer.id,
+                        itemType: "printer",
+                        name: printer.name,
+                        slug: (printer as any).slug ?? null,
+                        price: safeNum(printer.price),
+                        quantity: item.quantity,
+                        images:
+                            (printer as any).images?.map((i: any) => i.url) ??
+                            [],
+                        weight: printer.weight?.toString() ?? null,
+                        machineDimensionLength: machineDims.length,
+                        machineDimensionWidth: machineDims.width,
+                        machineDimensionHeight: machineDims.height,
+                    });
+                    continue;
+                }
+
+                /* ---------- PREBUILT ---------- */
+                if (item.prebuiltProductId) {
+                    const prebuiltProduct = item.prebuiltProduct;
+                    let prebuiltVariant = item.prebuiltVariant;
+
+                    if (!prebuiltProduct) {
+                        items.push({
+                            id: item.id,
+                            itemType: "unknown",
+                            name: "Product no longer available",
+                            price: 0,
+                            quantity: item.quantity,
+                            images: [],
+                            _orphaned: true,
+                        });
+                        continue;
+                    }
+
+                    // Heal orphaned/null variant
+                    if (!prebuiltVariant) {
+                        prebuiltVariant = await healPrebuiltVariant(
+                            item.prebuiltProductId,
+                            item.id,
+                        );
+                    }
+
+                    items.push({
+                        id: item.id,
+                        sourceId: prebuiltProduct.id,
+                        itemType: "prebuilt",
+                        name: prebuiltProduct.name,
+                        slug: (prebuiltProduct as any).slug ?? null,
+                        price: safeNum(prebuiltVariant?.price),
+                        quantity: item.quantity,
+                        images:
+                            (prebuiltProduct as any).images?.map(
+                                (i: any) => i.url,
+                            ) ?? [],
+                        color: prebuiltVariant?.colorName ?? null,
+                        colorHex: prebuiltVariant?.colorHex ?? null,
+                        size: prebuiltVariant?.sizeName ?? null,
+                        customization: item.customization ?? null,
+                    });
+                    continue;
+                }
+
+                /* ---------- PRODUCT ---------- */
+                if (item.productId) {
+                    const product = item.product;
+
+                    if (!product) {
+                        items.push({
+                            id: item.id,
+                            itemType: "unknown",
+                            name: "Product no longer available",
+                            price: 0,
+                            quantity: item.quantity,
+                            images: [],
+                            _orphaned: true,
+                        });
+                        continue;
+                    }
+
+                    items.push({
+                        id: item.id,
+                        sourceId: product.id,
+                        itemType: "product",
+                        name: product.name,
+                        slug: (product as any).slug ?? null,
+                        price: safeNum(product.price),
+                        quantity: item.quantity,
+                        images: (product as any).images ?? [],
+                    });
+                    continue;
+                }
+
+                /* ---------- FALLBACK ---------- */
+                items.push({
+                    id: item.id,
+                    itemType: "unknown",
+                    name: "Unknown item",
+                    price: 0,
+                    quantity: item.quantity,
+                    images: [],
+                });
+            } catch (itemError) {
+                console.error(
+                    `[CART] Failed to resolve item ${item.id}:`,
+                    itemError,
                 );
-                return {
+                items.push({
                     id: item.id,
-                    sourceId: item.printer.id,
-                    itemType: "printer",
-                    name: item.printer.name,
-                    price: item.printer.price,
+                    itemType: "unknown",
+                    name: "Error loading item",
+                    price: 0,
                     quantity: item.quantity,
-                    images: item.printer.images.map((i) => i.url),
-                    weight: item.printer.weight?.toString() ?? null,
-                    machineDimensionLength: machineDims.length,
-                    machineDimensionWidth: machineDims.width,
-                    machineDimensionHeight: machineDims.height,
-                };
+                    images: [],
+                    _error: true,
+                });
             }
-
-            /* ---------- PREBUILT ---------- */
-            if (item.prebuiltProduct && item.prebuiltVariant) {
-                return {
-                    id: item.id,
-                    sourceId: item.prebuiltProduct.id,
-                    itemType: "prebuilt",
-                    name: item.prebuiltProduct.name,
-                    price: item.prebuiltVariant.price, // ✅ from variant
-                    quantity: item.quantity,
-                    images:
-                        item.prebuiltProduct.images?.map((i) => i.url) ?? [],
-                    color: item.prebuiltVariant.colorName ?? null, // ✅ from variant
-                    colorHex: item.prebuiltVariant.colorHex ?? null, // ✅ from variant
-                    size: item.prebuiltVariant.sizeName ?? null, // ✅ from variant
-                    customization: item.customization ?? null,
-                };
-            }
-
-            /* ---------- PRODUCT ---------- */
-            if (item.product) {
-                return {
-                    id: item.id,
-                    sourceId: item.product.id,
-                    itemType: "product",
-                    name: item.product.name,
-                    price: item.product.price,
-                    quantity: item.quantity,
-                    images: item.product.images ?? [],
-                };
-            }
-
-            return {
-                id: item.id,
-                itemType: "unknown",
-                name: "Unknown item",
-                price: 0,
-                quantity: item.quantity,
-                images: [],
-            };
-        });
+        }
 
         return NextResponse.json({ items });
     } catch (error) {

@@ -886,7 +886,10 @@ function ProductCard({ product }: { product: any }) {
             ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
             : "One size";
 
-    const uniqueColors: { hex: string; name: string }[] = Array.from(
+    const uniqueColors: { hex: string; name: string }[] = Array.from<{
+        hex: string;
+        name: string;
+    }>(
         new Map<string, { hex: string; name: string }>(
             product.variants
                 ?.filter((v: any) => v.colorHex)
@@ -920,11 +923,8 @@ function ProductCard({ product }: { product: any }) {
                             </div>
                         )}
                         {product.highlighted && (
-                            <div className="absolute bottom-1.5 left-1.5 sm:bottom-3 sm:left-3 z-[1]">
-                                <span
-                                    className="inline-block rounded-full px-1.5 py-0.5 sm:px-3 sm:py-1 text-[7px] sm:text-[10px] font-medium border-2 bg-white text-[#372AAC]"
-                                    style={{ borderColor: "#A3B3FF" }}
-                                >
+                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-[2] flex items-center justify-center rounded-full bg-gradient-to-b from-[#6359F3] to-black px-2 py-0.5 sm:px-4 sm:py-1 shadow">
+                                <span className="font-inter text-[7px] sm:text-sm font-medium italic text-white/80">
                                     Trending Now
                                 </span>
                             </div>
@@ -946,12 +946,6 @@ function ProductCard({ product }: { product: any }) {
 
                     {/* CONTENT */}
                     <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
-                        {product.category && (
-                            <span className="inline-block mb-1 sm:mb-2 px-1.5 py-px sm:px-3 sm:py-1 text-[9px] sm:text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
-                                {product.category}
-                            </span>
-                        )}
-
                         <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
                             {product.name}
                         </h3>
@@ -962,35 +956,29 @@ function ProductCard({ product }: { product: any }) {
                             </p>
                         )}
 
-                        <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5 space-y-0.5">
-                            <div>
-                                <strong>Sizes:</strong> {sizeString}
-                            </div>
-                            {uniqueColors.length > 0 && (
-                                <div className="flex items-center gap-1.5">
-                                    <strong>Colours:</strong>
-                                    <span className="inline-flex items-center gap-1">
-                                        {uniqueColors
-                                            .slice(0, 5)
-                                            .map((c, i) => (
-                                                <span
-                                                    key={i}
-                                                    title={c.name}
-                                                    className="inline-block w-3.5 h-3.5 rounded-full border border-gray-300"
-                                                    style={{
-                                                        backgroundColor: c.hex,
-                                                    }}
-                                                />
-                                            ))}
-                                        {uniqueColors.length > 5 && (
-                                            <span className="text-[10px] text-gray-400">
-                                                +{uniqueColors.length - 5}
-                                            </span>
-                                        )}
-                                    </span>
-                                </div>
-                            )}
+                        {/* Sizes — desktop only */}
+                        <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5">
+                            <strong>Sizes:</strong> {sizeString}
                         </div>
+
+                        {/* Colour swatches — visible on all sizes */}
+                        {uniqueColors.length > 0 && (
+                            <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2">
+                                {uniqueColors.slice(0, 6).map((c, i) => (
+                                    <span
+                                        key={i}
+                                        title={c.name}
+                                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] ring-1 ring-black/5"
+                                        style={{ backgroundColor: c.hex }}
+                                    />
+                                ))}
+                                {uniqueColors.length > 6 && (
+                                    <span className="text-[9px] sm:text-[11px] text-gray-400 font-medium">
+                                        +{uniqueColors.length - 6}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </Link>
 

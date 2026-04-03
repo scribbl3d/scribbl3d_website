@@ -29,10 +29,44 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+/* =========================
+   ERROR CODE → USER MESSAGE
+========================= */
+function getLoginErrorMessage(errorCode: string | undefined): string {
+    if (!errorCode) return "An unexpected error occurred";
+
+    // NextAuth passes the Error message through result.error
+    // Our authorize function throws specific error codes
+    switch (errorCode) {
+        case "NO_ACCOUNT":
+            return "No account found with this email. Please sign up first.";
+        case "GOOGLE_ACCOUNT":
+            return "This account uses Google sign-in. Please click 'Sign in with Google' below.";
+        case "WRONG_PASSWORD":
+            return "Incorrect password. Please try again or reset your password.";
+        case "INVALID_INPUT":
+            return "Please enter a valid email and password.";
+        case "CredentialsSignin":
+            // Fallback for generic NextAuth error
+            return "Invalid email or password";
+        default:
+            // Check if it contains our custom messages (some NextAuth versions pass the full message)
+            if (errorCode.includes("Google"))
+                return "This account uses Google sign-in. Please click 'Sign in with Google' below.";
+            if (
+                errorCode.includes("No account") ||
+                errorCode.includes("NO_ACCOUNT")
+            )
+                return "No account found with this email. Please sign up first.";
+            return "Invalid email or password";
+    }
+}
+
 export default function LoginForm() {
     const { error, isLoading, setError, setLoading } = useActionState<void>();
     const [success, setSuccess] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [isGoogleError, setIsGoogleError] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams?.get("callbackUrl") || "/profile";
@@ -79,6 +113,7 @@ export default function LoginForm() {
 
     const onSubmit = async (data: LoginFormData) => {
         setLoading(true);
+        setIsGoogleError(false);
         try {
             const result = await signIn("credentials", {
                 redirect: false,
@@ -88,8 +123,16 @@ export default function LoginForm() {
             });
 
             if (result?.error) {
-                console.error("Login error:", result.error);
-                setError("Invalid email or password");
+                const message = getLoginErrorMessage(result.error);
+                setError(message);
+
+                // Highlight the Google button if they should use Google
+                if (
+                    result.error === "GOOGLE_ACCOUNT" ||
+                    result.error.includes("Google")
+                ) {
+                    setIsGoogleError(true);
+                }
             } else if (result?.ok) {
                 setIsRedirecting(true);
                 router.push(callbackUrl);
@@ -237,7 +280,11 @@ export default function LoginForm() {
                     <Button
                         variant="outline"
                         type="button"
-                        className="w-full"
+                        className={`w-full transition-all ${
+                            isGoogleError
+                                ? "ring-2 ring-blue-500 bg-blue-50 border-blue-300 animate-pulse"
+                                : ""
+                        }`}
                         onClick={handleGoogleSignIn}
                     >
                         <FcGoogle className="w-5 h-5 mr-2" />

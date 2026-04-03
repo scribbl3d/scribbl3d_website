@@ -60,7 +60,9 @@ export const authOptions: NextAuthOptions = {
             },
             async authorize(credentials) {
                 const result = loginSchema.safeParse(credentials);
-                if (!result.success) return null;
+                if (!result.success) {
+                    throw new Error("INVALID_INPUT");
+                }
 
                 const { email, password } = result.data;
 
@@ -74,16 +76,21 @@ export const authOptions: NextAuthOptions = {
                     },
                 });
 
-                if (!user) return null;
-
-                if (user.password.startsWith("google_")) {
-                    throw new Error(
-                        "This account uses Google authentication. Please sign in with Google.",
-                    );
+                // No account found with this email
+                if (!user) {
+                    throw new Error("NO_ACCOUNT");
                 }
 
+                // Account exists but was created via Google OAuth
+                if (!user.password || user.password.startsWith("google_")) {
+                    throw new Error("GOOGLE_ACCOUNT");
+                }
+
+                // Wrong password
                 const isValid = await bcryptjs.compare(password, user.password);
-                if (!isValid) return null;
+                if (!isValid) {
+                    throw new Error("WRONG_PASSWORD");
+                }
 
                 return { id: user.id, email: user.email, name: user.name };
             },
@@ -105,7 +112,6 @@ export const authOptions: NextAuthOptions = {
             return token;
         },
 
-        // 🔥 FIX: Always hydrate session from DB (image included)
         async session({ session }) {
             if (!session.user?.email) return session;
 
@@ -126,7 +132,6 @@ export const authOptions: NextAuthOptions = {
         async signIn({ user, account }) {
             if (account?.provider === "google") {
                 try {
-                    // Save image ONCE if missing
                     if (user.email && user.image) {
                         await prisma.user.updateMany({
                             where: {
@@ -139,7 +144,6 @@ export const authOptions: NextAuthOptions = {
                         });
                     }
 
-                    // Check existing linked account
                     const existingAccount = await prisma.account.findFirst({
                         where: {
                             provider: "google",
@@ -153,7 +157,6 @@ export const authOptions: NextAuthOptions = {
                         return true;
                     }
 
-                    // Check user by email
                     const existingUser = await prisma.user.findUnique({
                         where: { email: user.email! },
                     });
@@ -176,7 +179,6 @@ export const authOptions: NextAuthOptions = {
                         return true;
                     }
 
-                    // New user
                     const newUser = await prisma.user.create({
                         data: {
                             name: user.name!,

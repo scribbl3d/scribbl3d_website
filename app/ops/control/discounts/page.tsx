@@ -61,12 +61,28 @@ export default function DiscountsPage() {
                                 {d.code} • {d.valueType} • {d.value}
                             </div>
 
-                            {/* Show scope and item types */}
+                            {/* Scope and item types */}
                             <div className="text-sm text-muted-foreground mt-0.5">
                                 {d.scope === "item_type" && itemTypeNames
                                     ? `Applies to: ${itemTypeNames}`
                                     : "Applies to: entire cart"}
                             </div>
+
+                            {/* Usage restrictions info */}
+                            {(d.firstOrderOnly || d.maxUsesPerUser != null) && (
+                                <div className="text-sm text-muted-foreground mt-0.5">
+                                    {[
+                                        d.firstOrderOnly
+                                            ? "First order only"
+                                            : null,
+                                        d.maxUsesPerUser != null
+                                            ? `Max ${d.maxUsesPerUser} use${d.maxUsesPerUser === 1 ? "" : "s"}/customer`
+                                            : null,
+                                    ]
+                                        .filter(Boolean)
+                                        .join(" • ")}
+                                </div>
+                            )}
 
                             <div className="flex gap-2 mt-2 text-xs flex-wrap">
                                 {d.isActive ? (
@@ -91,6 +107,16 @@ export default function DiscountsPage() {
                                 {d.scope === "item_type" && (
                                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
                                         Scoped
+                                    </span>
+                                )}
+                                {d.firstOrderOnly && (
+                                    <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">
+                                        New User
+                                    </span>
+                                )}
+                                {d.maxUsesPerUser != null && (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">
+                                        {d.maxUsesPerUser}× limit
                                     </span>
                                 )}
                             </div>

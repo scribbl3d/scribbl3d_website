@@ -1,9 +1,8 @@
 import { rateLimit } from "@/lib/rate-limit";
-import { PrismaClient } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request) {
     const { email, otp } = await req.json();
@@ -13,7 +12,7 @@ export async function POST(req: Request) {
     if (!email || !otp) {
         return NextResponse.json(
             { error: "Email and OTP are required" },
-            { status: 400 }
+            { status: 400 },
         );
     }
 
@@ -23,7 +22,7 @@ export async function POST(req: Request) {
     if (!success) {
         return NextResponse.json(
             { error: "Rate limit exceeded" },
-            { status: 429 }
+            { status: 429 },
         );
     }
 
@@ -45,7 +44,7 @@ export async function POST(req: Request) {
                 {
                     error: "OTP expired or not found. Please request a new OTP.",
                 },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -53,7 +52,7 @@ export async function POST(req: Request) {
             await prisma.onetimep.delete({ where: { id: otpRecord.id } });
             return NextResponse.json(
                 { error: "Too many attempts. Please request a new OTP." },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -80,7 +79,7 @@ export async function POST(req: Request) {
                 error: "Failed to verify OTP",
                 details: error.message,
             },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

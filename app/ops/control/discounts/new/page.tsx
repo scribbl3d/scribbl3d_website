@@ -23,6 +23,8 @@ export default function NewDiscountPage() {
         expiresAt: "",
         isActive: true,
         isHidden: false,
+        firstOrderOnly: false,
+        maxUsesPerUser: "",
         itemTypes: [] as string[],
     });
 
@@ -48,6 +50,10 @@ export default function NewDiscountPage() {
                 expiresAt: data.expiresAt || null,
                 isActive: data.isActive,
                 isHidden: data.isHidden,
+                firstOrderOnly: data.firstOrderOnly,
+                maxUsesPerUser: data.maxUsesPerUser
+                    ? Number(data.maxUsesPerUser)
+                    : null,
                 itemTypes: data.scope === "item_type" ? data.itemTypes : [],
             }),
         });
@@ -267,9 +273,58 @@ export default function NewDiscountPage() {
                     />
                 </div>
 
+                {/* USAGE RESTRICTIONS */}
+                <div className="border rounded-lg p-4 space-y-4">
+                    <Label className="text-base font-semibold">
+                        Usage Restrictions
+                    </Label>
+
+                    <label className="flex gap-2 items-start">
+                        <input
+                            type="checkbox"
+                            checked={data.firstOrderOnly}
+                            onChange={(e) =>
+                                setData({
+                                    ...data,
+                                    firstOrderOnly: e.target.checked,
+                                })
+                            }
+                        />
+                        <div>
+                            <div className="font-medium">First order only</div>
+                            <div className="text-sm text-muted-foreground">
+                                Only customers who have never placed an order
+                                can use this coupon
+                            </div>
+                        </div>
+                    </label>
+
+                    <div>
+                        <Label>Max uses per customer (optional)</Label>
+                        <Input
+                            type="number"
+                            min="1"
+                            placeholder="Leave blank for unlimited"
+                            value={data.maxUsesPerUser}
+                            onChange={(e) =>
+                                setData({
+                                    ...data,
+                                    maxUsesPerUser: e.target.value,
+                                })
+                            }
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            How many times a single customer can redeem this
+                            coupon. Leave blank for unlimited.
+                        </p>
+                    </div>
+                </div>
+
                 {/* VISIBILITY */}
                 <div className="border rounded-lg p-4 space-y-3">
-                    <Label>Visibility</Label>
+                    <Label className="text-base font-semibold">
+                        Visibility
+                    </Label>
 
                     <label className="flex gap-2 items-start">
                         <input

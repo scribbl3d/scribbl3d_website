@@ -33,6 +33,58 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /* =================================================================
+   SAFE NUMBER HELPERS
+================================================================= */
+
+/** Safely coerce any value to a finite number, defaulting to 0 */
+function safeNum(val: unknown): number {
+    const n = Number(val);
+    return Number.isFinite(n) ? n : 0;
+}
+
+/** Format a number for Indian locale — never returns "NaN" */
+function formatINR(val: unknown): string {
+    return safeNum(val).toLocaleString("en-IN");
+}
+
+/** Safe line total for a cart item */
+function safeLineTotal(item: { price?: unknown; quantity?: unknown }): number {
+    return safeNum(item.price) * safeNum(item.quantity);
+}
+
+/** Safe subtotal for an array of cart items, optionally filtered */
+function safeSubtotal(
+    items: CartItem[],
+    filterFn?: (item: CartItem) => boolean,
+): number {
+    const list = filterFn ? items.filter(filterFn) : items;
+    return list.reduce((sum, item) => sum + safeLineTotal(item), 0);
+}
+
+/** Build the PDP URL for a given item type + slug/id */
+function getPDPUrl(
+    itemType: string | undefined,
+    slug?: string | null,
+    id?: string,
+): string | null {
+    const identifier = slug || id;
+    if (!identifier || !itemType) return null;
+    const type = itemType.toLowerCase();
+    switch (type) {
+        case "printer":
+            return `/printers/${identifier}`;
+        case "product":
+            return `/products/${identifier}`;
+        case "resin":
+            return `/resins/${identifier}`;
+        case "prebuilt":
+            return `/prebuilt-products/${identifier}`;
+        default:
+            return null;
+    }
+}
+
+/* =================================================================
    TYPES
 ================================================================= */
 
@@ -64,16 +116,16 @@ interface AvailableCoupon {
 
 function buildValueLabel(d: Discount): string {
     if (d.valueType === "flat")
-        return `Save ₹${d.value.toLocaleString("en-IN")}`;
-    return `${d.value}% OFF`;
+        return `Save ₹${safeNum(d.value).toLocaleString("en-IN")}`;
+    return `${safeNum(d.value)}% OFF`;
 }
 
 function buildDescription(d: Discount): string {
     const parts: string[] = [];
     if (d.valueType === "flat") {
-        parts.push(`Flat ₹${d.value.toLocaleString("en-IN")} off`);
+        parts.push(`Flat ₹${safeNum(d.value).toLocaleString("en-IN")} off`);
     } else {
-        parts.push(`Get ${d.value}% off`);
+        parts.push(`Get ${safeNum(d.value)}% off`);
     }
     if (d.scope === "item_type" && d.itemTypes?.length > 0) {
         const types = d.itemTypes.map(
@@ -84,9 +136,13 @@ function buildDescription(d: Discount): string {
         parts[0] += " on your order";
     }
     if (d.maxDiscount)
-        parts.push(`Max discount ₹${d.maxDiscount.toLocaleString("en-IN")}`);
+        parts.push(
+            `Max discount ₹${safeNum(d.maxDiscount).toLocaleString("en-IN")}`,
+        );
     if (d.minOrderValue)
-        parts.push(`Min. order ₹${d.minOrderValue.toLocaleString("en-IN")}`);
+        parts.push(
+            `Min. order ₹${safeNum(d.minOrderValue).toLocaleString("en-IN")}`,
+        );
     return parts.join(". ") + ".";
 }
 
@@ -404,34 +460,40 @@ function CouponModal({
                                             (t: { itemType: string }) =>
                                                 t.itemType,
                                         );
-                                        const scopedSubtotal = cartItems
-                                            .filter((item) =>
+                                        const scopedSubtotal = safeSubtotal(
+                                            cartItems,
+                                            (item) =>
                                                 allowedTypes.includes(
                                                     item.itemType,
                                                 ),
-                                            )
-                                            .reduce(
-                                                (sum, item) =>
-                                                    sum +
-                                                    item.price * item.quantity,
-                                                0,
-                                            );
+                                        );
                                         if (scopedSubtotal === 0) return false;
                                     }
                                     if (d.minOrderValue) {
-                                        const cartTotal = cartItems.reduce(
-                                            (sum, item) =>
-                                                sum +
-                                                item.price * item.quantity,
-                                            0,
-                                        );
+                                        const cartTotal =
+                                            safeSubtotal(cartItems);
                                         if (cartTotal < d.minOrderValue)
                                             return false;
                                     }
                                     return true;
                                 },
                             );
-                            if (applicableCoupons.length === 0) return null;
+                            if (applicableCoupons.length === 0) {
+                                return (
+                                    <div className="flex flex-col items-center justify-center py-10 px-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
+                                            <Ticket className="w-7 h-7 text-gray-300" />
+                                        </div>
+                                        <p className="text-[15px] font-semibold text-gray-900 text-center">
+                                            No coupons available right now
+                                        </p>
+                                        <p className="text-sm text-gray-400 text-center mt-1.5 max-w-[280px] leading-relaxed">
+                                            Try entering a coupon code above, or
+                                            check back later for new offers.
+                                        </p>
+                                    </div>
+                                );
+                            }
                             return (
                                 <>
                                     <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
@@ -490,13 +552,16 @@ function ProductSuggestionCard({
     onAddToCart: (product: ProductSuggestion) => void;
     buttonState: "idle" | "loading" | "success";
 }) {
-    const hasDiscount = product.mrp && product.mrp > product.price;
+    const price = safeNum(product.price);
+    const mrp = safeNum(product.mrp);
+    const hasDiscount = mrp > 0 && mrp > price;
     const isResinOrPrebuilt =
         product.itemType?.toLowerCase() === "resin" ||
         product.itemType?.toLowerCase() === "prebuilt";
+    const pdpUrl = getPDPUrl(product.itemType, product.slug, product.id);
 
-    return (
-        <div className="flex-shrink-0 w-[180px] sm:w-[200px] bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow duration-200 snap-start">
+    const imageAndInfo = (
+        <>
             <div className="relative aspect-square bg-gray-50 overflow-hidden">
                 {product.images[0] ? (
                     <Image
@@ -512,7 +577,7 @@ function ProductSuggestionCard({
                     </div>
                 )}
             </div>
-            <div className="p-3">
+            <div className="p-3 pb-0">
                 {product.itemType && (
                     <span
                         className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md mb-1.5 ${
@@ -541,16 +606,33 @@ function ProductSuggestionCard({
                 </h4>
                 <div className="flex items-baseline gap-2 mt-2">
                     <span className="text-base font-bold text-gray-900">
-                        ₹{product.price.toLocaleString("en-IN")}
+                        ₹{formatINR(price)}
                     </span>
                     {hasDiscount && (
                         <span className="text-xs text-gray-400 line-through">
-                            ₹{product.mrp!.toLocaleString("en-IN")}
+                            ₹{formatINR(mrp)}
                         </span>
                     )}
                 </div>
+            </div>
+        </>
+    );
+
+    return (
+        <div className="flex-shrink-0 w-[180px] sm:w-[200px] bg-white rounded-2xl border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow duration-200 snap-start">
+            {pdpUrl ? (
+                <Link href={pdpUrl} className="block cursor-pointer">
+                    {imageAndInfo}
+                </Link>
+            ) : (
+                imageAndInfo
+            )}
+            <div className="p-3 pt-0">
                 <Button
-                    onClick={() => onAddToCart(product)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToCart(product);
+                    }}
                     disabled={buttonState !== "idle"}
                     className={`w-full mt-3 h-9 rounded-xl text-sm font-semibold transition-all duration-200 ${
                         buttonState === "success"
@@ -729,7 +811,8 @@ function CartItemCard({
     onUpdateQuantity: (id: string, qty: number) => void;
     onRemove: (id: string) => void;
 }) {
-    const lineTotal = item.price * item.quantity;
+    const lineTotal = safeLineTotal(item);
+    const pdpUrl = getPDPUrl(item.itemType, item.slug, item.sourceId);
 
     const displayColor = item.color ?? null;
     const displayColorHex = item.colorHex ?? null;
@@ -750,21 +833,47 @@ function CartItemCard({
         <Card className="rounded-2xl border border-gray-100 shadow-none hover:shadow-sm transition-shadow">
             <CardContent className="p-4 sm:p-5">
                 <div className="flex gap-4">
-                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
-                        <Image
-                            src={item.images?.[0] ?? "/placeholder.png"}
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                            unoptimized
-                        />
-                    </div>
+                    {/* Clickable image */}
+                    {pdpUrl ? (
+                        <Link
+                            href={pdpUrl}
+                            className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0 hover:opacity-80 transition-opacity"
+                        >
+                            <Image
+                                src={item.images?.[0] ?? "/placeholder.png"}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                            />
+                        </Link>
+                    ) : (
+                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
+                            <Image
+                                src={item.images?.[0] ?? "/placeholder.png"}
+                                alt={item.name}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                            />
+                        </div>
+                    )}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                             <div className="min-w-0 pr-2">
-                                <h3 className="font-semibold text-gray-900 text-sm sm:text-base leading-snug">
-                                    {item.name}
-                                </h3>
+                                {/* Clickable name */}
+                                {pdpUrl ? (
+                                    <Link
+                                        href={pdpUrl}
+                                        className="font-semibold text-gray-900 text-sm sm:text-base leading-snug hover:text-blue-600 transition-colors line-clamp-2"
+                                    >
+                                        {item.name}
+                                    </Link>
+                                ) : (
+                                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base leading-snug">
+                                        {item.name}
+                                    </h3>
+                                )}
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                                     {displayColor && (
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-xs text-gray-600">
@@ -840,7 +949,7 @@ function CartItemCard({
                             </div>
                             <div className="text-right">
                                 <p className="text-base sm:text-lg font-bold text-gray-900">
-                                    ₹{lineTotal.toLocaleString("en-IN")}
+                                    ₹{formatINR(lineTotal)}
                                 </p>
                             </div>
                         </div>
@@ -914,8 +1023,15 @@ export default function ShoppingCart() {
         });
     }, [fetchCart]);
 
+    /* Sanitise cart items when syncing from provider */
     useEffect(() => {
-        setLocalCart(cart ?? []);
+        setLocalCart(
+            (cart ?? []).map((item) => ({
+                ...item,
+                price: safeNum(item.price),
+                quantity: Math.max(1, Math.round(safeNum(item.quantity))),
+            })),
+        );
     }, [cart]);
 
     useEffect(() => {
@@ -999,12 +1115,10 @@ export default function ShoppingCart() {
 
     const isLoading = !initialLoadDone || !suggestionsLoaded;
 
-    const subtotal = localCart.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0,
-    );
-    const couponDiscount = contextDiscountAmount;
-    const afterDiscount = subtotal - couponDiscount;
+    /* ── Safe price calculations ── */
+    const subtotal = safeSubtotal(localCart);
+    const couponDiscount = safeNum(contextDiscountAmount);
+    const afterDiscount = Math.max(0, subtotal - couponDiscount);
     const gstAmount = Math.round(afterDiscount - afterDiscount / 1.18);
     const grandTotal = afterDiscount;
 
@@ -1049,6 +1163,7 @@ export default function ShoppingCart() {
                     message: "This coupon is not applicable to your order",
                 };
             const discount: Discount = await res.json();
+
             let applicableSubtotal: number;
             if (
                 discount.scope === "item_type" &&
@@ -1057,16 +1172,16 @@ export default function ShoppingCart() {
                 const allowedTypes = discount.itemTypes.map(
                     (t: { itemType: string }) => t.itemType,
                 );
-                applicableSubtotal = localCart
-                    .filter((item) => allowedTypes.includes(item.itemType))
-                    .reduce((sum, item) => sum + item.price * item.quantity, 0);
-            } else {
-                applicableSubtotal = localCart.reduce(
-                    (sum, item) => sum + item.price * item.quantity,
-                    0,
+                applicableSubtotal = safeSubtotal(localCart, (item) =>
+                    allowedTypes.includes(item.itemType),
                 );
+            } else {
+                applicableSubtotal = safeSubtotal(localCart);
             }
-            const testAmount = calculateDiscount(discount, applicableSubtotal);
+
+            const testAmount = safeNum(
+                calculateDiscount(discount, applicableSubtotal),
+            );
             if (testAmount === 0)
                 return {
                     valid: false,
@@ -1170,7 +1285,9 @@ export default function ShoppingCart() {
                         title: resinData.name,
                         image: resinData.cardImageUrl ?? product.images[0],
                         badge: resinData.technology,
-                        price: resinData.weights?.[0]?.price ?? product.price,
+                        price:
+                            safeNum(resinData.weights?.[0]?.price) ||
+                            safeNum(product.price),
                         originalPrice:
                             resinData.weights?.[0]?.originalPrice ?? null,
                         requiresOptions: true,
@@ -1189,7 +1306,7 @@ export default function ShoppingCart() {
                             resinData.weights?.map((w: any) => ({
                                 id: w.id,
                                 label: `${w.weightInGrams} g`,
-                                price: w.price,
+                                price: safeNum(w.price),
                                 originalPrice: w.originalPrice,
                             })) ?? [],
                     });
@@ -1205,7 +1322,9 @@ export default function ShoppingCart() {
                     const variants = prebuiltData.variants ?? [];
                     const cheapest = variants.reduce(
                         (min: any, v: any) =>
-                            !min || v.price < min.price ? v : min,
+                            !min || safeNum(v.price) < safeNum(min.price)
+                                ? v
+                                : min,
                         null,
                     );
 
@@ -1219,7 +1338,8 @@ export default function ShoppingCart() {
                             prebuiltData.images?.[0]?.url ??
                             product.images[0],
                         badge: prebuiltData.category,
-                        price: cheapest?.price ?? product.price,
+                        price:
+                            safeNum(cheapest?.price) || safeNum(product.price),
                         originalPrice: cheapest?.originalPrice ?? null,
                         requiresOptions: variants.length > 0,
                         slug: prebuiltData.slug ?? null,
@@ -1229,13 +1349,12 @@ export default function ShoppingCart() {
                             colorName: v.colorName ?? null,
                             colorHex: v.colorHex ?? null,
                             sizeName: v.sizeName ?? null,
-                            price: v.price,
-                            originalPrice: v.originalPrice ?? 0,
+                            price: safeNum(v.price),
+                            originalPrice: safeNum(v.originalPrice),
                             isActive: v.isActive,
                         })),
                     });
                 }
-                // Modal opened — reset to idle
                 setButtonState(pid, "idle");
             } catch {
                 toast({
@@ -1247,7 +1366,7 @@ export default function ShoppingCart() {
             return;
         }
 
-        // Printer & Product — direct add with loading → success → idle
+        // Printer & Product — direct add
         setButtonState(pid, "loading");
         try {
             const payload: Record<string, string | number> = { quantity: 1 };
@@ -1261,7 +1380,6 @@ export default function ShoppingCart() {
             );
             setButtonState(pid, "success");
             toast({ title: `${product.name} added to cart` });
-            // Show success for 1.5s then reset
             setTimeout(() => setButtonState(pid, "idle"), 1500);
         } catch {
             toast({ title: "Failed to add item", variant: "destructive" });
@@ -1449,7 +1567,7 @@ export default function ShoppingCart() {
                                             Subtotal
                                         </span>
                                         <span className="font-medium text-gray-900">
-                                            ₹{subtotal.toLocaleString("en-IN")}
+                                            ₹{formatINR(subtotal)}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
@@ -1464,9 +1582,7 @@ export default function ShoppingCart() {
                                             >
                                                 <span className="font-medium text-green-600">
                                                     -₹
-                                                    {couponDiscount.toLocaleString(
-                                                        "en-IN",
-                                                    )}
+                                                    {formatINR(couponDiscount)}
                                                 </span>
                                             </DiscountAmountDisplay>
                                         ) : (
@@ -1491,10 +1607,7 @@ export default function ShoppingCart() {
                                             }
                                         >
                                             <span className="font-medium text-gray-900">
-                                                ₹
-                                                {gstAmount.toLocaleString(
-                                                    "en-IN",
-                                                )}
+                                                ₹{formatINR(gstAmount)}
                                             </span>
                                         </DiscountAmountDisplay>
                                     </div>
@@ -1519,10 +1632,7 @@ export default function ShoppingCart() {
                                             }
                                         >
                                             <span className="text-2xl font-bold text-gray-900">
-                                                ₹
-                                                {grandTotal.toLocaleString(
-                                                    "en-IN",
-                                                )}
+                                                ₹{formatINR(grandTotal)}
                                             </span>
                                         </DiscountAmountDisplay>
                                         <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
@@ -1612,7 +1722,7 @@ export default function ShoppingCart() {
                                         Subtotal
                                     </span>
                                     <span className="font-medium">
-                                        ₹{subtotal.toLocaleString("en-IN")}
+                                        ₹{formatINR(subtotal)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
@@ -1626,10 +1736,7 @@ export default function ShoppingCart() {
                                             }
                                         >
                                             <span className="font-medium text-green-600">
-                                                -₹
-                                                {couponDiscount.toLocaleString(
-                                                    "en-IN",
-                                                )}
+                                                -₹{formatINR(couponDiscount)}
                                             </span>
                                         </DiscountAmountDisplay>
                                     ) : (
@@ -1654,7 +1761,7 @@ export default function ShoppingCart() {
                                         }
                                     >
                                         <span className="font-medium">
-                                            ₹{gstAmount.toLocaleString("en-IN")}
+                                            ₹{formatINR(gstAmount)}
                                         </span>
                                     </DiscountAmountDisplay>
                                 </div>
@@ -1677,8 +1784,7 @@ export default function ShoppingCart() {
                                         }
                                     >
                                         <span className="text-2xl font-bold text-gray-900">
-                                            ₹
-                                            {grandTotal.toLocaleString("en-IN")}
+                                            ₹{formatINR(grandTotal)}
                                         </span>
                                     </DiscountAmountDisplay>
                                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-0.5">
@@ -1729,7 +1835,7 @@ export default function ShoppingCart() {
                         <div className="flex justify-between">
                             <span className="text-gray-600">Subtotal</span>
                             <span className="font-medium">
-                                ₹{subtotal.toLocaleString("en-IN")}
+                                ₹{formatINR(subtotal)}
                             </span>
                         </div>
                         {couponDiscount > 0 && (
@@ -1741,8 +1847,7 @@ export default function ShoppingCart() {
                                     isRecalculating={isRecalculatingDiscount}
                                 >
                                     <span className="text-green-600 font-medium">
-                                        -₹
-                                        {couponDiscount.toLocaleString("en-IN")}
+                                        -₹{formatINR(couponDiscount)}
                                     </span>
                                 </DiscountAmountDisplay>
                             </div>
@@ -1753,7 +1858,7 @@ export default function ShoppingCart() {
                                 isRecalculating={isRecalculatingDiscount}
                             >
                                 <span className="font-medium">
-                                    ₹{gstAmount.toLocaleString("en-IN")}
+                                    ₹{formatINR(gstAmount)}
                                 </span>
                             </DiscountAmountDisplay>
                         </div>
@@ -1781,7 +1886,7 @@ export default function ShoppingCart() {
                             isRecalculating={isRecalculatingDiscount}
                         >
                             <p className="text-xl font-bold text-gray-900">
-                                ₹{grandTotal.toLocaleString("en-IN")}
+                                ₹{formatINR(grandTotal)}
                             </p>
                         </DiscountAmountDisplay>
                     </div>

@@ -1,8 +1,12 @@
+// ─── app/api/discounts/route.ts ───
+
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-    const discounts = await prisma.discount.findMany({
+    let discounts = await prisma.discount.findMany({
         where: {
             isActive: true,
             isHidden: false,
@@ -13,6 +17,57 @@ export async function GET() {
         },
         orderBy: { createdAt: "desc" },
     });
+
+    // ── Filter out ineligible coupons for the current user ──
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string };
+    } | null;
+    const userId = session?.user?.id ?? null;
+
+    if (userId) {
+        // Check if this is the user's first order
+        const completedOrderCount = await prisma.order.count({
+            where: {
+                userId,
+                status: {
+                    in: [
+                        "completed",
+                        "shipped",
+                        "delivered",
+                        "processing",
+                        "confirmed",
+                    ],
+                },
+            },
+        });
+
+        const isFirstOrder = completedOrderCount === 0;
+
+        // Hide first-order-only coupons from returning users
+        if (!isFirstOrder) {
+            discounts = discounts.filter((d) => !d.firstOrderOnly);
+        }
+
+        // Hide coupons the user has fully exhausted
+        const usages = await prisma.discountUsage.groupBy({
+            by: ["discountId"],
+            where: { userId },
+            _count: { id: true },
+        });
+
+        const usageMap = new Map(
+            usages.map((u) => [u.discountId, u._count.id]),
+        );
+
+        discounts = discounts.filter((d) => {
+            if (d.maxUsesPerUser == null) return true; // unlimited
+            const used = usageMap.get(d.id) ?? 0;
+            return used < d.maxUsesPerUser;
+        });
+    } else {
+        // Not logged in — hide first-order-only coupons (can't verify eligibility)
+        discounts = discounts.filter((d) => !d.firstOrderOnly);
+    }
 
     return NextResponse.json(discounts);
 }
@@ -32,6 +87,8 @@ export async function POST(req: Request) {
             expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
             isHidden: body.isHidden ?? false,
             isActive: body.isActive ?? true,
+            firstOrderOnly: body.firstOrderOnly ?? false,
+            maxUsesPerUser: body.maxUsesPerUser ?? null,
 
             itemTypes:
                 body.scope === "item_type"

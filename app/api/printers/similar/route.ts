@@ -1,8 +1,7 @@
 // app/api/printers/similar/route.ts
-import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
     try {
@@ -14,7 +13,7 @@ export async function GET(request: NextRequest) {
         if (!technology) {
             return NextResponse.json(
                 { error: "Technology parameter is required" },
-                { status: 400 }
+                { status: 400 },
             );
         }
 
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
         console.error("Error fetching similar printers:", error);
         return NextResponse.json(
             { error: "Failed to fetch similar printers" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }

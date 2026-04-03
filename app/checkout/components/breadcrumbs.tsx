@@ -34,23 +34,34 @@ export function Breadcrumbs() {
 
     return (
         <div className="w-full mb-4 sm:mb-6">
-            <div className="max-w-4xl mx-auto">
+            <div className="w-full">
                 <nav aria-label="Progress" className="relative">
-                    {/* Progress Bar Background */}
-                    <div className="absolute top-[16px] sm:top-[18px] left-[16.66%] right-[16.66%] h-0.5 sm:h-1 bg-gray-100 rounded-full" />
-
-                    {/* Animated Progress Bar */}
-                    <motion.div
-                        className="absolute top-[16px] sm:top-[18px] left-[16.66%] h-0.5 sm:h-1 bg-primary rounded-full"
-                        initial={{ width: "0%" }}
-                        animate={{
-                            width: `${((state.step - 1) / (steps.length - 1)) * 66.66}%`,
+                    {/* Connecting Line Wrapper */}
+                    {/* Bounded strictly between the center of the first and last step */}
+                    <div
+                        className="absolute top-[16px] sm:top-[18px] h-0.5 sm:h-1 z-0"
+                        style={{
+                            left: `calc(100% / (${steps.length} * 2))`,
+                            right: `calc(100% / (${steps.length} * 2))`,
                         }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                    />
+                    >
+                        {/* Progress Bar Background */}
+                        <div className="absolute inset-0 bg-gray-100 rounded-full" />
 
-                    {/* Steps */}
-                    <ol className="relative flex justify-between w-full">
+                        {/* Animated Progress Bar */}
+                        <motion.div
+                            className="absolute inset-y-0 left-0 bg-primary rounded-full"
+                            initial={{ width: "0%" }}
+                            animate={{
+                                width: `${((state.step - 1) / (steps.length - 1)) * 100}%`,
+                            }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                        />
+                    </div>
+
+                    {/* Steps Container */}
+                    {/* Switched from 'justify-between' to equally distributed via flex-1 */}
+                    <ol className="relative flex w-full">
                         {steps.map((step) => {
                             const Icon = step.icon;
                             const isActive = state.step === step.id;
@@ -59,7 +70,7 @@ export function Breadcrumbs() {
                             return (
                                 <li
                                     key={step.name}
-                                    className="flex flex-col items-center"
+                                    className="relative flex flex-col items-center flex-1 z-10"
                                 >
                                     <div className="flex flex-col items-center">
                                         <motion.button
@@ -68,7 +79,7 @@ export function Breadcrumbs() {
                                             className={cn(
                                                 "relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 transition-all duration-200",
                                                 isCompleted
-                                                    ? "bg-primary border-primary hover:bg-primary/90"
+                                                    ? "bg-primary border-primary hover:bg-primary/90 text-primary-foreground"
                                                     : isActive
                                                       ? "bg-white border-primary"
                                                       : "bg-white border-gray-300",
@@ -121,7 +132,6 @@ export function Breadcrumbs() {
                                                           : "text-gray-500",
                                                 )}
                                             >
-                                                {/* Short name on mobile, full on sm+ */}
                                                 <span className="sm:hidden">
                                                     {step.shortName}
                                                 </span>

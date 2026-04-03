@@ -1,12 +1,11 @@
 // app/api/printers/[slug]/route.ts
-import { PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ slug: string }> }
+    { params }: { params: Promise<{ slug: string }> },
 ) {
     try {
         const { slug } = await params;
@@ -36,7 +35,7 @@ export async function GET(
         if (!printer) {
             return NextResponse.json(
                 { error: "Printer not found" },
-                { status: 404 }
+                { status: 404 },
             );
         }
 
@@ -57,7 +56,7 @@ export async function GET(
         console.error("Error fetching printer details:", error);
         return NextResponse.json(
             { error: "Failed to fetch printer details" },
-            { status: 500 }
+            { status: 500 },
         );
     }
 }
