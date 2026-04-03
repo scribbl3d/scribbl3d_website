@@ -42,7 +42,7 @@ async function fetchProducts(
             price: true,
             originalPrice: true,
             category: true,
-            images: true, // ✅ String[] — direct field, not a relation
+            images: true,
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -130,16 +130,34 @@ async function fetchPrinters(
     }));
 }
 
-// ✅ Restored and fixed — price now comes from cheapest active variant
 async function fetchPrebuilts(
     limit: number,
     excludeIds: string[],
     category?: string,
+    sameCategoryAsIds?: string[],
 ): Promise<RecommendationResult[]> {
-    const prebuilts = await prisma.prebuiltProducts.findMany({
+    // If sameCategoryAsIds provided, look up their categories from DB
+    let categoryFilter: any = {};
+
+    if (sameCategoryAsIds?.length) {
+        const sourceProducts = await prisma.prebuiltProducts.findMany({
+            where: { id: { in: sameCategoryAsIds } },
+            select: { category: true },
+        });
+        const cats = Array.from(
+            new Set(sourceProducts.map((p) => p.category).filter(Boolean)),
+        );
+        if (cats.length > 0) {
+            categoryFilter = { category: { in: cats } };
+        }
+    } else if (category) {
+        categoryFilter = { category };
+    }
+
+    let prebuilts = await prisma.prebuiltProducts.findMany({
         where: {
             id: { notIn: excludeIds },
-            ...(category ? { category } : {}),
+            ...categoryFilter,
         },
         select: {
             id: true,
@@ -151,7 +169,6 @@ async function fetchPrebuilts(
                 select: { url: true },
                 take: 1,
             },
-            // ✅ price lives on variants, not on the product itself
             variants: {
                 where: { isActive: true },
                 select: { price: true, originalPrice: true },
@@ -163,21 +180,44 @@ async function fetchPrebuilts(
         take: limit,
     });
 
-    return (
-        prebuilts
-            // only return products that have at least one active variant with a price
-            .filter((p) => p.variants.length > 0)
-            .map((p) => ({
-                id: p.id,
-                name: p.name,
-                slug: p.slug ?? undefined,
-                images: p.images.map((i) => i.url),
-                price: p.variants[0].price,
-                mrp: p.variants[0].originalPrice ?? undefined,
-                itemType: "prebuilt",
-                category: p.category ?? undefined,
-            }))
-    );
+    // Fallback: if nothing matched the category, fetch any prebuilts
+    if (prebuilts.length === 0 && (category || sameCategoryAsIds?.length)) {
+        prebuilts = await prisma.prebuiltProducts.findMany({
+            where: { id: { notIn: excludeIds } },
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                category: true,
+                images: {
+                    where: { isMain: true },
+                    select: { url: true },
+                    take: 1,
+                },
+                variants: {
+                    where: { isActive: true },
+                    select: { price: true, originalPrice: true },
+                    orderBy: { price: "asc" },
+                    take: 1,
+                },
+            },
+            orderBy: { createdAt: "desc" },
+            take: limit,
+        });
+    }
+
+    return prebuilts
+        .filter((p) => p.variants.length > 0)
+        .map((p) => ({
+            id: p.id,
+            name: p.name,
+            slug: p.slug ?? undefined,
+            images: p.images.map((i) => i.url),
+            price: p.variants[0].price,
+            mrp: p.variants[0].originalPrice ?? undefined,
+            itemType: "prebuilt",
+            category: p.category ?? undefined,
+        }));
 }
 
 async function fetchResins(
@@ -281,6 +321,7 @@ export async function POST(req: Request) {
                 limit: number;
                 technology?: string;
                 category?: string;
+                sameCategoryAsIds?: string[];
             }>;
             excludeIds: string[];
         } = body;
@@ -314,11 +355,11 @@ export async function POST(req: Request) {
                     );
                     break;
                 case "prebuilt":
-                    // ✅ now fully functional
                     results = await fetchPrebuilts(
                         group.limit,
                         combinedExcludes,
                         group.category,
+                        group.sameCategoryAsIds,
                     );
                     break;
                 case "resin":

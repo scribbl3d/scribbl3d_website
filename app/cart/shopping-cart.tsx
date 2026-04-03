@@ -161,6 +161,7 @@ function getRecommendationParams(cartItems: CartItem[]): {
         limit: number;
         technology?: string;
         category?: string;
+        sameCategoryAsIds?: string[];
     }>;
     excludeIds: string[];
 } {
@@ -174,8 +175,19 @@ function getRecommendationParams(cartItems: CartItem[]): {
         limit: number;
         technology?: string;
         category?: string;
+        sameCategoryAsIds?: string[];
     }> = [];
     if (itemTypes.has("prebuilt")) {
+        // Pass prebuilt IDs so the API can look up their categories
+        const prebuiltSourceIds = cartItems
+            .filter((i) => i.itemType?.toLowerCase() === "prebuilt")
+            .map((i) => i.sourceId ?? i.id)
+            .filter(Boolean);
+        groups.push({
+            itemType: "prebuilt",
+            limit: 5,
+            sameCategoryAsIds: prebuiltSourceIds,
+        });
         groups.push({ itemType: "product", limit: 2, category: "PLA" });
         groups.push({ itemType: "printer", limit: 2 });
         groups.push({ itemType: "resin", limit: 2 });
@@ -1243,6 +1255,9 @@ export default function ShoppingCart() {
         const type = product.itemType?.toLowerCase();
         const pid = product.id;
 
+        /* ── FIX 1: Always clear any stale modal before doing anything ── */
+        setActiveModalItem(null);
+
         if (type === "resin" || type === "prebuilt") {
             setButtonState(pid, "loading");
             try {
@@ -1355,6 +1370,7 @@ export default function ShoppingCart() {
                         })),
                     });
                 }
+                /* Reset button once modal is ready to show */
                 setButtonState(pid, "idle");
             } catch {
                 toast({
@@ -1388,109 +1404,135 @@ export default function ShoppingCart() {
     };
 
     /* =========================
-       LOADING SKELETON
+       RENDER
     ========================= */
 
+    /* Loading skeleton */
     if (isLoading) {
         return (
-            <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
-                <div className="h-9 w-48 bg-gray-200 rounded-lg animate-pulse mb-6" />
-                <div className="grid lg:grid-cols-12 gap-6">
-                    <div className="lg:col-span-8 space-y-3">
-                        {[1, 2, 3].map((i) => (
-                            <div
-                                key={i}
-                                className="rounded-2xl border border-gray-100 p-4 sm:p-5"
-                            >
-                                <div className="flex gap-4">
-                                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gray-200 animate-pulse flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 pr-2">
-                                                <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
-                                                <div className="flex gap-1.5 mt-2">
-                                                    <div className="h-5 w-16 bg-gray-100 rounded-md animate-pulse" />
-                                                    <div className="h-5 w-12 bg-gray-100 rounded-md animate-pulse" />
+            <>
+                <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
+                    <div className="h-9 w-48 bg-gray-200 rounded-lg animate-pulse mb-6" />
+                    <div className="grid lg:grid-cols-12 gap-6">
+                        <div className="lg:col-span-8 space-y-3">
+                            {[1, 2, 3].map((i) => (
+                                <div
+                                    key={i}
+                                    className="rounded-2xl border border-gray-100 p-4 sm:p-5"
+                                >
+                                    <div className="flex gap-4">
+                                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-gray-200 animate-pulse flex-shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 pr-2">
+                                                    <div className="h-5 w-3/4 bg-gray-200 rounded animate-pulse" />
+                                                    <div className="flex gap-1.5 mt-2">
+                                                        <div className="h-5 w-16 bg-gray-100 rounded-md animate-pulse" />
+                                                        <div className="h-5 w-12 bg-gray-100 rounded-md animate-pulse" />
+                                                    </div>
                                                 </div>
+                                                <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
                                             </div>
-                                            <div className="w-8 h-8 bg-gray-100 rounded-lg animate-pulse" />
-                                        </div>
-                                        <div className="flex items-center justify-between mt-3">
-                                            <div className="h-9 w-28 bg-gray-100 rounded-xl animate-pulse" />
-                                            <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                                            <div className="flex items-center justify-between mt-3">
+                                                <div className="h-9 w-28 bg-gray-100 rounded-xl animate-pulse" />
+                                                <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="lg:col-span-4 hidden lg:block">
-                        <div className="rounded-2xl border border-gray-100 p-6 space-y-4">
-                            <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
-                            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                                <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
-                                <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse mt-2" />
-                            </div>
-                            <div className="h-px bg-gray-100" />
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="flex justify-between">
-                                    <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
-                                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
-                                </div>
                             ))}
-                            <div className="h-14 w-full bg-gray-200 rounded-2xl animate-pulse" />
+                        </div>
+                        <div className="lg:col-span-4 hidden lg:block">
+                            <div className="rounded-2xl border border-gray-100 p-6 space-y-4">
+                                <div className="h-6 w-36 bg-gray-200 rounded animate-pulse" />
+                                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                                    <div className="h-5 w-24 bg-gray-200 rounded animate-pulse" />
+                                    <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse mt-2" />
+                                </div>
+                                <div className="h-px bg-gray-100" />
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="flex justify-between"
+                                    >
+                                        <div className="h-4 w-24 bg-gray-100 rounded animate-pulse" />
+                                        <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                                    </div>
+                                ))}
+                                <div className="h-14 w-full bg-gray-200 rounded-2xl animate-pulse" />
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        );
-    }
 
-    /* =========================
-       EMPTY STATE
-    ========================= */
-
-    if (localCart.length === 0) {
-        return (
-            <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
-                    Shopping Cart
-                </h1>
-                <Card className="rounded-2xl border border-gray-100 shadow-none">
-                    <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20">
-                        <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-                            <ShoppingCartIcon className="w-7 h-7 text-gray-400" />
-                        </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-1">
-                            Your cart is empty
-                        </h2>
-                        <p className="text-sm text-gray-500 mb-6">
-                            Explore our catalog to add products.
-                        </p>
-                        <Link href="/">
-                            <Button className="h-12 px-8 rounded-2xl bg-gray-900 text-white font-semibold hover:bg-gray-800 text-sm">
-                                Browse Products
-                            </Button>
-                        </Link>
-                    </CardContent>
-                </Card>
-                {emptySuggestions.length > 0 && (
-                    <ProductCarousel
-                        title="Here are some products you might need"
-                        subtitle="Add these to your cart to get started"
-                        products={emptySuggestions}
-                        onAddToCart={handleAddSuggestion}
-                        buttonStates={suggestionButtonStates}
+                {/* Modal always available, even during loading */}
+                {activeModalItem && (
+                    <WishlistModal
+                        item={activeModalItem}
+                        onClose={() => {
+                            const pid = activeModalItem.id;
+                            setActiveModalItem(null);
+                            setButtonState(pid, "idle");
+                        }}
                     />
                 )}
-            </div>
+            </>
         );
     }
 
-    /* =========================
-       FILLED CART
-    ========================= */
+    /* Empty cart */
+    if (localCart.length === 0) {
+        return (
+            <>
+                <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
+                        Shopping Cart
+                    </h1>
+                    <Card className="rounded-2xl border border-gray-100 shadow-none">
+                        <CardContent className="flex flex-col items-center justify-center py-16 sm:py-20">
+                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                                <ShoppingCartIcon className="w-7 h-7 text-gray-400" />
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-900 mb-1">
+                                Your cart is empty
+                            </h2>
+                            <p className="text-sm text-gray-500 mb-6">
+                                Explore our catalog to add products.
+                            </p>
+                            <Link href="/">
+                                <Button className="h-12 px-8 rounded-2xl bg-gray-900 text-white font-semibold hover:bg-gray-800 text-sm">
+                                    Browse Products
+                                </Button>
+                            </Link>
+                        </CardContent>
+                    </Card>
+                    {emptySuggestions.length > 0 && (
+                        <ProductCarousel
+                            title="Here are some products you might need"
+                            subtitle="Add these to your cart to get started"
+                            products={emptySuggestions}
+                            onAddToCart={handleAddSuggestion}
+                            buttonStates={suggestionButtonStates}
+                        />
+                    )}
+                </div>
 
+                {/* Modal always available, even for empty cart suggestions */}
+                {activeModalItem && (
+                    <WishlistModal
+                        item={activeModalItem}
+                        onClose={() => {
+                            const pid = activeModalItem.id;
+                            setActiveModalItem(null);
+                            setButtonState(pid, "idle");
+                        }}
+                    />
+                )}
+            </>
+        );
+    }
+
+    /* Filled cart */
     return (
         <>
             <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10 pb-32 lg:pb-10">
@@ -1914,11 +1956,15 @@ export default function ShoppingCart() {
                 onCheckCode={handleCheckCode}
             />
 
-            {/* Options Modal (Resin/Prebuilt) */}
+            {/* Options Modal (Resin/Prebuilt) — FIX 3: reset button on close */}
             {activeModalItem && (
                 <WishlistModal
                     item={activeModalItem}
-                    onClose={() => setActiveModalItem(null)}
+                    onClose={() => {
+                        const pid = activeModalItem.id;
+                        setActiveModalItem(null);
+                        setButtonState(pid, "idle");
+                    }}
                 />
             )}
         </>
