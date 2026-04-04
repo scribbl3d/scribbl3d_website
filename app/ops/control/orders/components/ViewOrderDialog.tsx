@@ -17,21 +17,13 @@ interface Props {
     order: Order | null;
     open: boolean;
     onClose(): void;
-
-    onChangeStatus?(order: Order): void;
 }
 
-export function ViewOrderDialog({
-    order,
-    open,
-    onClose,
-    onChangeStatus,
-}: Props) {
+export function ViewOrderDialog({ order, open, onClose }: Props) {
     if (!order) return null;
 
     const tracking = parseTracking(order.trackingInfo);
 
-    // Parse GSTIN from billingAddress
     const billing = order.billingAddress as Record<string, any> | null;
     const hasGstin = billing?.wantsGstInvoice && billing?.gstin;
 
@@ -91,7 +83,7 @@ export function ViewOrderDialog({
                         <p>{order.shippingAddress?.country}</p>
                     </section>
 
-                    {/* ===================== GST BILLING ===================== */}
+                    {/* ===================== GST ===================== */}
                     {hasGstin && (
                         <section>
                             <h4 className="font-semibold mb-2">
@@ -101,7 +93,7 @@ export function ViewOrderDialog({
                             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+                                        <p className="text-xs font-medium text-blue-600 uppercase">
                                             GSTIN
                                         </p>
                                         <p className="font-mono font-semibold text-blue-900">
@@ -110,22 +102,20 @@ export function ViewOrderDialog({
                                     </div>
 
                                     <div>
-                                        <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
-                                            Registered Company
+                                        <p className="text-xs font-medium text-blue-600 uppercase">
+                                            Company
                                         </p>
-                                        <p className="font-medium text-gray-900">
+                                        <p className="font-medium">
                                             {billing.gstCompanyName || "N/A"}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
-                                        Registered Address
+                                    <p className="text-xs font-medium text-blue-600 uppercase">
+                                        Address
                                     </p>
-                                    <p className="text-gray-700">
-                                        {billing.gstAddress || "N/A"}
-                                    </p>
+                                    <p>{billing.gstAddress || "N/A"}</p>
                                 </div>
                             </div>
                         </section>
@@ -152,26 +142,18 @@ export function ViewOrderDialog({
                                 </div>
 
                                 <div>
-                                    <strong>Transaction Id:</strong>
-                                    <p className="break-all">
-                                        {order.transactionId || "N/A"}
-                                    </p>
-                                </div>
-                                <div>
-                                    <strong>Payment Reference:</strong>
-                                    <p className="break-all">
-                                        {order.paymentReference || "N/A"}
-                                    </p>
+                                    <strong>Transaction ID:</strong>
+                                    <p>{order.transactionId || "N/A"}</p>
                                 </div>
 
                                 <div>
-                                    <strong>Masked Identifier:</strong>
+                                    <strong>Reference:</strong>
+                                    <p>{order.paymentReference || "N/A"}</p>
+                                </div>
+
+                                <div>
+                                    <strong>Masked ID:</strong>
                                     <p>{order.maskedPaymentId || "N/A"}</p>
-                                </div>
-
-                                <div>
-                                    <strong>Payment Status:</strong>
-                                    <p className="capitalize">{order.status}</p>
                                 </div>
                             </div>
                         </section>
@@ -186,7 +168,7 @@ export function ViewOrderDialog({
                                 (item: any, idx: number) => (
                                     <li
                                         key={idx}
-                                        className="flex justify-between rounded-md border p-3"
+                                        className="flex justify-between border p-3 rounded-md"
                                     >
                                         <div>
                                             <p className="font-medium">
@@ -225,7 +207,7 @@ export function ViewOrderDialog({
                         tracking?.trackingUrl) && (
                         <section>
                             <h4 className="font-semibold mb-2">
-                                Tracking Information
+                                Tracking Info
                             </h4>
 
                             <p>
@@ -235,7 +217,7 @@ export function ViewOrderDialog({
 
                             <p>
                                 <strong>Carrier:</strong>{" "}
-                                {tracking.provider || tracking.carrier || "N/A"}
+                                {tracking.provider || "N/A"}
                             </p>
 
                             {tracking.trackingUrl && (
@@ -258,22 +240,6 @@ export function ViewOrderDialog({
                             {formatRupees(order.totalAmount)}
                         </p>
                     </section>
-
-                    {/* ===================== UPDATE STATUS ===================== */}
-                    {onChangeStatus && (
-                        <section>
-                            <h4 className="font-semibold mb-2">
-                                Update Status
-                            </h4>
-
-                            <Button
-                                variant="secondary"
-                                onClick={() => onChangeStatus(order)}
-                            >
-                                Change Status
-                            </Button>
-                        </section>
-                    )}
 
                     {/* ===================== FOOTER ===================== */}
                     <div className="flex justify-end pt-4">

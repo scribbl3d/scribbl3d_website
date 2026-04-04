@@ -17,6 +17,7 @@ import { useMemo, useState } from "react";
 
 type OrderStatus =
     | "payment_pending"
+    | "payment_failed"
     | "confirmed"
     | "shipped"
     | "delivered"
@@ -29,6 +30,8 @@ type ShipmentStatus =
     | "delivered";
 type DisplayStatus =
     | "payment_pending"
+    | "payment_failed"
+    | "not_completed"
     | "order_confirmed"
     | "order_processing"
     | "order_shipped"
@@ -51,6 +54,7 @@ function getOrderDisplayStatus(
     shipment?: Shipment | null,
 ): DisplayStatus {
     if (orderStatus === "payment_pending") return "payment_pending";
+    if (orderStatus === "payment_failed") return "payment_failed";
     if (orderStatus === "cancelled") return "cancelled";
     if (orderStatus === "delivered" && shipment?.status === "delivered")
         return "delivered";
@@ -62,7 +66,9 @@ function getOrderDisplayStatus(
     }
     if (orderStatus === "confirmed") return "order_confirmed";
     if (orderStatus === "shipped") return "order_processing";
-    return "order_confirmed";
+
+    // Fallback for any unknown/unhandled status
+    return "not_completed";
 }
 
 const ORDER_STATUS_UI: Record<
@@ -71,6 +77,16 @@ const ORDER_STATUS_UI: Record<
 > = {
     payment_pending: {
         label: "Payment Pending",
+        Icon: Clock,
+        className: "border-yellow-300 text-yellow-700 bg-yellow-50",
+    },
+    payment_failed: {
+        label: "Payment Failed",
+        Icon: XCircle,
+        className: "border-red-300 text-red-700 bg-red-50",
+    },
+    not_completed: {
+        label: "Not Completed",
         Icon: Clock,
         className: "border-yellow-300 text-yellow-700 bg-yellow-50",
     },

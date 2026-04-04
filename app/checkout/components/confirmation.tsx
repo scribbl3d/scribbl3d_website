@@ -10,6 +10,7 @@ import {
     AlertCircle,
     ArrowLeft,
     Building2,
+    ChevronLeft,
     Mail,
     MapPin,
     Phone,
@@ -34,7 +35,6 @@ interface Section {
 export function Confirmation() {
     const checkout = useCheckout();
 
-    /* ---------- Safety: Context ---------- */
     if (!checkout) {
         return (
             <Card className="rounded-xl sm:rounded-2xl">
@@ -51,7 +51,6 @@ export function Confirmation() {
     const { state, prevStep } = checkout;
     const { shippingDetails, selectedShipping } = state;
 
-    /* ---------- Missing Shipping Details ---------- */
     if (!shippingDetails) {
         return (
             <Card className="rounded-xl sm:rounded-2xl">
@@ -71,7 +70,6 @@ export function Confirmation() {
         );
     }
 
-    /* ---------- Missing Shipping Method ---------- */
     if (!selectedShipping) {
         return (
             <Card className="rounded-xl sm:rounded-2xl">
@@ -91,10 +89,8 @@ export function Confirmation() {
         );
     }
 
-    /* ===================== SHIPPING LOGIC ===================== */
     const isFreeShipping = selectedShipping.price === 0;
 
-    /* ===================== SECTIONS ===================== */
     const sections: Section[] = [
         {
             title: "Contact Information",
@@ -147,7 +143,6 @@ export function Confirmation() {
         },
     ];
 
-    // Add GSTIN section if user requested GST invoice
     if (shippingDetails.wantsGstInvoice && shippingDetails.gstin) {
         sections.push({
             title: "GST Billing Details",
@@ -187,10 +182,18 @@ export function Confirmation() {
         });
     }
 
-    /* ===================== UI ===================== */
     return (
         <Card className="rounded-xl sm:rounded-2xl border border-gray-100 shadow-none">
             <CardHeader className="px-4 sm:px-6 pb-2 sm:pb-4">
+                {/* Mobile: back link above the title */}
+                <button
+                    type="button"
+                    onClick={prevStep}
+                    className="sm:hidden flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors -ml-1 mb-1"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to Shipping
+                </button>
                 <CardTitle className="text-base sm:text-lg font-bold">
                     Review Your Order
                 </CardTitle>
@@ -240,12 +243,12 @@ export function Confirmation() {
                     );
                 })}
 
-                {/* ===================== BACK BUTTON ===================== */}
-                <div className="pt-4 sm:pt-6">
+                {/* ── Desktop: back button at bottom (unchanged) ── */}
+                <div className="hidden sm:block pt-6">
                     <Button
                         variant="outline"
                         onClick={prevStep}
-                        className="h-11 sm:h-10 rounded-xl sm:rounded-lg w-full sm:w-auto"
+                        className="h-10 rounded-lg"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Shipping

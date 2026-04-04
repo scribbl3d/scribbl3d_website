@@ -337,10 +337,6 @@ export default function OrdersPage() {
                 order={activeOrder}
                 open={!!activeOrder}
                 onClose={() => setActiveOrder(null)}
-                onChangeStatus={(order) => {
-                    setPendingOrder(order);
-                    setShowStatusDialog(true);
-                }}
             />
 
             <StatusDialog

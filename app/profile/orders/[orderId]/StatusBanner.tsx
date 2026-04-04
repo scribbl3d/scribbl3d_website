@@ -7,11 +7,14 @@ import {
     Package,
     ShieldCheck,
     Truck,
+    XCircle,
 } from "lucide-react";
 import { useState } from "react";
 
 type DisplayStatus =
     | "payment_pending"
+    | "payment_failed"
+    | "not_completed"
     | "order_confirmed"
     | "order_processing"
     | "order_shipped"
@@ -35,6 +38,22 @@ const STATUS_CONFIG: Record<
         className: "border-yellow-300 text-yellow-700 bg-yellow-50",
         infoMessage:
             "Your payment is being verified by the gateway. If any amount was deducted, it will be confirmed or refunded automatically within the gateway's processing time.",
+        infoClassName: "border-yellow-200 bg-yellow-50/50 text-yellow-800",
+    },
+    payment_failed: {
+        label: "Payment Failed",
+        Icon: XCircle,
+        className: "border-red-300 text-red-700 bg-red-50",
+        infoMessage:
+            "Your payment could not be completed. If any amount was deducted from your account, it will be automatically refunded within 5–7 business days by your bank or payment gateway.",
+        infoClassName: "border-red-200 bg-red-50/50 text-red-800",
+    },
+    not_completed: {
+        label: "Not Completed",
+        Icon: Clock,
+        className: "border-yellow-300 text-yellow-700 bg-yellow-50",
+        infoMessage:
+            "This order could not be completed. Please contact support if you believe this is an error or if any amount was deducted.",
         infoClassName: "border-yellow-200 bg-yellow-50/50 text-yellow-800",
     },
     order_confirmed: {
@@ -115,13 +134,20 @@ export function StatusBanner({
             : null;
 
     const isPending = displayStatus === "payment_pending";
+    const isPaymentFailed = displayStatus === "payment_failed";
+    const isNotCompleted = displayStatus === "not_completed";
+
     const badgeLabel = isCancelled
         ? refundBadge?.label || "Cancelled"
         : isPending
           ? "In Progress"
-          : isPaid
-            ? "Paid"
-            : "Unpaid";
+          : isPaymentFailed
+            ? "Failed"
+            : isNotCompleted
+              ? "Incomplete"
+              : isPaid
+                ? "Paid"
+                : "Unpaid";
 
     const badgeClassName = isCancelled
         ? refundBadge?.className || config.className

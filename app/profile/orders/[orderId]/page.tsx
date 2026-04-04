@@ -24,14 +24,15 @@ import { StatusBanner } from "./StatusBanner";
 
 /* ────────────────────── Types ────────────────────── */
 
-type OrderStatus =
+type LocalOrderStatus =
     | "payment_pending"
+    | "payment_failed"
     | "confirmed"
     | "shipped"
     | "delivered"
     | "cancelled";
 
-type ShipmentStatus =
+type LocalShipmentStatus =
     | "manifested"
     | "pickup"
     | "in_transit"
@@ -40,6 +41,8 @@ type ShipmentStatus =
 
 type DisplayStatus =
     | "payment_pending"
+    | "payment_failed"
+    | "not_completed"
     | "order_confirmed"
     | "order_processing"
     | "order_shipped"
@@ -50,10 +53,11 @@ type DisplayStatus =
 /* ────────────────────── Status Logic ────────────────────── */
 
 function getOrderDisplayStatus(
-    orderStatus: OrderStatus,
-    shipmentStatus?: ShipmentStatus | null,
+    orderStatus: LocalOrderStatus,
+    shipmentStatus?: LocalShipmentStatus | null,
 ): DisplayStatus {
     if (orderStatus === "payment_pending") return "payment_pending";
+    if (orderStatus === "payment_failed") return "payment_failed";
     if (orderStatus === "cancelled") return "cancelled";
     if (orderStatus === "delivered" && shipmentStatus === "delivered")
         return "delivered";
@@ -68,7 +72,9 @@ function getOrderDisplayStatus(
 
     if (orderStatus === "confirmed") return "order_confirmed";
     if (orderStatus === "shipped") return "order_processing";
-    return "order_confirmed";
+
+    // Fallback for any unknown/unhandled status
+    return "not_completed";
 }
 
 /* ────────────────────── Helpers ────────────────────── */
@@ -102,9 +108,7 @@ function formatSize(size: string | number | null | undefined): string | null {
     if (size == null || size === "") return null;
     const str = String(size).trim();
 
-    // Already has unit like "1 kg", "500ml", "10x10x5 cm" → show as-is
     if (/[a-zA-Z]/.test(str)) {
-        // Check if it's in grams and should be converted to kg
         const gramsMatch = str.match(/^(\d+(?:\.\d+)?)\s*g$/i);
         if (gramsMatch) {
             const grams = parseFloat(gramsMatch[1]);
@@ -116,24 +120,12 @@ function formatSize(size: string | number | null | undefined): string | null {
         return str;
     }
 
-    // Pure number → assume grams
     const num = parseFloat(str);
     if (isNaN(num)) return str;
     if (num >= 1000) {
         return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)} kg`;
     }
     return `${num}g`;
-}
-
-function formatDateTime(date: Date | string): string {
-    return new Date(date).toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-    });
 }
 
 /* ────────────────────── Page ────────────────────── */
@@ -184,13 +176,17 @@ export default async function OrderDetailsPage({ params }: PageProps) {
         (waybill ? `https://delhivery.com/track/package/${waybill}` : null);
 
     const displayStatus = getOrderDisplayStatus(
-        order.status as OrderStatus,
-        shipment?.status as ShipmentStatus | undefined,
+        order.status as unknown as LocalOrderStatus,
+        shipment?.status as unknown as LocalShipmentStatus | undefined,
     );
 
-    const isPaid = displayStatus !== "payment_pending";
+    const isPaid =
+        displayStatus !== "payment_pending" &&
+        displayStatus !== "payment_failed" &&
+        displayStatus !== "not_completed";
     const isDelivered = displayStatus === "delivered";
     const isCancelled = displayStatus === "cancelled";
+    const isPaymentFailed = displayStatus === "payment_failed";
     const showTracking =
         displayStatus === "order_shipped" ||
         displayStatus === "out_for_delivery";
@@ -199,11 +195,11 @@ export default async function OrderDetailsPage({ params }: PageProps) {
         displayStatus === "order_processing";
 
     // Payment — direct DB fields from Order model
-    const rawPaymentMethod = order.paymentMethod; // "UPI" | "CREDIT_CARD" | "DEBIT_CARD" | "NET_BANKING" | "WALLET"
-    const maskedPaymentId = order.maskedPaymentId; // "dh***@okaxis" for UPI, "****1234" for card
-    const paymentUtr = order.utrNumber; // UPI reference (UTR)
-    const paymentBnr = order.brnNumber; // Bank reference number (card)
-    const paymentCardNetwork = order.cardNetwork; // "Visa", "Mastercard"
+    const rawPaymentMethod = order.paymentMethod;
+    const maskedPaymentId = order.maskedPaymentId;
+    const paymentUtr = order.utrNumber;
+    const paymentBnr = order.brnNumber;
+    const paymentCardNetwork = order.cardNetwork;
     const transactionId = order.transactionId;
 
     // Normalize payment method for display
@@ -241,6 +237,8 @@ export default async function OrderDetailsPage({ params }: PageProps) {
     // Support context
     const statusLabelMap: Record<string, string> = {
         payment_pending: "Payment Pending",
+        payment_failed: "Failed",
+        not_completed: "Not Completed",
         order_confirmed: "Order Placed",
         order_processing: "Order Confirmed",
         order_shipped: "Order Shipped",
@@ -558,10 +556,16 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                     className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded ${
                                         isPaid
                                             ? "text-green-700 bg-green-50"
-                                            : "text-gray-600 bg-gray-100"
+                                            : isPaymentFailed
+                                              ? "text-red-700 bg-red-50"
+                                              : "text-gray-600 bg-gray-100"
                                     }`}
                                 >
-                                    {isPaid ? "Successful" : "Pending"}
+                                    {isPaid
+                                        ? "Successful"
+                                        : isPaymentFailed
+                                          ? "Failed"
+                                          : "Pending"}
                                 </span>
                             </div>
 
@@ -650,7 +654,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                 </div>
                             )}
 
-                            {/* ── Pending: show transaction ID ── */}
+                            {/* ── Pending / Failed: show transaction ID ── */}
                             {!isPaid && transactionId && (
                                 <div>
                                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 mb-3">
@@ -674,9 +678,11 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                 </div>
                             )}
 
-                            {/* Download Invoice — hide for payment_pending and cancelled */}
+                            {/* Download Invoice — hide for payment_pending, payment_failed, not_completed and cancelled */}
                             {!isCancelled &&
-                                displayStatus !== "payment_pending" && (
+                                displayStatus !== "payment_pending" &&
+                                displayStatus !== "payment_failed" &&
+                                displayStatus !== "not_completed" && (
                                     <DownloadInvoiceButton orderId={order.id} />
                                 )}
                         </div>
@@ -689,6 +695,28 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                             <div className="space-y-2.5">
                                 {/* Payment Pending → Contact Support only */}
                                 {displayStatus === "payment_pending" && (
+                                    <ContactSupportButton
+                                        orderId={order.id}
+                                        orderStatus={statusLabel}
+                                        userEmail={userEmail}
+                                        customerName={customerName}
+                                        transactionId={transactionId}
+                                    />
+                                )}
+
+                                {/* Payment Failed → Contact Support only */}
+                                {isPaymentFailed && (
+                                    <ContactSupportButton
+                                        orderId={order.id}
+                                        orderStatus={statusLabel}
+                                        userEmail={userEmail}
+                                        customerName={customerName}
+                                        transactionId={transactionId}
+                                    />
+                                )}
+
+                                {/* Not Completed (unknown fallback) → Contact Support only */}
+                                {displayStatus === "not_completed" && (
                                     <ContactSupportButton
                                         orderId={order.id}
                                         orderStatus={statusLabel}
