@@ -1,3 +1,4 @@
+import { recordDiscountUsage } from "@/app/cart/utils/validateDiscountEligibility";
 import { sendOrderConfirmation } from "@/lib/email/index";
 import { mapOrderToEmailData } from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
@@ -112,6 +113,41 @@ export async function POST(req: NextRequest) {
             });
 
             console.log("[PhonePe Callback] Order confirmed:", updatedOrder.id);
+
+            // Record discount usage only after confirmed payment
+            if (order.discountCode && order.userId) {
+                try {
+                    const discount = await prisma.discount.findFirst({
+                        where: {
+                            code: order.discountCode.toUpperCase(),
+                            isActive: true,
+                        },
+                    });
+
+                    if (discount) {
+                        const existingUsage = await prisma.discountUsage.findFirst({
+                            where: {
+                                orderId: order.id,
+                                discountId: discount.id,
+                                userId: order.userId,
+                            },
+                        });
+
+                        if (!existingUsage) {
+                            await recordDiscountUsage(
+                                discount.id,
+                                order.userId,
+                                order.id,
+                            );
+                        }
+                    }
+                } catch (usageError) {
+                    console.error(
+                        "[PhonePe Callback] Failed to record discount usage:",
+                        usageError,
+                    );
+                }
+            }
 
             // Clear the user's cart after successful payment
             try {

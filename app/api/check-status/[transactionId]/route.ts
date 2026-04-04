@@ -1,3 +1,4 @@
+import { recordDiscountUsage } from "@/app/cart/utils/validateDiscountEligibility";
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import crypto from "crypto";
@@ -191,4 +192,35 @@ async function handlePaymentSuccess(transactionId: string, result: any) {
     });
 
     console.log("[CheckStatus] Order confirmed:", updatedOrder.id);
+
+    // Record discount usage only after confirmed payment
+    if (order.discountCode && order.userId) {
+        try {
+            const discount = await prisma.discount.findFirst({
+                where: {
+                    code: order.discountCode.toUpperCase(),
+                    isActive: true,
+                },
+            });
+
+            if (discount) {
+                const existingUsage = await prisma.discountUsage.findFirst({
+                    where: {
+                        orderId: order.id,
+                        discountId: discount.id,
+                        userId: order.userId,
+                    },
+                });
+
+                if (!existingUsage) {
+                    await recordDiscountUsage(discount.id, order.userId, order.id);
+                }
+            }
+        } catch (usageError) {
+            console.error(
+                "[CheckStatus] Failed to record discount usage:",
+                usageError,
+            );
+        }
+    }
 }

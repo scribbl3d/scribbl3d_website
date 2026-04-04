@@ -1,4 +1,3 @@
-import { recordDiscountUsage } from "@/app/cart/utils/validateDiscountEligibility";
 import { calculateExpressShipping } from "@/app/checkout/components/expressShipping";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -248,32 +247,6 @@ export async function POST(req: Request) {
                 transactionId,
             },
         });
-
-        /* ---------- RECORD DISCOUNT USAGE ---------- */
-        if (discountCode && session.user.id) {
-            try {
-                const discount = await prisma.discount.findFirst({
-                    where: {
-                        code: discountCode.toUpperCase(),
-                        isActive: true,
-                    },
-                });
-
-                if (discount) {
-                    await recordDiscountUsage(
-                        discount.id,
-                        session.user.id,
-                        order.id,
-                    );
-                }
-            } catch (usageError) {
-                // Log but don't fail the order — usage tracking is non-critical
-                console.error(
-                    "[Create Order] Failed to record discount usage:",
-                    usageError,
-                );
-            }
-        }
 
         return NextResponse.json({ orderId: order.id, status: order.status });
     } catch (error) {

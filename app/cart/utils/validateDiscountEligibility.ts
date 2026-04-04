@@ -88,7 +88,7 @@ export async function validateDiscountEligibility(
 
 /**
  * Records that a user has redeemed a discount on a specific order.
- * Call AFTER order creation succeeds.
+ * Call AFTER payment succeeds and the order is confirmed.
  */
 export async function recordDiscountUsage(
     discountId: string,

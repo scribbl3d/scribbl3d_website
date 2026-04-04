@@ -5,7 +5,24 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
+    const { searchParams } = new URL(req.url);
+    const isAdminView = searchParams.get("admin") === "true";
+
+    if (isAdminView) {
+        const adminDiscounts = await prisma.discount.findMany({
+            include: {
+                itemTypes: true,
+                _count: {
+                    select: { usages: true },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        return NextResponse.json(adminDiscounts);
+    }
+
     let discounts = await prisma.discount.findMany({
         where: {
             isActive: true,
@@ -14,6 +31,9 @@ export async function GET() {
         },
         include: {
             itemTypes: true,
+            _count: {
+                select: { usages: true },
+            },
         },
         orderBy: { createdAt: "desc" },
     });
