@@ -5,7 +5,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
 import { useCheckout } from "@/providers/CheckoutProvider";
 import axios from "axios";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, MessageCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -20,6 +20,7 @@ export default function PaymentStatus() {
     >("checking");
     const [retryCount, setRetryCount] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [isRetrying, setIsRetrying] = useState(false);
 
     // Refs to prevent race conditions
     const isCheckingRef = useRef(false);
@@ -29,9 +30,11 @@ export default function PaymentStatus() {
         transactionId: string | null;
         orderId: string | null;
         amount: string | null;
-    }>({ transactionId: null, orderId: null, amount: null });
+        name: string | null;
+        mobile: string | null;
+    }>({ transactionId: null, orderId: null, amount: null, name: null, mobile: null });
 
-    const MAX_RETRIES = 12; // 60 seconds total (12 × 5s)
+    const MAX_RETRIES = 10; // 50 seconds total (10 × 5s)
     const RETRY_INTERVAL = 5000; // 5 seconds
 
     useEffect(() => {
@@ -44,8 +47,10 @@ export default function PaymentStatus() {
             sessionStorage.getItem("phonepe_transaction_id");
         const orderId = sessionStorage.getItem("phonepe_order_id");
         const amount = sessionStorage.getItem("phonepe_amount");
+        const name = sessionStorage.getItem("phonepe_name");
+        const mobile = sessionStorage.getItem("phonepe_mobile");
 
-        transactionRef.current = { transactionId, orderId, amount };
+        transactionRef.current = { transactionId, orderId, amount, name, mobile };
 
         if (!transactionId) {
             console.error("[PaymentStatus] Missing transaction ID");
@@ -102,6 +107,8 @@ export default function PaymentStatus() {
             sessionStorage.removeItem("phonepe_transaction_id");
             sessionStorage.removeItem("phonepe_order_id");
             sessionStorage.removeItem("phonepe_amount");
+            sessionStorage.removeItem("phonepe_name");
+            sessionStorage.removeItem("phonepe_mobile");
 
             // Clear cart and reset checkout
             try {
@@ -140,22 +147,11 @@ export default function PaymentStatus() {
             setStatus("failed");
             setErrorMessage(message);
 
-            sessionStorage.removeItem("phonepe_transaction_id");
-            sessionStorage.removeItem("phonepe_order_id");
-            sessionStorage.removeItem("phonepe_amount");
-
             toast({
                 title: "Payment Failed",
                 description: message,
                 variant: "destructive",
             });
-
-            setTimeout(() => {
-                const { transactionId, orderId } = transactionRef.current;
-                router.replace(
-                    `/payment/failure?txnId=${transactionId}&orderId=${orderId}`,
-                );
-            }, 2000);
         };
 
         const handleTimeout = () => {
@@ -194,23 +190,83 @@ export default function PaymentStatus() {
         };
     }, []); // Empty dependency - run once on mount
 
-    const handleManualRetry = () => {
-        hasCompletedRef.current = false;
-        isCheckingRef.current = false;
-        setStatus("checking");
-        setRetryCount(0);
+    const handleRetryPayment = async () => {
+        const { orderId, amount, name, mobile } =
+            transactionRef.current;
 
-        // Re-trigger the effect by forcing a re-render
-        window.location.reload();
+        if (!orderId || !amount) {
+            toast({
+                title: "Error",
+                description: "Missing payment details. Please try again from checkout.",
+                variant: "destructive",
+            });
+            router.push("/checkout");
+            return;
+        }
+
+        setIsRetrying(true);
+
+        try {
+            // Generate a new transaction ID (PhonePe rejects reused ones)
+            const newTransactionId = `TXN${Date.now()}${Math.random()
+                .toString(36)
+                .slice(2, 8)}`;
+
+            // Update the order in DB with the new transaction ID
+            const retryRes = await axios.post("/api/orders/retry-payment", {
+                orderId,
+                newTransactionId,
+            });
+
+            if (!retryRes.data?.success) {
+                throw new Error("Failed to prepare retry");
+            }
+
+            // Update refs and sessionStorage with new transaction ID
+            transactionRef.current.transactionId = newTransactionId;
+            sessionStorage.setItem("phonepe_transaction_id", newTransactionId);
+
+            // Initiate PhonePe payment with the new transaction ID
+            const response = await axios.post("/api/order", {
+                name: name || "Customer",
+                amount: parseFloat(amount),
+                mobile: mobile || "",
+                transactionId: newTransactionId,
+                orderId,
+                MUID: `MUID${Date.now()}${Math.random().toString(36).slice(2, 8)}`,
+            });
+
+            if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
+                window.location.href =
+                    response.data.data.instrumentResponse.redirectInfo.url;
+            } else {
+                throw new Error("Failed to initiate payment");
+            }
+        } catch (error: any) {
+            console.error("[PaymentStatus] Retry error:", error);
+            toast({
+                title: "Retry Failed",
+                description:
+                    error.response?.data?.details ||
+                    error.response?.data?.error ||
+                    error.message ||
+                    "Could not re-initiate payment. Please try again.",
+                variant: "destructive",
+            });
+            setIsRetrying(false);
+        }
     };
 
     const handleContactSupport = () => {
         const { transactionId, orderId } = transactionRef.current;
-        router.push(`/support?txnId=${transactionId}&orderId=${orderId}`);
+        const message = `Hi, I need help with my order.\nOrder ID: ${orderId || "N/A"}\nTransaction ID: ${transactionId || "N/A"}`;
+        const phone = "919599523434";
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(url, "_blank");
     };
 
     const handleGoToOrders = () => {
-        router.push("/account/orders");
+        router.push("/profile?tab=orders");
     };
 
     return (
@@ -270,9 +326,40 @@ export default function PaymentStatus() {
                         <h2 className="text-xl font-semibold mb-2 text-red-600">
                             Payment Failed
                         </h2>
-                        <p className="text-gray-500 mb-4">
-                            {errorMessage || "Redirecting..."}
+                        <p className="text-gray-500 mb-6">
+                            {errorMessage || "Your payment could not be completed. Please try again."}
                         </p>
+                        <div className="space-y-3">
+                            <Button
+                                onClick={handleRetryPayment}
+                                className="w-full"
+                                disabled={isRetrying}
+                            >
+                                {isRetrying ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Redirecting to Payment...
+                                    </>
+                                ) : (
+                                    "Retry Payment"
+                                )}
+                            </Button>
+                            <Button
+                                onClick={handleGoToOrders}
+                                variant="outline"
+                                className="w-full"
+                            >
+                                View Orders
+                            </Button>
+                            <Button
+                                onClick={handleContactSupport}
+                                variant="ghost"
+                                className="w-full flex items-center justify-center gap-2"
+                            >
+                                <MessageCircle className="h-4 w-4" />
+                                Contact Support
+                            </Button>
+                        </div>
                     </>
                 )}
 
@@ -292,23 +379,32 @@ export default function PaymentStatus() {
                         </p>
                         <div className="space-y-3">
                             <Button
-                                onClick={handleManualRetry}
+                                onClick={handleRetryPayment}
                                 className="w-full"
+                                disabled={isRetrying}
                             >
-                                Try Again
+                                {isRetrying ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Redirecting to Payment...
+                                    </>
+                                ) : (
+                                    "Retry Payment"
+                                )}
                             </Button>
                             <Button
                                 onClick={handleGoToOrders}
                                 variant="outline"
                                 className="w-full"
                             >
-                                Check My Orders
+                                View Orders
                             </Button>
                             <Button
                                 onClick={handleContactSupport}
                                 variant="ghost"
-                                className="w-full"
+                                className="w-full flex items-center justify-center gap-2"
                             >
+                                <MessageCircle className="h-4 w-4" />
                                 Contact Support
                             </Button>
                         </div>

@@ -86,7 +86,6 @@ export async function POST(req: Request) {
         }
 
         let orderItems: any[] = [];
-        let cartIdToClear: string | null = null;
 
         /* =====================================================
            BUY NOW FLOW
@@ -161,8 +160,6 @@ export async function POST(req: Request) {
                 );
             }
 
-            cartIdToClear = cart.id;
-
             orderItems = cart.items.map((item) => {
                 /* ── Resin ── */
                 if (item.resin) {
@@ -230,13 +227,6 @@ export async function POST(req: Request) {
                     { status: 400 },
                 );
             }
-        }
-
-        /* ---------- CLEAR CART ---------- */
-        if (cartIdToClear) {
-            await prisma.cartItem.deleteMany({
-                where: { cartId: cartIdToClear },
-            });
         }
 
         /* ---------- CREATE ORDER ---------- */

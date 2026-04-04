@@ -113,6 +113,21 @@ export async function POST(req: NextRequest) {
 
             console.log("[PhonePe Callback] Order confirmed:", updatedOrder.id);
 
+            // Clear the user's cart after successful payment
+            try {
+                const userCart = await prisma.cart.findFirst({
+                    where: { userId: order.userId },
+                });
+                if (userCart) {
+                    await prisma.cartItem.deleteMany({
+                        where: { cartId: userCart.id },
+                    });
+                    console.log("[PhonePe Callback] Cart cleared for user:", order.userId);
+                }
+            } catch (cartError) {
+                console.error("[PhonePe Callback] Failed to clear cart:", cartError);
+            }
+
             // Send order confirmation email (fire-and-forget)
             if (updatedOrder.user?.email) {
                 sendOrderConfirmation(mapOrderToEmailData(updatedOrder)).catch(

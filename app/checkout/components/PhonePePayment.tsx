@@ -87,10 +87,12 @@ export default function PhonePePayment({
             });
 
             if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
-                // Store transaction details for status page
+                // Store transaction details for status page & retry
                 sessionStorage.setItem("phonepe_transaction_id", transactionId);
                 sessionStorage.setItem("phonepe_order_id", orderId);
                 sessionStorage.setItem("phonepe_amount", amount.toString());
+                sessionStorage.setItem("phonepe_name", name);
+                sessionStorage.setItem("phonepe_mobile", mobile);
 
                 // Redirect to PhonePe
                 window.location.href =

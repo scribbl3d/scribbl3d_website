@@ -116,25 +116,26 @@ export async function GET(
     } catch (error: any) {
         console.error("[CheckStatus] Error:", error.message);
 
-        if (
-            error.code === "ECONNABORTED" ||
-            error.message?.includes("timeout")
-        ) {
+        // If PhonePe returned an actual error response, parse it
+        if (error.response?.data) {
+            const phonepeData = error.response.data;
             return NextResponse.json({
                 success: false,
-                code: "PAYMENT_PENDING",
-                message: "Status check timed out, please wait",
+                code: phonepeData.code || "PAYMENT_PENDING",
+                message: phonepeData.message || "Status check failed",
             });
         }
 
-        return NextResponse.json(
-            {
-                success: false,
-                code: "ERROR",
-                message: "Failed to check payment status",
-            },
-            { status: 500 },
-        );
+        // Network/timeout errors — treat as pending so frontend retries
+        return NextResponse.json({
+            success: false,
+            code: "PAYMENT_PENDING",
+            message:
+                error.code === "ECONNABORTED" ||
+                error.message?.includes("timeout")
+                    ? "Status check timed out, please wait"
+                    : "Unable to verify payment status, retrying...",
+        });
     }
 }
 
