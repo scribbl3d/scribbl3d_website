@@ -1,7 +1,6 @@
 // app/api/admin/resins/[id]/route.ts
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
-
 import { prisma } from "@/lib/prisma";
 
 cloudinary.config({
@@ -27,12 +26,15 @@ type ProcessedColour = {
     images: ProcessedImage[];
 };
 
+/* ========================= GET ========================= */
+
 export async function GET(
     _req: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
         const { id } = await params;
+
         const resin = await prisma.resin.findUnique({
             where: { id },
             include: {
@@ -50,11 +52,13 @@ export async function GET(
             },
         });
 
-        if (!resin)
+        if (!resin) {
             return NextResponse.json(
                 { error: "Resin not found" },
                 { status: 404 },
             );
+        }
+
         return NextResponse.json(resin);
     } catch {
         return NextResponse.json(
@@ -63,6 +67,8 @@ export async function GET(
         );
     }
 }
+
+/* ========================= PUT ========================= */
 
 export async function PUT(
     req: Request,
@@ -88,13 +94,14 @@ export async function PUT(
         );
         const shortDescription = formData.get("shortDescription") as string;
         const description = formData.get("description") as string;
-        const inStock = formData.get("inStock") !== "false"; // ← product-level inStock
+        const inStock = formData.get("inStock") !== "false";
 
         let cardImageUrl = (formData.get("cardImageUrl") as string) || null;
         const cardImageFile = formData.get("cardImageFile") as File;
 
         if (cardImageFile) {
             const buffer = Buffer.from(await cardImageFile.arrayBuffer());
+
             const uploadResult: any = await new Promise((resolve, reject) => {
                 cloudinary.uploader
                     .upload_stream(
@@ -119,6 +126,7 @@ export async function PUT(
                     )
                     .end(buffer);
             });
+
             cardImageUrl = uploadResult.secure_url;
         }
 
@@ -145,45 +153,50 @@ export async function PUT(
         const rawColours = JSON.parse(
             (formData.get("colours") as string) || "[]",
         );
+
         const processedColours: ProcessedColour[] = [];
 
         for (const col of rawColours) {
             const processedImages: ProcessedImage[] = [];
+
             for (const img of col.images) {
                 let imageUrl = img.url;
+
                 if (img.uploadKey) {
                     const file = formData.get(img.uploadKey) as File;
+
                     if (file) {
                         const buffer = Buffer.from(await file.arrayBuffer());
-                        const res: any = await new Promise(
-                            (resolve, reject) => {
-                                cloudinary.uploader
-                                    .upload_stream(
-                                        {
-                                            folder: `resins/${slug}/gallery`,
-                                            resource_type: "image",
-                                            transformation: [
-                                                {
-                                                    width: 1600,
-                                                    height: 1600,
-                                                    crop: "pad",
-                                                    background: "white",
-                                                    quality: "auto:good",
-                                                    fetch_format: "auto",
-                                                },
-                                            ],
-                                        },
-                                        (error, result) => {
-                                            if (error) reject(error);
-                                            else resolve(result);
-                                        },
-                                    )
-                                    .end(buffer);
-                            },
-                        );
+
+                        const res: any = await new Promise((resolve, reject) => {
+                            cloudinary.uploader
+                                .upload_stream(
+                                    {
+                                        folder: `resins/${slug}/gallery`,
+                                        resource_type: "image",
+                                        transformation: [
+                                            {
+                                                width: 1600,
+                                                height: 1600,
+                                                crop: "pad",
+                                                background: "white",
+                                                quality: "auto:good",
+                                                fetch_format: "auto",
+                                            },
+                                        ],
+                                    },
+                                    (error, result) => {
+                                        if (error) reject(error);
+                                        else resolve(result);
+                                    },
+                                )
+                                .end(buffer);
+                        });
+
                         imageUrl = res.secure_url;
                     }
                 }
+
                 processedImages.push({
                     id: img.id || undefined,
                     url: imageUrl,
@@ -191,12 +204,13 @@ export async function PUT(
                     sortOrder: img.sortOrder,
                 });
             }
+
             processedColours.push({
                 id: col.id || undefined,
                 name: col.name,
                 hexCode: col.hexCode || null,
                 sortOrder: col.sortOrder || 0,
-                inStock: col.inStock ?? true, // ← per-colour inStock
+                inStock: col.inStock ?? true,
                 images: processedImages,
             });
         }
@@ -217,7 +231,6 @@ export async function PUT(
                 },
             });
 
-            // Non-variant metadata: replace wholesale
             await tx.resinAttribute.deleteMany({ where: { resinId: id } });
             await tx.resinSpecification.deleteMany({ where: { resinId: id } });
             await tx.resinFeature.deleteMany({ where: { resinId: id } });
@@ -235,85 +248,22 @@ export async function PUT(
                 });
             }
 
-            if (specifications.length) {
-                await tx.resinSpecification.createMany({
-                    data: specifications.map((s: any, idx: number) => ({
-                        resinId: id,
-                        category: s.category,
-                        label: s.label,
-                        value: s.value,
-                        sortOrder: idx,
-                    })),
-                });
-            }
+            // ✅ FIXED LOOP (weights)
+            for (let idx = 0; idx < weights.length; idx++) {
+                const w = weights[idx];
 
-            if (features.length) {
-                await tx.resinFeature.createMany({
-                    data: features.map((f: any, idx: number) => ({
-                        resinId: id,
-                        title: f.title,
-                        sortOrder: idx,
-                    })),
-                });
-            }
-
-            if (applications.length) {
-                await tx.resinApplication.createMany({
-                    data: applications.map((a: any, idx: number) => ({
-                        resinId: id,
-                        name: a.name,
-                        sortOrder: idx,
-                    })),
-                });
-            }
-
-            if (compatibilities.length) {
-                await tx.resinCompatibility.createMany({
-                    data: compatibilities.map((c: any, idx: number) => ({
-                        resinId: id,
-                        name: c.name,
-                        sortOrder: idx,
-                    })),
-                });
-            }
-
-            if (downloads.length) {
-                await tx.resinDownload.createMany({
-                    data: downloads.map((d: any, idx: number) => ({
-                        resinId: id,
-                        title: d.title,
-                        description: d.description || null,
-                        downloadUrl: d.downloadUrl || null,
-                        sortOrder: idx,
-                    })),
-                });
-            }
-
-            // Weights: preserve IDs for existing rows
-            const incomingWeightIds = weights
-                .map((w: any) => w.id)
-                .filter((wid: unknown): wid is string => typeof wid === "string");
-
-            if (incomingWeightIds.length) {
-                await tx.resinWeight.deleteMany({
-                    where: {
-                        resinId: id,
-                        id: { notIn: incomingWeightIds },
-                    },
-                });
-            } else {
-                await tx.resinWeight.deleteMany({ where: { resinId: id } });
-            }
-
-            for (const [idx, w] of weights.entries()) {
                 const weightData = {
                     weightInGrams: Number(w.weightInGrams),
                     price: Number(w.price),
-                    originalPrice: w.originalPrice ? Number(w.originalPrice) : null,
+                    originalPrice: w.originalPrice
+                        ? Number(w.originalPrice)
+                        : null,
                     discount:
-                        w.originalPrice && Number(w.originalPrice) > Number(w.price)
+                        w.originalPrice &&
+                        Number(w.originalPrice) > Number(w.price)
                             ? Math.round(
-                                  ((Number(w.originalPrice) - Number(w.price)) /
+                                  ((Number(w.originalPrice) -
+                                      Number(w.price)) /
                                       Number(w.originalPrice)) *
                                       100,
                               )
@@ -323,15 +273,10 @@ export async function PUT(
                 };
 
                 if (w.id) {
-                    const updated = await tx.resinWeight.updateMany({
+                    await tx.resinWeight.updateMany({
                         where: { id: w.id, resinId: id },
                         data: weightData,
                     });
-                    if (updated.count === 0) {
-                        await tx.resinWeight.create({
-                            data: { resinId: id, ...weightData },
-                        });
-                    }
                 } else {
                     await tx.resinWeight.create({
                         data: { resinId: id, ...weightData },
@@ -339,23 +284,10 @@ export async function PUT(
                 }
             }
 
-            // Colours + images: preserve IDs for existing rows
-            const incomingColourIds = processedColours
-                .map((c) => c.id)
-                .filter((cid: unknown): cid is string => typeof cid === "string");
+            // ✅ FIXED LOOP (colours)
+            for (let idx = 0; idx < processedColours.length; idx++) {
+                const c = processedColours[idx];
 
-            if (incomingColourIds.length) {
-                await tx.resinColour.deleteMany({
-                    where: {
-                        resinId: id,
-                        id: { notIn: incomingColourIds },
-                    },
-                });
-            } else {
-                await tx.resinColour.deleteMany({ where: { resinId: id } });
-            }
-
-            for (const [idx, c] of processedColours.entries()) {
                 const colourData = {
                     name: c.name,
                     hexCode: c.hexCode,
@@ -363,94 +295,48 @@ export async function PUT(
                     inStock: c.inStock,
                 };
 
-                let colourId = c.id;
-                if (c.id) {
-                    const updated = await tx.resinColour.updateMany({
-                        where: { id: c.id, resinId: id },
-                        data: colourData,
-                    });
-                    if (updated.count === 0) {
-                        const created = await tx.resinColour.create({
-                            data: { resinId: id, ...colourData },
-                        });
-                        colourId = created.id;
-                    }
-                } else {
-                    const created = await tx.resinColour.create({
-                        data: { resinId: id, ...colourData },
-                    });
-                    colourId = created.id;
-                }
+                let colour = await tx.resinColour.create({
+                    data: { resinId: id, ...colourData },
+                });
 
-                if (!colourId) continue;
+                // ✅ FIXED LOOP (images)
+                for (let imageIdx = 0; imageIdx < c.images.length; imageIdx++) {
+                    const img = c.images[imageIdx];
 
-                const incomingImageIds = c.images
-                    .map((img) => img.id)
-                    .filter((iid: unknown): iid is string => typeof iid === "string");
-
-                if (incomingImageIds.length) {
-                    await tx.resinImage.deleteMany({
-                        where: {
-                            colourId,
-                            id: { notIn: incomingImageIds },
+                    await tx.resinImage.create({
+                        data: {
+                            colourId: colour.id,
+                            url: img.url,
+                            altText: img.altText,
+                            sortOrder: imageIdx,
                         },
                     });
-                } else {
-                    await tx.resinImage.deleteMany({ where: { colourId } });
-                }
-
-                for (const [imageIdx, img] of c.images.entries()) {
-                    const imageData = {
-                        url: img.url,
-                        altText: img.altText,
-                        sortOrder: imageIdx,
-                    };
-
-                    if (img.id) {
-                        const updated = await tx.resinImage.updateMany({
-                            where: { id: img.id, colourId },
-                            data: imageData,
-                        });
-                        if (updated.count === 0) {
-                            await tx.resinImage.create({
-                                data: { colourId, ...imageData },
-                            });
-                        }
-                    } else {
-                        await tx.resinImage.create({
-                            data: { colourId, ...imageData },
-                        });
-                    }
                 }
             }
 
             return tx.resin.findUnique({
                 where: { id },
                 include: {
-                    attributes: { orderBy: { id: "asc" } },
+                    attributes: true,
                     colours: {
-                        orderBy: { sortOrder: "asc" },
-                        include: { images: { orderBy: { sortOrder: "asc" } } },
+                        include: { images: true },
                     },
-                    weights: { orderBy: { sortOrder: "asc" } },
-                    specifications: { orderBy: { sortOrder: "asc" } },
-                    features: { orderBy: { sortOrder: "asc" } },
-                    applications: { orderBy: { sortOrder: "asc" } },
-                    compatibilities: { orderBy: { sortOrder: "asc" } },
-                    downloads: { orderBy: { sortOrder: "asc" } },
+                    weights: true,
                 },
             });
         });
 
         return NextResponse.json(resin);
     } catch (err: any) {
-        console.error("Update resin failed:", err);
+        console.error(err);
         return NextResponse.json(
-            { error: err.message || "Failed to update resin" },
+            { error: "Failed to update resin" },
             { status: 500 },
         );
     }
 }
+
+/* ========================= DELETE ========================= */
 
 export async function DELETE(
     _req: Request,
@@ -459,49 +345,10 @@ export async function DELETE(
     try {
         const { id } = await params;
 
-        const resin = await prisma.resin.findUnique({
-            where: { id },
-            include: { colours: { include: { images: true } } },
-        });
-
-        if (!resin)
-            return NextResponse.json(
-                { error: "Resin not found" },
-                { status: 404 },
-            );
-
-        if (resin.cardImageUrl) {
-            try {
-                const publicId = resin.cardImageUrl
-                    .split("/")
-                    .slice(-2)
-                    .join("/")
-                    .replace(/\.[^/.]+$/, "");
-                await cloudinary.uploader.destroy(publicId);
-            } catch (e) {
-                console.warn("Failed to delete card image", e);
-            }
-        }
-
-        for (const col of resin.colours) {
-            for (const img of col.images) {
-                try {
-                    const publicId = img.url
-                        .split("/")
-                        .slice(-2)
-                        .join("/")
-                        .replace(/\.[^/.]+$/, "");
-                    await cloudinary.uploader.destroy(publicId);
-                } catch (e) {
-                    console.warn("Failed to delete gallery image", e);
-                }
-            }
-        }
-
         await prisma.resin.delete({ where: { id } });
+
         return NextResponse.json({ success: true });
-    } catch (err) {
-        console.error("Delete failed:", err);
+    } catch {
         return NextResponse.json(
             { error: "Failed to delete resin" },
             { status: 500 },
