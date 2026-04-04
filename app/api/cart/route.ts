@@ -66,71 +66,6 @@ function extractMachineDimensions(specifications: any[]): {
 }
 
 /* =========================
-   ORPHAN RESOLVERS
-   
-   Only called when the Prisma include returned null
-   for a relation that should exist (FK is set but
-   record was deleted). Runs sequentially to avoid
-   connection storms.
-========================= */
-
-async function healResinWeight(
-    resinId: string,
-    cartItemId: string,
-): Promise<any> {
-    const replacement = await prisma.resinWeight.findFirst({
-        where: { resinId },
-        orderBy: { weightInGrams: "asc" },
-    });
-    if (replacement) {
-        await prisma.cartItem
-            .update({
-                where: { id: cartItemId },
-                data: { resinWeightId: replacement.id },
-            })
-            .catch(() => {});
-    }
-    return replacement;
-}
-
-async function healResinColour(
-    resinId: string,
-    cartItemId: string,
-): Promise<any> {
-    const replacement = await prisma.resinColour.findFirst({
-        where: { resinId },
-        include: { images: { orderBy: { sortOrder: "asc" } } },
-    });
-    if (replacement) {
-        await prisma.cartItem
-            .update({
-                where: { id: cartItemId },
-                data: { resinColourId: replacement.id },
-            })
-            .catch(() => {});
-    }
-    return replacement;
-}
-
-async function healPrebuiltVariant(
-    prebuiltProductId: string,
-    cartItemId: string,
-): Promise<any> {
-    const replacement = await prisma.prebuiltVariants.findFirst({
-        where: { prebuildProductId: prebuiltProductId, isActive: true },
-    });
-    if (replacement) {
-        await prisma.cartItem
-            .update({
-                where: { id: cartItemId },
-                data: { prebuiltVariantId: replacement.id },
-            })
-            .catch(() => {});
-    }
-    return replacement;
-}
-
-/* =========================
    ADD TO CART
 ========================= */
 export async function POST(req: Request) {
@@ -339,34 +274,7 @@ export async function GET() {
                         continue;
                     }
 
-                    // Heal orphaned weight (FK set but record deleted)
-                    if (!resinWeight && item.resinWeightId) {
-                        resinWeight = await healResinWeight(
-                            item.resinId,
-                            item.id,
-                        );
-                    }
-                    // Heal null weight (FK cleared by onDelete: SetNull)
-                    if (!resinWeight && !item.resinWeightId) {
-                        resinWeight = await healResinWeight(
-                            item.resinId,
-                            item.id,
-                        );
-                    }
-
-                    // Heal orphaned colour
-                    if (!resinColour && item.resinColourId) {
-                        resinColour = await healResinColour(
-                            item.resinId,
-                            item.id,
-                        );
-                    }
-                    if (!resinColour && !item.resinColourId) {
-                        resinColour = await healResinColour(
-                            item.resinId,
-                            item.id,
-                        );
-                    }
+                    const missingVariant = !resinWeight || !resinColour;
 
                     const colourImages =
                         resinColour?.images?.map((i: any) => i.url) ?? [];
@@ -384,7 +292,7 @@ export async function GET() {
                         itemType: "resin",
                         name: resin.name,
                         slug: (resin as any).slug ?? null,
-                        price: safeNum(resinWeight?.price),
+                        price: missingVariant ? 0 : safeNum(resinWeight?.price),
                         quantity: item.quantity,
                         images,
                         size: resinWeight
@@ -392,6 +300,7 @@ export async function GET() {
                             : null,
                         color: resinColour?.name ?? null,
                         colorHex: resinColour?.hexCode ?? null,
+                        _orphaned: missingVariant,
                     });
                     continue;
                 }
@@ -454,13 +363,7 @@ export async function GET() {
                         continue;
                     }
 
-                    // Heal orphaned/null variant
-                    if (!prebuiltVariant) {
-                        prebuiltVariant = await healPrebuiltVariant(
-                            item.prebuiltProductId,
-                            item.id,
-                        );
-                    }
+                    const missingVariant = !prebuiltVariant;
 
                     items.push({
                         id: item.id,
@@ -468,7 +371,7 @@ export async function GET() {
                         itemType: "prebuilt",
                         name: prebuiltProduct.name,
                         slug: (prebuiltProduct as any).slug ?? null,
-                        price: safeNum(prebuiltVariant?.price),
+                        price: missingVariant ? 0 : safeNum(prebuiltVariant?.price),
                         quantity: item.quantity,
                         images:
                             (prebuiltProduct as any).images?.map(
@@ -478,6 +381,7 @@ export async function GET() {
                         colorHex: prebuiltVariant?.colorHex ?? null,
                         size: prebuiltVariant?.sizeName ?? null,
                         customization: item.customization ?? null,
+                        _orphaned: missingVariant,
                     });
                     continue;
                 }

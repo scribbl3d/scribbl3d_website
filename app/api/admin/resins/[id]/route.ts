@@ -12,12 +12,14 @@ cloudinary.config({
 });
 
 type ProcessedImage = {
+    id?: string;
     url: string;
     altText: string | null;
     sortOrder: number;
 };
 
 type ProcessedColour = {
+    id?: string;
     name: string;
     hexCode: string | null;
     sortOrder: number;
@@ -183,12 +185,14 @@ export async function PUT(
                     }
                 }
                 processedImages.push({
+                    id: img.id || undefined,
                     url: imageUrl,
                     altText: null,
                     sortOrder: img.sortOrder,
                 });
             }
             processedColours.push({
+                id: col.id || undefined,
                 name: col.name,
                 hexCode: col.hexCode || null,
                 sortOrder: col.sortOrder || 0,
@@ -197,107 +201,245 @@ export async function PUT(
             });
         }
 
-        // Delete all related records then recreate
-        await prisma.$transaction([
-            prisma.resinAttribute.deleteMany({ where: { resinId: id } }),
-            prisma.resinColour.deleteMany({ where: { resinId: id } }), // cascades images
-            prisma.resinWeight.deleteMany({ where: { resinId: id } }),
-            prisma.resinSpecification.deleteMany({ where: { resinId: id } }),
-            prisma.resinFeature.deleteMany({ where: { resinId: id } }),
-            prisma.resinApplication.deleteMany({ where: { resinId: id } }),
-            prisma.resinCompatibility.deleteMany({ where: { resinId: id } }),
-            prisma.resinDownload.deleteMany({ where: { resinId: id } }),
-        ]);
+        const resin = await prisma.$transaction(async (tx) => {
+            await tx.resin.update({
+                where: { id },
+                data: {
+                    name,
+                    slug,
+                    brand,
+                    technology,
+                    resolution,
+                    shortDescription,
+                    description,
+                    cardImageUrl,
+                    inStock,
+                },
+            });
 
-        const resin = await prisma.resin.update({
-            where: { id },
-            data: {
-                name,
-                slug,
-                brand,
-                technology,
-                resolution,
-                shortDescription,
-                description,
-                cardImageUrl,
-                inStock, // ← product-level
+            // Non-variant metadata: replace wholesale
+            await tx.resinAttribute.deleteMany({ where: { resinId: id } });
+            await tx.resinSpecification.deleteMany({ where: { resinId: id } });
+            await tx.resinFeature.deleteMany({ where: { resinId: id } });
+            await tx.resinApplication.deleteMany({ where: { resinId: id } });
+            await tx.resinCompatibility.deleteMany({ where: { resinId: id } });
+            await tx.resinDownload.deleteMany({ where: { resinId: id } });
 
-                attributes: {
-                    create: attributes.map((a: any) => ({
+            if (attributes.length) {
+                await tx.resinAttribute.createMany({
+                    data: attributes.map((a: any) => ({
+                        resinId: id,
                         label: a.label,
                         value: a.value,
                     })),
-                },
-                weights: {
-                    create: weights.map((w: any, idx: number) => ({
-                        weightInGrams: Number(w.weightInGrams),
-                        price: Number(w.price),
-                        originalPrice: w.originalPrice
-                            ? Number(w.originalPrice)
-                            : null,
-                        discount:
-                            w.originalPrice &&
-                            Number(w.originalPrice) > Number(w.price)
-                                ? Math.round(
-                                      ((Number(w.originalPrice) -
-                                          Number(w.price)) /
-                                          Number(w.originalPrice)) *
-                                          100,
-                                  )
-                                : null,
-                        sortOrder: idx,
-                        inStock: w.inStock ?? true, // ← per-weight inStock
-                    })),
-                },
-                specifications: {
-                    create: specifications.map((s: any, idx: number) => ({
+                });
+            }
+
+            if (specifications.length) {
+                await tx.resinSpecification.createMany({
+                    data: specifications.map((s: any, idx: number) => ({
+                        resinId: id,
                         category: s.category,
                         label: s.label,
                         value: s.value,
                         sortOrder: idx,
                     })),
-                },
-                features: {
-                    create: features.map((f: any, idx: number) => ({
+                });
+            }
+
+            if (features.length) {
+                await tx.resinFeature.createMany({
+                    data: features.map((f: any, idx: number) => ({
+                        resinId: id,
                         title: f.title,
                         sortOrder: idx,
                     })),
-                },
-                applications: {
-                    create: applications.map((a: any, idx: number) => ({
+                });
+            }
+
+            if (applications.length) {
+                await tx.resinApplication.createMany({
+                    data: applications.map((a: any, idx: number) => ({
+                        resinId: id,
                         name: a.name,
                         sortOrder: idx,
                     })),
-                },
-                compatibilities: {
-                    create: compatibilities.map((c: any, idx: number) => ({
+                });
+            }
+
+            if (compatibilities.length) {
+                await tx.resinCompatibility.createMany({
+                    data: compatibilities.map((c: any, idx: number) => ({
+                        resinId: id,
                         name: c.name,
                         sortOrder: idx,
                     })),
-                },
-                downloads: {
-                    create: downloads.map((d: any, idx: number) => ({
+                });
+            }
+
+            if (downloads.length) {
+                await tx.resinDownload.createMany({
+                    data: downloads.map((d: any, idx: number) => ({
+                        resinId: id,
                         title: d.title,
                         description: d.description || null,
                         downloadUrl: d.downloadUrl || null,
                         sortOrder: idx,
                     })),
-                },
-                colours: {
-                    create: processedColours.map((c, idx) => ({
-                        name: c.name,
-                        hexCode: c.hexCode,
-                        sortOrder: idx,
-                        inStock: c.inStock, // ← per-colour inStock
-                        images: {
-                            create: c.images.map((img, i) => ({
-                                url: img.url,
-                                sortOrder: i,
-                            })),
+                });
+            }
+
+            // Weights: preserve IDs for existing rows
+            const incomingWeightIds = weights
+                .map((w: any) => w.id)
+                .filter((wid: unknown): wid is string => typeof wid === "string");
+
+            if (incomingWeightIds.length) {
+                await tx.resinWeight.deleteMany({
+                    where: {
+                        resinId: id,
+                        id: { notIn: incomingWeightIds },
+                    },
+                });
+            } else {
+                await tx.resinWeight.deleteMany({ where: { resinId: id } });
+            }
+
+            for (const [idx, w] of weights.entries()) {
+                const weightData = {
+                    weightInGrams: Number(w.weightInGrams),
+                    price: Number(w.price),
+                    originalPrice: w.originalPrice ? Number(w.originalPrice) : null,
+                    discount:
+                        w.originalPrice && Number(w.originalPrice) > Number(w.price)
+                            ? Math.round(
+                                  ((Number(w.originalPrice) - Number(w.price)) /
+                                      Number(w.originalPrice)) *
+                                      100,
+                              )
+                            : null,
+                    sortOrder: idx,
+                    inStock: w.inStock ?? true,
+                };
+
+                if (w.id) {
+                    const updated = await tx.resinWeight.updateMany({
+                        where: { id: w.id, resinId: id },
+                        data: weightData,
+                    });
+                    if (updated.count === 0) {
+                        await tx.resinWeight.create({
+                            data: { resinId: id, ...weightData },
+                        });
+                    }
+                } else {
+                    await tx.resinWeight.create({
+                        data: { resinId: id, ...weightData },
+                    });
+                }
+            }
+
+            // Colours + images: preserve IDs for existing rows
+            const incomingColourIds = processedColours
+                .map((c) => c.id)
+                .filter((cid: unknown): cid is string => typeof cid === "string");
+
+            if (incomingColourIds.length) {
+                await tx.resinColour.deleteMany({
+                    where: {
+                        resinId: id,
+                        id: { notIn: incomingColourIds },
+                    },
+                });
+            } else {
+                await tx.resinColour.deleteMany({ where: { resinId: id } });
+            }
+
+            for (const [idx, c] of processedColours.entries()) {
+                const colourData = {
+                    name: c.name,
+                    hexCode: c.hexCode,
+                    sortOrder: idx,
+                    inStock: c.inStock,
+                };
+
+                let colourId = c.id;
+                if (c.id) {
+                    const updated = await tx.resinColour.updateMany({
+                        where: { id: c.id, resinId: id },
+                        data: colourData,
+                    });
+                    if (updated.count === 0) {
+                        const created = await tx.resinColour.create({
+                            data: { resinId: id, ...colourData },
+                        });
+                        colourId = created.id;
+                    }
+                } else {
+                    const created = await tx.resinColour.create({
+                        data: { resinId: id, ...colourData },
+                    });
+                    colourId = created.id;
+                }
+
+                if (!colourId) continue;
+
+                const incomingImageIds = c.images
+                    .map((img) => img.id)
+                    .filter((iid: unknown): iid is string => typeof iid === "string");
+
+                if (incomingImageIds.length) {
+                    await tx.resinImage.deleteMany({
+                        where: {
+                            colourId,
+                            id: { notIn: incomingImageIds },
                         },
-                    })),
+                    });
+                } else {
+                    await tx.resinImage.deleteMany({ where: { colourId } });
+                }
+
+                for (const [imageIdx, img] of c.images.entries()) {
+                    const imageData = {
+                        url: img.url,
+                        altText: img.altText,
+                        sortOrder: imageIdx,
+                    };
+
+                    if (img.id) {
+                        const updated = await tx.resinImage.updateMany({
+                            where: { id: img.id, colourId },
+                            data: imageData,
+                        });
+                        if (updated.count === 0) {
+                            await tx.resinImage.create({
+                                data: { colourId, ...imageData },
+                            });
+                        }
+                    } else {
+                        await tx.resinImage.create({
+                            data: { colourId, ...imageData },
+                        });
+                    }
+                }
+            }
+
+            return tx.resin.findUnique({
+                where: { id },
+                include: {
+                    attributes: { orderBy: { id: "asc" } },
+                    colours: {
+                        orderBy: { sortOrder: "asc" },
+                        include: { images: { orderBy: { sortOrder: "asc" } } },
+                    },
+                    weights: { orderBy: { sortOrder: "asc" } },
+                    specifications: { orderBy: { sortOrder: "asc" } },
+                    features: { orderBy: { sortOrder: "asc" } },
+                    applications: { orderBy: { sortOrder: "asc" } },
+                    compatibilities: { orderBy: { sortOrder: "asc" } },
+                    downloads: { orderBy: { sortOrder: "asc" } },
                 },
-            },
+            });
         });
 
         return NextResponse.json(resin);

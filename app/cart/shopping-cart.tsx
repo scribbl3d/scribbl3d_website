@@ -72,7 +72,7 @@ function getPDPUrl(
     const type = itemType.toLowerCase();
     switch (type) {
         case "printer":
-            return `/printers/${identifier}`;
+            return slug ? `/printers/${slug}` : null;
         case "product":
             return `/products/${identifier}`;
         case "resin":

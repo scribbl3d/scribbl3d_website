@@ -85,6 +85,7 @@ async function fetchPrinters(
         select: {
             id: true,
             name: true,
+            slug: true,
             price: true,
             originalPrice: true,
             technology: true,
@@ -105,6 +106,7 @@ async function fetchPrinters(
             select: {
                 id: true,
                 name: true,
+                slug: true,
                 price: true,
                 originalPrice: true,
                 technology: true,
@@ -122,6 +124,7 @@ async function fetchPrinters(
     return printers.map((p) => ({
         id: p.id,
         name: p.name,
+        slug: p.slug ?? undefined,
         images: p.images.map((i) => i.url),
         price: p.price,
         mrp: p.originalPrice ?? undefined,
