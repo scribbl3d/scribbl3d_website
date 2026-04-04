@@ -248,7 +248,75 @@ export async function PUT(
                 });
             }
 
-            // ✅ FIXED LOOP (weights)
+            if (specifications.length) {
+                await tx.resinSpecification.createMany({
+                    data: specifications.map((s: any, idx: number) => ({
+                        resinId: id,
+                        category: s.category,
+                        label: s.label,
+                        value: s.value,
+                        sortOrder: idx,
+                    })),
+                });
+            }
+
+            if (features.length) {
+                await tx.resinFeature.createMany({
+                    data: features.map((f: any, idx: number) => ({
+                        resinId: id,
+                        title: f.title,
+                        sortOrder: idx,
+                    })),
+                });
+            }
+
+            if (applications.length) {
+                await tx.resinApplication.createMany({
+                    data: applications.map((a: any, idx: number) => ({
+                        resinId: id,
+                        name: a.name,
+                        sortOrder: idx,
+                    })),
+                });
+            }
+
+            if (compatibilities.length) {
+                await tx.resinCompatibility.createMany({
+                    data: compatibilities.map((c: any, idx: number) => ({
+                        resinId: id,
+                        name: c.name,
+                        sortOrder: idx,
+                    })),
+                });
+            }
+
+            if (downloads.length) {
+                await tx.resinDownload.createMany({
+                    data: downloads.map((d: any, idx: number) => ({
+                        resinId: id,
+                        title: d.title,
+                        description: d.description || null,
+                        downloadUrl: d.downloadUrl || null,
+                        sortOrder: idx,
+                    })),
+                });
+            }
+
+            const incomingWeightIds = weights
+                .map((w: any) => w.id)
+                .filter((wid: unknown): wid is string => typeof wid === "string");
+
+            if (incomingWeightIds.length) {
+                await tx.resinWeight.deleteMany({
+                    where: {
+                        resinId: id,
+                        id: { notIn: incomingWeightIds },
+                    },
+                });
+            } else {
+                await tx.resinWeight.deleteMany({ where: { resinId: id } });
+            }
+
             for (let idx = 0; idx < weights.length; idx++) {
                 const w = weights[idx];
 
@@ -273,10 +341,16 @@ export async function PUT(
                 };
 
                 if (w.id) {
-                    await tx.resinWeight.updateMany({
+                    const updated = await tx.resinWeight.updateMany({
                         where: { id: w.id, resinId: id },
                         data: weightData,
                     });
+
+                    if (updated.count === 0) {
+                        await tx.resinWeight.create({
+                            data: { resinId: id, ...weightData },
+                        });
+                    }
                 } else {
                     await tx.resinWeight.create({
                         data: { resinId: id, ...weightData },
@@ -284,7 +358,21 @@ export async function PUT(
                 }
             }
 
-            // ✅ FIXED LOOP (colours)
+            const incomingColourIds = processedColours
+                .map((c) => c.id)
+                .filter((cid: unknown): cid is string => typeof cid === "string");
+
+            if (incomingColourIds.length) {
+                await tx.resinColour.deleteMany({
+                    where: {
+                        resinId: id,
+                        id: { notIn: incomingColourIds },
+                    },
+                });
+            } else {
+                await tx.resinColour.deleteMany({ where: { resinId: id } });
+            }
+
             for (let idx = 0; idx < processedColours.length; idx++) {
                 const c = processedColours[idx];
 
@@ -295,33 +383,83 @@ export async function PUT(
                     inStock: c.inStock,
                 };
 
-                let colour = await tx.resinColour.create({
-                    data: { resinId: id, ...colourData },
-                });
+                let colourId = c.id;
+                if (c.id) {
+                    const updated = await tx.resinColour.updateMany({
+                        where: { id: c.id, resinId: id },
+                        data: colourData,
+                    });
+                    if (updated.count === 0) {
+                        const created = await tx.resinColour.create({
+                            data: { resinId: id, ...colourData },
+                        });
+                        colourId = created.id;
+                    }
+                } else {
+                    const created = await tx.resinColour.create({
+                        data: { resinId: id, ...colourData },
+                    });
+                    colourId = created.id;
+                }
 
-                // ✅ FIXED LOOP (images)
+                if (!colourId) continue;
+
+                const incomingImageIds = c.images
+                    .map((img) => img.id)
+                    .filter((iid: unknown): iid is string => typeof iid === "string");
+
+                if (incomingImageIds.length) {
+                    await tx.resinImage.deleteMany({
+                        where: {
+                            colourId,
+                            id: { notIn: incomingImageIds },
+                        },
+                    });
+                } else {
+                    await tx.resinImage.deleteMany({ where: { colourId } });
+                }
+
                 for (let imageIdx = 0; imageIdx < c.images.length; imageIdx++) {
                     const img = c.images[imageIdx];
 
-                    await tx.resinImage.create({
-                        data: {
-                            colourId: colour.id,
-                            url: img.url,
-                            altText: img.altText,
-                            sortOrder: imageIdx,
-                        },
-                    });
+                    const imageData = {
+                        url: img.url,
+                        altText: img.altText,
+                        sortOrder: imageIdx,
+                    };
+
+                    if (img.id) {
+                        const updated = await tx.resinImage.updateMany({
+                            where: { id: img.id, colourId },
+                            data: imageData,
+                        });
+                        if (updated.count === 0) {
+                            await tx.resinImage.create({
+                                data: { colourId, ...imageData },
+                            });
+                        }
+                    } else {
+                        await tx.resinImage.create({
+                            data: { colourId, ...imageData },
+                        });
+                    }
                 }
             }
 
             return tx.resin.findUnique({
                 where: { id },
                 include: {
-                    attributes: true,
+                    attributes: { orderBy: { id: "asc" } },
                     colours: {
-                        include: { images: true },
+                        orderBy: { sortOrder: "asc" },
+                        include: { images: { orderBy: { sortOrder: "asc" } } },
                     },
-                    weights: true,
+                    weights: { orderBy: { sortOrder: "asc" } },
+                    specifications: { orderBy: { sortOrder: "asc" } },
+                    features: { orderBy: { sortOrder: "asc" } },
+                    applications: { orderBy: { sortOrder: "asc" } },
+                    compatibilities: { orderBy: { sortOrder: "asc" } },
+                    downloads: { orderBy: { sortOrder: "asc" } },
                 },
             });
         });

@@ -41,6 +41,29 @@ export default function PaymentStatus() {
         orderId ? `/profile/orders/${orderId}` : "/profile?tab=orders";
 
     useEffect(() => {
+        globalThis.history.pushState(
+            { fromPaymentStatus: true },
+            "",
+            globalThis.location.href,
+        );
+
+        const onPopState = () => {
+            const lastStatus = sessionStorage.getItem("last_payment_status");
+            const lastOrderId = sessionStorage.getItem("last_payment_order_id");
+
+            if (lastStatus === "success") {
+                router.replace(getOrdersRoute(lastOrderId));
+                return;
+            }
+
+            router.replace("/checkout");
+        };
+
+        globalThis.addEventListener("popstate", onPopState);
+        return () => globalThis.removeEventListener("popstate", onPopState);
+    }, [router]);
+
+    useEffect(() => {
         // Prevent running if already completed
         if (hasCompletedRef.current) return;
 
@@ -123,6 +146,13 @@ export default function PaymentStatus() {
             const { transactionId, orderId, amount } = transactionRef.current;
             sessionStorage.setItem("last_payment_status", "success");
             sessionStorage.setItem("prevent_checkout_back", "1");
+
+            globalThis.document.cookie =
+                "post_payment_success=1; Path=/; Max-Age=45; SameSite=Lax";
+            if (orderId) {
+                globalThis.document.cookie = `post_payment_order_id=${encodeURIComponent(orderId)}; Path=/; Max-Age=45; SameSite=Lax`;
+            }
+
             if (transactionId)
                 sessionStorage.setItem("last_payment_txn_id", transactionId);
             if (orderId) sessionStorage.setItem("last_payment_order_id", orderId);

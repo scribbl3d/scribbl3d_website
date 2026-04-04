@@ -33,6 +33,14 @@ export default function PaymentSuccessPage() {
         const paymentSuccess = sessionStorage.getItem("payment_success");
         const lastStatus = sessionStorage.getItem("last_payment_status");
 
+        sessionStorage.setItem("last_payment_status", "success");
+        sessionStorage.setItem("prevent_checkout_back", "1");
+        globalThis.document.cookie =
+            "post_payment_success=1; Path=/; Max-Age=45; SameSite=Lax";
+        if (orderId) {
+            globalThis.document.cookie = `post_payment_order_id=${encodeURIComponent(orderId)}; Path=/; Max-Age=45; SameSite=Lax`;
+        }
+
         if (!rawTxnId || !rawAmount) {
             console.error("Missing required parameters");
             if (!paymentSuccess && lastStatus !== "success") {

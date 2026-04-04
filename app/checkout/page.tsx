@@ -1,10 +1,29 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense } from "react";
 import { Breadcrumbs } from "./components/breadcrumbs";
 import ClientCheckoutSteps from "./components/ClientCheckoutSteps";
 import OrderSummary from "./components/order-summary";
 
-export default function CheckoutPage() {
+export default async function CheckoutPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ mode?: string }>;
+}) {
+    const resolvedSearchParams = await searchParams;
+    const mode = resolvedSearchParams?.mode;
+
+    if (mode !== "buynow") {
+        const cookieStore = await cookies();
+        const successMarker = cookieStore.get("post_payment_success")?.value;
+        const orderId = cookieStore.get("post_payment_order_id")?.value;
+
+        if (successMarker === "1") {
+            redirect(orderId ? `/profile/orders/${orderId}` : "/profile?tab=orders");
+        }
+    }
+
     return (
         <div className="min-h-screen bg-gray-50 pt-[72px] sm:pt-[80px] md:pt-[90px]">
             <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6">
