@@ -10,18 +10,33 @@ import { useEffect, useState } from "react";
 
 export default function PaymentSuccessPage() {
     const router = useRouter();
-    const searchParams = useSearchParams()!;
+    const searchParams = useSearchParams();
     const [orderStatus, setOrderStatus] = useState("Processing");
 
-    useEffect(() => {
-        const txnId = searchParams.get("txnId");
-        const amount = searchParams.get("amount");
-        const paymentSuccess = sessionStorage.getItem("payment_success");
+    const txnId = searchParams?.get("txnId") || "N/A";
+    const amount =
+        searchParams?.get("amount") ||
+        sessionStorage.getItem("last_payment_amount") ||
+        "0";
+    const orderId =
+        searchParams?.get("orderId") ||
+        sessionStorage.getItem("last_payment_order_id") ||
+        null;
 
-        if (!txnId || !amount) {
+    const ordersRoute = orderId
+        ? `/profile/orders/${orderId}`
+        : "/profile?tab=orders";
+
+    useEffect(() => {
+        const rawTxnId = searchParams?.get("txnId");
+        const rawAmount = searchParams?.get("amount");
+        const paymentSuccess = sessionStorage.getItem("payment_success");
+        const lastStatus = sessionStorage.getItem("last_payment_status");
+
+        if (!rawTxnId || !rawAmount) {
             console.error("Missing required parameters");
-            if (!paymentSuccess) {
-                router.replace("/");
+            if (!paymentSuccess && lastStatus !== "success") {
+                router.replace(ordersRoute);
                 return;
             }
         }
@@ -32,7 +47,9 @@ export default function PaymentSuccessPage() {
         // Check order status
         const checkOrderStatus = async () => {
             try {
-                const response = await axios.get(`/api/check-status/${txnId}`);
+                if (!rawTxnId) return;
+
+                const response = await axios.get(`/api/check-status/${rawTxnId}`);
                 if (
                     response.data.success &&
                     response.data.code === "PAYMENT_SUCCESS"
@@ -45,10 +62,19 @@ export default function PaymentSuccessPage() {
         };
 
         checkOrderStatus();
-    }, [router, searchParams]);
+    }, [ordersRoute, router, searchParams]);
 
-    const txnId = searchParams?.get("txnId") || "N/A";
-    const amount = searchParams?.get("amount") || "0";
+    useEffect(() => {
+        const state = { fromPaymentSuccess: true };
+        window.history.pushState(state, "", window.location.href);
+
+        const onPopState = () => {
+            router.replace(ordersRoute);
+        };
+
+        window.addEventListener("popstate", onPopState);
+        return () => window.removeEventListener("popstate", onPopState);
+    }, [ordersRoute, router]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -72,8 +98,11 @@ export default function PaymentSuccessPage() {
                     <p className="text-center font-semibold">
                         Order Status: {orderStatus}
                     </p>
-                    <div className="flex justify-center">
-                        <Button onClick={() => router.push("/")}>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                        <Button onClick={() => router.replace(ordersRoute)}>
+                            View Order Details
+                        </Button>
+                        <Button variant="outline" onClick={() => router.replace("/")}>
                             Return to Home
                         </Button>
                     </div>

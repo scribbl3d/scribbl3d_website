@@ -37,6 +37,9 @@ export default function PaymentStatus() {
     const MAX_RETRIES = 10; // 50 seconds total (10 × 5s)
     const RETRY_INTERVAL = 5000; // 5 seconds
 
+    const getOrdersRoute = (orderId?: string | null) =>
+        orderId ? `/profile/orders/${orderId}` : "/profile?tab=orders";
+
     useEffect(() => {
         // Prevent running if already completed
         if (hasCompletedRef.current) return;
@@ -53,18 +56,25 @@ export default function PaymentStatus() {
         transactionRef.current = { transactionId, orderId, amount, name, mobile };
 
         if (!transactionId) {
-            console.error("[PaymentStatus] Missing transaction ID");
+            const lastStatus = sessionStorage.getItem("last_payment_status");
+            const lastOrderId =
+                sessionStorage.getItem("last_payment_order_id") || orderId;
+
+            if (lastStatus === "success") {
+                router.replace(getOrdersRoute(lastOrderId));
+                return;
+            }
+
             setStatus("failed");
             setErrorMessage(
-                "Could not verify payment - missing transaction ID",
+                "Payment session expired. Please view your orders for latest status.",
             );
             toast({
-                title: "Error",
+                title: "Session Expired",
                 description:
-                    "Could not verify payment - missing transaction ID",
-                variant: "destructive",
+                    "Payment session expired. Redirecting to your orders.",
             });
-            setTimeout(() => router.replace("/checkout"), 2000);
+            setTimeout(() => router.replace(getOrdersRoute(lastOrderId)), 1200);
             return;
         }
 
@@ -110,6 +120,13 @@ export default function PaymentStatus() {
             sessionStorage.removeItem("phonepe_name");
             sessionStorage.removeItem("phonepe_mobile");
 
+            const { transactionId, orderId, amount } = transactionRef.current;
+            sessionStorage.setItem("last_payment_status", "success");
+            if (transactionId)
+                sessionStorage.setItem("last_payment_txn_id", transactionId);
+            if (orderId) sessionStorage.setItem("last_payment_order_id", orderId);
+            if (amount) sessionStorage.setItem("last_payment_amount", amount);
+
             // Clear cart and reset checkout
             try {
                 await clearCart();
@@ -120,8 +137,6 @@ export default function PaymentStatus() {
 
             // Redirect after brief delay
             setTimeout(() => {
-                const { transactionId, orderId, amount } =
-                    transactionRef.current;
                 router.replace(
                     `/payment/success?txnId=${transactionId}&amount=${amount}&orderId=${orderId}`,
                 );
