@@ -122,6 +122,7 @@ export default function PaymentStatus() {
 
             const { transactionId, orderId, amount } = transactionRef.current;
             sessionStorage.setItem("last_payment_status", "success");
+            sessionStorage.setItem("prevent_checkout_back", "1");
             if (transactionId)
                 sessionStorage.setItem("last_payment_txn_id", transactionId);
             if (orderId) sessionStorage.setItem("last_payment_order_id", orderId);

@@ -8,7 +8,7 @@ import { useCheckout } from "@/providers/CheckoutProvider";
 import { AnimatePresence, motion } from "framer-motion";
 import { Lock } from "lucide-react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import PhonePePayment from "./PhonePePayment";
 
@@ -23,6 +23,7 @@ type CheckoutItem = {
 
 export default function OrderSummary() {
     const { state } = useCheckout();
+    const router = useRouter();
     const searchParams = useSearchParams();
 
     const mode = searchParams?.get("mode");
@@ -66,6 +67,26 @@ export default function OrderSummary() {
 
         loadItems();
     }, [mode, productId, type]);
+
+    useEffect(() => {
+        if (loadingItems || !isClient) return;
+        if (mode === "buynow") return;
+
+        if (items.length === 0) {
+            const preventCheckoutBack =
+                sessionStorage.getItem("prevent_checkout_back") === "1";
+            const lastOrderId = sessionStorage.getItem("last_payment_order_id");
+
+            if (preventCheckoutBack) {
+                sessionStorage.removeItem("prevent_checkout_back");
+                router.replace(
+                    lastOrderId
+                        ? `/profile/orders/${lastOrderId}`
+                        : "/profile?tab=orders",
+                );
+            }
+        }
+    }, [isClient, items.length, loadingItems, mode, router]);
 
     if (!isClient || loadingItems) {
         return (
