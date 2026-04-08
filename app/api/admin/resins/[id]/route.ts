@@ -88,6 +88,36 @@ export async function PUT(
     const inStock = formData.get("inStock") !== "false";
 
     let cardImageUrl = (formData.get("cardImageUrl") as string) || null;
+    const cardImageFile = formData.get("cardImageFile") as File;
+
+    if (cardImageFile && cardImageFile.size > 0) {
+      const buffer = Buffer.from(await cardImageFile.arrayBuffer());
+      const uploadResult: any = await new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: `resins/${slug}`,
+              resource_type: "image",
+              transformation: [
+                {
+                  width: 1600,
+                  height: 1600,
+                  crop: "pad",
+                  background: "white",
+                  quality: "auto:good",
+                  fetch_format: "auto",
+                },
+              ],
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            },
+          )
+          .end(buffer);
+      });
+      cardImageUrl = uploadResult.secure_url;
+    }
 
     // ---------- PARSE ----------
     const attributes = JSON.parse((formData.get("attributes") as string) || "[]");
@@ -224,22 +254,80 @@ export async function PUT(
       // 🔹 5. Colours + Images (parallel optimized)
       await tx.resinColour.deleteMany({ where: { resinId: id } });
 
+      // Upload new colour images to Cloudinary before DB insert
+      const processedColours: { name: string; hexCode: string | null; sortOrder: number; inStock: boolean; images: ProcessedImage[] }[] = [];
+
+      for (let idx = 0; idx < colours.length; idx++) {
+        const c = colours[idx];
+        const processedImages: ProcessedImage[] = [];
+
+        if (c.images?.length) {
+          for (const img of c.images) {
+            let imageUrl = img.url;
+            if (img.uploadKey) {
+              const file = formData.get(img.uploadKey) as File;
+              if (file && file.size > 0) {
+                const buffer = Buffer.from(await file.arrayBuffer());
+                const res: any = await new Promise((resolve, reject) => {
+                  cloudinary.uploader
+                    .upload_stream(
+                      {
+                        folder: `resins/${slug}/gallery`,
+                        resource_type: "image",
+                        transformation: [
+                          {
+                            width: 1600,
+                            height: 1600,
+                            crop: "pad",
+                            background: "white",
+                            quality: "auto:good",
+                            fetch_format: "auto",
+                          },
+                        ],
+                      },
+                      (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                      },
+                    )
+                    .end(buffer);
+                });
+                imageUrl = res.secure_url;
+              }
+            }
+            processedImages.push({
+              url: imageUrl,
+              altText: null,
+              sortOrder: img.sortOrder,
+            });
+          }
+        }
+
+        processedColours.push({
+          name: c.name,
+          hexCode: c.hexCode || null,
+          sortOrder: idx,
+          inStock: c.inStock ?? true,
+          images: processedImages,
+        });
+      }
+
       await Promise.all(
-        colours.map(async (c: any, idx: number) => {
+        processedColours.map(async (c, idx) => {
           const colour = await tx.resinColour.create({
             data: {
               resinId: id,
               name: c.name,
               hexCode: c.hexCode,
               sortOrder: idx,
-              inStock: c.inStock ?? true,
+              inStock: c.inStock,
             },
           });
 
-          if (!c.images?.length) return;
+          if (!c.images.length) return;
 
           await tx.resinImage.createMany({
-            data: c.images.map((img: any, i: number) => ({
+            data: c.images.map((img, i) => ({
               colourId: colour.id,
               url: img.url,
               altText: null,
