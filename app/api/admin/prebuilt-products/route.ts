@@ -161,47 +161,46 @@ export async function POST(request: NextRequest) {
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
-        const imageRecords: any[] = [];
+        const imageRecords: any[] = await Promise.all(
+            newFiles.map(async (file, i) => {
+                const meta = JSON.parse(newMetaStrings[i] || "{}");
+                const buffer = Buffer.from(await file.arrayBuffer());
 
-        for (let i = 0; i < newFiles.length; i++) {
-            const file = newFiles[i];
-            const meta = JSON.parse(newMetaStrings[i] || "{}");
-            const buffer = Buffer.from(await file.arrayBuffer());
+                const uploadResult: any = await new Promise((resolve, reject) => {
+                    cloudinary.uploader
+                        .upload_stream(
+                            {
+                                folder: "prebuilt-products-new",
+                                resource_type: "image",
 
-            const uploadResult: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader
-                    .upload_stream(
-                        {
-                            folder: "prebuilt-products-new",
-                            resource_type: "image",
+                                transformation: [
+                                    {
+                                        width: 1600,
+                                        height: 1600,
+                                        crop: "pad",
+                                        background: "white",
+                                        quality: "auto:good",
+                                        fetch_format: "auto",
+                                    },
+                                ],
+                            },
+                            (error, result) => {
+                                if (error) reject(error);
+                                else resolve(result);
+                            },
+                        )
+                        .end(buffer);
+                });
 
-                            transformation: [
-                                {
-                                    width: 1600,
-                                    height: 1600,
-                                    crop: "pad",
-                                    background: "white",
-                                    quality: "auto:good",
-                                    fetch_format: "auto",
-                                },
-                            ],
-                        },
-                        (error, result) => {
-                            if (error) reject(error);
-                            else resolve(result);
-                        },
-                    )
-                    .end(buffer);
-            });
-
-            imageRecords.push({
-                url: uploadResult.secure_url,
-                altText: meta.altText || name.trim(),
-                position: meta.position ?? i,
-                colorName: meta.colorName || null,
-                isMain: meta.isMain ?? i === 0,
-            });
-        }
+                return {
+                    url: uploadResult.secure_url,
+                    altText: meta.altText || name.trim(),
+                    position: meta.position ?? i,
+                    colorName: meta.colorName || null,
+                    isMain: meta.isMain ?? i === 0,
+                };
+            })
+        );
 
         const product = await prisma.prebuiltProducts.create({
             data: {

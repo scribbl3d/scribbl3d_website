@@ -176,45 +176,44 @@ export async function POST(request: NextRequest) {
             url: string;
             isMain: boolean;
             sortOrder: number;
-        }[] = [];
+        }[] = await Promise.all(
+            newFiles.map(async (file, i) => {
+                const meta = JSON.parse(newMetaStrings[i] || "{}");
+                const buffer = Buffer.from(await file.arrayBuffer());
 
-        for (let i = 0; i < newFiles.length; i++) {
-            const file = newFiles[i];
-            const meta = JSON.parse(newMetaStrings[i] || "{}");
-            const buffer = Buffer.from(await file.arrayBuffer());
+                const uploadResult: any = await new Promise((resolve, reject) => {
+                    cloudinary.uploader
+                        .upload_stream(
+                            {
+                                folder: `printers/${slug}`,
+                                resource_type: "image",
 
-            const uploadResult: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader
-                    .upload_stream(
-                        {
-                            folder: `printers/${slug}`,
-                            resource_type: "image",
+                                transformation: [
+                                    {
+                                        width: 1600,
+                                        height: 1600,
+                                        crop: "pad",
+                                        background: "white",
+                                        quality: "auto:good",
+                                        fetch_format: "auto",
+                                    },
+                                ],
+                            },
+                            (error, result) => {
+                                if (error) reject(error);
+                                else resolve(result);
+                            },
+                        )
+                        .end(buffer);
+                });
 
-                            transformation: [
-                                {
-                                    width: 1600,
-                                    height: 1600,
-                                    crop: "pad",
-                                    background: "white",
-                                    quality: "auto:good",
-                                    fetch_format: "auto",
-                                },
-                            ],
-                        },
-                        (error, result) => {
-                            if (error) reject(error);
-                            else resolve(result);
-                        },
-                    )
-                    .end(buffer);
-            });
-
-            imageRecords.push({
-                url: uploadResult.secure_url,
-                isMain: meta.isMain || false,
-                sortOrder: meta.sortOrder ?? i,
-            });
-        }
+                return {
+                    url: uploadResult.secure_url,
+                    isMain: meta.isMain || false,
+                    sortOrder: meta.sortOrder ?? i,
+                };
+            })
+        );
 
         const newPrinter = await prisma.printer.create({
             data: {
