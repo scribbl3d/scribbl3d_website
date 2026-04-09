@@ -7,7 +7,7 @@ import { Bell, Check, Loader2, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { WishlistGridItem } from "./wishlist.types";
 
 export default function WishlistModal({
@@ -20,6 +20,16 @@ export default function WishlistModal({
     const { addToCart } = useCart();
     const router = useRouter();
     const { data: session } = useSession();
+
+    /* =====================
+       SCROLL LOCK
+    ===================== */
+    useEffect(() => {
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, []);
 
     /* =====================
        RESIN STATE
@@ -334,8 +344,8 @@ export default function WishlistModal({
                                                         selectedColourId ===
                                                         c.id
                                                             ? "ring-2 ring-blue-600 ring-offset-1"
-                                                            : "border-transparent"
-                                                    } ${colourOOS ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                            : "border-gray-300 hover:scale-110"
+                                                    } ${colourOOS ? "opacity-40 cursor-not-allowed !hover:scale-100" : ""}`}
                                                     style={{
                                                         backgroundColor:
                                                             c.hex ?? "#E5E7EB",
@@ -452,8 +462,8 @@ export default function WishlistModal({
                                                 className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
                                                     selectedColor === c.name
                                                         ? "ring-2 ring-gray-900 scale-110"
-                                                        : "border-transparent hover:ring-1 hover:ring-gray-400"
-                                                } ${c.isOOS ? "opacity-35 cursor-not-allowed" : ""}`}
+                                                        : "border-gray-300 hover:scale-110"
+                                                } ${c.isOOS ? "opacity-35 cursor-not-allowed !hover:scale-100" : ""}`}
                                                 style={{
                                                     backgroundColor:
                                                         c.hex ?? "#E5E7EB",

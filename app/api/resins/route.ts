@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+// /api/resins/route.ts
 
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
@@ -20,7 +21,7 @@ export async function GET(req: Request) {
     if (brands.length) where.brand = { in: brands };
 
     const resolutions = searchParams.getAll("resolution");
-    if (resolutions.length) where.resolution = { in: resolutions };
+    if (resolutions.length) where.resolution = { hasSome: resolutions };
 
     const colours = searchParams.getAll("colour");
     if (colours.length) {
@@ -29,24 +30,39 @@ export async function GET(req: Request) {
         };
     }
 
+    /* ── Material + Washable (both go into attributes, so combine with AND) ── */
+    const attributeConditions: any[] = [];
+
     const materialTypes = searchParams.getAll("materialType");
     if (materialTypes.length) {
-        where.attributes = {
-            some: {
-                label: "Material",
-                value: { in: materialTypes },
+        // "Standard Resin" should match "Standard Resin, Elastic Resin"
+        attributeConditions.push({
+            attributes: {
+                some: {
+                    label: "Material",
+                    OR: materialTypes.map((m) => ({
+                        value: { contains: m, mode: "insensitive" },
+                    })),
+                },
             },
-        };
+        });
     }
 
     const washable = searchParams.get("washable");
     if (washable !== null) {
-        where.attributes = {
-            some: {
-                label: "Washable",
-                value: washable === "true" ? "Yes" : "No",
+        attributeConditions.push({
+            attributes: {
+                some: {
+                    label: "Washable",
+                    value: washable === "true" ? "Yes" : "No",
+                },
             },
-        };
+        });
+    }
+
+    // Merge attribute conditions so they don't overwrite each other
+    if (attributeConditions.length) {
+        where.AND = [...(where.AND || []), ...attributeConditions];
     }
 
     const minPrice = searchParams.get("minPrice");

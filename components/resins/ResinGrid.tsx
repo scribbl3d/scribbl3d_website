@@ -23,55 +23,105 @@ export default function ResinGrid({
     const totalPages = Math.ceil(total / limit);
     const [activeItem, setActiveItem] = useState<WishlistGridItem | null>(null);
 
+    if (resins.length === 0) {
+        return (
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No resins found
+                </h3>
+                <p className="text-gray-600">
+                    Try adjusting your filters to see more results
+                </p>
+            </div>
+        );
+    }
+
     return (
         <>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {resins.map((resin) => (
-                    <ResinCard
-                        key={resin.id}
-                        resin={resin}
-                        onSelect={() => {
-                            setActiveItem({
-                                id: resin.id,
-                                itemType: "resin",
-                                title: resin.name,
-                                image: resin.cardImageUrl,
-                                badge: resin.technology,
-                                price: resin.weights?.[0]?.price ?? 0,
-                                originalPrice:
-                                    resin.weights?.[0]?.originalPrice ?? null,
-                                requiresOptions: true,
-                                slug: resin.slug,
-                                inStock: resin.inStock ?? true, // ← overall product OOS
+            <div className="space-y-8">
+                {/* GRID — 2 cols on mobile, 2 on md, 3 on xl */}
+                <div className="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
+                    {resins.map((resin) => (
+                        <ResinCard
+                            key={resin.id}
+                            resin={resin}
+                            onSelect={() => {
+                                setActiveItem({
+                                    id: resin.id,
+                                    itemType: "resin",
+                                    title: resin.name,
+                                    image: resin.cardImageUrl,
+                                    badge: resin.technology,
+                                    price: resin.weights?.[0]?.price ?? 0,
+                                    originalPrice:
+                                        resin.weights?.[0]?.originalPrice ??
+                                        null,
+                                    requiresOptions: true,
+                                    slug: resin.slug,
+                                    inStock: resin.inStock ?? true,
 
-                                cartPayload: { resinId: resin.id },
+                                    cartPayload: { resinId: resin.id },
 
-                                resinColours:
-                                    resin.colours?.map((c: any) => ({
-                                        id: c.id,
-                                        name: c.name,
-                                        hex: c.hexCode ?? null,
-                                        image:
-                                            c.images?.find((i: any) => i.isMain)
-                                                ?.url ?? null,
-                                        inStock: c.inStock ?? true, // ← per-colour OOS
-                                    })) ?? [],
+                                    resinColours:
+                                        resin.colours?.map((c: any) => ({
+                                            id: c.id,
+                                            name: c.name,
+                                            hex: c.hexCode ?? null,
+                                            image:
+                                                c.images?.find(
+                                                    (i: any) => i.isMain,
+                                                )?.url ?? null,
+                                            inStock: c.inStock ?? true,
+                                        })) ?? [],
 
-                                resinWeights:
-                                    resin.weights?.map((w: any) => ({
-                                        id: w.id,
-                                        label:
-                                            w.weightInGrams >= 1000
-                                                ? `${w.weightInGrams / 1000} kg`
-                                                : `${w.weightInGrams} g`,
-                                        price: w.price,
-                                        originalPrice: w.originalPrice,
-                                        inStock: w.inStock ?? true, // ← per-weight OOS
-                                    })) ?? [],
-                            });
-                        }}
-                    />
-                ))}
+                                    resinWeights:
+                                        resin.weights?.map((w: any) => ({
+                                            id: w.id,
+                                            label:
+                                                w.weightInGrams >= 1000
+                                                    ? `${w.weightInGrams / 1000} kg`
+                                                    : `${w.weightInGrams} g`,
+                                            price: w.price,
+                                            originalPrice: w.originalPrice,
+                                            inStock: w.inStock ?? true,
+                                        })) ?? [],
+                                });
+                            }}
+                        />
+                    ))}
+                </div>
+
+                {/* PAGINATION */}
+                {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => onPageChange(page - 1)}
+                            className="px-3 py-1 border rounded disabled:opacity-40 text-sm"
+                        >
+                            Prev
+                        </button>
+                        {Array.from({ length: totalPages }).map((_, i) => {
+                            const p = i + 1;
+                            return (
+                                <button
+                                    key={p}
+                                    onClick={() => onPageChange(p)}
+                                    className={`px-3 py-1 border rounded text-sm ${p === page ? "bg-black text-white" : ""}`}
+                                >
+                                    {p}
+                                </button>
+                            );
+                        })}
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => onPageChange(page + 1)}
+                            className="px-3 py-1 border rounded disabled:opacity-40 text-sm"
+                        >
+                            Next
+                        </button>
+                    </div>
+                )}
             </div>
 
             {activeItem && (
@@ -79,34 +129,6 @@ export default function ResinGrid({
                     item={activeItem}
                     onClose={() => setActiveItem(null)}
                 />
-            )}
-
-            {totalPages > 1 && (
-                <div className="mt-10 flex justify-center gap-2">
-                    <button
-                        disabled={page === 1}
-                        onClick={() => onPageChange(page - 1)}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        Prev
-                    </button>
-                    {Array.from({ length: totalPages }).map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => onPageChange(i + 1)}
-                            className={`px-3 py-1 rounded ${page === i + 1 ? "bg-black text-white" : "border"}`}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
-                    <button
-                        disabled={page === totalPages}
-                        onClick={() => onPageChange(page + 1)}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        Next
-                    </button>
-                </div>
             )}
         </>
     );

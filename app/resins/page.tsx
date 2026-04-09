@@ -23,8 +23,6 @@ export type ResinFiltersState = {
     price: [number, number] | null;
 };
 
-const PAGE_LIMIT = 3;
-
 /* ================= PAGE ================= */
 
 export default function ResinsPage() {
@@ -33,6 +31,17 @@ export default function ResinsPage() {
     const [resins, setResins] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
+
+    /* ================= RESPONSIVE PAGE LIMIT ================= */
+
+    const [limit, setLimit] = useState(9);
+
+    useEffect(() => {
+        const update = () => setLimit(window.innerWidth < 1024 ? 10 : 9);
+        update();
+        window.addEventListener("resize", update);
+        return () => window.removeEventListener("resize", update);
+    }, []);
 
     /* ================= PAGINATION ================= */
 
@@ -92,12 +101,12 @@ export default function ResinsPage() {
     useEffect(() => {
         fetchResins();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters, sortBy, page]);
+    }, [filters, sortBy, page, limit]);
 
-    /* Reset page when filters or sort change */
+    /* Reset page when filters, sort, or limit change */
     useEffect(() => {
         setPage(1);
-    }, [filters, sortBy]);
+    }, [filters, sortBy, limit]);
 
     const fetchResins = async () => {
         setLoading(true);
@@ -128,7 +137,7 @@ export default function ResinsPage() {
             /* SORT + PAGINATION */
             params.append("sortBy", sortBy);
             params.append("page", String(page));
-            params.append("limit", String(PAGE_LIMIT));
+            params.append("limit", String(limit));
 
             const res = await fetch(`/api/resins?${params.toString()}`);
             const data = await res.json();
@@ -304,7 +313,7 @@ export default function ResinsPage() {
                                             resins={resins}
                                             page={page}
                                             total={total}
-                                            limit={PAGE_LIMIT}
+                                            limit={limit}
                                             onPageChange={setPage}
                                         />
                                     </div>

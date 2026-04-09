@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+// /api/resins/filters/route.ts
 
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
@@ -33,8 +34,17 @@ export async function GET() {
 
     const resolutions = resolutionsRaw.map((r) => r.resolution).flat();
 
+    // Split comma-separated materials into individual items & deduplicate
+    const individualMaterials = Array.from(
+        new Set(
+            materials.flatMap((m) =>
+                m.value.split(",").map((v) => v.trim()).filter(Boolean)
+            )
+        )
+    ).sort();
+
     return NextResponse.json({
-        materialTypes: materials.map((m) => m.value),
+        materialTypes: individualMaterials,
         technologies: technologies.map((t) => t.technology),
         resolutions: Array.from(new Set(resolutions)),
         colours: colours.map((c) => c.name),

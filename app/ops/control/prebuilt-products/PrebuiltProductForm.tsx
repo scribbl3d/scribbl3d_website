@@ -555,7 +555,11 @@ export default function PrebuiltProductForm({
                                         setShortDescription(e.target.value)
                                     }
                                     placeholder="Brief one-line summary"
+                                    maxLength={92}
                                 />
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {shortDescription.length}/92 characters
+                                </p>
                                 <Err msg={errors.shortDesc} />
                             </div>
                             <div>

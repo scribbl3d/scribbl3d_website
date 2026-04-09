@@ -40,7 +40,7 @@ export default function SimilarResinsCarousel({
         async function fetchSimilar() {
             try {
                 const res = await fetch(
-                    `/api/resins/similar?technology=${technology}&exclude=${currentResinId}`
+                    `/api/resins/similar?technology=${technology}&exclude=${currentResinId}`,
                 );
                 const data = await res.json();
                 if (!ignore) {
@@ -60,19 +60,35 @@ export default function SimilarResinsCarousel({
     }, [currentResinId, technology]);
 
     /* =====================================================
+       AUTO-SCROLL
+    ===================================================== */
+
+    useEffect(() => {
+        if (!scrollRef.current || resins.length <= 1) return;
+        const container = scrollRef.current;
+        container.scrollLeft = 0;
+        const interval = setInterval(() => {
+            const cardWidth = container.firstElementChild?.clientWidth || 0;
+            container.scrollBy({ left: cardWidth, behavior: "smooth" });
+            if (container.scrollLeft >= container.scrollWidth / 2) {
+                container.scrollTo({ left: 0, behavior: "auto" });
+            }
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [resins]);
+
+    /* =====================================================
        SCROLL
     ===================================================== */
 
-    const scrollLeft = () => {
-        const el = scrollRef.current;
-        if (!el) return;
-        el.scrollBy({ left: -el.clientWidth, behavior: "smooth" });
-    };
-
-    const scrollRight = () => {
-        const el = scrollRef.current;
-        if (!el) return;
-        el.scrollBy({ left: el.clientWidth, behavior: "smooth" });
+    const scroll = (dir: "left" | "right") => {
+        const container = scrollRef.current;
+        if (!container) return;
+        const cardWidth = container.firstElementChild?.clientWidth || 0;
+        container.scrollBy({
+            left: dir === "left" ? -cardWidth : cardWidth,
+            behavior: "smooth",
+        });
     };
 
     /* =====================================================
@@ -81,56 +97,37 @@ export default function SimilarResinsCarousel({
 
     if (loading || resins.length === 0) return null;
 
-    /**
-     * 🔑 DUPLICATION RULE
-     * - Only duplicate if screen can show MORE cards than we have
-     * - Desktop ≈ 4 cards
-     */
-    const shouldDuplicate = resins.length < 4;
-    const carouselItems = shouldDuplicate ? [...resins, ...resins] : resins;
-
     /* =====================================================
        UI
     ===================================================== */
 
     return (
-        <div className="py-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="py-4 sm:py-8">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-6">
                 Similar Resins
             </h2>
 
             <div className="relative">
-                {/* LEFT ARROW */}
-                {carouselItems.length > 1 && (
-                    <button
-                        onClick={scrollLeft}
-                        className="absolute left-[-18px] top-1/2 -translate-y-1/2 z-10
-                                   w-10 h-10 rounded-full bg-white shadow
-                                   flex items-center justify-center hover:bg-gray-100"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-                )}
-
-                {/* RIGHT ARROW */}
-                {carouselItems.length > 1 && (
-                    <button
-                        onClick={scrollRight}
-                        className="absolute right-[-18px] top-1/2 -translate-y-1/2 z-10
-                                   w-10 h-10 rounded-full bg-white shadow
-                                   flex items-center justify-center hover:bg-gray-100"
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
-                )}
+                {/* Arrow buttons — hidden on mobile (swipe), visible on sm+ */}
+                <button
+                    onClick={() => scroll("left")}
+                    className="hidden sm:flex absolute left-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow items-center justify-center hover:bg-gray-100"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                    onClick={() => scroll("right")}
+                    className="hidden sm:flex absolute right-[-18px] top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow items-center justify-center hover:bg-gray-100"
+                >
+                    <ChevronRight className="w-5 h-5" />
+                </button>
 
                 {/* CAROUSEL */}
                 <div
                     ref={scrollRef}
-                    className="flex gap-6 overflow-x-auto scroll-smooth
-                               scrollbar-hide snap-x snap-mandatory pb-4"
+                    className="flex gap-3 sm:gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory scrollbar-hide pb-2 sm:pb-4"
                 >
-                    {carouselItems.map((resin, index) => {
+                    {[...resins, ...resins].map((resin, index) => {
                         const weights =
                             resin.weights && resin.weights.length > 0
                                 ? resin.weights
@@ -145,8 +142,7 @@ export default function SimilarResinsCarousel({
                         return (
                             <div
                                 key={`${resin.id}-${index}`}
-                                className="snap-start flex-shrink-0
-                                           w-[85%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
+                                className="snap-start flex-shrink-0 w-[48%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
                             >
                                 <ResinCard
                                     resin={{ ...resin, weights }}
@@ -159,7 +155,6 @@ export default function SimilarResinsCarousel({
                                             badge: resin.technology,
                                             slug: resin.slug,
 
-                                            // 👇 ALWAYS FROM weights[0]
                                             price: weights[0].price,
                                             originalPrice:
                                                 weights[0].originalPrice ??
@@ -171,7 +166,6 @@ export default function SimilarResinsCarousel({
                                                 resinId: resin.id,
                                             },
 
-                                            // ✅ COLORS (THIS FIXES COLOR ISSUE)
                                             resinColours:
                                                 resin.colours?.map(
                                                     (c: any) => ({
@@ -183,10 +177,9 @@ export default function SimilarResinsCarousel({
                                                         image:
                                                             c.images?.[0]
                                                                 ?.url ?? null,
-                                                    })
+                                                    }),
                                                 ) ?? [],
 
-                                            // ✅ WEIGHTS
                                             resinWeights: weights.map(
                                                 (w: any) => ({
                                                     id: w.id,
@@ -196,7 +189,7 @@ export default function SimilarResinsCarousel({
                                                     price: w.price,
                                                     originalPrice:
                                                         w.originalPrice ?? null,
-                                                })
+                                                }),
                                             ),
                                         })
                                     }

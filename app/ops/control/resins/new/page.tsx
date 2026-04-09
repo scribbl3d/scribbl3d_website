@@ -1206,6 +1206,7 @@ export default function ResinFormPage() {
                             onChange={(v: string) =>
                                 updateField("shortDescription", v)
                             }
+                            maxLength={92}
                         />
                         <Textarea
                             label="Full Description"
@@ -1270,7 +1271,7 @@ function Input({ label, value, onChange, type = "text", className = "" }: any) {
     );
 }
 
-function Textarea({ label, value, onChange }: any) {
+function Textarea({ label, value, onChange, maxLength }: any) {
     return (
         <div>
             <label className="text-sm font-medium mb-1 block text-gray-700">
@@ -1281,7 +1282,13 @@ function Textarea({ label, value, onChange }: any) {
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-black focus:outline-none"
+                maxLength={maxLength}
             />
+            {maxLength && (
+                <p className="mt-1 text-xs text-gray-500">
+                    {value.length}/{maxLength} characters
+                </p>
+            )}
         </div>
     );
 }

@@ -1719,7 +1719,11 @@ export default function PrinterFormPage() {
                                                 })
                                             }
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                            maxLength={92}
                                         />
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {formData.shortDescription.length}/92 characters
+                                        </p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
