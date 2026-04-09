@@ -156,51 +156,80 @@ export async function POST(req: Request) {
         const rawColours = JSON.parse(
             (formData.get("colours") as string) || "[]",
         );
-        const processedColours: ProcessedColour[] = [];
 
-        for (const col of rawColours) {
-            const processedImages: ProcessedImage[] = [];
-            for (const img of col.images) {
-                let imageUrl = img.url;
+        // Upload all colour images to Cloudinary in parallel
+        const uploadToCloudinary = async (file: File): Promise<string> => {
+            const buffer = Buffer.from(await file.arrayBuffer());
+            const res: any = await new Promise((resolve, reject) => {
+                cloudinary.uploader
+                    .upload_stream(
+                        {
+                            folder: `resins/${slug}/gallery`,
+                            resource_type: "image",
+                            transformation: [
+                                {
+                                    width: 1600,
+                                    height: 1600,
+                                    crop: "pad",
+                                    background: "white",
+                                    quality: "auto:good",
+                                    fetch_format: "auto",
+                                },
+                            ],
+                        },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        },
+                    )
+                    .end(buffer);
+            });
+            return res.secure_url;
+        };
+
+        const uploadJobs: { colourIdx: number; imageIdx: number; promise: Promise<string> }[] = [];
+
+        for (let cIdx = 0; cIdx < rawColours.length; cIdx++) {
+            const col = rawColours[cIdx];
+            if (!col.images?.length) continue;
+            for (let iIdx = 0; iIdx < col.images.length; iIdx++) {
+                const img = col.images[iIdx];
                 if (img.uploadKey) {
                     const file = formData.get(img.uploadKey) as File;
-                    if (file) {
-                        const buffer = Buffer.from(await file.arrayBuffer());
-                        const res: any = await new Promise(
-                            (resolve, reject) => {
-                                cloudinary.uploader
-                                    .upload_stream(
-                                        {
-                                            folder: `resins/${slug}/gallery`,
-                                            resource_type: "image",
-                                            transformation: [
-                                                {
-                                                    width: 1600,
-                                                    height: 1600,
-                                                    crop: "pad",
-                                                    background: "white",
-                                                    quality: "auto:good",
-                                                    fetch_format: "auto",
-                                                },
-                                            ],
-                                        },
-                                        (error, result) => {
-                                            if (error) reject(error);
-                                            else resolve(result);
-                                        },
-                                    )
-                                    .end(buffer);
-                            },
-                        );
-                        imageUrl = res.secure_url;
+                    if (file && file.size > 0) {
+                        uploadJobs.push({ colourIdx: cIdx, imageIdx: iIdx, promise: uploadToCloudinary(file) });
                     }
                 }
-                processedImages.push({
-                    url: imageUrl,
-                    altText: null,
-                    sortOrder: img.sortOrder,
-                });
             }
+        }
+
+        const uploadResults = await Promise.all(
+            uploadJobs.map(async (job) => ({ ...job, url: await job.promise }))
+        );
+
+        const uploadMap = new Map<string, string>();
+        for (const r of uploadResults) {
+            uploadMap.set(`${r.colourIdx}-${r.imageIdx}`, r.url);
+        }
+
+        const processedColours: ProcessedColour[] = [];
+
+        for (let idx = 0; idx < rawColours.length; idx++) {
+            const col = rawColours[idx];
+            const processedImages: ProcessedImage[] = [];
+
+            if (col.images?.length) {
+                for (let iIdx = 0; iIdx < col.images.length; iIdx++) {
+                    const img = col.images[iIdx];
+                    const cloudinaryUrl = uploadMap.get(`${idx}-${iIdx}`);
+                    processedImages.push({
+                        url: cloudinaryUrl || img.url,
+                        altText: null,
+                        sortOrder: img.sortOrder,
+                    });
+                }
+            }
+
             processedColours.push({
                 name: col.name,
                 hexCode: col.hexCode || null,

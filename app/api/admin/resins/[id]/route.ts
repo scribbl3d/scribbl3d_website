@@ -129,7 +129,65 @@ export async function PUT(
     const downloads = JSON.parse((formData.get("downloads") as string) || "[]");
     const colours = JSON.parse((formData.get("colours") as string) || "[]");
 
-    // ================= UPLOAD IMAGES TO CLOUDINARY (before transaction) =================
+    // ================= UPLOAD IMAGES TO CLOUDINARY IN PARALLEL (before transaction) =================
+    const uploadToCloudinary = async (file: File): Promise<string> => {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const res: any = await new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: `resins/${slug}/gallery`,
+              resource_type: "image",
+              transformation: [
+                {
+                  width: 1600,
+                  height: 1600,
+                  crop: "pad",
+                  background: "white",
+                  quality: "auto:good",
+                  fetch_format: "auto",
+                },
+              ],
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            },
+          )
+          .end(buffer);
+      });
+      return res.secure_url;
+    };
+
+    // Collect all upload promises across all colours
+    const uploadJobs: { colourIdx: number; imageIdx: number; promise: Promise<string> }[] = [];
+
+    for (let cIdx = 0; cIdx < colours.length; cIdx++) {
+      const c = colours[cIdx];
+      if (!c.images?.length) continue;
+      for (let iIdx = 0; iIdx < c.images.length; iIdx++) {
+        const img = c.images[iIdx];
+        if (img.uploadKey) {
+          const file = formData.get(img.uploadKey) as File;
+          if (file && file.size > 0) {
+            uploadJobs.push({ colourIdx: cIdx, imageIdx: iIdx, promise: uploadToCloudinary(file) });
+          }
+        }
+      }
+    }
+
+    // Run all uploads in parallel
+    const uploadResults = await Promise.all(
+      uploadJobs.map(async (job) => ({ ...job, url: await job.promise }))
+    );
+
+    // Build a lookup map: "colourIdx-imageIdx" -> cloudinary url
+    const uploadMap = new Map<string, string>();
+    for (const r of uploadResults) {
+      uploadMap.set(`${r.colourIdx}-${r.imageIdx}`, r.url);
+    }
+
+    // Build processedColours with resolved URLs
     const processedColours: { name: string; hexCode: string | null; sortOrder: number; inStock: boolean; images: ProcessedImage[] }[] = [];
 
     for (let idx = 0; idx < colours.length; idx++) {
@@ -137,41 +195,11 @@ export async function PUT(
       const processedImages: ProcessedImage[] = [];
 
       if (c.images?.length) {
-        for (const img of c.images) {
-          let imageUrl = img.url;
-          if (img.uploadKey) {
-            const file = formData.get(img.uploadKey) as File;
-            if (file && file.size > 0) {
-              const buffer = Buffer.from(await file.arrayBuffer());
-              const res: any = await new Promise((resolve, reject) => {
-                cloudinary.uploader
-                  .upload_stream(
-                    {
-                      folder: `resins/${slug}/gallery`,
-                      resource_type: "image",
-                      transformation: [
-                        {
-                          width: 1600,
-                          height: 1600,
-                          crop: "pad",
-                          background: "white",
-                          quality: "auto:good",
-                          fetch_format: "auto",
-                        },
-                      ],
-                    },
-                    (error, result) => {
-                      if (error) reject(error);
-                      else resolve(result);
-                    },
-                  )
-                  .end(buffer);
-              });
-              imageUrl = res.secure_url;
-            }
-          }
+        for (let iIdx = 0; iIdx < c.images.length; iIdx++) {
+          const img = c.images[iIdx];
+          const cloudinaryUrl = uploadMap.get(`${idx}-${iIdx}`);
           processedImages.push({
-            url: imageUrl,
+            url: cloudinaryUrl || img.url,
             altText: null,
             sortOrder: img.sortOrder,
           });
