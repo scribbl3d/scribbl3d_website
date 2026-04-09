@@ -129,7 +129,65 @@ export async function PUT(
     const downloads = JSON.parse((formData.get("downloads") as string) || "[]");
     const colours = JSON.parse((formData.get("colours") as string) || "[]");
 
-    // ================= TRANSACTION =================
+    // ================= UPLOAD IMAGES TO CLOUDINARY (before transaction) =================
+    const processedColours: { name: string; hexCode: string | null; sortOrder: number; inStock: boolean; images: ProcessedImage[] }[] = [];
+
+    for (let idx = 0; idx < colours.length; idx++) {
+      const c = colours[idx];
+      const processedImages: ProcessedImage[] = [];
+
+      if (c.images?.length) {
+        for (const img of c.images) {
+          let imageUrl = img.url;
+          if (img.uploadKey) {
+            const file = formData.get(img.uploadKey) as File;
+            if (file && file.size > 0) {
+              const buffer = Buffer.from(await file.arrayBuffer());
+              const res: any = await new Promise((resolve, reject) => {
+                cloudinary.uploader
+                  .upload_stream(
+                    {
+                      folder: `resins/${slug}/gallery`,
+                      resource_type: "image",
+                      transformation: [
+                        {
+                          width: 1600,
+                          height: 1600,
+                          crop: "pad",
+                          background: "white",
+                          quality: "auto:good",
+                          fetch_format: "auto",
+                        },
+                      ],
+                    },
+                    (error, result) => {
+                      if (error) reject(error);
+                      else resolve(result);
+                    },
+                  )
+                  .end(buffer);
+              });
+              imageUrl = res.secure_url;
+            }
+          }
+          processedImages.push({
+            url: imageUrl,
+            altText: null,
+            sortOrder: img.sortOrder,
+          });
+        }
+      }
+
+      processedColours.push({
+        name: c.name,
+        hexCode: c.hexCode || null,
+        sortOrder: idx,
+        inStock: c.inStock ?? true,
+        images: processedImages,
+      });
+    }
+
+    // ================= TRANSACTION (DB only, no external calls) =================
     const resin = await prisma.$transaction(async (tx) => {
 
       // 🔹 1. Update base
@@ -225,7 +283,7 @@ export async function PUT(
           : null,
       ]);
 
-      // 🔹 4. Weights (parallel)
+      // 🔹 4. Weights
       await tx.resinWeight.deleteMany({ where: { resinId: id } });
 
       await Promise.all(
@@ -251,66 +309,8 @@ export async function PUT(
         )
       );
 
-      // 🔹 5. Colours + Images (parallel optimized)
+      // 🔹 5. Colours + Images (using pre-uploaded URLs)
       await tx.resinColour.deleteMany({ where: { resinId: id } });
-
-      // Upload new colour images to Cloudinary before DB insert
-      const processedColours: { name: string; hexCode: string | null; sortOrder: number; inStock: boolean; images: ProcessedImage[] }[] = [];
-
-      for (let idx = 0; idx < colours.length; idx++) {
-        const c = colours[idx];
-        const processedImages: ProcessedImage[] = [];
-
-        if (c.images?.length) {
-          for (const img of c.images) {
-            let imageUrl = img.url;
-            if (img.uploadKey) {
-              const file = formData.get(img.uploadKey) as File;
-              if (file && file.size > 0) {
-                const buffer = Buffer.from(await file.arrayBuffer());
-                const res: any = await new Promise((resolve, reject) => {
-                  cloudinary.uploader
-                    .upload_stream(
-                      {
-                        folder: `resins/${slug}/gallery`,
-                        resource_type: "image",
-                        transformation: [
-                          {
-                            width: 1600,
-                            height: 1600,
-                            crop: "pad",
-                            background: "white",
-                            quality: "auto:good",
-                            fetch_format: "auto",
-                          },
-                        ],
-                      },
-                      (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                      },
-                    )
-                    .end(buffer);
-                });
-                imageUrl = res.secure_url;
-              }
-            }
-            processedImages.push({
-              url: imageUrl,
-              altText: null,
-              sortOrder: img.sortOrder,
-            });
-          }
-        }
-
-        processedColours.push({
-          name: c.name,
-          hexCode: c.hexCode || null,
-          sortOrder: idx,
-          inStock: c.inStock ?? true,
-          images: processedImages,
-        });
-      }
 
       await Promise.all(
         processedColours.map(async (c, idx) => {
@@ -351,8 +351,6 @@ export async function PUT(
           downloads: true,
         },
       });
-    }, {
-      timeout: 20000, // 🔥 FIX
     });
 
     return NextResponse.json(resin);
