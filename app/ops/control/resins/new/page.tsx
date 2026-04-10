@@ -794,6 +794,9 @@ export default function ResinFormPage() {
                                                     e.target.value,
                                                 )
                                             }
+                                            onWheel={(e) =>
+                                                e.currentTarget.blur()
+                                            }
                                             className={`w-full border px-3 py-2 rounded ${isInvalid ? "border-red-500 bg-red-50" : ""}`}
                                         />
                                         {isInvalid && (
@@ -814,6 +817,9 @@ export default function ResinFormPage() {
                                                     "originalPrice",
                                                     e.target.value,
                                                 )
+                                            }
+                                            onWheel={(e) =>
+                                                e.currentTarget.blur()
                                             }
                                             className="w-full border px-3 py-2 rounded"
                                         />

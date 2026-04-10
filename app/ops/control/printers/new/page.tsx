@@ -1509,6 +1509,9 @@ export default function PrinterFormPage() {
                                                     price: e.target.value,
                                                 })
                                             }
+                                            onWheel={(e) =>
+                                                e.currentTarget.blur()
+                                            }
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                                             placeholder="0"
                                         />
@@ -1526,6 +1529,9 @@ export default function PrinterFormPage() {
                                                     originalPrice:
                                                         e.target.value,
                                                 })
+                                            }
+                                            onWheel={(e) =>
+                                                e.currentTarget.blur()
                                             }
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-500"
                                             placeholder="0"

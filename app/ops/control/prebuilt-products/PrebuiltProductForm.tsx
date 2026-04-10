@@ -811,13 +811,15 @@ export default function PrebuiltProductForm({
                                                         "price",
                                                         raw === ""
                                                             ? 0
-                                                            : Math.round(
-                                                                  parseFloat(
-                                                                      raw,
-                                                                  ),
-                                                              ),
+                                                            : (Number.parseInt(
+                                                                  raw,
+                                                                  10,
+                                                              ) || 0),
                                                     );
                                                 }}
+                                                onWheel={(e) =>
+                                                    e.currentTarget.blur()
+                                                }
                                                 placeholder="e.g. 499"
                                             />
                                         </div>
@@ -838,13 +840,15 @@ export default function PrebuiltProductForm({
                                                         "originalPrice",
                                                         raw === ""
                                                             ? 0
-                                                            : Math.round(
-                                                                  parseFloat(
-                                                                      raw,
-                                                                  ),
-                                                              ),
+                                                            : (Number.parseInt(
+                                                                  raw,
+                                                                  10,
+                                                              ) || 0),
                                                     );
                                                 }}
+                                                onWheel={(e) =>
+                                                    e.currentTarget.blur()
+                                                }
                                                 placeholder="e.g. 699"
                                             />
                                         </div>

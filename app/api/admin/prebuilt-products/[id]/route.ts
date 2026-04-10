@@ -40,6 +40,17 @@ const parseDim = (val: unknown): number | null => {
     return isNaN(n) ? null : n;
 };
 
+const parsePrice = (val: unknown): number => {
+    if (typeof val === "number") {
+        return Number.isFinite(val) ? Math.trunc(val) : 0;
+    }
+    if (typeof val === "string") {
+        const parsed = Number.parseInt(val, 10);
+        return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+};
+
 /* ============================================================================
    GET /api/admin/prebuilt-products/[id]
    ============================================================================ */
@@ -250,10 +261,8 @@ export async function PUT(
 
             for (const v of variants) {
                 const variantData = {
-                    price: Math.round(parseFloat(String(v.price)) || 0),
-                    originalPrice: Math.round(
-                        parseFloat(String(v.originalPrice)) || 0,
-                    ),
+                    price: parsePrice(v.price),
+                    originalPrice: parsePrice(v.originalPrice),
                     isActive: v.isActive ?? true,
                     inStock: v.inStock ?? true, // ← variant-level inStock
                     colorName: v.colorName?.trim() || null,
