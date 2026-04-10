@@ -8,6 +8,9 @@ const nextConfig = {
         // This is the specific patch for Next.js production builds
         styledComponents: true,
     },
+     experimental: {
+        middlewareClientMaxBodySize: '50mb',
+    },
 
     images: {
         remotePatterns: [
