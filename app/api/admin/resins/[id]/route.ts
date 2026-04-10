@@ -188,7 +188,7 @@ export async function PUT(
     }
 
     // Build processedColours with resolved URLs
-    const processedColours: { name: string; hexCode: string | null; sortOrder: number; inStock: boolean; images: ProcessedImage[] }[] = [];
+    const processedColours: ProcessedColour[] = [];
 
     for (let idx = 0; idx < colours.length; idx++) {
       const c = colours[idx];
@@ -207,6 +207,7 @@ export async function PUT(
       }
 
       processedColours.push({
+        id: c.id || undefined,
         name: c.name,
         hexCode: c.hexCode || null,
         sortOrder: idx,
@@ -311,52 +312,111 @@ export async function PUT(
           : null,
       ]);
 
-      // 🔹 4. Weights
-      await tx.resinWeight.deleteMany({ where: { resinId: id } });
+      // 🔹 4. Weights — upsert to preserve IDs (cart items reference these)
+      const existingWeightIds = (
+        await tx.resinWeight.findMany({
+          where: { resinId: id },
+          select: { id: true },
+        })
+      ).map((w) => w.id);
 
+      const incomingWeightIds = weights
+        .map((w: any) => w.id)
+        .filter(Boolean);
+
+      // Delete only weights that were removed in admin
+      const weightIdsToDelete = existingWeightIds.filter(
+        (eid) => !incomingWeightIds.includes(eid)
+      );
+      if (weightIdsToDelete.length) {
+        await tx.resinWeight.deleteMany({
+          where: { id: { in: weightIdsToDelete } },
+        });
+      }
+
+      // Update existing or create new
       await Promise.all(
-        weights.map((w: any, idx: number) =>
-          tx.resinWeight.create({
-            data: {
-              resinId: id,
-              weightInGrams: Number(w.weightInGrams),
-              price: Number(w.price),
-              originalPrice: w.originalPrice ? Number(w.originalPrice) : null,
-              discount:
-                w.originalPrice && Number(w.originalPrice) > Number(w.price)
-                  ? Math.round(
-                      ((Number(w.originalPrice) - Number(w.price)) /
-                        Number(w.originalPrice)) *
-                        100
-                    )
-                  : null,
-              sortOrder: idx,
-              inStock: w.inStock ?? true,
-            },
-          })
-        )
+        weights.map((w: any, idx: number) => {
+          const data = {
+            resinId: id,
+            weightInGrams: Number(w.weightInGrams),
+            price: Number(w.price),
+            originalPrice: w.originalPrice ? Number(w.originalPrice) : null,
+            discount:
+              w.originalPrice && Number(w.originalPrice) > Number(w.price)
+                ? Math.round(
+                    ((Number(w.originalPrice) - Number(w.price)) /
+                      Number(w.originalPrice)) *
+                      100
+                  )
+                : null,
+            sortOrder: idx,
+            inStock: w.inStock ?? true,
+          };
+
+          if (w.id && existingWeightIds.includes(w.id)) {
+            return tx.resinWeight.update({ where: { id: w.id }, data });
+          }
+          return tx.resinWeight.create({ data });
+        })
       );
 
-      // 🔹 5. Colours + Images (using pre-uploaded URLs)
-      await tx.resinColour.deleteMany({ where: { resinId: id } });
+      // 🔹 5. Colours + Images — upsert to preserve IDs (cart items reference these)
+      const existingColourIds = (
+        await tx.resinColour.findMany({
+          where: { resinId: id },
+          select: { id: true },
+        })
+      ).map((c) => c.id);
 
+      const incomingColourIds = colours
+        .map((c: any) => c.id)
+        .filter(Boolean);
+
+      // Delete only colours that were removed in admin
+      const colourIdsToDelete = existingColourIds.filter(
+        (eid) => !incomingColourIds.includes(eid)
+      );
+      if (colourIdsToDelete.length) {
+        // Images cascade-delete with colour
+        await tx.resinColour.deleteMany({
+          where: { id: { in: colourIdsToDelete } },
+        });
+      }
+
+      // Update existing or create new colours + replace their images
       await Promise.all(
         processedColours.map(async (c, idx) => {
-          const colour = await tx.resinColour.create({
-            data: {
-              resinId: id,
-              name: c.name,
-              hexCode: c.hexCode,
-              sortOrder: idx,
-              inStock: c.inStock,
-            },
-          });
+          const originalColour = colours[idx];
+          const colourData = {
+            resinId: id,
+            name: c.name,
+            hexCode: c.hexCode,
+            sortOrder: idx,
+            inStock: c.inStock,
+          };
+
+          let colourId: string;
+
+          if (originalColour.id && existingColourIds.includes(originalColour.id)) {
+            await tx.resinColour.update({
+              where: { id: originalColour.id },
+              data: colourData,
+            });
+            colourId = originalColour.id;
+
+            // Replace images for this colour (images don't need stable IDs)
+            await tx.resinImage.deleteMany({ where: { colourId } });
+          } else {
+            const created = await tx.resinColour.create({ data: colourData });
+            colourId = created.id;
+          }
 
           if (!c.images.length) return;
 
           await tx.resinImage.createMany({
             data: c.images.map((img, i) => ({
-              colourId: colour.id,
+              colourId,
               url: img.url,
               altText: null,
               sortOrder: i,
@@ -391,6 +451,7 @@ export async function PUT(
     );
   }
 }
+
 /* ========================= DELETE ========================= */
 
 export async function DELETE(
