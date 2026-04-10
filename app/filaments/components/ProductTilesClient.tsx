@@ -446,7 +446,13 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
             setIsLoading(false);
         }
     };
-    const handleBuyNow = () => {
+    const handleBuyNow = async () => {
+        // Set checkout access cookie to allow navigation
+        try {
+            await fetch("/api/checkout/set-access", { method: "POST" });
+        } catch (error) {
+            console.error("Failed to set checkout access:", error);
+        }
         router.push(`/checkout?mode=buynow&type=product&productId=${id}`);
     };
 

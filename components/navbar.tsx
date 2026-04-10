@@ -71,7 +71,13 @@ export default function Navbar() {
 
     const handleSignOut = async () => {
         await signOut({ redirect: false });
-        router.push("/login");
+        // Clear any client-side cached data
+        if (typeof window !== 'undefined') {
+            // Force a hard refresh to clear cached pages
+            window.location.href = "/login";
+        } else {
+            router.push("/login");
+        }
     };
 
     useEffect(() => {

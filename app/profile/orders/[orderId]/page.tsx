@@ -18,6 +18,10 @@ import { notFound, redirect } from "next/navigation";
 import { CancelOrderButton } from "./CancelOrderButton";
 import { ContactSupportButton } from "./ContactSupportModal";
 import { CopyButton } from "./CopyButton";
+
+// Force dynamic rendering to prevent caching of authenticated pages
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { DownloadInvoiceButton } from "./DownloadInvoiceButton";
 import { GiveFeedbackButton } from "./FeedbackModal";
 import { StatusBanner } from "./StatusBanner";

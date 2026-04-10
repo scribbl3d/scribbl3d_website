@@ -5,12 +5,23 @@ import { Suspense } from "react";
 import { Breadcrumbs } from "./components/breadcrumbs";
 import ClientCheckoutSteps from "./components/ClientCheckoutSteps";
 import OrderSummary from "./components/order-summary";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+
+// Force dynamic rendering to prevent caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function CheckoutPage({
     searchParams,
 }: {
     searchParams: Promise<{ mode?: string }>;
 }) {
+    // Verify user is authenticated
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+        redirect("/login?callbackUrl=/checkout");
+    }
     const resolvedSearchParams = await searchParams;
     const mode = resolvedSearchParams?.mode;
 

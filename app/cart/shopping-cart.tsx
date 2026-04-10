@@ -1225,13 +1225,21 @@ export default function ShoppingCart() {
         }
     };
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         setPricing({
             subtotal,
             discountAmount: couponDiscount,
             appliedDiscountCode,
             tax: gstAmount,
         });
+        
+        // Set checkout access cookie to allow navigation
+        try {
+            await fetch("/api/checkout/set-access", { method: "POST" });
+        } catch (error) {
+            console.error("Failed to set checkout access:", error);
+        }
+        
         router.push("/checkout");
     };
 

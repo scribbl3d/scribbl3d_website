@@ -7,6 +7,10 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 
 import { MobileNav } from "./_components/mobile-nav";
+
+// Force dynamic rendering to prevent caching of authenticated pages
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { Orders } from "./_components/orders";
 import { Overview } from "./_components/overview";
 import { PersonalInfo } from "./_components/personal-info";
