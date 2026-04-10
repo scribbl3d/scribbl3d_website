@@ -324,7 +324,6 @@ export async function PUT(
         .map((w: any) => w.id)
         .filter(Boolean);
 
-      // Delete only weights that were removed in admin
       const weightIdsToDelete = existingWeightIds.filter(
         (eid) => !incomingWeightIds.includes(eid)
       );
@@ -334,7 +333,6 @@ export async function PUT(
         });
       }
 
-      // Update existing or create new
       await Promise.all(
         weights.map((w: any, idx: number) => {
           const data = {
@@ -373,18 +371,15 @@ export async function PUT(
         .map((c: any) => c.id)
         .filter(Boolean);
 
-      // Delete only colours that were removed in admin
       const colourIdsToDelete = existingColourIds.filter(
         (eid) => !incomingColourIds.includes(eid)
       );
       if (colourIdsToDelete.length) {
-        // Images cascade-delete with colour
         await tx.resinColour.deleteMany({
           where: { id: { in: colourIdsToDelete } },
         });
       }
 
-      // Update existing or create new colours + replace their images
       await Promise.all(
         processedColours.map(async (c, idx) => {
           const originalColour = colours[idx];
@@ -405,7 +400,6 @@ export async function PUT(
             });
             colourId = originalColour.id;
 
-            // Replace images for this colour (images don't need stable IDs)
             await tx.resinImage.deleteMany({ where: { colourId } });
           } else {
             const created = await tx.resinColour.create({ data: colourData });
@@ -439,7 +433,7 @@ export async function PUT(
           downloads: true,
         },
       });
-    });
+    }, { timeout: 120000 });
 
     return NextResponse.json(resin);
 
