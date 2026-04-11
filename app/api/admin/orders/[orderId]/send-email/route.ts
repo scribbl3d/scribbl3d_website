@@ -1,10 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import sgMail from "@sendgrid/mail";
 import sendStatusEmail from "./sendStatusEmail";
-
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY!;
-sgMail.setApiKey(SENDGRID_API_KEY);
 
 export async function POST(
   req: NextRequest,
@@ -13,13 +9,17 @@ export async function POST(
   try {
     const { orderId } = await context.params;
     const { status, trackingInfo } = await req.json();
+    
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: { user: { select: { email: true, name: true } } },
     });
+    
     if (!order)
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    
     await sendStatusEmail(order, status, trackingInfo);
+    
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Error sending status email:", error);

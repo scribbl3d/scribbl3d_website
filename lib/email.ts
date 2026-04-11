@@ -1,15 +1,8 @@
-import sgMail from "@sendgrid/mail";
+import { sendEmail as sesEmail } from "@/lib/email/sendEmail";
 
-// Set up SendGrid
-const sendGridApiKey = process.env.SENDGRID_API_KEY;
-if (!sendGridApiKey) {
-    throw new Error("SENDGRID_API_KEY is not set in the environment variables");
-}
-sgMail.setApiKey(sendGridApiKey);
-
-// Default sender email - must be verified in SendGrid
+// Default sender email
 const DEFAULT_FROM_EMAIL =
-    process.env.SENDGRID_FROM_EMAIL || "noreply@scribbl3d.com";
+    process.env.AWS_SES_FROM_EMAIL || "supplychain@scribbl3d.com";
 
 export interface EmailParams {
     to: string;
@@ -26,37 +19,30 @@ export async function sendEmail(params: EmailParams) {
         throw new Error("From email address is required");
     }
 
-    const msg = {
-        to,
-        from,
-        subject,
-        text: text || "",
-        html: html || text || "",
-    };
-
     try {
-        console.log("Attempting to send email via SendGrid:", {
+        console.log("Attempting to send email via AWS SES:", {
             to,
             from,
             subject,
         });
 
-        const response = await sgMail.send(msg);
-        console.log(`Email sent successfully to ${to}`, response[0].statusCode);
-        return response;
-    } catch (error: any) {
-        console.error("SendGrid Error:", {
-            message: error.message,
-            code: error.code,
-            response: error.response?.body,
+        const result = await sesEmail({
+            to,
+            subject,
+            html: html || text || "",
+            text,
         });
 
-        // If we get a 403 Forbidden error, it's likely a sender verification issue
-        if (error.code === 403) {
-            throw new Error(
-                "Email sending failed: Sender email not verified in SendGrid. Please verify your sender email address.",
-            );
+        if (!result.ok) {
+            throw new Error(result.error || "Failed to send email");
         }
+
+        console.log(`Email sent successfully to ${to}`);
+        return result;
+    } catch (error: any) {
+        console.error("AWS SES Error:", {
+            message: error.message,
+        });
 
         throw new Error(`Failed to send email: ${error.message}`);
     }
@@ -107,35 +93,3 @@ export async function sendPasswordResetEmail(
         throw new Error("Failed to send password reset email");
     }
 }
-
-// export async function sendOrderConfirmationEmail(order: any) {
-//   const subject = `Order Confirmed - #${order.id}`;
-//   const html = `
-//     <h1>Thank you for your order!</h1>
-//     <p>Your order #${order.id} has been confirmed and is being processed.</p>
-//     <h2>Order Details:</h2>
-//     <ul>
-//       ${order.items
-//         .map(
-//           (item: any) => `
-//         <li>${item.quantity}x ${item.product.name} - ₹${item.price}</li>
-//       `
-//         )
-//         .join("")}
-//     </ul>
-//     <p>Total Amount: ₹${order.totalAmount}</p>
-//     <p>We'll send you another email when your order ships.</p>
-//   `;
-
-//   try {
-//     await sendEmail({
-//       to: order.user.email,
-//       subject,
-//       html,
-//     });
-//     console.log("Order confirmation email sent successfully");
-//   } catch (error) {
-//     console.error("Error sending order confirmation email:", error);
-//     throw new Error("Failed to send order confirmation email");
-//   }
-// }

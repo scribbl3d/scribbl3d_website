@@ -1,8 +1,4 @@
-import sgMail from "@sendgrid/mail";
-
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY!;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL!;
-sgMail.setApiKey(SENDGRID_API_KEY);
+import { sendEmail } from "@/lib/email/sendEmail";
 
 export interface TrackingInfo {
   trackingNumber?: string;
@@ -190,11 +186,10 @@ export default async function sendStatusEmail(
     </html>
   `;
 
-  const msg = {
+  // Send via AWS SES
+  await sendEmail({
     to: userEmail,
-    from: SENDGRID_FROM_EMAIL,
     subject,
     html,
-  };
-  await sgMail.send(msg);
+  });
 }

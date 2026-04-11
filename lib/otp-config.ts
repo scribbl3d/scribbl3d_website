@@ -1,7 +1,7 @@
 export const OTP_CONFIG = {
   // Email configuration
   EMAIL: {
-    FROM: process.env.SENDGRID_FROM_EMAIL || "noreply@scribbl3d.com",
+    FROM: process.env.AWS_SES_FROM_EMAIL || "supplychain@scribbl3d.com",
     SUBJECT: "Your Verification Code",
     COMPANY_NAME: "Scribbl3D",
     COMPANY_LOGO: "https://scribbl3d.com/logo.png", // Replace with actual logo URL

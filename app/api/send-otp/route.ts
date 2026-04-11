@@ -1,19 +1,10 @@
 import { OTP_CONFIG, getOTPEmailTemplate } from "@/lib/otp-config";
 import { rateLimit } from "@/lib/rate-limit";
-import sgMail from "@sendgrid/mail";
+import { sendEmail } from "@/lib/email/sendEmail";
 import { hash } from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
-
-const apiKey = process.env.SENDGRID_API_KEY;
-
-if (!apiKey) {
-    throw new Error("SENDGRID_API_KEY is not set in the environment variables");
-}
-
-// Initialize SendGrid with API key
-sgMail.setApiKey(apiKey);
 
 function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
@@ -76,45 +67,33 @@ export async function POST(req: Request) {
 
         console.log(`Storing OTP for ${email}`);
 
-        const msg = {
+        // Send OTP via AWS SES
+        const emailResult = await sendEmail({
             to: email,
-            from: OTP_CONFIG.EMAIL.FROM,
             subject: OTP_CONFIG.EMAIL.SUBJECT,
             html: getOTPEmailTemplate(otp, "register"),
-        };
+        });
 
-        try {
-            const response = await sgMail.send(msg);
-            console.log("SendGrid Response:", response[0].statusCode);
-
-            return NextResponse.json({
-                success: true,
-                message: "OTP sent successfully",
-            });
-        } catch (sendGridError: any) {
-            console.error("SendGrid Error:", {
-                message: sendGridError.message,
-                code: sendGridError.code,
-                response: sendGridError.response?.body,
-            });
+        if (!emailResult.ok) {
+            console.error("Email send failed:", emailResult.error);
 
             // Delete the OTP from database since email failed
             await prisma.onetimep.deleteMany({
                 where: { email },
             });
 
-            if (sendGridError.code === 401 || sendGridError.code === 403) {
-                return NextResponse.json(
-                    { error: "Email service configuration error" },
-                    { status: 500 },
-                );
-            }
-
             return NextResponse.json(
                 { error: "Failed to send OTP email" },
                 { status: 500 },
             );
         }
+
+        console.log("OTP email sent successfully via AWS SES");
+
+        return NextResponse.json({
+            success: true,
+            message: "OTP sent successfully",
+        });
     } catch (error) {
         console.error("Error in OTP process:", error);
 

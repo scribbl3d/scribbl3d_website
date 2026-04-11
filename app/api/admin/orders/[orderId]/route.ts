@@ -1,12 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import sgMail from "@sendgrid/mail";
+import { sendEmail } from "@/lib/email/sendEmail";
 import { NextRequest, NextResponse } from "next/server";
 import sendStatusEmail from "./send-email/sendStatusEmail";
-
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY!;
-const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL!;
-
-sgMail.setApiKey(SENDGRID_API_KEY);
 
 /* =========================================================
    EMAIL HELPERS
@@ -14,9 +9,8 @@ sgMail.setApiKey(SENDGRID_API_KEY);
 async function sendShippingEmail(order: any, trackingInfo: any) {
     if (!order.user?.email) return;
 
-    await sgMail.send({
+    await sendEmail({
         to: order.user.email,
-        from: SENDGRID_FROM_EMAIL,
         subject: "Your Order Has Been Shipped! - Scribbl3D",
         html: `<p>Your order #${order.id.slice(-6)} has been shipped.</p>`,
     });
