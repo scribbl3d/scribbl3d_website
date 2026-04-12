@@ -828,7 +828,16 @@ model PrinterApplication {
   @@index([printerId, sortOrder])
 }
 
-
+model PageHero {
+  id        String   @id @default(cuid())
+  page      String   @unique   // "resins", "printers", "filaments", "prebuilt" etc.
+  mediaUrl  String
+  mediaType String   @default("video") // "video" or "image"
+  headline  String?
+  subtext   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 model PrinterDownload {
   id          String  @id @default(cuid())
   printerId   String

@@ -10,6 +10,7 @@ import ResinFilters from "@/components/resins/ResinFilters";
 import ResinGrid from "@/components/resins/ResinGrid";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useEffect, useState } from "react";
+import ResinHero from "@/components/resins/ResinHero";
 
 /* ================= TYPES ================= */
 
@@ -221,7 +222,7 @@ export default function ResinsPage() {
                 }}
             >
                 <div className="min-h-screen bg-gray-50">
-                    <PrinterHero />
+                    <ResinHero/>
 
                     <div className="container mx-auto px-4 py-8">
                         <div className="flex flex-col lg:flex-row gap-8">

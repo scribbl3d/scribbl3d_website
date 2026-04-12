@@ -3,7 +3,7 @@
 import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
+import HeroBannerEditor from "../_components/HeroBannerEditor";
 import SearchSortControl from "../_components/SearchSortControl";
 /* ===================== TYPES ===================== */
 
@@ -104,6 +104,7 @@ export default function AdminPrintersPage() {
 
             {/* ===================== CONTENT ===================== */}
             <div className="max-w-7xl mx-auto px-6 py-8">
+                <HeroBannerEditor page="printers" />
                 {/* TITLE + ADD */}
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">Printers List</h2>

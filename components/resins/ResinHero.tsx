@@ -33,7 +33,6 @@ type HeroData = {
     mediaType: string;
     headline: string | null;
     subtext: string | null;
-    isFromAdmin: boolean;
 };
 
 const FALLBACK: HeroData = {
@@ -42,20 +41,19 @@ const FALLBACK: HeroData = {
     mediaType: "video",
     headline: "Discover Cutting-Edge 3D Printers",
     subtext: "Explore our extensive selection of 3D printers.",
-    isFromAdmin: false,
 };
 
-interface PrinterHeroProps {
+interface ResinHeroProps {
     animate?: boolean;
 }
 
-export default function PrinterHero({ animate = true }: PrinterHeroProps) {
+export default function ResinHero({ animate = true }: ResinHeroProps) {
     const [hero, setHero] = useState<HeroData>(FALLBACK);
 
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch("/api/page-hero/printers");
+                const res = await fetch("/api/page-hero/resins");
                 const data = await res.json();
                 if (data?.mediaUrl) {
                     setHero({
@@ -63,7 +61,6 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
                         mediaType: data.mediaType || "video",
                         headline: data.headline,
                         subtext: data.subtext,
-                        isFromAdmin: true,
                     });
                 }
             } catch {
@@ -74,65 +71,9 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
 
     const hasText = hero.headline || hero.subtext;
 
-    // Fallback = old full-height video layout
-    // Admin upload = natural-height image/video layout
-    if (!hero.isFromAdmin) {
-        return (
-            <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[450px] max-h-[900px] overflow-hidden bg-[#0a0a0f]">
-                <video
-                    src={hero.mediaUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/10" />
-
-                <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto">
-                    <motion.h1
-                        variants={staggerContainer}
-                        initial="hidden"
-                        {...(animate
-                            ? {
-                                  whileInView: "visible",
-                                  viewport: { once: false, amount: 0.2 },
-                              }
-                            : {})}
-                        className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight"
-                    >
-                        {(hero.headline || "").split(" ").map((word, i) => (
-                            <motion.span
-                                key={i}
-                                variants={wordVariant}
-                                className="inline-block mr-[0.25em]"
-                            >
-                                {word}
-                            </motion.span>
-                        ))}
-                    </motion.h1>
-
-                    <motion.h3
-                        variants={subtextVariant}
-                        initial="hidden"
-                        {...(animate
-                            ? {
-                                  whileInView: "visible",
-                                  viewport: { once: false, amount: 0.2 },
-                              }
-                            : {})}
-                        className="mt-2 sm:mt-4 text-lg sm:text-2xl md:text-3xl lg:text-4xl font-normal text-white/90 leading-snug"
-                    >
-                        {hero.subtext}
-                    </motion.h3>
-                </div>
-            </section>
-        );
-    }
-
-    // Admin-uploaded hero — natural height layout
     return (
         <section className="relative w-full overflow-hidden bg-[#f0f0f0] mt-[72px]">
+            {/* Background media — full width, natural height */}
             {hero.mediaType === "video" ? (
                 <video
                     src={hero.mediaUrl}
@@ -150,8 +91,10 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
                 />
             )}
 
+            {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
 
+            {/* Content — positioned near top, overlaid on image */}
             {hasText && (
                 <div className="absolute inset-0 z-10 flex flex-col pt-8 sm:pt-12 lg:pt-16 px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto">
                     {hero.headline && (
