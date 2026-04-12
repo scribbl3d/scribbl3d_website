@@ -10,15 +10,23 @@ cloudinary.config({
     secure: true,
 });
 
+// Reusable type for Next.js 15
+type RouteContext = {
+    params: Promise<{ page: string }>;
+};
+
 // GET current hero for a page
 export async function GET(
     _req: Request,
-    { params }: { params: { page: string } }
+    { params }: RouteContext
 ) {
+    const { page } = await params;
+
     try {
         const hero = await prisma.pageHero.findUnique({
-            where: { page: params.page },
+            where: { page },
         });
+
         return NextResponse.json(hero);
     } catch (error) {
         console.error("PageHero GET failed:", error);
@@ -32,8 +40,10 @@ export async function GET(
 // PUT — create or update hero for a page
 export async function PUT(
     req: Request,
-    { params }: { params: { page: string } }
+    { params }: RouteContext
 ) {
+    const { page } = await params;
+
     try {
         const formData = await req.formData();
 
@@ -44,13 +54,14 @@ export async function PUT(
 
         // Handle file upload
         const mediaFile = formData.get("mediaFile") as File;
+
         if (mediaFile && mediaFile.size > 0) {
             const buffer = Buffer.from(await mediaFile.arrayBuffer());
             const resourceType = mediaType === "video" ? "video" : "image";
 
             const uploadResult: any = await new Promise((resolve, reject) => {
                 const uploadOptions: any = {
-                    folder: `hero/${params.page}`,
+                    folder: `hero/${page}`,
                     resource_type: resourceType,
                 };
 
@@ -84,10 +95,10 @@ export async function PUT(
         }
 
         const hero = await prisma.pageHero.upsert({
-            where: { page: params.page },
+            where: { page },
             update: { mediaUrl, mediaType, headline, subtext },
             create: {
-                page: params.page,
+                page,
                 mediaUrl,
                 mediaType,
                 headline,
