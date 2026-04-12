@@ -285,24 +285,23 @@ export default function PrebuiltProductForm({
         e: React.ChangeEvent<HTMLInputElement>,
         slotIdx: number,
     ) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const previewUrl = URL.createObjectURL(file);
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
 
         if (slotIdx === images.length) {
-            setImages((p) => [
-                ...p,
-                {
-                    url: previewUrl,
-                    file,
-                    altText: "",
-                    position: p.length,
-                    colorName: "",
-                    isMain: p.length === 0,
-                    isNew: true,
-                },
-            ]);
+            const newImages = Array.from(files).map((file, i) => ({
+                url: URL.createObjectURL(file),
+                file,
+                altText: "",
+                position: images.length + i,
+                colorName: "",
+                isMain: images.length === 0 && i === 0,
+                isNew: true,
+            }));
+            setImages((p) => [...p, ...newImages]);
         } else {
+            const file = files[0];
+            const previewUrl = URL.createObjectURL(file);
             setImages((p) =>
                 p.map((img, i) =>
                     i === slotIdx
@@ -1090,6 +1089,7 @@ export default function PrebuiltProductForm({
                                 <input
                                     type="file"
                                     accept="image/*"
+                                    multiple
                                     className="hidden"
                                     onChange={(e) =>
                                         handleFileSelect(e, images.length)
