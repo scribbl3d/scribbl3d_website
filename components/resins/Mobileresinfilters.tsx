@@ -2,7 +2,8 @@
 
 import { ResinFiltersState } from "@/app/resins/page";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { ChevronDown, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type FiltersMeta = {
@@ -32,6 +33,7 @@ export default function MobileResinFilters({
     const [meta, setMeta] = useState<FiltersMeta | null>(null);
     const [localFilters, setLocalFilters] =
         useState<ResinFiltersState>(filters);
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         fetch("/api/resins/filters")
@@ -70,6 +72,18 @@ export default function MobileResinFilters({
         });
     };
 
+    const toggleSection = (section: string) => {
+        setExpandedSections((prev) => {
+            const next = new Set(prev);
+            if (next.has(section)) {
+                next.delete(section);
+            } else {
+                next.add(section);
+            }
+            return next;
+        });
+    };
+
     const handleClearAll = () => {
         setLocalFilters({
             materialTypes: [],
@@ -80,6 +94,7 @@ export default function MobileResinFilters({
             washable: null,
             price: null,
         });
+        setExpandedSections(new Set());
     };
 
     const handleApply = () => {
@@ -128,110 +143,152 @@ export default function MobileResinFilters({
                             <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-500" />
                         </div>
                     ) : (
-                        <div className="space-y-1">
-                            {/* Material Type */}
-                            <FilterSection title="Material Type">
-                                {meta.materialTypes.map((m) => (
-                                    <FilterItem
-                                        key={m}
-                                        label={m}
-                                        checked={localFilters.materialTypes.includes(
-                                            m,
-                                        )}
-                                        onChange={() =>
-                                            toggleArray("materialTypes", m)
-                                        }
-                                    />
-                                ))}
-                            </FilterSection>
+                        <div className="space-y-3">
+                            {/* Material Type - Always Open */}
+                            <div className="border-b border-gray-200 pb-4">
+                                <p className="text-base font-semibold text-gray-900 mb-3">Material Type</p>
+                                <div className="space-y-3">
+                                    {meta.materialTypes.map((m) => (
+                                        <FilterItem
+                                            key={m}
+                                            label={m}
+                                            checked={localFilters.materialTypes.includes(m)}
+                                            onChange={() => toggleArray("materialTypes", m)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
 
-                            {/* Printer Compatibility */}
-                            <FilterSection title="Printer Compatibility">
-                                {meta.technologies.map((t) => (
-                                    <FilterItem
-                                        key={t}
-                                        label={t}
-                                        checked={localFilters.technologies.includes(
-                                            t,
-                                        )}
-                                        onChange={() =>
-                                            toggleArray("technologies", t)
-                                        }
-                                    />
-                                ))}
-                            </FilterSection>
-
-                            {/* Washable Resin */}
-                            <FilterSection title="Washable Resin">
-                                <FilterItem
-                                    label="Yes (Water Washable)"
-                                    checked={localFilters.washable === true}
-                                    onChange={(v) =>
-                                        setLocalFilters((p) => ({
-                                            ...p,
-                                            washable: v ? true : null,
-                                        }))
-                                    }
-                                />
-                                <FilterItem
-                                    label="No (IPA Wash)"
-                                    checked={localFilters.washable === false}
-                                    onChange={(v) =>
-                                        setLocalFilters((p) => ({
-                                            ...p,
-                                            washable: v ? false : null,
-                                        }))
-                                    }
-                                />
-                            </FilterSection>
-
-                            {/* Resolution */}
-                            <FilterSection title="Resolution Optimization">
-                                {meta.resolutions.map((r) => (
-                                    <FilterItem
-                                        key={r}
-                                        label={r}
-                                        checked={localFilters.resolutions.includes(
-                                            r,
-                                        )}
-                                        onChange={() =>
-                                            toggleArray("resolutions", r)
-                                        }
-                                    />
-                                ))}
-                            </FilterSection>
-
-                            {/* Colour */}
-                            <FilterSection title="Color">
-                                {meta.colours.map((c) => (
-                                    <FilterItem
-                                        key={c}
-                                        label={c}
-                                        checked={localFilters.colours.includes(
-                                            c,
-                                        )}
-                                        onChange={() =>
-                                            toggleArray("colours", c)
-                                        }
-                                    />
-                                ))}
-                            </FilterSection>
-
-                            {/* Brand */}
-                            <FilterSection title="Brand">
+                            {/* Brand - Dropdown */}
+                            <AccordionSection
+                                title="Brand"
+                                isExpanded={expandedSections.has("brand")}
+                                onToggle={() => toggleSection("brand")}
+                            >
                                 {meta.brands.map((b) => (
                                     <FilterItem
                                         key={b}
                                         label={b}
-                                        checked={localFilters.brands.includes(
-                                            b,
-                                        )}
-                                        onChange={() =>
-                                            toggleArray("brands", b)
-                                        }
+                                        checked={localFilters.brands.includes(b)}
+                                        onChange={() => toggleArray("brands", b)}
                                     />
                                 ))}
-                            </FilterSection>
+                            </AccordionSection>
+
+                            {/* Colour - Dropdown */}
+                            <AccordionSection
+                                title="Colour"
+                                isExpanded={expandedSections.has("colour")}
+                                onToggle={() => toggleSection("colour")}
+                            >
+                                {meta.colours.map((c) => (
+                                    <FilterItem
+                                        key={c}
+                                        label={c}
+                                        checked={localFilters.colours.includes(c)}
+                                        onChange={() => toggleArray("colours", c)}
+                                    />
+                                ))}
+                            </AccordionSection>
+
+                            {/* Resolution - Dropdown */}
+                            <AccordionSection
+                                title="Resolution"
+                                isExpanded={expandedSections.has("resolution")}
+                                onToggle={() => toggleSection("resolution")}
+                            >
+                                {meta.resolutions.map((r) => (
+                                    <FilterItem
+                                        key={r}
+                                        label={r}
+                                        checked={localFilters.resolutions.includes(r)}
+                                        onChange={() => toggleArray("resolutions", r)}
+                                    />
+                                ))}
+                            </AccordionSection>
+
+                            {/* Printer Compatibility - Dropdown */}
+                            <AccordionSection
+                                title="Printer Compatibility"
+                                isExpanded={expandedSections.has("printer")}
+                                onToggle={() => toggleSection("printer")}
+                            >
+                                {meta.technologies.map((t) => (
+                                    <FilterItem
+                                        key={t}
+                                        label={t}
+                                        checked={localFilters.technologies.includes(t)}
+                                        onChange={() => toggleArray("technologies", t)}
+                                    />
+                                ))}
+                            </AccordionSection>
+
+                            {/* Price - Always Visible */}
+                            <div className="border-b border-gray-200 pb-4">
+                                <p className="text-base font-semibold text-gray-900 mb-4">Price (₹)</p>
+                                
+                                <div className="px-1 mb-5">
+                                    <Slider
+                                        min={meta.price.min}
+                                        max={meta.price.max}
+                                        step={100}
+                                        value={localFilters.price ?? [meta.price.min, meta.price.max]}
+                                        onValueChange={(v) =>
+                                            setLocalFilters((p) => ({
+                                                ...p,
+                                                price: v as [number, number],
+                                            }))
+                                        }
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">Min</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">₹</span>
+                                            <input
+                                                type="number"
+                                                min={meta.price.min}
+                                                max={(localFilters.price ?? [meta.price.min, meta.price.max])[1]}
+                                                value={(localFilters.price ?? [meta.price.min, meta.price.max])[0]}
+                                                onChange={(e) =>
+                                                    setLocalFilters((p) => ({
+                                                        ...p,
+                                                        price: [
+                                                            Number(e.target.value) || meta.price.min,
+                                                            (p.price ?? [meta.price.min, meta.price.max])[1],
+                                                        ],
+                                                    }))
+                                                }
+                                                className="w-full pl-7 pr-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">Max</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">₹</span>
+                                            <input
+                                                type="number"
+                                                min={(localFilters.price ?? [meta.price.min, meta.price.max])[0]}
+                                                max={meta.price.max}
+                                                value={(localFilters.price ?? [meta.price.min, meta.price.max])[1]}
+                                                onChange={(e) =>
+                                                    setLocalFilters((p) => ({
+                                                        ...p,
+                                                        price: [
+                                                            (p.price ?? [meta.price.min, meta.price.max])[0],
+                                                            Number(e.target.value) || meta.price.max,
+                                                        ],
+                                                    }))
+                                                }
+                                                className="w-full pl-7 pr-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -256,18 +313,36 @@ export default function MobileResinFilters({
     );
 }
 
-/* Filter Section Component */
-function FilterSection({
+/* Accordion Section Component */
+function AccordionSection({
     title,
+    isExpanded,
+    onToggle,
     children,
 }: {
     title: string;
+    isExpanded: boolean;
+    onToggle: () => void;
     children: React.ReactNode;
 }) {
     return (
-        <div className="border-b border-gray-100 pb-4 mb-4 last:border-b-0 last:pb-0 last:mb-0">
-            <p className="text-sm font-medium text-gray-500 mb-3">{title}</p>
-            <div className="space-y-3 pl-1">{children}</div>
+        <div className="border-b border-gray-200 pb-4">
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center justify-between py-2 text-left"
+            >
+                <span className="text-base font-semibold text-gray-900">{title}</span>
+                <ChevronDown
+                    className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180" : ""
+                    }`}
+                />
+            </button>
+            {isExpanded && (
+                <div className="space-y-3 mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {children}
+                </div>
+            )}
         </div>
     );
 }

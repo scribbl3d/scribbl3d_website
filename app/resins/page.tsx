@@ -1,6 +1,5 @@
 "use client";
 
-import PrinterHero from "@/components/printers/PrinterHero"; // reused
 import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 
 import Loader from "@/components/Loader";
@@ -205,6 +204,12 @@ export default function ResinsPage() {
         });
     };
 
+    /* ================= DISPLAY CALCULATION ================= */
+
+    // "Showing x–y of z"
+    const startItem = total > 0 ? (page - 1) * limit + 1 : 0;
+    const endItem = Math.min(page * limit, total);
+
     /* ================= UI ================= */
 
     return (
@@ -245,6 +250,10 @@ export default function ResinsPage() {
                                 <div className="mb-6 flex justify-between items-center">
                                     <p className="text-gray-600">
                                         Showing{" "}
+                                        <span className="font-semibold">
+                                            {startItem}–{endItem}
+                                        </span>{" "}
+                                        of{" "}
                                         <span className="font-semibold">
                                             {total}
                                         </span>{" "}
