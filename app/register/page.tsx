@@ -16,7 +16,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UserPlus, Mail, User, Lock } from "lucide-react";
+import { UserPlus, Mail, User, Lock, Eye, EyeOff } from "lucide-react";
 import { PasswordStrengthMeter } from "./_components/password-strength";
 import OTPVerification from "./_components/otp-verification";
 
@@ -45,6 +45,7 @@ export default function RegisterPage() {
   const [registrationData, setRegistrationData] =
     useState<RegisterFormData | null>(null);
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const {
     register,
@@ -61,6 +62,22 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
     try {
+      const emailCheckResponse = await fetch("/api/check-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: data.email }),
+      });
+
+      const emailCheckResult = await emailCheckResponse.json();
+
+      if (emailCheckResult.exists) {
+        setError("This email is already registered. Please sign in instead.");
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch("/api/send-otp", {
         method: "POST",
         headers: {
@@ -130,7 +147,12 @@ export default function RegisterPage() {
       if (response.ok) {
         router.push("/login?registered=true");
       } else {
-        setError(responseData.error || "An error occurred during registration");
+        if (responseData.error === "User already exists") {
+          setShowOTP(false);
+          setError("This email is already registered. Please sign in instead.");
+        } else {
+          setError(responseData.error || "An error occurred during registration");
+        }
       }
     } catch (error) {
       console.error("An unexpected error happened:", error);
@@ -247,13 +269,25 @@ export default function RegisterPage() {
               <div className="relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
                   {...register("password")}
                   disabled={isLoading}
-                  className="pl-10 bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                  className="pl-10 pr-10 bg-blue-50 border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                 />
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-600 focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
               {errors.password && (
                 <p className="text-sm text-red-500 break-words">
@@ -268,6 +302,14 @@ export default function RegisterPage() {
             {error && (
               <div className="p-3 text-sm text-red-600 bg-red-100 rounded-md break-words">
                 {error}
+                {error.includes("already registered") && (
+                  <Link
+                    href="/login"
+                    className="block mt-2 text-blue-700 hover:text-blue-900 font-semibold underline"
+                  >
+                    Go to Login Page →
+                  </Link>
+                )}
               </div>
             )}
             <p className="text-xs text-center text-blue-600 px-2 sm:px-4 break-words">

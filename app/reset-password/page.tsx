@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { PasswordStrengthMeter } from "../register/_components/password-strength";
 
 const resetPasswordSchema = z
@@ -45,6 +46,8 @@ export default function ResetPassword() {
   const [isValidToken, setIsValidToken] = useState<null | boolean>(null);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams?.get("token") || null;
@@ -209,13 +212,28 @@ export default function ResetPassword() {
           )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Input
-                id="password"
-                type="password"
-                placeholder="New password"
-                {...register("password")}
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="New password"
+                  {...register("password")}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               <PasswordStrengthMeter
                 password={watchPassword || ""}
                 onStrengthChange={setPasswordStrength}
@@ -227,13 +245,28 @@ export default function ResetPassword() {
               )}
             </div>
             <div className="space-y-2">
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm new password"
-                {...register("confirmPassword")}
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm new password"
+                  {...register("confirmPassword")}
+                  disabled={isLoading}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="text-sm text-red-500">
                   {errors.confirmPassword.message}

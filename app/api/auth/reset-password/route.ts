@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Delete all sessions for this user to log them out from all devices
+    await db.session.deleteMany({
+      where: { userId: user.id },
+    });
+
+    // Update password and clear reset token
     await db.user.update({
       where: { id: user.id },
       data: {
@@ -56,7 +62,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ message: "Password reset successful" });
+    return NextResponse.json({ 
+      message: "Password reset successful. All active sessions have been logged out for security." 
+    });
   } catch (error) {
     console.error("Error in reset password:", error);
     if (error instanceof z.ZodError) {

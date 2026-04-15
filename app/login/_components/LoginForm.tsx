@@ -35,6 +35,12 @@ type LoginFormData = z.infer<typeof loginSchema>;
 function getLoginErrorMessage(errorCode: string | undefined): string {
     if (!errorCode) return "An unexpected error occurred";
 
+    // Check for rate limiting error
+    if (errorCode.startsWith("TOO_MANY_ATTEMPTS:")) {
+        const minutes = errorCode.split(":")[1];
+        return `Too many failed login attempts. Please try again in ${minutes} minutes.`;
+    }
+
     // NextAuth passes the Error message through result.error
     // Our authorize function throws specific error codes
     switch (errorCode) {
@@ -51,6 +57,8 @@ function getLoginErrorMessage(errorCode: string | undefined): string {
             return "Invalid email or password";
         default:
             // Check if it contains our custom messages (some NextAuth versions pass the full message)
+            if (errorCode.includes("TOO_MANY_ATTEMPTS"))
+                return "Too many failed login attempts. Please try again later.";
             if (errorCode.includes("Google"))
                 return "This account uses Google sign-in. Please click 'Sign in with Google' below.";
             if (

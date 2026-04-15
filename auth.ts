@@ -6,6 +6,11 @@ import GoogleProvider from "next-auth/providers/google";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import {
+    checkLoginAttempts,
+    recordFailedLogin,
+    resetLoginAttempts,
+} from "@/lib/login-rate-limit";
 
 const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -36,6 +41,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     const { email, password } = result.data;
 
+                    // Check rate limiting
+                    const rateLimitCheck = checkLoginAttempts(email);
+                    if (!rateLimitCheck.allowed) {
+                        console.error(
+                            `Login rate limit exceeded for ${email}. Locked for ${rateLimitCheck.lockoutTimeRemaining} minutes`,
+                        );
+                        throw new Error(
+                            `TOO_MANY_ATTEMPTS:${rateLimitCheck.lockoutTimeRemaining}`,
+                        );
+                    }
+
                     const user = await prisma.user.findUnique({
                         where: { email },
                         select: {
@@ -48,6 +64,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     if (!user || !user.password) {
                         console.error("User not found or password not set");
+                        recordFailedLogin(email);
                         return null;
                     }
 
@@ -58,9 +75,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
                     if (!isPasswordValid) {
                         console.error("Invalid password");
+                        recordFailedLogin(email);
                         return null;
                     }
 
+                    // Reset attempts on successful login
+                    resetLoginAttempts(email);
                     return { id: user.id, email: user.email, name: user.name };
                 } catch (error) {
                     console.error("Authentication error:", error);

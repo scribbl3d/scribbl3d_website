@@ -5,9 +5,13 @@ import { SendMailClient } from "zeptomail";
 // ─────────────────────────────────────────────
 
 const url = "https://api.zeptomail.in/v1.1/email";
-const token = process.env.ZEPTOMAIL_API_TOKEN!;
+const token = process.env.ZEPTOMAIL_API_TOKEN || process.env.ZEPTOMAIL_API_KEY;
 
-const client = new SendMailClient({ url, token });
+if (!token) {
+  console.error("❌ ZeptoMail configuration error: ZEPTOMAIL_API_TOKEN or ZEPTOMAIL_API_KEY not found in environment variables");
+}
+
+const client = token ? new SendMailClient({ url, token }) : null;
 
 // ─────────────────────────────────────────────
 // Types
@@ -32,7 +36,23 @@ interface ZeptoMailResponse {
 
 export async function sendEmail({ to, subject, html, text }: EmailOptions) {
   try {
-    const fromEmail = process.env.ZEPTOMAIL_FROM_EMAIL!;
+    if (!client) {
+      console.error("❌ Email service not configured: ZeptoMail client is not initialized");
+      return { 
+        ok: false, 
+        error: "Email service configuration error. Please contact support." 
+      };
+    }
+
+    const fromEmail = process.env.ZEPTOMAIL_FROM_EMAIL;
+    if (!fromEmail) {
+      console.error("❌ ZEPTOMAIL_FROM_EMAIL not configured in environment variables");
+      return { 
+        ok: false, 
+        error: "Email sender address not configured" 
+      };
+    }
+
     const fromName = process.env.ZEPTOMAIL_FROM_NAME || "Scribbl3D";
 
     const response = await client.sendMail({
@@ -53,12 +73,13 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
       textbody: text || stripHtml(html),
     }) as ZeptoMailResponse;
 
-    console.log(`[Email] Sent "${subject}" to ${to} (Response: ${JSON.stringify(response)})`);
+    console.log(`✅ [Email] Sent "${subject}" to ${to} (Response: ${JSON.stringify(response)})`);
     return { ok: true, messageId: response.request_id || "sent" };
   } catch (error: any) {
     console.error(
-      `[Email] Failed to send "${subject}" to ${to}:`,
-      error?.message || error
+      `❌ [Email] Failed to send "${subject}" to ${to}:`,
+      error?.message || error,
+      "\nFull error:", error
     );
     return { ok: false, error: error?.message || "Email send failed" };
   }

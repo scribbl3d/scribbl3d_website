@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,6 +27,16 @@ export default function OTPVerification({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +79,7 @@ export default function OTPVerification({
     try {
       await resendOTP();
       toast.success("New OTP sent successfully");
+      setResendCooldown(30);
     } catch (err) {
       console.error("Failed to resend OTP:", err);
       toast.error("Failed to resend OTP");
@@ -148,7 +159,7 @@ export default function OTPVerification({
                   type="button"
                   variant="outline"
                   className="w-full h-11"
-                  disabled={isResending}
+                  disabled={isResending || resendCooldown > 0}
                   onClick={handleResendOTP}
                 >
                   <RefreshCw
@@ -156,7 +167,11 @@ export default function OTPVerification({
                       isResending ? "animate-spin" : ""
                     }`}
                   />
-                  {isResending ? "Sending..." : "Resend OTP"}
+                  {isResending
+                    ? "Sending..."
+                    : resendCooldown > 0
+                    ? `Resend OTP (${resendCooldown}s)`
+                    : "Resend OTP"}
                 </Button>
               </div>
             </form>
