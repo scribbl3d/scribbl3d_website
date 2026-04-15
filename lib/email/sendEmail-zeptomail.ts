@@ -4,7 +4,7 @@ import { SendMailClient } from "zeptomail";
 // ZeptoMail Client Configuration
 // ─────────────────────────────────────────────
 
-const url = "api.zeptomail.in/";
+const url = "https://api.zeptomail.in/v1.1/email";
 const token = process.env.ZEPTOMAIL_API_TOKEN!;
 
 const client = new SendMailClient({ url, token });

@@ -166,13 +166,16 @@ export async function POST(req: NextRequest) {
 
             // Send order confirmation email (fire-and-forget)
             if (updatedOrder.user?.email) {
+                console.log(`[Email] Attempting to send order confirmation to ${updatedOrder.user.email}`);
                 sendOrderConfirmation(mapOrderToEmailData(updatedOrder)).catch(
                     (err) =>
                         console.error(
                             "[Email] Order confirmation failed:",
-                            err,
+                            err?.message || err,
                         ),
                 );
+            } else {
+                console.log("[Email] Skipping email - no user email found");
             }
 
             return NextResponse.json({ success: true });
