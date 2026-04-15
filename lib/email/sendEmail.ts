@@ -1,7 +1,9 @@
 
-// Switch to AWS SES
-export { sendEmail } from "./sendEmail-ses";
+// Switch to ZeptoMail
+export { sendEmail } from "./sendEmail-zeptomail";
 
+// Previous providers (AWS SES, SendGrid)
+// export { sendEmail } from "./sendEmail-ses";
 // import sgMail from "@sendgrid/mail";
 
 // sgMail.setApiKey(process.env.SENDGRID_API_KEY!);

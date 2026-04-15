@@ -2,7 +2,7 @@ import { sendEmail as sesEmail } from "@/lib/email/sendEmail";
 
 // Default sender email
 const DEFAULT_FROM_EMAIL =
-    process.env.AWS_SES_FROM_EMAIL || "supplychain@scribbl3d.com";
+    process.env.ZEPTOMAIL_FROM_EMAIL || "supplychain@scribbl3d.com";
 
 export interface EmailParams {
     to: string;
@@ -20,7 +20,7 @@ export async function sendEmail(params: EmailParams) {
     }
 
     try {
-        console.log("Attempting to send email via AWS SES:", {
+        console.log("Attempting to send email via ZeptoMail:", {
             to,
             from,
             subject,
@@ -40,7 +40,7 @@ export async function sendEmail(params: EmailParams) {
         console.log(`Email sent successfully to ${to}`);
         return result;
     } catch (error: any) {
-        console.error("AWS SES Error:", {
+        console.error("ZeptoMail Error:", {
             message: error.message,
         });
 

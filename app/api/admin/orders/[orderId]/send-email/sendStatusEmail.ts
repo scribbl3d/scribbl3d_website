@@ -186,7 +186,7 @@ export default async function sendStatusEmail(
     </html>
   `;
 
-  // Send via AWS SES
+  // Send via ZeptoMail
   await sendEmail({
     to: userEmail,
     subject,

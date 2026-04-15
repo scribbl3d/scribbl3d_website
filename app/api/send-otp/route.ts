@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
         console.log(`Storing OTP for ${email}`);
 
-        // Send OTP via AWS SES
+        // Send OTP via ZeptoMail
         const emailResult = await sendEmail({
             to: email,
             subject: OTP_CONFIG.EMAIL.SUBJECT,
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
             );
         }
 
-        console.log("OTP email sent successfully via AWS SES");
+        console.log("OTP email sent successfully via ZeptoMail");
 
         return NextResponse.json({
             success: true,
