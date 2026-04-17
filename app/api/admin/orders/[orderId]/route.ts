@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, context: any) {
 }
 
 /* =========================================================
-   DELETE → PAYMENT PENDING ONLY
+   DELETE → PAYMENT PENDING & FAILED ONLY
    ========================================================= */
 export async function DELETE(req: NextRequest, context: any) {
     try {
@@ -77,9 +77,9 @@ export async function DELETE(req: NextRequest, context: any) {
             );
         }
 
-        if (order.status !== "payment_pending") {
+        if (order.status !== "payment_pending" && order.status !== "payment_failed") {
             return NextResponse.json(
-                { error: "Only payment pending orders can be deleted" },
+                { error: "Only payment pending or failed orders can be deleted" },
                 { status: 400 },
             );
         }
