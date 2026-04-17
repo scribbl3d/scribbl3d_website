@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { LoadingOverlay } from "@/components/ui/loading-spinner";
 
 /* ===================== CONSTANTS ===================== */
 
@@ -1233,20 +1234,10 @@ export default function ResinFormPage() {
 function LoadingModal({ open, isEdit }: { open: boolean; isEdit: boolean }) {
     if (!open) return null;
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-xl shadow-lg px-8 py-6 w-[360px] text-center">
-                <div className="flex justify-center mb-4">
-                    <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
-                </div>
-                <h2 className="text-lg font-semibold mb-2">
-                    {isEdit ? "Editing Product…" : "Adding Product…"}
-                </h2>
-                <p className="text-sm text-gray-600">
-                    This may take up to a few minutes. Please do not close this
-                    window.
-                </p>
-            </div>
-        </div>
+        <LoadingOverlay
+            message={isEdit ? "Editing Product…" : "Adding Product…"}
+            submessage="This may take up to a few minutes. Please do not close this window."
+        />
     );
 }
 

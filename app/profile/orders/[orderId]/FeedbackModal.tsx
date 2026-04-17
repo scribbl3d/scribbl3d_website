@@ -3,6 +3,7 @@
 import { MessageSquarePlus, Package, Star, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { StarRating } from "@/components/ui/star-rating";
 
 /* ────────────────────── Tag Config ────────────────────── */
 
@@ -72,41 +73,6 @@ export interface OrderItem {
 interface ItemReview {
     rating: number;
     review: string;
-}
-
-/* ────────────────────── Star Rating ────────────────────── */
-
-function StarRating({
-    rating,
-    onChange,
-}: {
-    rating: number;
-    onChange: (r: number) => void;
-}) {
-    const [hovered, setHovered] = useState(0);
-
-    return (
-        <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                    key={star}
-                    type="button"
-                    onMouseEnter={() => setHovered(star)}
-                    onMouseLeave={() => setHovered(0)}
-                    onClick={() => onChange(star)}
-                    className="p-0.5 transition-transform hover:scale-110"
-                >
-                    <Star
-                        className={`w-6 h-6 transition-colors ${
-                            star <= (hovered || rating)
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "fill-none text-gray-300"
-                        }`}
-                    />
-                </button>
-            ))}
-        </div>
-    );
 }
 
 /* ────────────────────── Modal ────────────────────── */
@@ -319,9 +285,7 @@ function FeedbackModal({ orderId, items, onClose }: FeedbackModalProps) {
                                 <div className="mb-2">
                                     <StarRating
                                         rating={itemReviews[idx]?.rating || 0}
-                                        onChange={(r) =>
-                                            updateItemRating(idx, r)
-                                        }
+                                        onChange={(r) => updateItemRating(idx, r)}
                                     />
                                 </div>
 

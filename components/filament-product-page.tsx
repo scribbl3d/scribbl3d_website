@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/use-toast";
 import { getColorOrTexture, getContrastTextColor } from "@/lib/color-mappings";
 import { useCart } from "@/providers/CartProvider";
+import { useAuthToast } from "@/hooks/useAuthToast";
 import {
     Check,
     ChevronLeft,
@@ -20,8 +21,6 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import Producttabs from "./product-tabs";
-
-import { signIn } from "next-auth/react";
 
 interface Review {
     id: string;
@@ -84,6 +83,7 @@ export default function FilamentProductPage({
     const [images, setImages] = useState(initialImages);
     const { data: session } = useSession();
     const { addToCart } = useCart();
+    const { showAuthToast } = useAuthToast();
     const [availableColors, setAvailableColors] = useState<
         Record<string, string[]>
     >({});
@@ -149,11 +149,7 @@ export default function FilamentProductPage({
 
     const handleAddToCart = async () => {
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your cart.",
-                variant: "destructive",
-            });
+            showAuthToast("add items to your cart");
             return;
         }
 
@@ -258,21 +254,7 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
         if (isWishlistLoading) return;
 
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
+            showAuthToast("add items to your wishlist");
             return;
         }
 

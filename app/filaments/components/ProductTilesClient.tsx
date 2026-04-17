@@ -4,15 +4,14 @@ import type React from "react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { imageLoader } from "@/lib/utils";
 import { useCart } from "@/providers/CartProvider";
-import { ChevronLeft, ChevronRight, Heart } from "lucide-react";
-import { signIn, useSession } from "next-auth/react";
-import Image from "next/image";
+import { useAuthToast } from "@/hooks/useAuthToast";
+import { ImageCarousel } from "@/components/shared/ImageCarousel";
+import { Heart } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useSwipeable } from "react-swipeable";
 
 // Type definitions for product data and props
 interface ProductTileProps {
@@ -27,106 +26,6 @@ interface ProductTileProps {
     onWishlistToggle: () => Promise<void>;
     isPrebuilt?: boolean;
 }
-
-interface ImageCarouselProps {
-    images: string[];
-    name: string;
-}
-
-/**
- * ImageCarousel Component
- * Displays a swipeable carousel of product images with touch support
- * Includes navigation dots and handles empty states
- */
-const ImageCarousel: React.FC<ImageCarouselProps> = ({ images, name }) => {
-    const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-    // Add swipe support while keeping the original click handlers
-    const handlers = useSwipeable({
-        onSwipedLeft: () =>
-            setCurrentImageIndex(
-                (prevIndex) => (prevIndex + 1) % images.length
-            ),
-        onSwipedRight: () =>
-            setCurrentImageIndex(
-                (prevIndex) => (prevIndex - 1 + images.length) % images.length
-            ),
-        trackMouse: true,
-    });
-
-    if (!images || images.length === 0) {
-        return (
-            <div className="relative w-[270px] h-[270px] bg-gray-200 flex items-center justify-center rounded-2xl">
-                <span className="text-gray-500">No image available</span>
-            </div>
-        );
-    }
-
-    const nextImage = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-    };
-
-    const prevImage = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setCurrentImageIndex(
-            (prevIndex) => (prevIndex - 1 + images.length) % images.length
-        );
-    };
-
-    return (
-        <div
-            className="relative w-[270px] h-[270px] overflow-hidden"
-            {...handlers}
-        >
-            <div className="w-full h-full overflow-hidden rounded-2xl">
-                <Image
-                    loader={imageLoader}
-                    src={images[currentImageIndex] || "/placeholder.svg"}
-                    alt={`${name} - Image ${currentImageIndex + 1}`}
-                    width={270}
-                    height={270}
-                    quality={85}
-                    priority={currentImageIndex === 0}
-                    loading={currentImageIndex === 0 ? "eager" : "lazy"}
-                    className="rounded-2xl object-cover"
-                    unoptimized={true} // Key prop
-                />
-            </div>
-            {images.length > 1 && (
-                <>
-                    <button
-                        className="absolute top-1/2 left-2 transform -translate-y-1/2 rounded-full bg-white p-2 touch-manipulation"
-                        onClick={prevImage}
-                    >
-                        <ChevronLeft className="h-6 w-6 text-gray-600" />
-                    </button>
-                    <button
-                        className="absolute top-1/2 right-2 transform -translate-y-1/2 rounded-full bg-white p-2 touch-manipulation"
-                        onClick={nextImage}
-                    >
-                        <ChevronRight className="h-6 w-6 text-gray-600" />
-                    </button>
-                    {/* Add dots for mobile */}
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 md:hidden">
-                        {images.map((_, index) => (
-                            <div
-                                key={index}
-                                className={`w-2 h-2 rounded-full ${
-                                    index === currentImageIndex
-                                        ? "bg-white"
-                                        : "bg-white/50"
-                                }`}
-                            />
-                        ))}
-                    </div>
-                </>
-            )}
-        </div>
-    );
-};
 
 /**
  * ProductTileA Component
@@ -149,6 +48,7 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
     const { addToCart } = useCart();
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const { showAuthToast } = useAuthToast();
 
     // Handle wishlist toggle with authentication check
     const handleWishlistToggle = async (e: React.MouseEvent) => {
@@ -156,21 +56,7 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
         e.stopPropagation();
 
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
+            showAuthToast("add items to your wishlist");
             return;
         }
 
@@ -202,21 +88,7 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
         e.stopPropagation();
 
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your cart.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
+            showAuthToast("add items to your cart");
             return;
         }
 
@@ -350,6 +222,7 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
     const { data: session } = useSession();
     const { addToCart } = useCart();
     const router = useRouter();
+    const { showAuthToast } = useAuthToast();
 
     // Handlers are identical to ProductTileA but with isPrebuilt: true
     const handleWishlistToggle = async (e: React.MouseEvent) => {
@@ -357,21 +230,7 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
         e.stopPropagation();
 
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
+            showAuthToast("add items to your wishlist");
             return;
         }
 
@@ -402,21 +261,7 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
         e.stopPropagation();
 
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your cart.",
-                variant: "destructive",
-                action: (
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => signIn()}
-                        className="bg-white text-black hover:bg-gray-200"
-                    >
-                        Log in
-                    </Button>
-                ),
-            });
+            showAuthToast("add items to your cart");
             return;
         }
 

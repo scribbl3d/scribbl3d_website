@@ -1,7 +1,1 @@
-import clsx from "clsx";
-import { twMerge } from "tailwind-merge";
-
-const cn = (...inputs) => {
-    return twMerge(clsx(inputs));
-};
-export default cn;
+export { cn as default } from "@/lib/utils";

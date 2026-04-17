@@ -1,12 +1,12 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/use-toast";
-import { clsx, type ClassValue } from "clsx";
+import { cn } from "@/lib/utils";
+import { ProductSkeleton } from "@/components/shared/ProductSkeleton";
+import { useAuthToast } from "@/hooks/useAuthToast";
 import { useSession } from "next-auth/react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { twMerge } from "tailwind-merge";
 import { ProductTileA, ProductTileB } from "./ProductTiles";
 
 interface Product {
@@ -36,20 +36,6 @@ interface CategoryProps {
     isStandalone?: boolean;
 }
 
-// Loading skeleton for products
-const ProductSkeleton = () => (
-    <div className="w-full">
-        <div className="w-[300px] h-[470px] bg-white rounded-lg overflow-hidden mx-auto">
-            <Skeleton className="w-full h-[340px]" />
-            <div className="p-4 space-y-3">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-        </div>
-    </div>
-);
-
 const CategoryBase: React.FC<CategoryProps> = ({
     searchTerm,
     sortBy,
@@ -64,6 +50,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
     const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const { data: session } = useSession();
+    const { showAuthToast } = useAuthToast();
 
     useEffect(() => {
         async function fetchProducts() {
@@ -120,11 +107,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
 
     const handleWishlistToggle = async (productId: string) => {
         if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your wishlist.",
-                variant: "destructive",
-            });
+            showAuthToast("add items to your wishlist");
             return;
         }
 
@@ -162,10 +145,6 @@ const CategoryBase: React.FC<CategoryProps> = ({
                 variant: "destructive",
             });
         }
-    };
-
-    const cn = (...inputs: ClassValue[]) => {
-        return twMerge(clsx(inputs));
     };
 
     return (
