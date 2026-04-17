@@ -2,21 +2,6 @@
 
 A modern, full-stack e-commerce platform specializing in 3D printing products including printers, resins, filaments, and prebuilt products. Built with Next.js 15, TypeScript, Prisma, and PostgreSQL.
 
-## 📋 Table of Contents
-
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Database Setup](#database-setup)
-- [Development](#development)
-- [Testing](#testing)
-- [Key Integrations](#key-integrations)
-- [API Routes](#api-routes)
-- [Deployment](#deployment)
-
-
 ## ✨ Features
 
 ###  Core
