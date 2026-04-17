@@ -84,10 +84,13 @@ export async function PUT(
             );
         };
 
+        // Extract material attributes ONLY from "Supported Materials" specification
+        // All other specs (including Temperature, etc. under Material Compatibility) 
+        // will be saved as regular specifications below - they won't become material attributes
         specifications.forEach((spec: any) => {
             // IMPORTANT: Only match EXACT label "Supported Materials"
-            // The old code was too greedy - it matched ANY spec with "material" in label/category
-            // This caused temperature specs under "Material Compatibility" to be saved as materials
+            // This allows you to add custom specs like "Max Temperature", "Nozzle Temperature" 
+            // under "Material Compatibility" category without them becoming material attributes
             const isMaterialSpec = spec.label === "Supported Materials";
 
             if (!isMaterialSpec || !spec.value) return;
@@ -97,7 +100,7 @@ export async function PUT(
                 .map((v: string) => v.trim().toUpperCase())
                 .filter(Boolean)
                 .filter((m: string) => {
-                    // Validate: Reject temperature values
+                    // Extra safety: Reject temperature values even if somehow added to checkboxes
                     if (isTemperatureValue(m)) {
                         console.warn(
                             `⚠️  Rejected temperature value "${m}" from materials. Please use separate temperature specifications.`
