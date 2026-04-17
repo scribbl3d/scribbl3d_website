@@ -9,27 +9,24 @@ import { FormResponseViewer } from "../_components/FormResponseViewer";
 
 interface Form3DResponse {
     id: string;
-    service: string;
+    fileReference: string | null;
+    additionalFile: string | null;
     requirement: string;
-    fileReference: string;
     fileExtension: string;
-    prototype: string;
-    prototypeOption: string;
-    printingTechnology: string;
-    material: string;
-    materialType: string;
-    materialDescription: string;
-    quantity: string;
-    productColor: string;
-    filamentColor: string;
-    resinColor: string;
-    additionalFile: string;
+    productionType: string | null;
+    quantity: number | null;
+    printingTechnology: string | null;
+    materialFamily: string | null;
+    material: string | null;
+    color: string | null;
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
-    company: string;
+    address: string | null;
+    company: string | null;
     createdAt: string;
+    updatedAt: string;
 }
 
 type Column = {
@@ -75,7 +72,6 @@ export default function Form3DResponsesPage() {
     };
 
     const columns: Column[] = [
-        { key: "service", label: "Service" },
         {
             key: "firstName",
             label: "Name",
@@ -83,12 +79,20 @@ export default function Form3DResponsesPage() {
                 item ? `${value} ${item.lastName}` : value,
         },
         { key: "email", label: "Email" },
-        { key: "printingTechnology", label: "Technology" },
-        { key: "material", label: "Material" },
+        { 
+            key: "productionType", 
+            label: "Production Type",
+            render: (value: string | null) => value || "Not Specified"
+        },
+        { 
+            key: "printingTechnology", 
+            label: "Technology",
+            render: (value: string | null) => value || "N/A"
+        },
         {
             key: "fileReference",
             label: "Reference File",
-            render: (value: string) =>
+            render: (value: string | null) =>
                 value ? (
                     <a
                         href={value}
@@ -113,12 +117,11 @@ export default function Form3DResponsesPage() {
     ];
 
     const detailsColumns: Column[] = [
-        { key: "service", label: "Service" },
         { key: "requirement", label: "Requirements" },
         {
             key: "fileReference",
             label: "Reference File",
-            render: (value: string) =>
+            render: (value: string | null) =>
                 value ? (
                     <a
                         href={value}
@@ -134,20 +137,10 @@ export default function Form3DResponsesPage() {
                 ),
         },
         { key: "fileExtension", label: "File Extension" },
-        { key: "prototype", label: "Prototype" },
-        { key: "prototypeOption", label: "Prototype Option" },
-        { key: "printingTechnology", label: "Printing Technology" },
-        { key: "material", label: "Material" },
-        { key: "materialType", label: "Material Type" },
-        { key: "materialDescription", label: "Material Description" },
-        { key: "quantity", label: "Quantity" },
-        { key: "productColor", label: "Product Color" },
-        { key: "filamentColor", label: "Filament Color" },
-        { key: "resinColor", label: "Resin Color" },
         {
             key: "additionalFile",
             label: "Additional File",
-            render: (value: string) =>
+            render: (value: string | null) =>
                 value ? (
                     <a
                         href={value}
@@ -162,11 +155,50 @@ export default function Form3DResponsesPage() {
                     <span className="text-gray-400">No file uploaded</span>
                 ),
         },
+        { 
+            key: "productionType", 
+            label: "Production Type",
+            render: (value: string | null) => value || "Not Specified"
+        },
+        { 
+            key: "quantity", 
+            label: "Quantity",
+            render: (value: number | null) => value !== null ? value : "N/A"
+        },
+        { 
+            key: "printingTechnology", 
+            label: "Printing Technology",
+            render: (value: string | null) => value || "N/A"
+        },
+        { 
+            key: "materialFamily", 
+            label: "Material Family",
+            render: (value: string | null) => value || "N/A"
+        },
+        { 
+            key: "material", 
+            label: "Material Subtype",
+            render: (value: string | null) => value || "N/A"
+        },
+        { 
+            key: "color", 
+            label: "Color",
+            render: (value: string | null) => value || "N/A"
+        },
         { key: "firstName", label: "First Name" },
         { key: "lastName", label: "Last Name" },
         { key: "email", label: "Email" },
         { key: "phone", label: "Phone" },
-        { key: "company", label: "Company" },
+        { 
+            key: "address", 
+            label: "Address",
+            render: (value: string | null) => value || "Not Provided"
+        },
+        { 
+            key: "company", 
+            label: "Company",
+            render: (value: string | null) => value || "Not Provided"
+        },
         {
             key: "createdAt",
             label: "Submitted At",
