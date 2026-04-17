@@ -68,7 +68,6 @@ export default function EnhancedProductTile({
                 const data = await res.json();
                 setIsInWishlist(data.isInWishlist);
             } catch (err) {
-                console.error(err);
             } finally {
                 setIsInitialLoad(false);
             }
@@ -85,7 +84,6 @@ export default function EnhancedProductTile({
      HANDLERS
   ========================= */
 
-    // 🔥 IMPORTANT: ONLY navigate when clicking the card itself
     const handleProductClick = (e: React.MouseEvent) => {
         setIsNavigating(true);
         router.push(`/product/${id}`);
@@ -153,7 +151,6 @@ export default function EnhancedProductTile({
 
             setIsInWishlist((prev) => !prev);
         } catch (err) {
-            console.error(err);
             toast({
                 title: "Error",
                 description: "Failed to update wishlist",

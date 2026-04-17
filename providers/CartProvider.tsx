@@ -49,7 +49,6 @@ export type AddToCartPayload = {
 type CartContextType = {
     cart: CartItem[];
 
-    /* 🔒 PRICING */
     discountAmount: number;
     appliedDiscountCode?: string;
     isRecalculatingDiscount: boolean;

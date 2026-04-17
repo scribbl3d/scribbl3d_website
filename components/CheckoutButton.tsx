@@ -43,7 +43,6 @@ export default function CheckoutButton({
         throw new Error("No payment URL received");
       }
     } catch (error) {
-      console.error("Error initiating payment:", error);
       alert(
         `Failed to initiate payment: ${
           error instanceof Error ? error.message : "Unknown error"

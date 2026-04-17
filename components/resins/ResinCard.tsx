@@ -219,7 +219,6 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
                 const data = await res.json();
                 setIsFavorite(data.isInWishlist);
             } catch (err) {
-                console.error("Wishlist check failed", err);
             }
         }
         checkWishlist();

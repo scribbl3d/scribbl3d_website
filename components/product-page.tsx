@@ -107,7 +107,6 @@ export default function ProductPage({
                         await response.json();
                     setIsInWishlist(wishlistStatus);
                 } catch (error) {
-                    console.error("Error checking wishlist status:", error);
                 }
             }
         };
@@ -144,7 +143,6 @@ export default function ProductPage({
 
                 setRelatedProducts(data as RelatedProduct[]);
             } catch (error) {
-                console.error("Error fetching related products:", error);
                 setError(
                     error instanceof Error
                         ? error.message
@@ -193,7 +191,7 @@ export default function ProductPage({
     //             prebuiltProductId: id,
     //             quantity,
 
-    //             // 🔥 THIS IS THE FIX
+    //           
     //             prebuiltSize: sizeObj?.name,
     //             prebuiltColour: colorObj?.name,
     //         });
@@ -225,7 +223,6 @@ export default function ProductPage({
                 });
             })
             .catch((err) => {
-                console.error("Failed to copy:", err);
                 toast({
                     title: "Failed to copy",
                     description: "Please try again",
@@ -282,7 +279,6 @@ export default function ProductPage({
                 } your wishlist.`,
             });
         } catch (err) {
-            console.error("Error updating wishlist:", err);
             if (err instanceof Error) {
                 toast({
                     title: "Error",

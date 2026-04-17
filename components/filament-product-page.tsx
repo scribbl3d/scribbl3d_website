@@ -111,7 +111,6 @@ export default function FilamentProductPage({
                     }
                 }
             } catch (error) {
-                console.error("Error fetching available colors:", error);
             }
         };
 
@@ -141,7 +140,6 @@ export default function FilamentProductPage({
                         await response.json();
                     setIsInWishlist(wishlistStatus);
                 } catch (error) {
-                    console.error("Error checking wishlist status:", error);
                 }
             }
         };
@@ -178,7 +176,6 @@ export default function FilamentProductPage({
                 description: `${name} has been added to your cart.`,
             });
         } catch (error) {
-            console.error("Error adding to cart:", error);
             setError("Failed to add item to cart. Please try again.");
             toast({
                 title: "Error",
@@ -224,7 +221,6 @@ export default function FilamentProductPage({
                 `/products/${productData.id}`
             );
         } catch (error) {
-            console.error("Error fetching product details:", error);
             toast({
                 title: "Error",
                 description:
@@ -250,7 +246,6 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
                 });
             })
             .catch((err) => {
-                console.error("Failed to copy:", err);
                 toast({
                     title: "Failed to copy",
                     description: "Please try again",
@@ -307,7 +302,6 @@ Check out ${name.toUpperCase()} on Scribbl3D`;
                 } your wishlist.`,
             });
         } catch (err) {
-            console.error("Error updating wishlist:", err);
             if (err instanceof Error) {
                 toast({
                     title: "Error",

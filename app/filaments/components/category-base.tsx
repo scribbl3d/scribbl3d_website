@@ -86,7 +86,6 @@ const CategoryBase: React.FC<CategoryProps> = ({
 
                 setProducts(productArray);
             } catch (error) {
-                console.error("Error fetching products:", error);
                 toast({
                     title: "Error",
                     description: "Failed to load products. Please try again.",
@@ -113,7 +112,6 @@ const CategoryBase: React.FC<CategoryProps> = ({
                         );
                     }
                 } catch (error) {
-                    console.error("Error fetching wishlist:", error);
                 }
             }
         }
@@ -158,7 +156,6 @@ const CategoryBase: React.FC<CategoryProps> = ({
                 } your wishlist.`,
             });
         } catch (error) {
-            console.error("Error updating wishlist:", error);
             toast({
                 title: "Error",
                 description: "Failed to update wishlist. Please try again.",

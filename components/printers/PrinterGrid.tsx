@@ -322,7 +322,6 @@ function PrinterCard({ printer }: { printer: any }) {
                 const data = await res.json();
                 if (data.isAuthenticated) setIsFavorite(data.isInWishlist);
             } catch (err) {
-                console.error(err);
             }
         };
         checkWishlist();

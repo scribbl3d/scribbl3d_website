@@ -47,7 +47,6 @@ export default function SimilarResinsCarousel({
                     setResins(data.resins ?? []);
                 }
             } catch (err) {
-                console.error("Failed to fetch similar resins", err);
             } finally {
                 if (!ignore) setLoading(false);
             }

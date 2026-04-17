@@ -239,7 +239,6 @@ export default function SimilarPrintersCarousel({
             const data = await res.json();
             setPrinters(data.printers || []);
         } catch (err) {
-            console.error(err);
         } finally {
             setLoading(false);
         }

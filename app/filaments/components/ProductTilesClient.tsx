@@ -186,7 +186,6 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
                 } your wishlist.`,
             });
         } catch (error) {
-            console.error("Error updating wishlist:", error);
             toast({
                 title: "Error",
                 description: "Failed to update wishlist. Please try again.",
@@ -234,7 +233,6 @@ export const ProductTileA: React.FC<ProductTileProps> = ({
                 description: `${name} has been added to your cart.`,
             });
         } catch (error) {
-            console.error("Error adding to cart:", error);
             toast({
                 title: "Error",
                 description: "Failed to add item to cart. Please try again.",
@@ -389,7 +387,6 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
                 } your wishlist.`,
             });
         } catch (error) {
-            console.error("Error updating wishlist:", error);
             toast({
                 title: "Error",
                 description: "Failed to update wishlist. Please try again.",
@@ -436,7 +433,6 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
                 description: `${name} has been added to your cart.`,
             });
         } catch (err) {
-            console.error("Error adding to cart:", err);
             toast({
                 title: "Error",
                 description: "Failed to add item to cart. Please try again.",
@@ -451,7 +447,6 @@ export const ProductTileB: React.FC<ProductTileProps> = ({
         try {
             await fetch("/api/checkout/set-access", { method: "POST" });
         } catch (error) {
-            console.error("Failed to set checkout access:", error);
         }
         router.push(`/checkout?mode=buynow&type=product&productId=${id}`);
     };

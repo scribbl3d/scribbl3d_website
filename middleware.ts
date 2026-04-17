@@ -5,19 +5,13 @@ import { NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
-    // 🚨 BYPASS middleware for PDF label generation
     if (pathname.startsWith("/api/internal/generate-label")) {
         return NextResponse.next();
     }
 
-    console.log("🔥 Middleware HIT:", pathname);
-
     const origin = request.headers.get("origin") || "";
     const response = NextResponse.next();
 
-    // ----------------------------
-    // 🔥 GLOBAL CORS CONFIGURATION
-    // ----------------------------
     const allowedOrigins = [
         "http://localhost:3000",
         "https://scribbl3d.com",
@@ -39,7 +33,6 @@ export async function middleware(request: NextRequest) {
     );
     response.headers.set("Access-Control-Allow-Credentials", "true");
 
-    // 🟡 Handle Preflight OPTIONS Requests
     if (request.method === "OPTIONS") {
         return new Response(null, {
             status: 200,
@@ -47,9 +40,6 @@ export async function middleware(request: NextRequest) {
         });
     }
 
-    // ----------------------------
-    // 🛡️ AUTH + ADMIN LOGIC BELOW
-    // ----------------------------
     const token = await getToken({
         req: request,
         secret: process.env.NEXTAUTH_SECRET,
@@ -113,9 +103,6 @@ export async function middleware(request: NextRequest) {
     return response;
 }
 
-// ----------------------------
-// MATCHER (VERY IMPORTANT)
-// ----------------------------
 export const config = {
     matcher: [
         "/api/:path*",
