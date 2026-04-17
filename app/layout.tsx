@@ -29,24 +29,28 @@ const manrope = Manrope({
     subsets: ["latin"],
     variable: "--font-manrope",
     weight: ["200", "300", "400", "500", "600", "700", "800"],
+    display: "swap",
 }) as NextFontWithVariable;
 
 const mplus1 = M_PLUS_1({
     subsets: ["latin"],
     variable: "--font-mplus1",
     weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+    display: "swap",
 }) as NextFontWithVariable;
 
 const lato = Lato({
     subsets: ["latin"],
     variable: "--font-lato",
     weight: ["100", "300", "400", "700", "900"],
+    display: "swap",
 }) as NextFontWithVariable;
 
 const aboreto = Aboreto({
     subsets: ["latin"],
     weight: "400",
     variable: "--font-aboreto",
+    display: "swap",
 }) as NextFontWithVariable;
 
 export const metadata: Metadata = defaultMetadata;
@@ -64,6 +68,10 @@ export default async function RootLayout({
     const session = await getSession();
     return (
         <html lang="en">
+            <head>
+                <link rel="preconnect" href="https://res.cloudinary.com" />
+                <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+            </head>
             <body
                 className={`bg-background text-foreground ${geistSans.variable} ${geistMono.variable} ${gilroy.variable}  ${manrope.variable} ${mplus1.variable} ${lato.variable} ${aboreto.variable} antialiased`}
             >

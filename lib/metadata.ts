@@ -10,7 +10,7 @@ export const defaultMetadata: Metadata = {
     template: '%s | Scribbl3D',
   },
   description:
-    'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India. Expert solutions for hobbyists, professionals, and businesses.',
+    'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India. Fast shipping, expert support, and competitive prices. Shop now for the best deals on FDM and resin printers!',
   keywords: [
     '3D printer India',
     '3D printing',
@@ -36,24 +36,25 @@ export const defaultMetadata: Metadata = {
     locale: 'en_IN',
     url: baseUrl,
     siteName,
-    title: 'Scribbl3D - Premium 3D Printers, Filaments & Resins',
+    title: 'Scribbl3D - Premium 3D Printers, Filaments & Resins in India',
     description:
-      'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India.',
+      'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India. Fast shipping, expert support, competitive prices. Shop now!',
     images: [
       {
-        url: `${baseUrl}/logo.png`,
+        url: `${baseUrl}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: 'Scribbl3D Logo',
+        alt: 'Scribbl3D - Premium 3D Printers, Filaments & Resins in India',
+        type: 'image/png',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scribbl3D - Premium 3D Printers, Filaments & Resins',
+    title: 'Scribbl3D - Premium 3D Printers, Filaments & Resins in India',
     description:
-      'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India.',
-    images: [`${baseUrl}/logo.png`],
+      'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India. Fast shipping, expert support, competitive prices. Shop now!',
+    images: [`${baseUrl}/og-image.png`],
   },
   robots: {
     index: true,

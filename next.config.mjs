@@ -1,16 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // 🔥 ADD THIS BLOCK
     eslint: {
         ignoreDuringBuilds: true,
     },
     compiler: {
-        // This is the specific patch for Next.js production builds
         styledComponents: true,
+        removeConsole: process.env.NODE_ENV === 'production',
     },
-     experimental: {
+    experimental: {
         middlewareClientMaxBodySize: '50mb',
+        optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     },
+    compress: true,
+    poweredByHeader: false,
 
     images: {
         remotePatterns: [
@@ -40,7 +42,32 @@ const nextConfig = {
         dangerouslyAllowSVG: true,
         deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
         imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-        formats: ["image/webp"],
+        formats: ["image/avif", "image/webp"],
+        minimumCacheTTL: 60,
+        unoptimized: false,
+    },
+    
+    async headers() {
+        return [
+            {
+                source: '/:all*(svg|jpg|jpeg|png|webp|avif|gif)',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable',
+                    },
+                ],
+            },
+            {
+                source: '/fonts/:path*',
+                headers: [
+                    {
+                        key: 'Cache-Control',
+                        value: 'public, max-age=31536000, immutable',
+                    },
+                ],
+            },
+        ];
     },
 };
 

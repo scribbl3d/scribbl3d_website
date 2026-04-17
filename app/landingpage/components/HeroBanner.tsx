@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -181,10 +182,14 @@ export default function HeroBanner({
                             className="w-full h-full object-cover"
                         />
                     ) : (
-                        <img
+                        <Image
                             src={s.mediaUrl}
                             alt={s.altText || s.headline}
-                            className="w-full h-full object-cover"
+                            fill
+                            priority={i === 0}
+                            quality={85}
+                            sizes="100vw"
+                            className="object-cover"
                         />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/20" />

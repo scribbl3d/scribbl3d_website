@@ -1,18 +1,24 @@
 "use client";
 
-import Loader from "@/components/Loader";
-import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
-import { useEffect, useState } from "react";
-
-import BestSellers from "./BestSellers";
+import dynamic from "next/dynamic";
+import HeroBanner from "./HeroBanner";
 import BrowseByBrand from "./BrowseByBrand";
 import BrowseByEcosystem from "./BrowseByEcosystem";
-import CommunityShowcase from "./CommunityShowcase";
-import CustomerReviews from "./CustomerReviews";
-import CustomPrinting from "./CustomPrinting";
-import HeroBanner from "./HeroBanner";
-import LearningHub from "./LearningHub";
-import NewArrivals from "./NewArrivals";
+
+const BestSellers = dynamic(() => import("./BestSellers"), {
+    loading: () => <div className="h-96 bg-gray-50" />,
+});
+const NewArrivals = dynamic(() => import("./NewArrivals"), {
+    loading: () => <div className="h-96 bg-gray-50" />,
+});
+const CustomPrinting = dynamic(() => import("./CustomPrinting"), {
+    ssr: false,
+});
+const LearningHub = dynamic(() => import("./LearningHub"));
+const CommunityShowcase = dynamic(() => import("./CommunityShowcase"), {
+    ssr: false,
+});
+const CustomerReviews = dynamic(() => import("./CustomerReviews"));
 
 interface LandingContentProps {
     heroBanners: any[];
@@ -31,37 +37,17 @@ export default function LandingContent({
     testimonials,
     bestSellers,
 }: LandingContentProps) {
-    const isLoading = useAutoImageLoader();
-    const [isReady, setIsReady] = useState(false);
-
-    // Once loading finishes, wait for the opacity transition to complete, then trigger animations
-    useEffect(() => {
-        if (!isLoading) {
-            // Small delay to let the opacity fade-in start, then fire animations
-            const timer = setTimeout(() => setIsReady(true), 100);
-            return () => clearTimeout(timer);
-        }
-    }, [isLoading]);
-
     return (
         <>
-            {isLoading && <Loader />}
-            <div
-                style={{
-                    opacity: isLoading ? 0 : 1,
-                    transition: "opacity 0.8s ease-in-out",
-                }}
-            >
-                <HeroBanner slides={heroBanners} animate={isReady} />
-                <BrowseByBrand />
-                <BrowseByEcosystem />
-                <BestSellers items={bestSellers} />
-                <NewArrivals items={newArrivals} />
-                <CustomPrinting />
-                <LearningHub blogs={blogs} />
-                <CommunityShowcase images={communityImages} />
-                <CustomerReviews testimonials={testimonials} />
-            </div>
+            <HeroBanner slides={heroBanners} animate={true} />
+            <BrowseByBrand />
+            <BrowseByEcosystem />
+            <BestSellers items={bestSellers} />
+            <NewArrivals items={newArrivals} />
+            <CustomPrinting />
+            <LearningHub blogs={blogs} />
+            <CommunityShowcase images={communityImages} />
+            <CustomerReviews testimonials={testimonials} />
         </>
     );
 }
