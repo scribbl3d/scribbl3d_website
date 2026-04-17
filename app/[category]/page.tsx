@@ -71,9 +71,35 @@ export async function generateMetadata({
 }: CategoryPageProps): Promise<Metadata> {
     const { category } = await params;
     const title = CATEGORY_TITLES[category] || "Category";
+    const description = `Explore our ${title.toLowerCase()} collection of premium 3D printed products. High-quality custom designs and ready-to-ship items available at Scribbl3D.`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://scribbl3d.com';
+    
     return {
-        title: `${title} | Scribbl3D`,
-        description: `Explore our ${title.toLowerCase()} products at Scribbl3D`,
+        title: `${title} - Premium 3D Printed Products`,
+        description,
+        keywords: [
+            title,
+            '3D printed products',
+            '3D printing India',
+            'custom 3D prints',
+            'Scribbl3D',
+            category,
+        ],
+        alternates: {
+            canonical: `${baseUrl}/${category}`,
+        },
+        openGraph: {
+            title: `${title} | Scribbl3D`,
+            description,
+            url: `${baseUrl}/${category}`,
+            type: 'website',
+            siteName: 'Scribbl3D',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${title} | Scribbl3D`,
+            description,
+        },
     };
 }
 

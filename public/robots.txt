@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Disallow private/admin routes
+Disallow: /api/
+Disallow: /ops/
+Disallow: /checkout
+Disallow: /cart
+Disallow: /profile/
+Disallow: /order/
+Disallow: /order-confirmation/
+Disallow: /payment/
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Allow public product pages
+Allow: /printers/
+Allow: /resins/
+Allow: /filaments/
+Allow: /prebuilt-products/
+Allow: /blog/
+
+# Sitemap
+Sitemap: https://scribbl3d.com/sitemap.xml

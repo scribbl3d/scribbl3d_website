@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
+import { deleteFromCloudinary } from "@/lib/cloudinary-utils";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -58,8 +59,23 @@ export async function PUT(
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
 
+        const existingImage = await prisma.communityImage.findUnique({
+            where: { id },
+            select: { imageUrl: true },
+        });
+
+        if (!existingImage) {
+            return NextResponse.json(
+                { error: "Image not found" },
+                { status: 404 },
+            );
+        }
+
         let imageUrl: string | undefined;
         if (file && file.size > 0) {
+            if (existingImage.imageUrl) {
+                await deleteFromCloudinary(existingImage.imageUrl);
+            }
             const url = await uploadToCloudinary(file);
             if (!url)
                 return NextResponse.json(
@@ -96,6 +112,15 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
+        const image = await prisma.communityImage.findUnique({
+            where: { id },
+            select: { imageUrl: true },
+        });
+
+        if (image?.imageUrl) {
+            await deleteFromCloudinary(image.imageUrl);
+        }
+
         await prisma.communityImage.delete({ where: { id } });
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -11,6 +11,7 @@ import "./globals.css";
 import WhatsAppSupportButton from "@/components/WhatsAppSupportButton";
 import type React from "react";
 import { Providers } from "./providers";
+import { defaultMetadata } from "@/lib/metadata";
 
 const geistSans = localFont({
     src: "./fonts/GeistVF.woff",
@@ -48,10 +49,7 @@ const aboreto = Aboreto({
     variable: "--font-aboreto",
 }) as NextFontWithVariable;
 
-export const metadata: Metadata = {
-    title: "SCRIBBL3D",
-    description: "Your 3D printing solution",
-};
+export const metadata: Metadata = defaultMetadata;
 
 async function getSession() {
     const session: Session | null = await getServerSession(authOptions);

@@ -2,6 +2,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { deleteFromCloudinary, deleteMultipleFromCloudinary } from "@/lib/cloudinary-utils";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -87,10 +88,18 @@ export async function PUT(
     const description = formData.get("description") as string;
     const inStock = formData.get("inStock") !== "false";
 
+    const existingResin = await prisma.resin.findUnique({
+      where: { id },
+      select: { cardImageUrl: true },
+    });
+
     let cardImageUrl = (formData.get("cardImageUrl") as string) || null;
     const cardImageFile = formData.get("cardImageFile") as File;
 
     if (cardImageFile && cardImageFile.size > 0) {
+      if (existingResin?.cardImageUrl) {
+        await deleteFromCloudinary(existingResin.cardImageUrl);
+      }
       const buffer = Buffer.from(await cardImageFile.arrayBuffer());
       const uploadResult: any = await new Promise((resolve, reject) => {
         cloudinary.uploader
@@ -360,12 +369,12 @@ export async function PUT(
       );
 
       // 🔹 5. Colours + Images — upsert to preserve IDs (cart items reference these)
-      const existingColourIds = (
-        await tx.resinColour.findMany({
-          where: { resinId: id },
-          select: { id: true },
-        })
-      ).map((c) => c.id);
+      const existingColoursWithImages = await tx.resinColour.findMany({
+        where: { resinId: id },
+        select: { id: true, images: { select: { url: true } } },
+      });
+
+      const existingColourIds = existingColoursWithImages.map((c) => c.id);
 
       const incomingColourIds = colours
         .map((c: any) => c.id)
@@ -375,6 +384,16 @@ export async function PUT(
         (eid) => !incomingColourIds.includes(eid)
       );
       if (colourIdsToDelete.length) {
+        const coloursToDelete = existingColoursWithImages.filter((c) =>
+          colourIdsToDelete.includes(c.id)
+        );
+        const imagesToDelete = coloursToDelete.flatMap((c) =>
+          c.images.map((img) => img.url)
+        );
+        if (imagesToDelete.length) {
+          await deleteMultipleFromCloudinary(imagesToDelete);
+        }
+
         await tx.resinColour.deleteMany({
           where: { id: { in: colourIdsToDelete } },
         });
@@ -454,6 +473,39 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
+
+        const resin = await prisma.resin.findUnique({
+            where: { id },
+            select: {
+                cardImageUrl: true,
+                colours: {
+                    select: {
+                        images: { select: { url: true } },
+                    },
+                },
+            },
+        });
+
+        if (!resin) {
+            return NextResponse.json(
+                { error: "Resin not found" },
+                { status: 404 },
+            );
+        }
+
+        const imagesToDelete: (string | null)[] = [];
+        if (resin.cardImageUrl) {
+            imagesToDelete.push(resin.cardImageUrl);
+        }
+        resin.colours.forEach((colour) => {
+            colour.images.forEach((img) => {
+                imagesToDelete.push(img.url);
+            });
+        });
+
+        if (imagesToDelete.length > 0) {
+            await deleteMultipleFromCloudinary(imagesToDelete);
+        }
 
         await prisma.resin.delete({ where: { id } });
 

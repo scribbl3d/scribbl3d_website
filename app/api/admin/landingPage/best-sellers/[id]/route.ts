@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
+import { deleteFromCloudinary } from "@/lib/cloudinary-utils";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -58,8 +59,23 @@ export async function PUT(
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
 
+        const existingItem = await prisma.bestSeller.findUnique({
+            where: { id },
+            select: { image: true },
+        });
+
+        if (!existingItem) {
+            return NextResponse.json(
+                { error: "Item not found" },
+                { status: 404 },
+            );
+        }
+
         let imageUrl: string | undefined;
         if (file && file.size > 0) {
+            if (existingItem.image) {
+                await deleteFromCloudinary(existingItem.image);
+            }
             const url = await uploadToCloudinary(file);
             if (!url)
                 return NextResponse.json(
@@ -116,6 +132,15 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
+        const item = await prisma.bestSeller.findUnique({
+            where: { id },
+            select: { image: true },
+        });
+
+        if (item?.image) {
+            await deleteFromCloudinary(item.image);
+        }
+
         await prisma.bestSeller.delete({ where: { id } });
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { deleteFromCloudinary, deleteMultipleFromCloudinary } from "@/lib/cloudinary-utils";
 
 // Configure Cloudinary
 
@@ -71,6 +72,18 @@ export async function PUT(
     try {
         const formData = await request.formData();
 
+        const existingBlog = await prisma.blog.findUnique({
+            where: { id },
+            select: { thumbnailImage: true, heroImage: true },
+        });
+
+        if (!existingBlog) {
+            return NextResponse.json(
+                { error: "Blog not found" },
+                { status: 404 },
+            );
+        }
+
         // 1. Process Images
         // These could be 'File' objects (if user uploaded a new image) OR string URLs (if they didn't touch it)
         let thumbnailUrl = formData.get("thumbnailImage");
@@ -78,6 +91,9 @@ export async function PUT(
 
         // If it's a File object, upload it. If it's already a string, just keep the string.
         if (thumbnailUrl instanceof File) {
+            if (existingBlog.thumbnailImage) {
+                await deleteFromCloudinary(existingBlog.thumbnailImage);
+            }
             thumbnailUrl = await uploadToCloudinary(
                 thumbnailUrl,
                 "blog_thumbnails",
@@ -85,6 +101,9 @@ export async function PUT(
         }
 
         if (heroUrl instanceof File) {
+            if (existingBlog.heroImage) {
+                await deleteFromCloudinary(existingBlog.heroImage);
+            }
             heroUrl = await uploadToCloudinary(heroUrl, "blog_heroes");
         }
 
@@ -145,6 +164,20 @@ export async function DELETE(
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
+        const blog = await prisma.blog.findUnique({
+            where: { id },
+            select: { thumbnailImage: true, heroImage: true },
+        });
+
+        if (blog) {
+            const imagesToDelete = [blog.thumbnailImage, blog.heroImage].filter(
+                Boolean,
+            );
+            if (imagesToDelete.length > 0) {
+                await deleteMultipleFromCloudinary(imagesToDelete);
+            }
+        }
+
         await prisma.blog.delete({ where: { id } });
         return NextResponse.json({ message: "Blog deleted successfully" });
     } catch (error) {

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { deleteFromCloudinary } from "@/lib/cloudinary-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -199,16 +200,7 @@ export async function PUT(
         );
 
         for (const img of removedImages) {
-            try {
-                const publicId = img.url
-                    .split("/")
-                    .slice(-2)
-                    .join("/")
-                    .replace(/\.[^/.]+$/, "");
-                await cloudinary.uploader.destroy(publicId);
-            } catch {
-                console.warn("Cloudinary delete failed:", img.url);
-            }
+            await deleteFromCloudinary(img.url);
         }
 
         // Removed variants
@@ -359,16 +351,7 @@ export async function DELETE(
         }
 
         for (const img of product.images) {
-            try {
-                const publicId = img.url
-                    .split("/")
-                    .slice(-2)
-                    .join("/")
-                    .replace(/\.[^/.]+$/, "");
-                await cloudinary.uploader.destroy(publicId);
-            } catch {
-                console.warn("Cloudinary delete failed:", img.url);
-            }
+            await deleteFromCloudinary(img.url);
         }
 
         await prisma.prebuiltProducts.delete({ where: { id } });

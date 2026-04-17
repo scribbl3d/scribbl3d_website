@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { deleteMultipleFromCloudinary } from "@/lib/cloudinary-utils";
 
 export async function GET(
     req: Request,
@@ -103,6 +104,11 @@ export async function PUT(
         const newFiles = formData.getAll("newImages") as File[];
         const newMetaStrings = formData.getAll("newImagesMeta") as string[];
 
+        const currentPrinterImages = await prisma.printerImage.findMany({
+            where: { printerId: params.id },
+            select: { url: true },
+        });
+
         const uploadedNewImages: {
             url: string;
             isMain: boolean;
@@ -147,6 +153,14 @@ export async function PUT(
         );
 
         const finalImageRecords = [...existingImages, ...uploadedNewImages];
+        const finalImageUrls = new Set(finalImageRecords.map((img) => img.url));
+        const imagesToDelete = currentPrinterImages
+            .map((img) => img.url)
+            .filter((url) => !finalImageUrls.has(url));
+
+        if (imagesToDelete.length > 0) {
+            await deleteMultipleFromCloudinary(imagesToDelete);
+        }
 
         const [updatedPrinter] = await prisma.$transaction([
             prisma.printer.update({

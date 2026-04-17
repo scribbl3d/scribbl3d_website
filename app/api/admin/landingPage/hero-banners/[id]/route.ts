@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
+import { deleteFromCloudinary } from "@/lib/cloudinary-utils";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -65,8 +66,28 @@ export async function PUT(
         const mediaType = (formData.get("mediaType") as string) || "image";
         const file = formData.get("file") as File | null;
 
+        const existingBanner = await prisma.heroBanner.findUnique({
+            where: { id },
+            select: { mediaUrl: true, mediaType: true },
+        });
+
+        if (!existingBanner) {
+            return NextResponse.json(
+                { error: "Banner not found" },
+                { status: 404 },
+            );
+        }
+
         let mediaUrl: string | undefined;
         if (file && file.size > 0) {
+            if (existingBanner.mediaUrl) {
+                const oldResourceType =
+                    existingBanner.mediaType === "video" ? "video" : "image";
+                await deleteFromCloudinary(
+                    existingBanner.mediaUrl,
+                    oldResourceType,
+                );
+            }
             const resourceType = mediaType === "video" ? "video" : "image";
             const url = await uploadToCloudinary(file, resourceType);
             if (!url)
@@ -115,6 +136,16 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
+        const banner = await prisma.heroBanner.findUnique({
+            where: { id },
+            select: { mediaUrl: true, mediaType: true },
+        });
+
+        if (banner?.mediaUrl) {
+            const resourceType = banner.mediaType === "video" ? "video" : "image";
+            await deleteFromCloudinary(banner.mediaUrl, resourceType);
+        }
+
         await prisma.heroBanner.delete({ where: { id } });
         return NextResponse.json({ success: true });
     } catch (error) {
