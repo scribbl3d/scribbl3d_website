@@ -20,7 +20,7 @@ export default function CustomPrinting() {
                         {/* Image 1 */}
                         <div className="w-[45%] aspect-[3/4] rounded-xl sm:rounded-2xl overflow-hidden bg-[#0a0a0f]">
                             <img
-                                src="/landing/proto/proto1.png"
+                                src="/landing/proto/proto1.webp"
                                 alt="3D printed precision part"
                                 className="w-full h-full object-cover"
                             />
@@ -30,7 +30,7 @@ export default function CustomPrinting() {
                         <div className="w-[50%] flex flex-col gap-3 sm:gap-4">
                             <div className="flex-1 rounded-xl sm:rounded-2xl overflow-hidden bg-[#0a0a0f]">
                                 <img
-                                    src="/landing/proto/proto2.png"
+                                    src="/landing/proto/proto2.webp"
                                     alt="3D printed engineering component"
                                     className="w-full h-full object-cover"
                                 />

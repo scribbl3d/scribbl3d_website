@@ -107,7 +107,7 @@ export default function Navbar() {
                             onClick={() => setIsLoading(true)}
                         >
                             <Image
-                                src="/logo.png"
+                                src="/logo.webp"
                                 alt="scribb13d Logo"
                                 width={170}
                                 height={85}

@@ -6,21 +6,21 @@ const BRANDS = [
     {
         name: "Anycubic",
         slug: "Anycubic",
-        logo: "/landing/brands/anycubic.png",
+        logo: "/landing/brands/anycubic.webp",
     },
     {
         name: "Bambu Lab",
         slug: "Bambu Lab",
-        logo: "/landing/brands/bambuLab.png",
+        logo: "/landing/brands/bambuLab.webp",
     },
     {
         name: "Creality",
         slug: "Creality",
-        logo: "/landing/brands/creality.png",
+        logo: "/landing/brands/creality.webp",
     },
-    { name: "Elegoo", slug: "Elegoo", logo: "/landing/brands/egelo.png" },
-    { name: "Phrozen", slug: "Phrozen", logo: "/landing/brands/phrozen.png" },
-    { name: "Jamghe", slug: "jamghe", logo: "/landing/brands/jamghe.png" },
+    { name: "Elegoo", slug: "Elegoo", logo: "/landing/brands/egelo.webp" },
+    { name: "Phrozen", slug: "Phrozen", logo: "/landing/brands/phrozen.webp" },
+    { name: "Jamghe", slug: "jamghe", logo: "/landing/brands/jamghe.webp" },
 ];
 
 function BrandLogo({

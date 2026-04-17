@@ -8,7 +8,7 @@ const CATEGORIES = [
     {
         name: "Filaments",
         description: "Materials built for consistent, high-quality prints.",
-        image: "/landing/ecosystem/filament.png",
+        image: "/landing/ecosystem/filament.webp",
         href: "/filaments",
         buttonText: "Explore Materials",
         type: "hero", // large card — col-span-2, row-span-2
@@ -16,21 +16,21 @@ const CATEGORIES = [
     {
         name: "Printers",
         description: "",
-        image: "/landing/ecosystem/printer.png",
+        image: "/landing/ecosystem/printer.webp",
         href: "/printers",
         type: "small", // small card — centered text
     },
     {
         name: "Resins",
         description: "",
-        image: "/landing/ecosystem/resin.png",
+        image: "/landing/ecosystem/resin.webp",
         href: "/resins",
         type: "small",
     },
     {
         name: "Prebuilt Products",
         description: "Beautifully printed designs, ready to own.",
-        image: "/landing/ecosystem/prebuilt.png",
+        image: "/landing/ecosystem/prebuilt.webp",
         href: "/prebuilt-products",
         buttonText: "Discover Collection ",
         type: "wide", // wide card — col-span-2, left-aligned text
