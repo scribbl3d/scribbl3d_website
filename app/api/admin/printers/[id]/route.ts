@@ -74,21 +74,40 @@ export async function PUT(
             attributeValue: string;
         }[] = [];
 
+        // Validation: Temperature value patterns to reject
+        const isTemperatureValue = (value: string): boolean => {
+            return (
+                value.includes("°C") ||
+                value.includes("°F") ||
+                value.includes("UP TO") ||
+                /\d+\s*°/.test(value) // matches patterns like "300°" or "100 °"
+            );
+        };
+
         specifications.forEach((spec: any) => {
-            const isMaterialSpec =
-                spec.label?.toLowerCase().includes("material") ||
-                spec.category?.toLowerCase().includes("material");
+            // IMPORTANT: Only match EXACT label "Supported Materials"
+            // The old code was too greedy - it matched ANY spec with "material" in label/category
+            // This caused temperature specs under "Material Compatibility" to be saved as materials
+            const isMaterialSpec = spec.label === "Supported Materials";
 
             if (!isMaterialSpec || !spec.value) return;
 
-            const uniqueMaterials = Array.from(
-                new Set(
-                    spec.value
-                        .split(",")
-                        .map((v: string) => v.trim().toUpperCase())
-                        .filter(Boolean),
-                ),
-            );
+            const materials = spec.value
+                .split(",")
+                .map((v: string) => v.trim().toUpperCase())
+                .filter(Boolean)
+                .filter((m: string) => {
+                    // Validate: Reject temperature values
+                    if (isTemperatureValue(m)) {
+                        console.warn(
+                            `⚠️  Rejected temperature value "${m}" from materials. Please use separate temperature specifications.`
+                        );
+                        return false;
+                    }
+                    return true;
+                });
+
+            const uniqueMaterials = Array.from(new Set(materials));
 
             uniqueMaterials.forEach((material) => {
                 materialAttributes.push({

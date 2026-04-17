@@ -309,7 +309,17 @@ async function getAvailableFilters(currentFilters: any) {
                 select: { attributeValue: true },
                 distinct: ["attributeValue"],
             });
-            return attributes.map((a) => a.attributeValue);
+            
+            let values = attributes.map((a) => a.attributeValue);
+            
+            // Safety filter: Exclude temperature values from material filter
+            if (attributeKey === "material") {
+                values = values.filter(
+                    (v) => !v.includes("°C") && !v.includes("°F") && !v.includes("UP TO")
+                );
+            }
+            
+            return values;
         };
 
         // 1. Technology - Always show all available

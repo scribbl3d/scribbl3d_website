@@ -171,8 +171,8 @@ function NotifyMeModal({
             <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
                 <div className="flex items-start justify-between p-5 border-b border-gray-100">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                            <Bell size={16} className="text-orange-500" />
+                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Bell size={16} className="text-[#2563EB]" />
                         </div>
                         <div>
                             <h2 className="text-sm font-bold text-gray-900">
@@ -269,7 +269,7 @@ function NotifyMeModal({
                             <button
                                 onClick={handleSubmit}
                                 disabled={submitting}
-                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                                className="w-full h-11 bg-[#2563EB] hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
                             >
                                 {submitting ? (
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

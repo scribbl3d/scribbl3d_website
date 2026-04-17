@@ -145,28 +145,48 @@ export async function POST(request: NextRequest) {
             attributeValue: string;
         }[] = [];
 
-        specifications.forEach((spec: any) => {
-            const isMaterialSpec =
-                spec.label?.toLowerCase().includes("material") ||
-                spec.category?.toLowerCase().includes("material");
-
-            if (!isMaterialSpec || !spec.value) return;
-
-            const uniqueMaterials = Array.from(
-                new Set(
-                    spec.value
-                        .split(",")
-                        .map((v: string) => v.trim().toUpperCase())
-                        .filter(Boolean),
-                ),
+        // Validation: Temperature value patterns to reject
+        const isTemperatureValue = (value: string): boolean => {
+            return (
+                value.includes("°C") ||
+                value.includes("°F") ||
+                value.includes("UP TO") ||
+                /\d+\s*°/.test(value) // matches patterns like "300°" or "100 °"
             );
+        };
 
-            uniqueMaterials.forEach((material) => {
-                materialAttributes.push({
-                    attributeKey: "material",
-                    attributeValue: material as string,
+        specifications.forEach((spec: any) => {
+            // IMPORTANT: Only match EXACT label "Supported Materials"
+            // Don't match specs that just contain "material" in label/category
+            // to avoid converting temperature specs to material attributes
+            if (
+                spec.label === "Supported Materials" &&
+                spec.value &&
+                typeof spec.value === "string"
+            ) {
+                const materials = spec.value
+                    .split(",")
+                    .map((m) => m.trim())
+                    .filter(Boolean)
+                    .filter((m) => {
+                        // Validate: Reject temperature values
+                        if (isTemperatureValue(m)) {
+                            console.warn(
+                                `⚠️  Rejected temperature value "${m}" from materials. Please use separate temperature specifications.`
+                            );
+                            return false;
+                        }
+                        return true;
+                    });
+                const uniqueMaterials = Array.from(new Set(materials));
+
+                uniqueMaterials.forEach((material) => {
+                    materialAttributes.push({
+                        attributeKey: "material",
+                        attributeValue: material as string,
+                    });
                 });
-            });
+            }
         });
 
         const newFiles = formData.getAll("newImages") as File[];

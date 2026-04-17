@@ -162,7 +162,7 @@ export function NotifyMeModal({
                         <button
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                            className="w-full h-11 bg-[#2563EB] hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
                         >
                             {submitting ? (
                                 <LoadingSpinner size="sm" color="white" />
