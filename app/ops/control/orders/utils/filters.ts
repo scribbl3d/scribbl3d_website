@@ -2,6 +2,8 @@ import { Order } from "../types";
 
 export const paymentPending = (o: Order) => o.status === "payment_pending";
 
+export const paymentFailed = (o: Order) => o.status === "payment_failed";
+
 export const confirmedProcessing = (o: Order) =>
     (o.status === "confirmed" || o.status === "processing") &&
     !o.shipment?.waybill;

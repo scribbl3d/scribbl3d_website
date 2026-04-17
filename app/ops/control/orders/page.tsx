@@ -15,6 +15,7 @@ import { ConfirmedProcessingTab } from "./tabs/ConfirmedProcessingTab";
 import { DeliveredTab } from "./tabs/DeliveredTab";
 import { InTransitTab } from "./tabs/InTransitTab";
 import { PaymentPendingTab } from "./tabs/PaymentPendingTab";
+import { PaymentFailedTab } from "./tabs/PaymentFailedTab";
 
 import { Order } from "./types";
 import * as filters from "./utils/filters";
@@ -261,6 +262,7 @@ export default function OrdersPage() {
                     <TabsList className="sticky top-[64px] z-30 flex w-full justify-center gap-10 border-b-2 border-border bg-background/95 px-6 py-4 backdrop-blur">
                         {[
                             { value: "payment", label: "Payment" },
+                            { value: "failed", label: "Failed" },
                             { value: "confirmed", label: "Confirmed" },
                             { value: "transit", label: "Transit" },
                             { value: "delivered", label: "Delivered" },
@@ -281,6 +283,13 @@ export default function OrdersPage() {
                         <TabsContent value="payment">
                             <PaymentPendingTab
                                 orders={orders.filter(filters.paymentPending)}
+                                onView={setActiveOrder}
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="failed">
+                            <PaymentFailedTab
+                                orders={orders.filter(filters.paymentFailed)}
                                 onView={setActiveOrder}
                             />
                         </TabsContent>

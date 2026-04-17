@@ -9,6 +9,13 @@
 /.env
 # testing
 /coverage
+*.test.js.snap
+*.test.ts.snap
+*.test.tsx.snap
+__snapshots__/
+.jest/
+jest-results.json
+test-results/
 
 # next.js
 /.next/
