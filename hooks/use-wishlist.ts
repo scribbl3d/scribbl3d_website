@@ -25,7 +25,8 @@ export function useWishlist({ productId, productName, productType }: UseWishlist
 
         async function checkWishlist() {
             try {
-                const queryParam = `${productType}Id=${productId}`;
+                const paramName = productType === "prebuilt" ? "prebuiltProductId" : `${productType}Id`;
+                const queryParam = `${paramName}=${productId}`;
                 const res = await fetch(`/api/wishlist/check?${queryParam}`);
                 const data = await res.json();
                 
@@ -61,7 +62,8 @@ export function useWishlist({ productId, productName, productType }: UseWishlist
         setIsFavorite(!wasInWishlist);
 
         try {
-            const body = { [`${productType}Id`]: productId };
+            const paramName = productType === "prebuilt" ? "prebuiltProductId" : `${productType}Id`;
+            const body = { [paramName]: productId };
             
             const res = await fetch("/api/wishlist", {
                 method: "POST",
