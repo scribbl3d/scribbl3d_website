@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ProductSkeleton } from "@/components/shared/ProductSkeleton";
 import { useAuthToast } from "@/hooks/useAuthToast";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { ProductTileA, ProductTileB } from "./ProductTiles";
@@ -46,6 +47,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
     viewAllHref,
     isStandalone,
 }) => {
+    const router = useRouter();
     const [products, setProducts] = useState<Product[]>([]);
     const [wishlistItems, setWishlistItems] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
@@ -158,7 +160,7 @@ const CategoryBase: React.FC<CategoryProps> = ({
             {isStandalone && (
                 <div className="w-full max-w-[1400px] px-4 mb-4">
                     <button
-                        onClick={() => window.history.back()}
+                        onClick={() => router.push("/filaments")}
                         className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black"
                     >
                         ← Back to Filaments

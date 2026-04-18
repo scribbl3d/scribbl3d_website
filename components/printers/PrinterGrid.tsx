@@ -1,12 +1,13 @@
 "use client";
 
-import { toast } from "@/components/ui/use-toast";
 import { getCardImageUrl } from "@/lib/cloudinary-url";
-import { useCart } from "@/providers/CartProvider";
-import { Bell, Check, Heart, X } from "lucide-react";
-import { signIn, useSession } from "next-auth/react";
+import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useWishlist } from "@/hooks/use-wishlist";
+import { useAddToCart } from "@/hooks/use-add-to-cart";
+import { Bell, Heart } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /* ================= TYPES ================= */
 interface PrinterGridProps {
@@ -15,179 +16,6 @@ interface PrinterGridProps {
     total: number;
     limit: number;
     onPageChange: (page: number) => void;
-}
-
-/* ── Notify Me Modal ── */
-function NotifyMeModal({
-    printer,
-    onClose,
-}: {
-    printer: any;
-    onClose: () => void;
-}) {
-    const { data: session } = useSession();
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
-    const [phone, setPhone] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [done, setDone] = useState(false);
-
-    const handleSubmit = async () => {
-        if (!email.trim() || !phone.trim()) {
-            toast({
-                title: "Email and phone are required",
-                variant: "destructive",
-            });
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch("/api/stock-notifications", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productId: printer.id,
-                    productName: printer.name,
-                    productType: "printer",
-                    email: email.trim(),
-                    phone: phone.trim(),
-                    name: name.trim() || null,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                toast({
-                    title: data.error || "Something went wrong",
-                    variant: "destructive",
-                });
-                return;
-            }
-            setDone(true);
-        } catch {
-            toast({ title: "Request failed", variant: "destructive" });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-                <div className="flex items-start justify-between p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                            <Bell size={16} className="text-orange-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-sm font-bold text-gray-900">
-                                Notify Me When Back
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
-                                {printer.name}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-black mt-0.5"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-                <div className="p-5">
-                    {done ? (
-                        <div className="flex flex-col items-center py-6 text-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                                <Check size={22} className="text-green-600" />
-                            </div>
-                            <p className="text-base font-bold text-gray-900">
-                                You're on the list!
-                            </p>
-                            <p className="text-sm text-gray-500 leading-relaxed">
-                                We'll notify you on{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {email}
-                                </span>{" "}
-                                and{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {phone}
-                                </span>{" "}
-                                as soon as this item is back in stock.
-                            </p>
-                            <button
-                                onClick={onClose}
-                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
-                            >
-                                Got it
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-3.5">
-                            <p className="text-xs text-gray-500 leading-relaxed">
-                                This printer is currently out of stock. Leave
-                                your details and we'll let you know the moment
-                                it's available.
-                            </p>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Name{" "}
-                                    <span className="text-gray-400 normal-case font-normal">
-                                        (optional)
-                                    </span>
-                                </label>
-                                <input
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Your name"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Email{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Phone Number{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    placeholder="10-digit mobile number"
-                                    maxLength={15}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
-                            >
-                                {submitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <>
-                                        <Bell size={14} /> Notify Me
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
 }
 
 export default function PrinterGrid({
@@ -257,123 +85,29 @@ export default function PrinterGrid({
 }
 
 function PrinterCard({ printer }: { printer: any }) {
-    const [isFavorite, setIsFavorite] = useState(false);
-    const [isWishLoading, setIsWishLoading] = useState(false);
-    const { data: session } = useSession();
-    const { addToCart } = useCart();
-    const [isCartLoading, setIsCartLoading] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
 
     const isOutOfStock = printer.inStock === false;
-
-    const materials = printer.attributes
-        .filter((attr: any) => attr.attributeKey === "material")
-        .map((attr: any) => attr.attributeValue);
-
     const price = printer.price || 0;
     const originalPrice = printer.originalPrice || null;
-
     const imageUrl =
         printer.images.find((img: any) => img.isMain)?.url ||
         printer.images[0]?.url;
 
-    const handleAddToCart = async () => {
-        if (!printer || isCartLoading || isOutOfStock) return;
-        if (!session) {
-            toast({
-                title: "Authentication Required",
-                description: "Please log in to add items to your cart.",
-                variant: "destructive",
-                action: (
-                    <button
-                        onClick={() => signIn()}
-                        className="px-3 py-1 bg-white text-black rounded"
-                    >
-                        Log in
-                    </button>
-                ),
-            });
-            return;
-        }
-        setIsCartLoading(true);
-        try {
-            await addToCart({ printerId: printer.id, quantity: 1 });
-            toast({
-                title: "Added to Cart",
-                description: `${printer.name} has been added to your cart.`,
-            });
-        } catch {
-            toast({
-                title: "Error",
-                description: "Failed to add printer to cart.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsCartLoading(false);
-        }
-    };
+    // Use custom hooks
+    const { isFavorite, isLoading: isWishLoading, toggleWishlist } = useWishlist({
+        productId: printer.id,
+        productName: printer.name,
+        productType: "printer",
+    });
 
-    useEffect(() => {
-        const checkWishlist = async () => {
-            try {
-                const res = await fetch(
-                    `/api/wishlist/check?printerId=${printer.id}`,
-                );
-                const data = await res.json();
-                if (data.isAuthenticated) setIsFavorite(data.isInWishlist);
-            } catch (err) {
-            }
-        };
-        checkWishlist();
-    }, [printer.id]);
+    const { handleAddToCart, isLoading: isCartLoading } = useAddToCart({
+        productName: printer.name,
+    });
 
-    const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>,
-    ) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!session) {
-            toast({
-                title: "Authentication required",
-                description: "Please log in to add items to wishlist",
-                variant: "destructive",
-                action: (
-                    <button
-                        onClick={() => signIn()}
-                        className="px-3 py-1 bg-white text-black rounded"
-                    >
-                        Log in
-                    </button>
-                ),
-            });
-            return;
-        }
-        if (isWishLoading) return;
-        setIsWishLoading(true);
-        const wasInWishlist = isFavorite;
-        setIsFavorite(!wasInWishlist);
-        try {
-            await fetch("/api/wishlist", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ printerId: printer.id }),
-            });
-            toast({
-                title: wasInWishlist
-                    ? "Removed from wishlist"
-                    : "Added to wishlist",
-                description: `${printer.name} has been ${wasInWishlist ? "removed from" : "added to"} your wishlist.`,
-            });
-        } catch {
-            setIsFavorite(wasInWishlist);
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsWishLoading(false);
-        }
+    const onAddToCart = async () => {
+        if (isOutOfStock) return;
+        await handleAddToCart({ printerId: printer.id, quantity: 1 });
     };
 
     return (
@@ -399,12 +133,12 @@ function PrinterCard({ printer }: { printer: any }) {
                             </div>
                         )}
                         <button
-                            onClick={handleToggleWishlist}
+                            onClick={toggleWishlist}
                             disabled={isWishLoading}
                             className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
                         >
                             {isWishLoading ? (
-                                <div className="w-3 h-3 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                <LoadingSpinner size="sm" color="gray" className="w-3 h-3 sm:w-5 sm:h-5" />
                             ) : (
                                 <Heart
                                     className={`w-3 h-3 sm:w-5 sm:h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
@@ -484,12 +218,12 @@ function PrinterCard({ printer }: { printer: any }) {
                     </div>
                     {!isOutOfStock && (
                         <button
-                            onClick={handleAddToCart}
+                            onClick={onAddToCart}
                             disabled={isCartLoading}
                             className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center bg-black text-white hover:bg-gray-900"
                         >
                             {isCartLoading ? (
-                                <div className="w-3.5 h-3.5 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <LoadingSpinner size="sm" color="white" className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             ) : (
                                 "Add to Cart"
                             )}
@@ -514,8 +248,11 @@ function PrinterCard({ printer }: { printer: any }) {
 
             {showNotifyModal && (
                 <NotifyMeModal
-                    printer={printer}
+                    isOpen={showNotifyModal}
                     onClose={() => setShowNotifyModal(false)}
+                    productId={printer.id}
+                    productName={printer.name}
+                    productType="printer"
                 />
             )}
         </>

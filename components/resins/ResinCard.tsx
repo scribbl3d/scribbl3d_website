@@ -1,14 +1,14 @@
 "use client";
 
-import { toast } from "@/components/ui/use-toast";
 import { getCardImageUrl } from "@/lib/cloudinary-url";
 import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useAuthToast } from "@/hooks/useAuthToast";
+import { PriceDisplay } from "@/components/ui/price-display";
+import { StockBadge } from "@/components/ui/stock-badge";
+import { useWishlist } from "@/hooks/use-wishlist";
 import { Bell, Heart } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 /* ── Resin Card ── */
 interface ResinCardProps {
@@ -18,9 +18,6 @@ interface ResinCardProps {
 }
 
 export default function ResinCard({ resin, onSelect, priceRange }: ResinCardProps) {
-    const { data: session } = useSession();
-    const { showAuthToast } = useAuthToast();
-
     const imageUrl = resin.cardImageUrl;
     const name = resin.name;
     const shortDescription = resin.shortDescription;
@@ -45,64 +42,14 @@ export default function ResinCard({ resin, onSelect, priceRange }: ResinCardProp
         : [];
     const hasMatchingVariants = matchingWeights.length > 0 && matchingWeights.length < (resin.weights?.length || 0);
 
-    const [isFavorite, setIsFavorite] = useState(false);
-    const [isWishLoading, setIsWishLoading] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
 
-    useEffect(() => {
-        if (!session || !resin?.id) return;
-        async function checkWishlist() {
-            try {
-                const res = await fetch(
-                    `/api/wishlist/check?resinId=${resin.id}`,
-                );
-                const data = await res.json();
-                setIsFavorite(data.isInWishlist);
-            } catch (err) {
-            }
-        }
-        checkWishlist();
-    }, [session, resin?.id]);
-
-    const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>,
-    ) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!session) {
-            showAuthToast("add items to wishlist");
-            return;
-        }
-
-        if (isWishLoading) return;
-        setIsWishLoading(true);
-        const wasInWishlist = isFavorite;
-        setIsFavorite(!wasInWishlist);
-
-        try {
-            await fetch("/api/wishlist", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ resinId: resin.id }),
-            });
-            toast({
-                title: wasInWishlist
-                    ? "Removed from wishlist"
-                    : "Added to wishlist",
-                description: `${resin.name} has been ${wasInWishlist ? "removed from" : "added to"} your wishlist.`,
-            });
-        } catch {
-            setIsFavorite(wasInWishlist);
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsWishLoading(false);
-        }
-    };
+    // Use wishlist hook
+    const { isFavorite, isLoading: isWishLoading, toggleWishlist } = useWishlist({
+        productId: resin.id,
+        productName: resin.name,
+        productType: "resin",
+    });
 
     return (
         <>
@@ -121,13 +68,9 @@ export default function ResinCard({ resin, onSelect, priceRange }: ResinCardProp
                                 loading="eager"
                             />
                         )}
-                        {isOutOfStock && (
-                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
-                                Out of Stock
-                            </div>
-                        )}
+                        <StockBadge inStock={!isOutOfStock} size="sm" />
                         <button
-                            onClick={handleToggleWishlist}
+                            onClick={toggleWishlist}
                             disabled={isWishLoading}
                             className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
                         >
@@ -200,35 +143,13 @@ export default function ResinCard({ resin, onSelect, priceRange }: ResinCardProp
                         </div>
                     )}
 
-                    {/* Line 1: Actual price + Original price */}
-                    <div className="flex items-baseline gap-3 sm:gap-0 sm:justify-start mt-1">
-                        <span className="text-[13px] sm:text-[16px] font-bold text-[#101828]">
-                            ₹{price.toLocaleString("en-IN")}
-                        </span>
-                        {originalPrice && (
-                            <span className="sm:ml-3 text-[10px] sm:text-[14px] font-normal line-through text-[#99A1AF]">
-                                ₹{originalPrice.toLocaleString("en-IN")}
-                            </span>
-                        )}
-                        {/* Discount — desktop only inline with prices */}
-                        {discount && (
-                            <span className="hidden sm:inline-flex sm:ml-2 h-[22px] px-2 items-center rounded-full text-[12px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
-                                {discount}% OFF
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Line 2: GST + Discount on mobile */}
-                    <div className="flex items-center gap-3 sm:gap-2.5 mb-0.5 sm:mb-2.5 sm:justify-start">
-                        <p className="text-[9px] sm:text-[13px] text-[#667085]">
-                            (incl. GST)
-                        </p>
-                        {discount && (
-                            <span className="sm:hidden h-[14px] px-1 inline-flex items-center rounded-full text-[8px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
-                                {discount}% OFF
-                            </span>
-                        )}
-                    </div>
+                    <PriceDisplay
+                        price={price}
+                        originalPrice={originalPrice}
+                        discount={discount}
+                        size="sm"
+                        className="mt-1 mb-0.5 sm:mb-2.5"
+                    />
 
                     {/* Select Variants — hidden when OOS */}
                     {!isOutOfStock && (

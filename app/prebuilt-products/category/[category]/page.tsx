@@ -836,7 +836,7 @@ export default function CategoryListingPage() {
         <main className="min-h-screen bg-white pb-20">
             <div className="container mx-auto px-4 py-6 pt-24">
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push("/prebuilt-products")}
                     className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black mb-6 transition-colors"
                 >
                     <ChevronLeft size={16} /> Back to All Products
@@ -901,7 +901,7 @@ function CategoryProductCard({ product }: { product: any }) {
     const variant = product.variants?.[0];
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
-    const [showModal, setShowModal] = useState(false); // ← VariantModal
+    const [showModal, setShowModal] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
 
     useEffect(() => {
@@ -975,168 +975,153 @@ function CategoryProductCard({ product }: { product: any }) {
             ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
             : "One size";
 
+    const isOutOfStock = product.inStock === false;
+
     return (
         <>
-            <div
-                onClick={() =>
-                    product.slug &&
-                    router.push(`/prebuilt-products/${product.slug}`)
-                }
-                className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full h-full transition-all hover:shadow-lg hover:border-gray-200 cursor-pointer"
-            >
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                 <div
-                    className="relative overflow-hidden bg-[#f9f9f9]"
-                    style={{ aspectRatio: "1 / 0.9" }}
+                    onClick={() =>
+                        product.slug &&
+                        router.push(`/prebuilt-products/${product.slug}`)
+                    }
+                    className="flex flex-col h-full cursor-pointer"
                 >
-                    {mainImage ? (
-                        <Image
-                            src={mainImage}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-gray-300 text-xs">
-                            No image
-                        </div>
-                    )}
-                    {product.inStock === false && (
-                        <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
-                            Out of Stock
-                        </div>
-                    )}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleWishlist(e);
-                        }}
-                        disabled={isWishlistLoading}
-                        className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md hover:text-red-500"
-                    >
-                        {isWishlistLoading ? (
-                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
-                        ) : (
-                            <Heart
-                                size={20}
-                                className={
-                                    isFavorite
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-400"
-                                }
+                    {/* IMAGE — square on all sizes */}
+                    <div className="relative aspect-square w-full bg-white overflow-hidden">
+                        {mainImage ? (
+                            <Image
+                                src={mainImage}
+                                alt={product.name}
+                                fill
+                                className="object-contain"
                             />
-                        )}
-                    </button>
-                </div>
-                <div className="p-4 flex flex-col flex-1">
-                    <div className="mb-3 h-[32px] flex items-center">
-                        {product.highlighted ? (
-                            <span className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-medium text-[#372AAC] border-2 border-[#A3B3FF] bg-white">
-                                Trending Now
-                            </span>
                         ) : (
-                            <span className="invisible px-4 py-1.5 text-[11px]">
-                                Trending Now
-                            </span>
+                            <div className="flex items-center justify-center h-full text-gray-300 text-xs">
+                                No image
+                            </div>
                         )}
-                    </div>
-                    <h3 className="text-base font-medium text-[#101828] mb-2 line-clamp-2 h-[48px]">
-                        {product.name}
-                    </h3>
-                    <p className="text-sm text-[#4A5565] mb-4 line-clamp-2 h-[40px]">
-                        {product.shortDescription}
-                    </p>
-                    <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#6A7282]">
-                                Available Sizes:
-                            </span>
-                            <span className="text-xs text-[#364153]">
-                                {sizeString}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#6A7282]">
-                                Colour Options:
-                            </span>
-                            {uniqueColors.length > 0 ? (
-                                <div className="flex items-center gap-2">
-                                    {uniqueColors.slice(0, 5).map((c, i) => (
-                                        <div
-                                            key={i}
-                                            title={c.name}
-                                            className={`w-6 h-6 rounded-full flex items-center justify-center border ${i === 0 ? "border-black" : "border-gray-300"}`}
-                                        >
-                                            <div
-                                                className="w-4 h-4 rounded-full"
-                                                style={{
-                                                    backgroundColor: c.hex,
-                                                }}
-                                            />
-                                        </div>
-                                    ))}
-                                    {uniqueColors.length > 5 && (
-                                        <span className="text-[10px] text-gray-400">
-                                            +{uniqueColors.length - 5}
-                                        </span>
-                                    )}
-                                </div>
+                        {isOutOfStock && (
+                            <div className="absolute top-1.5 left-1.5 sm:top-4 sm:left-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
+                                Out of Stock
+                            </div>
+                        )}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleWishlist(e);
+                            }}
+                            disabled={isWishlistLoading}
+                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
+                        >
+                            {isWishlistLoading ? (
+                                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                             ) : (
-                                <span className="text-xs text-[#364153]">
-                                    Standard
-                                </span>
+                                <Heart
+                                    className={`w-3 h-3 sm:w-5 sm:h-5 transition ${
+                                        isFavorite
+                                            ? "fill-red-500 text-red-500"
+                                            : "text-gray-400"
+                                    }`}
+                                />
                             )}
-                        </div>
+                        </button>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#6A7282]">
-                                Starts at
-                            </span>
-                            <span className="text-base font-semibold text-[#1a1a1a]">
-                                ₹{variant?.price?.toLocaleString()}
-                            </span>
-                            {discount > 0 && (
-                                <span className="text-xs text-gray-400 line-through">
-                                    ₹{variant?.originalPrice?.toLocaleString()}
-                                </span>
-                            )}
-                        </div>
-                        {discount > 0 && (
-                            <span className="rounded-full bg-[#e8f5e9] px-2 py-1 text-[10px] font-semibold text-[#2e7d32]">
-                                {discount}% OFF
+
+                    {/* CONTENT */}
+                    <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
+                        {/* Category badge */}
+                        {product.category && (
+                            <span className="inline-block mb-1 sm:mb-2 px-1.5 py-px sm:px-3 sm:py-1 text-[9px] sm:text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
+                                {product.category}
                             </span>
                         )}
-                    </div>
-                    <span className="text-[10px] text-gray-400 mb-4">
-                        (incl. GST)
-                    </span>
 
-                    {product.inStock !== false && (
+                        {/* Name */}
+                        <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
+                            {product.name}
+                        </h3>
+
+                        {/* Colour swatches */}
+                        {uniqueColors.length > 0 && (
+                            <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 flex-wrap">
+                                {uniqueColors.map((c, i) => (
+                                    <span
+                                        key={i}
+                                        title={c.name}
+                                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-gray-300 flex-shrink-0"
+                                        style={{ backgroundColor: c.hex }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Description — hidden on mobile */}
+                        {product.shortDescription && (
+                            <p className="hidden sm:block text-[13px] leading-[20px] text-[#4A5565] mt-1 line-clamp-2">
+                                {product.shortDescription}
+                            </p>
+                        )}
+
+                        {/* Sizes — hidden on mobile */}
+                        <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5">
+                            <div>
+                                <strong>Sizes:</strong> {sizeString}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* FOOTER */}
+                <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
+                    <hr className="hidden sm:block my-3" />
+
+                    <div className="flex items-baseline gap-2 sm:gap-3 mb-0.5">
+                        {variant?.originalPrice && variant?.originalPrice > variant?.price && (
+                            <>
+                                <span className="text-[10px] sm:text-sm text-gray-400 line-through">
+                                    ₹{variant.originalPrice.toLocaleString("en-IN")}
+                                </span>
+                                <span className="text-[8px] sm:text-xs font-semibold text-green-600 bg-green-100 px-1 sm:px-2 py-0.5 rounded">
+                                    {discount}% off
+                                </span>
+                            </>
+                        )}
+                    </div>
+                    <p className="text-[15px] sm:text-xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                        ₹{variant?.price?.toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-[9px] sm:text-xs text-gray-500 mb-1 sm:mb-2.5">
+                        (incl. GST)
+                    </p>
+
+                    {!isOutOfStock && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setShowModal(true);
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold transition-all bg-[#1E1E1E] text-white hover:bg-black active:scale-[0.97]"
+                            className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center bg-black text-white hover:bg-gray-900"
                         >
                             Select Variants
                         </button>
                     )}
-                    {product.inStock === false && (
+
+                    {isOutOfStock && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setShowNotifyModal(true);
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                            className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center gap-1.5 border-2 border-blue-200 text-blue-500 hover:text-blue-700"
                         >
-                            <Bell size={13} /> Notify Me When Back in Stock
+                            <Bell size={12} className="sm:w-[14px] sm:h-[14px]" />
+                            Notify Me
                         </button>
                     )}
                 </div>
             </div>
 
-            {/* VariantModal — was missing, now renders with full OOS logic */}
             {showModal && (
                 <VariantModal
                     product={product}

@@ -3,6 +3,9 @@
 import { toast } from "@/components/ui/use-toast";
 import { getCardImageUrl } from "@/lib/cloudinary-url";
 import { useCart } from "@/providers/CartProvider";
+import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useWishlist } from "@/hooks/use-wishlist";
 import { Bell, Check, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -12,365 +15,6 @@ import { useEffect, useState } from "react";
 
 interface Props {
     products: any[];
-}
-
-/* ─────────────────────────────────────────────────────────
-   Notify Me Modal (whole product OOS)
-───────────────────────────────────────────────────────── */
-function NotifyMeModal({
-    product,
-    onClose,
-}: {
-    product: any;
-    onClose: () => void;
-}) {
-    const { data: session } = useSession();
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
-    const [phone, setPhone] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [done, setDone] = useState(false);
-
-    const handleSubmit = async () => {
-        if (!email.trim() || !phone.trim()) {
-            toast({
-                title: "Email and phone are required",
-                variant: "destructive",
-            });
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch("/api/stock-notifications", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productId: product.id,
-                    productName: product.name,
-                    productType: "prebuilt",
-                    email: email.trim(),
-                    phone: phone.trim(),
-                    name: name.trim() || null,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                toast({
-                    title: data.error || "Something went wrong",
-                    variant: "destructive",
-                });
-                return;
-            }
-            setDone(true);
-        } catch {
-            toast({ title: "Request failed", variant: "destructive" });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-                <div className="flex items-start justify-between p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                            <Bell size={16} className="text-blue-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-sm font-bold text-gray-900">
-                                Notify Me When Back
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
-                                {product.name}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-black mt-0.5"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-                <div className="p-5">
-                    {done ? (
-                        <div className="flex flex-col items-center py-6 text-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                                <Check size={22} className="text-green-600" />
-                            </div>
-                            <p className="text-base font-bold text-gray-900">
-                                You're on the list!
-                            </p>
-                            <p className="text-sm text-gray-500 leading-relaxed">
-                                We'll notify you on{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {email}
-                                </span>{" "}
-                                and{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {phone}
-                                </span>{" "}
-                                as soon as this item is back in stock.
-                            </p>
-                            <button
-                                onClick={onClose}
-                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
-                            >
-                                Got it
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-3.5">
-                            <p className="text-xs text-gray-500 leading-relaxed">
-                                This product is currently out of stock. Leave
-                                your details and we'll let you know the moment
-                                it's available.
-                            </p>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Name{" "}
-                                    <span className="text-gray-400 normal-case font-normal">
-                                        (optional)
-                                    </span>
-                                </label>
-                                <input
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Your name"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Email{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Phone Number{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    placeholder="10-digit mobile number"
-                                    maxLength={15}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
-                            >
-                                {submitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <>
-                                        <Bell size={14} /> Notify Me
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-/* ─────────────────────────────────────────────────────────
-   Variant-level Notify Me Modal
-───────────────────────────────────────────────────────── */
-function VariantNotifyModal({
-    product,
-    variantId,
-    variantLabel,
-    onClose,
-}: {
-    product: any;
-    variantId?: string;
-    variantLabel?: string;
-    onClose: () => void;
-}) {
-    const { data: session } = useSession();
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
-    const [phone, setPhone] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [done, setDone] = useState(false);
-
-    const handleSubmit = async () => {
-        if (!email.trim() || !phone.trim()) {
-            toast({
-                title: "Email and phone are required",
-                variant: "destructive",
-            });
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch("/api/stock-notifications", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productId: product.id,
-                    productName: product.name,
-                    productType: "prebuilt",
-                    variantId: variantId ?? null,
-                    variantLabel: variantLabel ?? null,
-                    email: email.trim(),
-                    phone: phone.trim(),
-                    name: name.trim() || null,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                toast({
-                    title: data.error || "Something went wrong",
-                    variant: "destructive",
-                });
-                return;
-            }
-            setDone(true);
-        } catch {
-            toast({ title: "Request failed", variant: "destructive" });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-                <div className="flex items-start justify-between p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                            <Bell size={16} className="text-orange-500" />
-                        </div>
-                        <div>
-                            <h2 className="text-sm font-bold text-gray-900">
-                                Notify Me When Back
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
-                                {product.name}
-                                {variantLabel ? ` — ${variantLabel}` : ""}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-black mt-0.5"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-                <div className="p-5">
-                    {done ? (
-                        <div className="flex flex-col items-center py-6 text-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                                <Check size={22} className="text-green-600" />
-                            </div>
-                            <p className="text-base font-bold text-gray-900">
-                                You're on the list!
-                            </p>
-                            <p className="text-sm text-gray-500 leading-relaxed">
-                                We'll notify you on{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {email}
-                                </span>{" "}
-                                and{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {phone}
-                                </span>{" "}
-                                as soon as this variant is back.
-                            </p>
-                            <button
-                                onClick={onClose}
-                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
-                            >
-                                Got it
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-3.5">
-                            <p className="text-xs text-gray-500 leading-relaxed">
-                                {variantLabel
-                                    ? `${variantLabel} is`
-                                    : "This variant is"}{" "}
-                                currently out of stock. Leave your details and
-                                we'll notify you the moment it's available.
-                            </p>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Name{" "}
-                                    <span className="text-gray-400 normal-case font-normal">
-                                        (optional)
-                                    </span>
-                                </label>
-                                <input
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Your name"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Email{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Phone Number{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    placeholder="10-digit mobile number"
-                                    maxLength={15}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="w-full h-11 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
-                            >
-                                {submitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <>
-                                        <Bell size={14} /> Notify Me
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -587,7 +231,7 @@ function VariantModal({
                     <div className="p-5 pb-8">
                         {fetching ? (
                             <div className="flex items-center justify-center py-10">
-                                <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
+                                <LoadingSpinner size="lg" color="gray" />
                             </div>
                         ) : (
                             <>
@@ -743,7 +387,7 @@ function VariantModal({
                                         className="w-full h-12 font-semibold rounded-xl transition flex items-center justify-center gap-2 bg-black text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
                                     >
                                         {isAdding ? (
-                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            <LoadingSpinner size="sm" color="white" />
                                         ) : (
                                             "Add to Cart"
                                         )}
@@ -786,11 +430,14 @@ function VariantModal({
             </div>
 
             {showVariantNotify && (
-                <VariantNotifyModal
-                    product={fullProduct}
+                <NotifyMeModal
+                    isOpen={showVariantNotify}
+                    onClose={() => setShowVariantNotify(false)}
+                    productId={fullProduct.id}
+                    productName={fullProduct.name}
+                    productType="prebuilt"
                     variantId={notifyVariantId}
                     variantLabel={notifyVariantLabel}
-                    onClose={() => setShowVariantNotify(false)}
                 />
             )}
         </>
@@ -801,74 +448,21 @@ function VariantModal({
    Product Card  (matches PrinterCard layout + image zoom)
 ───────────────────────────────────────────────────────── */
 function ProductCard({ product }: { product: any }) {
-    const { data: session } = useSession();
-
     const mainImage =
         product.images?.find((img: any) => img.isMain)?.url ||
         product.images?.[0]?.url;
     const variant = product.variants?.[0];
 
-    const [isFavorite, setIsFavorite] = useState(false);
-    const [isWishLoading, setIsWishLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
 
     const isOutOfStock = product.inStock === false;
 
-    useEffect(() => {
-        if (!session || !product?.id) return;
-        fetch(`/api/wishlist/check?prebuiltProductId=${product.id}`)
-            .then((r) => r.json())
-            .then((d) => setIsFavorite(d.isInWishlist))
-            .catch(() => {});
-    }, [session, product?.id]);
-
-    const handleToggleWishlist = async (
-        e: React.MouseEvent<HTMLButtonElement>,
-    ) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!session) {
-            toast({
-                title: "Authentication required",
-                description: "Please log in to add items to wishlist",
-                variant: "destructive",
-                action: (
-                    <button
-                        onClick={() => signIn()}
-                        className="px-3 py-1 bg-white text-black rounded"
-                    >
-                        Log in
-                    </button>
-                ),
-            });
-            return;
-        }
-        if (isWishLoading) return;
-        setIsWishLoading(true);
-        const was = isFavorite;
-        setIsFavorite(!was);
-        try {
-            await fetch("/api/wishlist", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prebuiltProductId: product.id }),
-            });
-            toast({
-                title: was ? "Removed from wishlist" : "Added to wishlist",
-                description: `${product.name} has been ${was ? "removed from" : "added to"} your wishlist.`,
-            });
-        } catch {
-            setIsFavorite(was);
-            toast({
-                title: "Error",
-                description: "Failed to update wishlist. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsWishLoading(false);
-        }
-    };
+    const { isFavorite, isLoading: isWishLoading, toggleWishlist } = useWishlist({
+        productId: product.id,
+        productName: product.name,
+        productType: "prebuilt",
+    });
 
     const discount = variant?.originalPrice
         ? Math.round(
@@ -902,43 +496,40 @@ function ProductCard({ product }: { product: any }) {
 
     return (
         <>
-            <div className="group bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+            <div className="bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                 <Link
                     href={`/prebuilt-products/${product.slug}`}
                     className="flex flex-col h-full"
                 >
-                    {/* IMAGE — square, zoom on hover */}
+                    {/* IMAGE — square on all sizes */}
                     <div className="relative aspect-square w-full bg-white overflow-hidden">
                         {mainImage && (
                             <img
                                 src={getCardImageUrl(mainImage)}
                                 alt={product.name}
-                                className="w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-110"
+                                className="w-full h-full object-contain"
                                 loading="eager"
                             />
                         )}
                         {isOutOfStock && (
-                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full z-[1]">
+                            <div className="absolute top-1.5 left-1.5 sm:top-4 sm:left-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
                                 Out of Stock
                             </div>
                         )}
-                        {product.highlighted && (
-                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-[2] flex items-center justify-center rounded-full bg-gradient-to-b from-[#6359F3] to-black px-2 py-0.5 sm:px-4 sm:py-1 shadow">
-                                <span className="font-inter text-[7px] sm:text-sm font-medium italic text-white/80">
-                                    Trending Now
-                                </span>
-                            </div>
-                        )}
                         <button
-                            onClick={handleToggleWishlist}
+                            onClick={toggleWishlist}
                             disabled={isWishLoading}
-                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center z-[1]"
+                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
                         >
                             {isWishLoading ? (
-                                <div className="w-3 h-3 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                <LoadingSpinner size="sm" color="gray" className="w-3 h-3 sm:w-5 sm:h-5" />
                             ) : (
                                 <Heart
-                                    className={`w-3 h-3 sm:w-5 sm:h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                                    className={`w-3 h-3 sm:w-5 sm:h-5 transition ${
+                                        isFavorite
+                                            ? "fill-red-500 text-red-500"
+                                            : "text-gray-400"
+                                    }`}
                                 />
                             )}
                         </button>
@@ -946,75 +537,70 @@ function ProductCard({ product }: { product: any }) {
 
                     {/* CONTENT */}
                     <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
+                        {/* Category badge */}
+                        {product.category && (
+                            <span className="inline-block mb-1 sm:mb-2 px-1.5 py-px sm:px-3 sm:py-1 text-[9px] sm:text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
+                                {product.category}
+                            </span>
+                        )}
+
+                        {/* Name */}
                         <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
                             {product.name}
                         </h3>
 
+                        {/* Colour swatches */}
+                        {uniqueColors.length > 0 && (
+                            <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 flex-wrap">
+                                {uniqueColors.map((c, i) => (
+                                    <span
+                                        key={i}
+                                        title={c.name}
+                                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-gray-300 flex-shrink-0"
+                                        style={{ backgroundColor: c.hex }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Description — hidden on mobile */}
                         {product.shortDescription && (
                             <p className="hidden sm:block text-[13px] leading-[20px] text-[#4A5565] mt-1 line-clamp-2">
                                 {product.shortDescription}
                             </p>
                         )}
 
-                        {/* Sizes — desktop only */}
+                        {/* Sizes — hidden on mobile */}
                         <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5">
-                            <strong>Sizes:</strong> {sizeString}
-                        </div>
-
-                        {/* Colour swatches — visible on all sizes */}
-                        {uniqueColors.length > 0 && (
-                            <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2">
-                                {uniqueColors.slice(0, 6).map((c, i) => (
-                                    <span
-                                        key={i}
-                                        title={c.name}
-                                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)] ring-1 ring-black/5"
-                                        style={{ backgroundColor: c.hex }}
-                                    />
-                                ))}
-                                {uniqueColors.length > 6 && (
-                                    <span className="text-[9px] sm:text-[11px] text-gray-400 font-medium">
-                                        +{uniqueColors.length - 6}
-                                    </span>
-                                )}
+                            <div>
+                                <strong>Sizes:</strong> {sizeString}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </Link>
 
-                {/* FOOTER — outside Link */}
+                {/* FOOTER */}
                 <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
                     <hr className="hidden sm:block my-3" />
 
-                    <div className="flex items-baseline gap-3 sm:gap-0 sm:justify-start mt-1">
-                        <span className="text-[13px] sm:text-[16px] font-bold text-[#101828]">
-                            ₹{variant?.price?.toLocaleString("en-IN")}
-                        </span>
-                        {variant?.originalPrice > variant?.price && (
-                            <span className="sm:ml-3 text-[10px] sm:text-[14px] font-normal line-through text-[#99A1AF]">
-                                ₹
-                                {variant?.originalPrice?.toLocaleString(
-                                    "en-IN",
-                                )}
-                            </span>
-                        )}
-                        {discount > 0 && (
-                            <span className="hidden sm:inline-flex sm:ml-2 h-[22px] px-2 items-center rounded-full text-[12px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
-                                {discount}% OFF
-                            </span>
+                    <div className="flex items-baseline gap-2 sm:gap-3 mb-0.5">
+                        {variant?.originalPrice && variant?.originalPrice > variant?.price && (
+                            <>
+                                <span className="text-[10px] sm:text-sm text-gray-400 line-through">
+                                    ₹{variant.originalPrice.toLocaleString("en-IN")}
+                                </span>
+                                <span className="text-[8px] sm:text-xs font-semibold text-green-600 bg-green-100 px-1 sm:px-2 py-0.5 rounded">
+                                    {discount}% off
+                                </span>
+                            </>
                         )}
                     </div>
-
-                    <div className="flex items-center gap-3 sm:gap-2.5 mb-0.5 sm:mb-2.5 sm:justify-start">
-                        <p className="text-[9px] sm:text-[13px] text-[#667085]">
-                            (incl. GST)
-                        </p>
-                        {discount > 0 && (
-                            <span className="sm:hidden h-[14px] px-1 inline-flex items-center rounded-full text-[8px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
-                                {discount}% OFF
-                            </span>
-                        )}
-                    </div>
+                    <p className="text-[15px] sm:text-xl font-bold text-gray-900 mb-0.5 sm:mb-1">
+                        ₹{variant?.price?.toLocaleString("en-IN")}
+                    </p>
+                    <p className="text-[9px] sm:text-xs text-gray-500 mb-1 sm:mb-2.5">
+                        (incl. GST)
+                    </p>
 
                     {!isOutOfStock && (
                         <button
@@ -1048,8 +634,11 @@ function ProductCard({ product }: { product: any }) {
             )}
             {showNotifyModal && (
                 <NotifyMeModal
-                    product={product}
+                    isOpen={showNotifyModal}
                     onClose={() => setShowNotifyModal(false)}
+                    productId={product.id}
+                    productName={product.name}
+                    productType="prebuilt"
                 />
             )}
         </>

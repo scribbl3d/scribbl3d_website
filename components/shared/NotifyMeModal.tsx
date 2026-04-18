@@ -79,8 +79,8 @@ export function NotifyMeModal({
             <ModalHeader>
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                            <Bell size={16} className="text-orange-500" />
+                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                            <Bell size={16} className="text-blue-600" />
                         </div>
                         <div>
                             <h2 className="text-sm font-bold text-gray-900">
@@ -162,7 +162,7 @@ export function NotifyMeModal({
                         <button
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="w-full h-11 bg-[#2563EB] hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
                         >
                             {submitting ? (
                                 <LoadingSpinner size="sm" color="white" />
