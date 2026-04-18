@@ -11,6 +11,9 @@ export type WishlistGridItem = {
     inStock?: boolean; // ← ADDED: overall product OOS flag
     cartPayload: Record<string, string>;
 
+    /* Price filter indicator */
+    priceRange?: [number, number] | null;
+
     /* 🧪 RESIN ONLY */
     resinColours?: {
         id: string;

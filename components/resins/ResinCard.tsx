@@ -14,9 +14,10 @@ import { useEffect, useState } from "react";
 interface ResinCardProps {
     resin: any;
     onSelect: () => void;
+    priceRange?: [number, number] | null;
 }
 
-export default function ResinCard({ resin, onSelect }: ResinCardProps) {
+export default function ResinCard({ resin, onSelect, priceRange }: ResinCardProps) {
     const { data: session } = useSession();
     const { showAuthToast } = useAuthToast();
 
@@ -34,6 +35,15 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
     const discount = resin.weights?.[0]?.discount;
 
     const isOutOfStock = resin.inStock === false;
+
+    // Check if any weight variants match the price filter
+    const matchingWeights = priceRange && resin.weights
+        ? resin.weights.filter((w: any) => {
+            const [minPrice, maxPrice] = priceRange;
+            return w.price >= minPrice && w.price <= maxPrice;
+        })
+        : [];
+    const hasMatchingVariants = matchingWeights.length > 0 && matchingWeights.length < (resin.weights?.length || 0);
 
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishLoading, setIsWishLoading] = useState(false);
@@ -177,6 +187,18 @@ export default function ResinCard({ resin, onSelect }: ResinCardProps) {
                 {/* FOOTER */}
                 <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
                     <hr className="hidden sm:block my-3" />
+
+                    {/* Price range indicator badge */}
+                    {hasMatchingVariants && (
+                        <div className="mb-1.5 sm:mb-2">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full">
+                                <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                {matchingWeights.length} variant{matchingWeights.length !== 1 ? 's' : ''} in range
+                            </span>
+                        </div>
+                    )}
 
                     {/* Line 1: Actual price + Original price */}
                     <div className="flex items-baseline gap-3 sm:gap-0 sm:justify-start mt-1">

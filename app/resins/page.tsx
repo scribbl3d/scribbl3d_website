@@ -325,6 +325,7 @@ export default function ResinsPage() {
                                             total={total}
                                             limit={limit}
                                             onPageChange={setPage}
+                                            priceRange={filters.price}
                                         />
                                     </div>
                                 )}

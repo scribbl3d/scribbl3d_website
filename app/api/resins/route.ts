@@ -65,18 +65,8 @@ export async function GET(req: Request) {
         where.AND = [...(where.AND || []), ...attributeConditions];
     }
 
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
-    if (minPrice || maxPrice) {
-        where.weights = {
-            some: {
-                price: {
-                    ...(minPrice && { gte: Number(minPrice) }),
-                    ...(maxPrice && { lte: Number(maxPrice) }),
-                },
-            },
-        };
-    }
+    const minPriceParam = searchParams.get("minPrice");
+    const maxPriceParam = searchParams.get("maxPrice");
 
     /* ================= FETCH ================= */
 
@@ -95,9 +85,28 @@ export async function GET(req: Request) {
         },
     });
 
+    /* ================= PRICE FILTER (ANY variant in range) ================= */
+    
+    let filtered = resins;
+    if (minPriceParam || maxPriceParam) {
+        const minPrice = minPriceParam ? Number(minPriceParam) : null;
+        const maxPrice = maxPriceParam ? Number(maxPriceParam) : null;
+        
+        filtered = resins.filter((resin) => {
+            if (resin.weights.length === 0) return false;
+            
+            // Show if ANY weight variant is within the price range
+            return resin.weights.some((w) => {
+                if (minPrice !== null && w.price < minPrice) return false;
+                if (maxPrice !== null && w.price > maxPrice) return false;
+                return true;
+            });
+        });
+    }
+
     /* ================= SORT ================= */
 
-    let sorted = [...resins];
+    let sorted = [...filtered];
 
     if (sortBy === "price_asc") {
         sorted.sort((a, b) => {

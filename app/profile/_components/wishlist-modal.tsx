@@ -383,6 +383,10 @@ export default function WishlistModal({
                                                 w.inStock === false;
                                             const isSelected =
                                                 selectedWeightId === w.id;
+                                            // Check if this weight matches the price filter
+                                            const isInPriceRange = item.priceRange
+                                                ? w.price >= item.priceRange[0] && w.price <= item.priceRange[1]
+                                                : false;
                                             // Convert grams to kg label
                                             const weightLabel =
                                                 typeof w.label === "number"
@@ -408,17 +412,26 @@ export default function WishlistModal({
                                                         !isResinProductOOS &&
                                                         !isResinColourOOS
                                                             ? "Out of Stock"
-                                                            : undefined
+                                                            : isInPriceRange
+                                                              ? "In your price range"
+                                                              : undefined
                                                     }
-                                                    className={`h-10 rounded-lg border text-sm transition-all ${
+                                                    className={`h-10 rounded-lg border text-sm transition-all relative ${
                                                         isSelected
                                                             ? "bg-blue-600 text-white border-blue-600"
                                                             : weightOOS
                                                               ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed line-through"
-                                                              : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
+                                                              : isInPriceRange
+                                                                ? "bg-green-50 text-green-700 border-green-300 hover:border-green-400"
+                                                                : "bg-white text-gray-700 border-gray-200 hover:border-gray-400"
                                                     }`}
                                                 >
                                                     {weightLabel}
+                                                    {isInPriceRange && !isSelected && (
+                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                                                            <Check className="w-2 h-2 text-white" strokeWidth={3} />
+                                                        </span>
+                                                    )}
                                                     {w.inStock === false &&
                                                         !isResinProductOOS &&
                                                         !isResinColourOOS && (

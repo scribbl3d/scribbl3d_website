@@ -11,6 +11,7 @@ type Props = {
     total: number;
     limit: number;
     onPageChange: (p: number) => void;
+    priceRange: [number, number] | null;
 };
 
 export default function ResinGrid({
@@ -19,6 +20,7 @@ export default function ResinGrid({
     total,
     limit,
     onPageChange,
+    priceRange,
 }: Props) {
     const totalPages = Math.ceil(total / limit);
     const [activeItem, setActiveItem] = useState<WishlistGridItem | null>(null);
@@ -45,6 +47,7 @@ export default function ResinGrid({
                         <ResinCard
                             key={resin.id}
                             resin={resin}
+                            priceRange={priceRange}
                             onSelect={() => {
                                 setActiveItem({
                                     id: resin.id,
@@ -59,6 +62,7 @@ export default function ResinGrid({
                                     requiresOptions: true,
                                     slug: resin.slug,
                                     inStock: resin.inStock ?? true,
+                                    priceRange,
 
                                     cartPayload: { resinId: resin.id },
 
