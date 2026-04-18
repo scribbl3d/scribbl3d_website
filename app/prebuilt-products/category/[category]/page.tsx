@@ -1,13 +1,14 @@
 "use client";
 
 import Loader from "@/components/Loader";
+import { PriceDisplay } from "@/components/ui/price-display";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { Bell, Check, ChevronLeft, Heart, X } from "lucide-react";
+import { Bell, Check, ChevronDown, ChevronLeft, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
     Cosplay:
@@ -817,6 +818,9 @@ export default function CategoryListingPage() {
     const categoryName = (params.category as string).replace(/-/g, " ");
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [sortBy, setSortBy] = useState<
+        "Popularity" | "Price: Low to High" | "Price: High to Low"
+    >("Popularity");
 
     useEffect(() => {
         fetch(`/api/prebuilt-products?category=${params.category}`)
@@ -832,54 +836,61 @@ export default function CategoryListingPage() {
         CATEGORY_DESCRIPTIONS[categoryName] ||
         `Discover our collection of ${categoryName.toLowerCase()} and interactive 3D printed models.`;
 
+    const getPrice = (p: any) => p.variants?.[0]?.price ?? 0;
+
+    const sortedProducts = [...products].sort((a, b) => {
+        if (sortBy === "Price: Low to High") return getPrice(a) - getPrice(b);
+        if (sortBy === "Price: High to Low") return getPrice(b) - getPrice(a);
+        // Popularity: highlighted first, then original order
+        if (a.highlighted && !b.highlighted) return -1;
+        if (!a.highlighted && b.highlighted) return 1;
+        return 0;
+    });
+
     return (
         <main className="min-h-screen bg-white pb-20">
-            <div className="container mx-auto px-4 py-6 pt-24">
+            <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-24 sm:pt-28">
                 <button
                     onClick={() => router.push("/prebuilt-products")}
-                    className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black mb-6 transition-colors"
+                    className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-gray-600 hover:text-black mt-2 sm:mt-0 mb-4 sm:mb-6 transition-colors"
                 >
-                    <ChevronLeft size={16} /> Back to All Products
+                    <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
+                    <span>Back to All Products</span>
                 </button>
+
+                {/* HERO BANNER */}
                 <div
-                    className="w-full rounded-[24px] p-10 lg:p-16 text-white mb-10 shadow-xl"
+                    className="w-full rounded-2xl sm:rounded-[24px] p-5 sm:p-10 lg:p-16 text-white mb-6 sm:mb-10 shadow-lg sm:shadow-xl"
                     style={{
-                        background: `linear-gradient(135deg, #372AAC 0%, #1D4ED8 50%, #4A5565 100%)`,
-                        minHeight: "262.5px",
+                        background: `linear-gradient(135deg, #372AAC 0%, #1D4ED8 55%, #3B82F6 100%)`,
                     }}
                 >
-                    <h1 className="text-[48px] font-black leading-tight mb-4 tracking-tight">
+                    <h1 className="text-[28px] sm:text-[40px] lg:text-[48px] font-black leading-tight mb-2 sm:mb-4 tracking-tight">
                         {categoryName?.charAt(0).toUpperCase() +
                             categoryName?.slice(1)}
                     </h1>
-                    <p className="max-w-2xl text-[18px] font-normal opacity-90 leading-[29.25px] mb-8">
+                    <p className="max-w-2xl text-[13px] sm:text-[16px] lg:text-[18px] font-normal opacity-90 leading-relaxed sm:leading-[29.25px] mb-4 sm:mb-8">
                         {categoryDescription}
                     </p>
-                    <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-full px-5 py-2 border border-white/10">
-                        <span className="text-sm font-black">
+                    <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-white/20 backdrop-blur-md rounded-full px-3 py-1.5 sm:px-5 sm:py-2 border border-white/10">
+                        <span className="text-xs sm:text-sm font-black">
                             {products.length}
                         </span>
-                        <span className="text-[11px] font-bold uppercase tracking-widest">
+                        <span className="text-[9px] sm:text-[11px] font-bold uppercase tracking-widest">
                             Products
                         </span>
                     </div>
                 </div>
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-10 gap-4 border-b border-gray-100 pb-6">
-                    <span className="text-sm font-medium text-gray-500">
-                        Showing{" "}
-                        <span className="text-black font-bold">
-                            {products.length}
-                        </span>{" "}
-                        products
-                    </span>
-                    <select className="appearance-none border border-gray-200 rounded-xl px-6 py-3 pr-10 text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm">
-                        <option>Sort by: Popularity</option>
-                        <option>Price: Low to High</option>
-                        <option>Price: High to Low</option>
-                    </select>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
-                    {products.map((product) => (
+
+                {/* TOOLBAR */}
+                <SortToolbar
+                    count={sortedProducts.length}
+                    sortBy={sortBy}
+                    onChange={setSortBy}
+                />
+
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                    {sortedProducts.map((product) => (
                         <CategoryProductCard
                             key={product.id}
                             product={product}
@@ -888,6 +899,82 @@ export default function CategoryListingPage() {
                 </div>
             </div>
         </main>
+    );
+}
+
+/* ── Sort Toolbar (custom dropdown) ── */
+type SortOption = "Popularity" | "Price: Low to High" | "Price: High to Low";
+
+function SortToolbar({
+    count,
+    sortBy,
+    onChange,
+}: {
+    count: number;
+    sortBy: SortOption;
+    onChange: (v: SortOption) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const options: SortOption[] = [
+        "Popularity",
+        "Price: Low to High",
+        "Price: High to Low",
+    ];
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div className="flex flex-row justify-between items-center mb-6 sm:mb-10 gap-3 sm:gap-4 border-b border-gray-100 pb-4 sm:pb-6">
+            <span className="text-xs sm:text-sm font-medium text-gray-500">
+                Showing{" "}
+                <span className="text-black font-bold">{count}</span> products
+            </span>
+
+            <div className="relative" ref={ref}>
+                <button
+                    onClick={() => setOpen((o) => !o)}
+                    className="flex items-center gap-2 border border-gray-200 rounded-lg sm:rounded-xl px-3 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition hover:border-gray-300"
+                >
+                    <span className="text-gray-500 font-medium">Sort by:</span>
+                    <span className="text-gray-900">{sortBy}</span>
+                    <ChevronDown
+                        size={14}
+                        className={`text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+                    />
+                </button>
+
+                {open && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20">
+                        {options.map((opt) => (
+                            <button
+                                key={opt}
+                                onClick={() => {
+                                    onChange(opt);
+                                    setOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-xs sm:text-sm font-medium transition flex items-center justify-between ${sortBy === opt ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"}`}
+                            >
+                                <span>{opt}</span>
+                                {sortBy === opt && (
+                                    <Check size={14} className="text-blue-600" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
 
@@ -989,20 +1076,27 @@ function CategoryProductCard({ product }: { product: any }) {
                 >
                     {/* IMAGE — square on all sizes */}
                     <div className="relative aspect-square w-full bg-white overflow-hidden">
-                        {mainImage ? (
-                            <Image
+                        {mainImage && (
+                            <img
                                 src={mainImage}
                                 alt={product.name}
-                                fill
-                                className="object-contain"
+                                className="w-full h-full object-contain"
+                                loading="eager"
                             />
-                        ) : (
-                            <div className="flex items-center justify-center h-full text-gray-300 text-xs">
-                                No image
+                        )}
+                        {/* Trending Now badge on image */}
+                        {product.highlighted && (
+                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10">
+                                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-lg">
+                                    <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    Trending Now
+                                </div>
                             </div>
                         )}
                         {isOutOfStock && (
-                            <div className="absolute top-1.5 left-1.5 sm:top-4 sm:left-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
+                            <div className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
                                 Out of Stock
                             </div>
                         )}
@@ -1030,12 +1124,6 @@ function CategoryProductCard({ product }: { product: any }) {
 
                     {/* CONTENT */}
                     <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
-                        {/* Category badge */}
-                        {product.category && (
-                            <span className="inline-block mb-1 sm:mb-2 px-1.5 py-px sm:px-3 sm:py-1 text-[9px] sm:text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
-                                {product.category}
-                            </span>
-                        )}
 
                         {/* Name */}
                         <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
@@ -1076,24 +1164,13 @@ function CategoryProductCard({ product }: { product: any }) {
                 <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
                     <hr className="hidden sm:block my-3" />
 
-                    <div className="flex items-baseline gap-2 sm:gap-3 mb-0.5">
-                        {variant?.originalPrice && variant?.originalPrice > variant?.price && (
-                            <>
-                                <span className="text-[10px] sm:text-sm text-gray-400 line-through">
-                                    ₹{variant.originalPrice.toLocaleString("en-IN")}
-                                </span>
-                                <span className="text-[8px] sm:text-xs font-semibold text-green-600 bg-green-100 px-1 sm:px-2 py-0.5 rounded">
-                                    {discount}% off
-                                </span>
-                            </>
-                        )}
-                    </div>
-                    <p className="text-[15px] sm:text-xl font-bold text-gray-900 mb-0.5 sm:mb-1">
-                        ₹{variant?.price?.toLocaleString("en-IN")}
-                    </p>
-                    <p className="text-[9px] sm:text-xs text-gray-500 mb-1 sm:mb-2.5">
-                        (incl. GST)
-                    </p>
+                    <PriceDisplay
+                        price={variant?.price ?? 0}
+                        originalPrice={variant?.originalPrice}
+                        discount={discount}
+                        size="sm"
+                        className="mt-1"
+                    />
 
                     {!isOutOfStock && (
                         <button

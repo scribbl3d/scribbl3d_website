@@ -43,7 +43,7 @@ export function PriceDisplay({
     const classes = sizeClasses[size];
 
     return (
-        <div className={className}>
+        <div className={`mb-2.5 ${className}`}>
             <div
                 className={`flex items-baseline gap-3 ${layout === "vertical" ? "flex-col items-start gap-1" : "sm:gap-0 sm:justify-start"}`}
             >
@@ -68,7 +68,7 @@ export function PriceDisplay({
 
             {showGST && (
                 <div
-                    className={`flex items-center gap-3 ${layout === "vertical" ? "mt-0" : "sm:gap-2.5 mt-0.5 sm:justify-start"}`}
+                    className={`flex items-center gap-3 ${layout === "vertical" ? "mt-0" : "sm:gap-2.5 mt-1 sm:justify-start"}`}
                 >
                     <p className={`${classes.gst} text-[#667085]`}>
                         (incl. GST)

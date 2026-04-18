@@ -6,6 +6,7 @@ import { useCart } from "@/providers/CartProvider";
 import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useWishlist } from "@/hooks/use-wishlist";
+import { PriceDisplay } from "@/components/ui/price-display";
 import { Bell, Check, Heart, X } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -511,8 +512,19 @@ function ProductCard({ product }: { product: any }) {
                                 loading="eager"
                             />
                         )}
+                        {/* Trending Now badge on image */}
+                        {product.highlighted && (
+                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10">
+                                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-lg">
+                                    <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    Trending Now
+                                </div>
+                            </div>
+                        )}
                         {isOutOfStock && (
-                            <div className="absolute top-1.5 left-1.5 sm:top-4 sm:left-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
+                            <div className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
                                 Out of Stock
                             </div>
                         )}
@@ -537,12 +549,6 @@ function ProductCard({ product }: { product: any }) {
 
                     {/* CONTENT */}
                     <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
-                        {/* Category badge */}
-                        {product.category && (
-                            <span className="inline-block mb-1 sm:mb-2 px-1.5 py-px sm:px-3 sm:py-1 text-[9px] sm:text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
-                                {product.category}
-                            </span>
-                        )}
 
                         {/* Name */}
                         <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
@@ -583,24 +589,13 @@ function ProductCard({ product }: { product: any }) {
                 <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
                     <hr className="hidden sm:block my-3" />
 
-                    <div className="flex items-baseline gap-2 sm:gap-3 mb-0.5">
-                        {variant?.originalPrice && variant?.originalPrice > variant?.price && (
-                            <>
-                                <span className="text-[10px] sm:text-sm text-gray-400 line-through">
-                                    ₹{variant.originalPrice.toLocaleString("en-IN")}
-                                </span>
-                                <span className="text-[8px] sm:text-xs font-semibold text-green-600 bg-green-100 px-1 sm:px-2 py-0.5 rounded">
-                                    {discount}% off
-                                </span>
-                            </>
-                        )}
-                    </div>
-                    <p className="text-[15px] sm:text-xl font-bold text-gray-900 mb-0.5 sm:mb-1">
-                        ₹{variant?.price?.toLocaleString("en-IN")}
-                    </p>
-                    <p className="text-[9px] sm:text-xs text-gray-500 mb-1 sm:mb-2.5">
-                        (incl. GST)
-                    </p>
+                    <PriceDisplay
+                        price={variant?.price ?? 0}
+                        originalPrice={variant?.originalPrice}
+                        discount={discount}
+                        size="sm"
+                        className="mt-1"
+                    />
 
                     {!isOutOfStock && (
                         <button

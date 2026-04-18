@@ -430,8 +430,19 @@ function SimilarProductCard({ product }: { product: any }) {
                             No image
                         </div>
                     )}
+                    {/* Trending Now badge on image */}
+                    {product.highlighted && (
+                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
+                            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-lg">
+                                <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                                Trending Now
+                            </div>
+                        </div>
+                    )}
                     {product.inStock === false && (
-                        <div className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
+                        <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
                             Out of Stock
                         </div>
                     )}
@@ -458,17 +469,6 @@ function SimilarProductCard({ product }: { product: any }) {
                     </button>
                 </div>
                 <div className="p-4 flex flex-col flex-1">
-                    <div className="mb-3 h-[32px] flex items-center">
-                        {product.highlighted ? (
-                            <span className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-medium text-[#372AAC] border-2 border-[#3f5df2] bg-white">
-                                Trending Now
-                            </span>
-                        ) : (
-                            <span className="invisible px-4 py-1.5 text-[11px]">
-                                Trending Now
-                            </span>
-                        )}
-                    </div>
                     <h3 className="text-base font-medium text-[#101828] mb-2 line-clamp-2 h-[48px]">
                         {product.name}
                     </h3>
@@ -1088,7 +1088,7 @@ export default function PrebuiltProductPDP() {
         product.isCustomizable && customizationChoice === "yes";
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-20">
+        <div className="min-h-screen bg-white pt-20">
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
             {/* Header — sticky on mobile, static on desktop */}
@@ -1162,6 +1162,18 @@ export default function PrebuiltProductPDP() {
                                             </>
                                         )}
 
+                                        {/* Trending Now badge on image */}
+                                        {product.highlighted && (
+                                            <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10">
+                                                <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] text-white text-[9px] sm:text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-lg">
+                                                    <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                    </svg>
+                                                    Trending Now
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {/* OOS badge on image */}
                                         {isOutOfStock && (
                                             <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-2 py-1 sm:px-3 sm:py-1.5 rounded-full z-10">
@@ -1201,47 +1213,39 @@ export default function PrebuiltProductPDP() {
                     </div>
 
                     {/* RIGHT — Product Info */}
-                    <div>
-                        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 relative">
-                            {/* Trending Now badge or category */}
-                            {product.highlighted ? (
-                                <span className="inline-flex items-center rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[10px] sm:text-[11px] font-medium text-[#372AAC] border-2 border-[#A3B3FF] bg-white mb-2 sm:mb-3">
-                                    Trending Now
-                                </span>
+                    <div className="flex flex-col gap-4 relative">
+                        <button
+                            onClick={handleToggleWishlist}
+                            disabled={isWishlistLoading}
+                            className="absolute top-0 right-0 w-9 h-9 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center hover:border-gray-400 transition disabled:opacity-60 z-10"
+                        >
+                            {isWishlistLoading ? (
+                                <div className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                             ) : (
-                                <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2">
-                                    {product.category}
-                                </p>
+                                <Heart
+                                    size={16}
+                                    className={
+                                        isFavorite
+                                            ? "fill-red-500 text-red-500"
+                                            : "text-gray-400"
+                                    }
+                                />
                             )}
+                        </button>
 
-                            <button
-                                onClick={handleToggleWishlist}
-                                disabled={isWishlistLoading}
-                                className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
-                            >
-                                {isWishlistLoading ? (
-                                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
-                                ) : (
-                                    <Heart
-                                        className={`w-4 h-4 sm:w-5 sm:h-5 transition ${
-                                            isFavorite
-                                                ? "fill-red-500 text-red-500"
-                                                : "text-gray-400"
-                                        }`}
-                                    />
-                                )}
-                            </button>
-
-                            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-10">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
+                                {product.category}
+                            </p>
+                            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight pr-10">
                                 {product.name}
                             </h1>
-                            <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 break-words">
+                            <p className="mt-1.5 text-gray-500 text-sm leading-relaxed">
                                 {product.shortDescription}
                             </p>
 
-                            {/* Reviews */}
                             {product.reviews?.length > 0 && (
-                                <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                                <div className="flex items-center gap-2 mt-2">
                                     <div className="flex gap-0.5">
                                         {[...Array(5)].map((_, i) => (
                                             <Star
@@ -1270,35 +1274,34 @@ export default function PrebuiltProductPDP() {
                                     </span>
                                 </div>
                             )}
+                        </div>
 
-                            {/* Price */}
-                            <div className="mb-4 sm:mb-6">
-                                <div className="flex items-baseline gap-2 sm:gap-3">
-                                    {originalPrice > displayPrice && (
-                                        <>
-                                            <span className="text-sm sm:text-lg text-gray-400 line-through">
-                                                ₹{originalPrice.toLocaleString("en-IN")}
-                                            </span>
-                                            <span className="text-xs sm:text-sm font-semibold text-green-600 bg-green-100 px-1.5 sm:px-2 py-0.5 rounded">
-                                                {discount}% off
-                                            </span>
-                                        </>
+                        <div className="border-t border-b border-gray-100 py-3">
+                            <p className="text-xs text-gray-400 mb-1">Price</p>
+                            {originalPrice > displayPrice && (
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <span className="text-sm text-gray-400 line-through">
+                                        ₹{originalPrice.toLocaleString("en-IN")}
+                                    </span>
+                                    {discount > 0 && (
+                                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md">
+                                            {discount}% off
+                                        </span>
                                     )}
                                 </div>
-                                <p className="text-2xl sm:text-4xl font-bold text-gray-900 mt-1">
-                                    ₹{displayPrice.toLocaleString("en-IN")}
+                            )}
+                            <p className="text-3xl font-bold text-gray-900 tracking-tight">
+                                ₹{displayPrice.toLocaleString("en-IN")}
+                            </p>
+                            {originalPrice > displayPrice && (
+                                <p className="text-xs text-green-600 font-semibold mt-0.5">
+                                    Save ₹{(originalPrice - displayPrice).toLocaleString("en-IN")}
                                 </p>
-                                {originalPrice > displayPrice && (
-                                    <p className="text-sm text-green-600 font-medium mt-1">
-                                        Save ₹{(originalPrice - displayPrice).toLocaleString("en-IN")}
-                                    </p>
-                                )}
-                                <p className="text-xs text-gray-500 mt-2">
-                                    MRP inclusive of all taxes. Shipping calculated at checkout.
-                                </p>
-                            </div>
-
-                            <hr className="mb-4" />
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                                MRP inclusive of all taxes. Shipping calculated at checkout.
+                            </p>
+                        </div>
 
                         {(uniqueColors.length > 0 ||
                             uniqueSizes.length > 0 ||
@@ -1880,7 +1883,6 @@ export default function PrebuiltProductPDP() {
                         category={product.category}
                     />
                 )}
-                </div>
             </div>
 
             {showNotifyModal && (

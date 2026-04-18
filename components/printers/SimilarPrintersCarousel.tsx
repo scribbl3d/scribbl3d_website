@@ -1,6 +1,7 @@
 "use client";
 
 import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
+import { PriceDisplay } from "@/components/ui/price-display";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
 import { Bell, ChevronLeft, ChevronRight, Heart } from "lucide-react";
@@ -272,29 +273,13 @@ function SimilarPrinterCard({ printer }: { printer: Printer }) {
                     <div className="mt-auto px-2.5 pb-2.5 sm:px-4 sm:pb-4">
                         <hr className="hidden sm:block mb-3" />
 
-                        {/* Price */}
-                        <div className="flex items-baseline gap-1.5 flex-wrap mt-1 sm:mt-0">
-                            <span className="text-[13px] sm:text-[16px] font-bold text-[#101828]">
-                                ₹{printer.price.toLocaleString("en-IN")}
-                            </span>
-                            {printer.originalPrice && (
-                                <span className="text-[10px] sm:text-sm line-through text-gray-400">
-                                    ₹
-                                    {printer.originalPrice.toLocaleString(
-                                        "en-IN",
-                                    )}
-                                </span>
-                            )}
-                            {printer.discount && (
-                                <span className="h-[14px] sm:h-auto px-1 sm:px-2 sm:py-0.5 inline-flex items-center rounded-full text-[8px] sm:text-xs text-green-700 bg-green-50 border border-green-200">
-                                    {printer.discount}% OFF
-                                </span>
-                            )}
-                        </div>
-
-                        <p className="text-[9px] sm:text-sm text-gray-500 mb-1.5 sm:mt-1 sm:mb-3">
-                            (incl. GST)
-                        </p>
+                        <PriceDisplay
+                            price={printer.price}
+                            originalPrice={printer.originalPrice}
+                            discount={printer.discount}
+                            size="sm"
+                            className="mt-1"
+                        />
 
                         {/* Add to Cart */}
                         {!isOutOfStock && (

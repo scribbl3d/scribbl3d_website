@@ -3,6 +3,7 @@
 import { getCardImageUrl } from "@/lib/cloudinary-url";
 import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PriceDisplay } from "@/components/ui/price-display";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { useAddToCart } from "@/hooks/use-add-to-cart";
 import { Bell, Heart } from "lucide-react";
@@ -187,35 +188,13 @@ function PrinterCard({ printer }: { printer: any }) {
                 <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
                     <hr className="hidden sm:block my-3" />
 
-                    {/* Line 1: Actual price + Original price */}
-                    <div className="flex items-baseline gap-3 sm:gap-0 sm:justify-start mt-1 ">
-                        <span className="text-[13px] sm:text-[16px] font-bold text-[#101828]">
-                            ₹{price.toLocaleString("en-IN")}
-                        </span>
-                        {originalPrice && (
-                            <span className="sm:ml-3 text-[10px] sm:text-[14px] font-normal line-through text-[#99A1AF]">
-                                ₹{originalPrice.toLocaleString("en-IN")}
-                            </span>
-                        )}
-                        {/* Discount — desktop only inline with prices */}
-                        {printer.discount && (
-                            <span className="hidden sm:inline-flex sm:ml-2 h-[22px] px-2 items-center rounded-full text-[12px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
-                                {printer.discount}% OFF
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Line 2: GST + Discount on mobile */}
-                    <div className="flex items-center gap-3 sm:gap-2.5 mb-0.5 sm:mb-2.5 sm:justify-start">
-                        <p className="text-[9px] sm:text-[13px] text-[#667085]">
-                            (incl. GST)
-                        </p>
-                        {printer.discount && (
-                            <span className="sm:hidden h-[14px] px-1 inline-flex items-center rounded-full text-[8px] font-medium text-[#008236] bg-[#F0FDF4] border border-[#B9F8CF]">
-                                {printer.discount}% OFF
-                            </span>
-                        )}
-                    </div>
+                    <PriceDisplay
+                        price={price}
+                        originalPrice={originalPrice}
+                        discount={printer.discount}
+                        size="sm"
+                        className="mt-1"
+                    />
                     {!isOutOfStock && (
                         <button
                             onClick={onAddToCart}

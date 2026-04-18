@@ -148,7 +148,7 @@ export default function ResinCard({ resin, onSelect, priceRange }: ResinCardProp
                         originalPrice={originalPrice}
                         discount={discount}
                         size="sm"
-                        className="mt-1 mb-0.5 sm:mb-2.5"
+                        className="mt-1"
                     />
 
                     {/* Select Variants — hidden when OOS */}
