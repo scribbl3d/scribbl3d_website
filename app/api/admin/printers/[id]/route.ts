@@ -184,7 +184,7 @@ export async function PUT(
             await deleteMultipleFromCloudinary(imagesToDelete);
         }
 
-        const [updatedPrinter] = await prisma.$transaction([
+        const transactionOps: any[] = [
             prisma.printer.update({
                 where: { id: params.id },
                 data: {
@@ -221,76 +221,102 @@ export async function PUT(
                     inStock,
                 },
             }),
+        ];
 
-            prisma.printerImage.deleteMany({ where: { printerId: params.id } }),
-            prisma.printerImage.createMany({
-                data: finalImageRecords.map((img) => ({
-                    printerId: params.id,
-                    url: img.url,
-                    isMain: img.isMain,
-                    sortOrder: img.sortOrder,
-                })),
-            }),
+        if (finalImageRecords.length > 0) {
+            transactionOps.push(
+                prisma.printerImage.deleteMany({ where: { printerId: params.id } }),
+                prisma.printerImage.createMany({
+                    data: finalImageRecords.map((img) => ({
+                        printerId: params.id,
+                        url: img.url,
+                        isMain: img.isMain,
+                        sortOrder: img.sortOrder,
+                    })),
+                })
+            );
+        }
 
-            prisma.printerSpecification.deleteMany({
-                where: { printerId: params.id },
-            }),
-            prisma.printerSpecification.createMany({
-                data: specifications.map((spec: any, index: number) => ({
-                    printerId: params.id,
-                    category: spec.category,
-                    label: spec.label,
-                    value: spec.value,
-                    sortOrder: index,
-                })),
-            }),
+        if (specifications.length > 0) {
+            transactionOps.push(
+                prisma.printerSpecification.deleteMany({
+                    where: { printerId: params.id },
+                }),
+                prisma.printerSpecification.createMany({
+                    data: specifications.map((spec: any, index: number) => ({
+                        printerId: params.id,
+                        category: spec.category,
+                        label: spec.label,
+                        value: spec.value,
+                        sortOrder: index,
+                    })),
+                })
+            );
+        }
 
-            prisma.printerAttribute.deleteMany({
-                where: { printerId: params.id, attributeKey: "material" },
-            }),
-            prisma.printerAttribute.createMany({
-                data: materialAttributes.map((attr) => ({
-                    printerId: params.id,
-                    attributeKey: attr.attributeKey,
-                    attributeValue: attr.attributeValue,
-                })),
-            }),
+        if (materialAttributes.length > 0) {
+            transactionOps.push(
+                prisma.printerAttribute.deleteMany({
+                    where: { printerId: params.id, attributeKey: "material" },
+                }),
+                prisma.printerAttribute.createMany({
+                    data: materialAttributes.map((attr) => ({
+                        printerId: params.id,
+                        attributeKey: attr.attributeKey,
+                        attributeValue: attr.attributeValue,
+                    })),
+                })
+            );
+        }
 
-            prisma.printerFeature.deleteMany({
-                where: { printerId: params.id },
-            }),
-            prisma.printerFeature.createMany({
-                data: features.map((feat: any, index: number) => ({
-                    printerId: params.id,
-                    title: feat.title,
-                    sortOrder: index,
-                })),
-            }),
+        if (features.length > 0) {
+            transactionOps.push(
+                prisma.printerFeature.deleteMany({
+                    where: { printerId: params.id },
+                }),
+                prisma.printerFeature.createMany({
+                    data: features.map((feat: any, index: number) => ({
+                        printerId: params.id,
+                        title: feat.title,
+                        sortOrder: index,
+                    })),
+                })
+            );
+        }
 
-            prisma.printerApplication.deleteMany({
-                where: { printerId: params.id },
-            }),
-            prisma.printerApplication.createMany({
-                data: applications.map((app: any, index: number) => ({
-                    printerId: params.id,
-                    name: app.name,
-                    sortOrder: index,
-                })),
-            }),
+        if (applications.length > 0) {
+            transactionOps.push(
+                prisma.printerApplication.deleteMany({
+                    where: { printerId: params.id },
+                }),
+                prisma.printerApplication.createMany({
+                    data: applications.map((app: any, index: number) => ({
+                        printerId: params.id,
+                        name: app.name,
+                        sortOrder: index,
+                    })),
+                })
+            );
+        }
 
-            prisma.printerDownload.deleteMany({
-                where: { printerId: params.id },
-            }),
-            prisma.printerDownload.createMany({
-                data: downloads.map((doc: any, index: number) => ({
-                    printerId: params.id,
-                    title: doc.title,
-                    description: doc.description,
-                    downloadUrl: doc.downloadUrl,
-                    sortOrder: index,
-                })),
-            }),
-        ]);
+        if (downloads.length > 0) {
+            transactionOps.push(
+                prisma.printerDownload.deleteMany({
+                    where: { printerId: params.id },
+                }),
+                prisma.printerDownload.createMany({
+                    data: downloads.map((doc: any, index: number) => ({
+                        printerId: params.id,
+                        title: doc.title,
+                        description: doc.description,
+                        downloadUrl: doc.downloadUrl,
+                        sortOrder: index,
+                    })),
+                })
+            );
+        }
+
+        const [updatedPrinter] = await prisma.$transaction(transactionOps);
 
         return NextResponse.json(updatedPrinter);
     } catch (error) {

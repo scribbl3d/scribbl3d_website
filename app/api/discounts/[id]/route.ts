@@ -65,22 +65,21 @@ export async function PUT(
             body.maxUsesPerUser === null ? null : Number(body.maxUsesPerUser);
 
     /* ---------- ITEM TYPES ---------- */
-    if ("itemTypes" in body) {
+    if (
+        "itemTypes" in body &&
+        body.scope === "item_type" &&
+        Array.isArray(body.itemTypes) &&
+        body.itemTypes.length > 0
+    ) {
         await prisma.discountItemType.deleteMany({
             where: { discountId: id },
         });
-
-        if (
-            body.scope === "item_type" &&
-            Array.isArray(body.itemTypes) &&
-            body.itemTypes.length > 0
-        ) {
-            updateData.itemTypes = {
-                create: body.itemTypes.map((t: string) => ({
-                    itemType: t,
-                })),
-            };
-        }
+        
+        updateData.itemTypes = {
+            create: body.itemTypes.map((t: string) => ({
+                itemType: t,
+            })),
+        };
     }
 
     const updated = await prisma.discount.update({

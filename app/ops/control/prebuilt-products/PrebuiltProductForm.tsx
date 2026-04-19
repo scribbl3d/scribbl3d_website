@@ -360,6 +360,10 @@ export default function PrebuiltProductForm({
             return;
         }
 
+        console.log("🔍 DEBUG - Form State Before Submit:");
+        console.log("Attributes:", attributes);
+        console.log("Variants:", variants);
+
         setLoading(true);
         startTransition(async () => {
             try {

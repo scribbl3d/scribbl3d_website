@@ -244,82 +244,92 @@ export async function PUT(
         },
       });
 
-      // 🔹 2. Delete bulk (parallel)
-      await Promise.all([
-        tx.resinAttribute.deleteMany({ where: { resinId: id } }),
-        tx.resinSpecification.deleteMany({ where: { resinId: id } }),
-        tx.resinFeature.deleteMany({ where: { resinId: id } }),
-        tx.resinApplication.deleteMany({ where: { resinId: id } }),
-        tx.resinCompatibility.deleteMany({ where: { resinId: id } }),
-        tx.resinDownload.deleteMany({ where: { resinId: id } }),
-      ]);
+      // 🔹 2. Delete & Create bulk (parallel) - only if data provided
+      const deleteAndCreateOps: any[] = [];
 
-      // 🔹 3. Create bulk (parallel)
-      await Promise.all([
-        attributes.length
-          ? tx.resinAttribute.createMany({
-              data: attributes.map((a: any) => ({
-                resinId: id,
-                label: a.label,
-                value: a.value,
-              })),
-            })
-          : null,
+      if (attributes.length > 0) {
+        deleteAndCreateOps.push(
+          tx.resinAttribute.deleteMany({ where: { resinId: id } }),
+          tx.resinAttribute.createMany({
+            data: attributes.map((a: any) => ({
+              resinId: id,
+              label: a.label,
+              value: a.value,
+            })),
+          })
+        );
+      }
 
-        specifications.length
-          ? tx.resinSpecification.createMany({
-              data: specifications.map((s: any, i: number) => ({
-                resinId: id,
-                category: s.category,
-                label: s.label,
-                value: s.value,
-                sortOrder: i,
-              })),
-            })
-          : null,
+      if (specifications.length > 0) {
+        deleteAndCreateOps.push(
+          tx.resinSpecification.deleteMany({ where: { resinId: id } }),
+          tx.resinSpecification.createMany({
+            data: specifications.map((s: any, i: number) => ({
+              resinId: id,
+              category: s.category,
+              label: s.label,
+              value: s.value,
+              sortOrder: i,
+            })),
+          })
+        );
+      }
 
-        features.length
-          ? tx.resinFeature.createMany({
-              data: features.map((f: any, i: number) => ({
-                resinId: id,
-                title: f.title,
-                sortOrder: i,
-              })),
-            })
-          : null,
+      if (features.length > 0) {
+        deleteAndCreateOps.push(
+          tx.resinFeature.deleteMany({ where: { resinId: id } }),
+          tx.resinFeature.createMany({
+            data: features.map((f: any, i: number) => ({
+              resinId: id,
+              title: f.title,
+              sortOrder: i,
+            })),
+          })
+        );
+      }
 
-        applications.length
-          ? tx.resinApplication.createMany({
-              data: applications.map((a: any, i: number) => ({
-                resinId: id,
-                name: a.name,
-                sortOrder: i,
-              })),
-            })
-          : null,
+      if (applications.length > 0) {
+        deleteAndCreateOps.push(
+          tx.resinApplication.deleteMany({ where: { resinId: id } }),
+          tx.resinApplication.createMany({
+            data: applications.map((a: any, i: number) => ({
+              resinId: id,
+              name: a.name,
+              sortOrder: i,
+            })),
+          })
+        );
+      }
 
-        compatibilities.length
-          ? tx.resinCompatibility.createMany({
-              data: compatibilities.map((c: any, i: number) => ({
-                resinId: id,
-                name: c.name,
-                sortOrder: i,
-              })),
-            })
-          : null,
+      if (compatibilities.length > 0) {
+        deleteAndCreateOps.push(
+          tx.resinCompatibility.deleteMany({ where: { resinId: id } }),
+          tx.resinCompatibility.createMany({
+            data: compatibilities.map((c: any, i: number) => ({
+              resinId: id,
+              name: c.name,
+              sortOrder: i,
+            })),
+          })
+        );
+      }
 
-        downloads.length
-          ? tx.resinDownload.createMany({
-              data: downloads.map((d: any, i: number) => ({
-                resinId: id,
-                title: d.title,
-                description: d.description || null,
-                downloadUrl: d.downloadUrl || null,
-                sortOrder: i,
-              })),
-            })
-          : null,
-      ]);
+      if (downloads.length > 0) {
+        deleteAndCreateOps.push(
+          tx.resinDownload.deleteMany({ where: { resinId: id } }),
+          tx.resinDownload.createMany({
+            data: downloads.map((d: any, i: number) => ({
+              resinId: id,
+              title: d.title,
+              description: d.description || null,
+              downloadUrl: d.downloadUrl || null,
+              sortOrder: i,
+            })),
+          })
+        );
+      }
+
+      await Promise.all(deleteAndCreateOps);
 
       // 🔹 4. Weights — upsert to preserve IDs (cart items reference these)
       const existingWeightIds = (

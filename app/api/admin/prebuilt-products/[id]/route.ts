@@ -127,6 +127,12 @@ export async function PUT(
             (formData.get("variants") as string) || "[]",
         );
 
+        console.log("🔍 API DEBUG - Received data:");
+        console.log("Attributes count:", attributes.length);
+        console.log("Attributes:", attributes);
+        console.log("Variants count:", variants.length);
+        console.log("Variants:", variants);
+
         const existingImages = JSON.parse(
             (formData.get("existingImages") as string) || "[]",
         );
@@ -229,51 +235,54 @@ export async function PUT(
                 },
             });
 
-            await tx.prebuiltAttributes.deleteMany({
-                where: { prebuildProductId: id },
-            });
+            const filteredAttributes = attributes.filter(
+                (a: any) => a.label?.trim() && a.value?.trim()
+            );
 
-            if (attributes.length) {
+            if (filteredAttributes.length > 0) {
+                await tx.prebuiltAttributes.deleteMany({
+                    where: { prebuildProductId: id },
+                });
                 await tx.prebuiltAttributes.createMany({
-                    data: attributes
-                        .filter((a: any) => a.label?.trim() && a.value?.trim())
-                        .map((a: any) => ({
-                            prebuildProductId: id,
-                            label: a.label.trim(),
-                            value: a.value.trim(),
-                        })),
+                    data: filteredAttributes.map((a: any) => ({
+                        prebuildProductId: id,
+                        label: a.label.trim(),
+                        value: a.value.trim(),
+                    })),
                 });
             }
 
-            if (removedVariantIds.length) {
-                await tx.prebuiltVariants.deleteMany({
-                    where: { id: { in: removedVariantIds } },
-                });
-            }
-
-            for (const v of variants) {
-                const variantData = {
-                    price: parsePrice(v.price),
-                    originalPrice: parsePrice(v.originalPrice),
-                    isActive: v.isActive ?? true,
-                    inStock: v.inStock ?? true, // ← variant-level inStock
-                    colorName: v.colorName?.trim() || null,
-                    colorHex: v.colorHex?.trim() || null,
-                    sizeName: v.sizeName?.trim() || null,
-                    length: parseDim(v.length),
-                    breadth: parseDim(v.breadth),
-                    height: parseDim(v.height),
-                };
-
-                if (v.id) {
-                    await tx.prebuiltVariants.update({
-                        where: { id: v.id },
-                        data: variantData,
+            if (variants.length > 0) {
+                if (removedVariantIds.length) {
+                    await tx.prebuiltVariants.deleteMany({
+                        where: { id: { in: removedVariantIds } },
                     });
-                } else {
-                    await tx.prebuiltVariants.create({
-                        data: { prebuildProductId: id, ...variantData },
-                    });
+                }
+
+                for (const v of variants) {
+                    const variantData = {
+                        price: parsePrice(v.price),
+                        originalPrice: parsePrice(v.originalPrice),
+                        isActive: v.isActive ?? true,
+                        inStock: v.inStock ?? true, // ← variant-level inStock
+                        colorName: v.colorName?.trim() || null,
+                        colorHex: v.colorHex?.trim() || null,
+                        sizeName: v.sizeName?.trim() || null,
+                        length: parseDim(v.length),
+                        breadth: parseDim(v.breadth),
+                        height: parseDim(v.height),
+                    };
+
+                    if (v.id) {
+                        await tx.prebuiltVariants.update({
+                            where: { id: v.id },
+                            data: variantData,
+                        });
+                    } else {
+                        await tx.prebuiltVariants.create({
+                            data: { prebuildProductId: id, ...variantData },
+                        });
+                    }
                 }
             }
 
