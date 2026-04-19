@@ -36,7 +36,7 @@ export function FormInput({
     return (
         <div className={className}>
             {label && (
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-gray-600 mb-2 sm:mb-1.5 uppercase tracking-wide">
                     {label}{" "}
                     {required && <span className="text-red-500">*</span>}
                     {optional && (
@@ -55,7 +55,7 @@ export function FormInput({
                     maxLength={maxLength}
                     disabled={disabled}
                     autoFocus={autoFocus}
-                    className={`w-full px-3 py-2.5 rounded-lg border ${error ? "border-red-300" : "border-gray-200"} text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
+                    className={`w-full px-3.5 sm:px-3 py-3 sm:py-2.5 rounded-lg border ${error ? "border-red-300" : "border-gray-200"} text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:focus:ring-gray-900 transition ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}`}
                 />
                 {rightElement && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -63,7 +63,7 @@ export function FormInput({
                     </div>
                 )}
             </div>
-            {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+            {error && <p className="text-xs text-red-500 mt-1.5 sm:mt-1">{error}</p>}
         </div>
     );
 }

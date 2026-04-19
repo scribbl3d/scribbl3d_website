@@ -49,8 +49,8 @@ export function BasicInformation({ user }: BasicInformationProps) {
         return (
             <div className="flex items-center">
                 <div>
-                    <Label htmlFor="email">Email</Label>
-                    <div className="text-sm text-muted-foreground mt-1">
+                    <Label htmlFor="email" className="text-xs md:text-sm">Email</Label>
+                    <div className="text-xs md:text-sm text-muted-foreground mt-0.5 md:mt-1">
                         {userEmail}
                     </div>
                 </div>
@@ -60,46 +60,48 @@ export function BasicInformation({ user }: BasicInformationProps) {
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Update your personal details.</CardDescription>
+            <CardHeader className="pb-4 md:pb-6">
+                <CardTitle className="text-base md:text-lg">Basic Information</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Update your personal details.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-4">
+            <CardContent className="space-y-4 md:space-y-6">
+                <div className="space-y-3 md:space-y-4">
                     <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <Label htmlFor="name">Name</Label>
+                        <div className="space-y-0.5 md:space-y-1">
+                            <Label htmlFor="name" className="text-xs md:text-sm">Name</Label>
                             {isEditingName ? (
-                                <div className="flex space-x-2">
+                                <div className="flex space-x-1.5 md:space-x-2">
                                     <Input
                                         id="name"
                                         value={name}
                                         onChange={(e) =>
                                             setName(e.target.value)
                                         }
-                                        className="max-w-[300px]"
+                                        className="max-w-[200px] md:max-w-[300px] text-xs md:text-sm h-8 md:h-10"
                                     />
-                                    <Button onClick={handleNameSave}>
+                                    <Button onClick={handleNameSave} className="text-xs md:text-sm h-8 md:h-10 px-3 md:px-4">
                                         Save
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         onClick={() => setIsEditingName(false)}
+                                        className="text-xs md:text-sm h-8 md:h-10 px-3 md:px-4"
                                     >
                                         Cancel
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="flex items-center space-x-2">
-                                    <div className="text-sm text-muted-foreground">
+                                <div className="flex items-center space-x-1.5 md:space-x-2">
+                                    <div className="text-xs md:text-sm text-muted-foreground">
                                         {name}
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setIsEditingName(true)}
+                                        className="h-7 md:h-8 w-7 md:w-8 p-0"
                                     >
-                                        <Pencil className="h-4 w-4" />
+                                        <Pencil className="h-3 w-3 md:h-4 md:w-4" />
                                     </Button>
                                 </div>
                             )}

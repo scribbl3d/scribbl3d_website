@@ -56,7 +56,7 @@ export function Modal({
             onClick={handleOverlayClick}
         >
             <div
-                className={`bg-white ${mobileFullscreen ? "rounded-t-2xl sm:rounded-2xl" : "rounded-2xl"} w-full ${maxWidthClasses[maxWidth]} ${className}`}
+                className={`bg-white ${mobileFullscreen ? "rounded-t-2xl sm:rounded-2xl max-h-[90vh] sm:max-h-[85vh]" : "rounded-2xl max-h-[90vh]"} w-full ${maxWidthClasses[maxWidth]} ${className} flex flex-col overflow-hidden`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {showClose && (
@@ -92,7 +92,7 @@ interface ModalBodyProps {
 }
 
 export function ModalBody({ children, className = "" }: ModalBodyProps) {
-    return <div className={`p-5 ${className}`}>{children}</div>;
+    return <div className={`p-5 overflow-y-auto ${className}`}>{children}</div>;
 }
 
 interface ModalFooterProps {

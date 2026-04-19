@@ -219,12 +219,12 @@ export default async function ProfilePage({ searchParams }: PageProps) {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-white via-[#f6fbff] to-[#e3f0fa]">
-            <div className="pt-[100px] md:pt-[150px]">
-                <div className="container mx-auto px-4">
+            <div className="pt-[90px] md:pt-[100px] lg:pt-[150px]">
+                <div className="container mx-auto px-3 md:px-4">
                     {/* ---------- MOBILE HEADER ---------- */}
-                    <div className="md:hidden mb-6">
-                        <div className="flex items-center gap-4 bg-white/80 rounded-lg shadow-sm p-4">
-                            <div className="h-12 w-12 rounded-full bg-gray-200 overflow-hidden">
+                    <div className="md:hidden mb-4">
+                        <div className="flex items-center gap-3 bg-white/80 rounded-lg shadow-sm p-3">
+                            <div className="h-11 w-11 rounded-full bg-gray-200 overflow-hidden">
                                 {user.image ? (
                                     <img
                                         src={user.image}
@@ -232,31 +232,31 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                                         className="h-full w-full object-cover"
                                     />
                                 ) : (
-                                    <div className="h-full w-full flex items-center justify-center bg-gray-300 text-gray-600 text-xl font-semibold">
+                                    <div className="h-full w-full flex items-center justify-center bg-gray-300 text-gray-600 text-lg font-semibold">
                                         {user.name?.[0]?.toUpperCase() || "U"}
                                     </div>
                                 )}
                             </div>
                             <div>
-                                <h1 className="text-lg font-semibold">
+                                <h1 className="text-base font-semibold">
                                     {user.name || "User"}
                                 </h1>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-xs text-gray-500">
                                     {user.email}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-8">
+                    <div className="flex flex-col md:flex-row gap-5 md:gap-8">
                         {/* ---------- DESKTOP SIDEBAR ---------- */}
                         <div className="hidden md:block">
                             <ProfileSidebar activeTab={activeTab} />
                         </div>
 
                         {/* ---------- MAIN CONTENT ---------- */}
-                        <main className="flex-1 pb-24 md:pb-0">
-                            <div className="bg-white/80 rounded-lg shadow-sm p-4 md:p-6">
+                        <main className="flex-1 pb-20 md:pb-0">
+                            <div className="bg-white/80 rounded-lg shadow-sm p-3 md:p-4 lg:p-6">
                                 {renderContent()}
                             </div>
                         </main>

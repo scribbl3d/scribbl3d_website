@@ -398,7 +398,7 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                                         }
                                                     >
                                                         {variantParts.length > 0
-                                                            ? `${variantParts.join("    ")}    ${qtyLabel}`
+                                                            ? `${variantParts.join(" • ")} • ${qtyLabel}`
                                                             : qtyLabel}
                                                     </p>
 

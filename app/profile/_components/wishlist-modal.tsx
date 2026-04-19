@@ -236,42 +236,44 @@ export default function WishlistModal({
        UI
     ===================== */
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-sm max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden">
                 {/* HEADER */}
-                <div className="flex gap-4 p-5 relative">
+                <div className="flex gap-3 sm:gap-4 p-4 sm:p-5 relative flex-shrink-0 border-b border-gray-200">
+                    {/* Pull indicator for mobile */}
+                    <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-gray-300 rounded-full sm:hidden" />
+                    
                     <Image
                         src={item.image || "/placeholder.svg"}
                         alt={item.title}
                         width={56}
                         height={56}
-                        className="rounded-lg object-cover"
+                        className="rounded-lg object-cover flex-shrink-0 mt-2 sm:mt-0"
                     />
-                    <div className="flex-1">
-                        <h2 className="text-lg font-semibold pr-6">
+                    <div className="flex-1 min-w-0 mt-2 sm:mt-0">
+                        <h2 className="text-base sm:text-lg font-semibold pr-8 line-clamp-2">
                             {item.title}
                         </h2>
                         {item.badge && (
-                            <span className="inline-block mt-1 px-3 py-1 text-xs rounded-full bg-blue-50 text-blue-600">
+                            <span className="inline-block mt-1.5 sm:mt-1 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs rounded-full bg-blue-50 text-blue-600">
                                 {item.badge}
                             </span>
                         )}
                     </div>
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-black"
+                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-900 transition-colors p-1 sm:p-0"
+                        aria-label="Close"
                     >
-                        <X />
+                        <X className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                 </div>
 
-                <div className="h-px bg-gray-200" />
-
-                <div className="p-5 pb-8">
+                <div className="p-4 sm:p-5 pb-6 sm:pb-8 overflow-y-auto flex-1">
                     {/* PRICE */}
-                    <div className="text-xl font-semibold">
+                    <div className="text-lg sm:text-xl font-semibold">
                         ₹{displayPrice.toLocaleString("en-IN")}{" "}
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                             (incl. GST)
                         </span>
                     </div>
@@ -312,8 +314,8 @@ export default function WishlistModal({
                     {item.itemType === "resin" && (
                         <>
                             {item.resinColours && (
-                                <div className="mt-5">
-                                    <p className="text-sm font-medium mb-2">
+                                <div className="mt-4 sm:mt-5">
+                                    <p className="text-sm font-medium mb-2.5 sm:mb-2">
                                         Color
                                         {isResinColourOOS && (
                                             <span className="ml-2 text-xs font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
@@ -321,7 +323,7 @@ export default function WishlistModal({
                                             </span>
                                         )}
                                     </p>
-                                    <div className="flex gap-2 flex-wrap">
+                                    <div className="flex gap-2.5 sm:gap-2 flex-wrap">
                                         {item.resinColours.map((c) => {
                                             const colourOOS =
                                                 isResinProductOOS ||
@@ -340,7 +342,7 @@ export default function WishlistModal({
                                                             ? `${c.name} — Out of Stock`
                                                             : c.name
                                                     }
-                                                    className={`relative w-9 h-9 rounded-full border-2 transition-all ${
+                                                    className={`relative w-10 h-10 sm:w-9 sm:h-9 rounded-full border-2 transition-all ${
                                                         selectedColourId ===
                                                         c.id
                                                             ? "ring-2 ring-blue-600 ring-offset-1"
@@ -371,11 +373,11 @@ export default function WishlistModal({
                             )}
 
                             {item.resinWeights && (
-                                <div className="mt-5">
-                                    <p className="text-sm font-medium mb-2">
+                                <div className="mt-4 sm:mt-5">
+                                    <p className="text-sm font-medium mb-2.5 sm:mb-2">
                                         Pack Size
                                     </p>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-3 gap-2.5 sm:gap-2">
                                         {item.resinWeights.map((w) => {
                                             const weightOOS =
                                                 isResinProductOOS ||
@@ -416,7 +418,7 @@ export default function WishlistModal({
                                                               ? "In your price range"
                                                               : undefined
                                                     }
-                                                    className={`h-10 rounded-lg border text-sm transition-all relative ${
+                                                    className={`h-11 sm:h-10 rounded-lg border text-sm transition-all relative ${
                                                         isSelected
                                                             ? "bg-blue-600 text-white border-blue-600"
                                                             : weightOOS
@@ -451,14 +453,14 @@ export default function WishlistModal({
                         <>
                             {/* COLOR SWATCHES */}
                             {uniqueColors.length > 0 && (
-                                <div className="mt-5">
-                                    <p className="text-sm font-medium mb-2">
+                                <div className="mt-4 sm:mt-5">
+                                    <p className="text-sm font-medium mb-2.5 sm:mb-2">
                                         Color:{" "}
                                         <span className="font-normal text-gray-500">
                                             {selectedColor ?? "Select"}
                                         </span>
                                     </p>
-                                    <div className="flex gap-2 flex-wrap">
+                                    <div className="flex gap-2.5 sm:gap-2 flex-wrap">
                                         {uniqueColors.map((c) => (
                                             <button
                                                 key={c.name}
@@ -472,7 +474,7 @@ export default function WishlistModal({
                                                         ? `${c.name} — Out of Stock`
                                                         : c.name
                                                 }
-                                                className={`relative w-9 h-9 rounded-full border-2 transition-all ring-offset-1 ${
+                                                className={`relative w-10 h-10 sm:w-9 sm:h-9 rounded-full border-2 transition-all ring-offset-1 ${
                                                     selectedColor === c.name
                                                         ? "ring-2 ring-gray-900 scale-110"
                                                         : "border-gray-300 hover:scale-110"
@@ -503,11 +505,11 @@ export default function WishlistModal({
 
                             {/* SIZE BUTTONS */}
                             {validSizes.length > 0 && (
-                                <div className="mt-5">
-                                    <p className="text-sm font-medium mb-2">
+                                <div className="mt-4 sm:mt-5">
+                                    <p className="text-sm font-medium mb-2.5 sm:mb-2">
                                         Size
                                     </p>
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-wrap gap-2.5 sm:gap-2">
                                         {validSizes.map(
                                             ({
                                                 name: size,
@@ -525,7 +527,7 @@ export default function WishlistModal({
                                                             ? `${size} — Out of Stock`
                                                             : undefined
                                                     }
-                                                    className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                    className={`px-4 py-2.5 sm:py-2 rounded-xl border text-sm font-medium transition-all ${
                                                         selectedSize === size
                                                             ? "border-gray-900 bg-gray-900 text-white"
                                                             : sizeOOS
@@ -572,25 +574,25 @@ export default function WishlistModal({
 
                     {/* QUANTITY — hidden if any OOS */}
                     {!isSelectedVariantOOS && !isResinAnyOOS && (
-                        <div className="mt-5">
-                            <p className="text-sm font-medium mb-2">Quantity</p>
+                        <div className="mt-4 sm:mt-5">
+                            <p className="text-sm font-medium mb-2.5 sm:mb-2">Quantity</p>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() =>
                                         setQuantity((q) => Math.max(1, q - 1))
                                     }
                                     disabled={addingState !== "idle"}
-                                    className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="w-12 h-12 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl disabled:opacity-40 disabled:cursor-not-allowed active:bg-gray-100"
                                 >
                                     −
                                 </button>
-                                <div className="flex-1 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold text-base">
+                                <div className="flex-1 h-12 sm:h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-900 font-semibold text-base">
                                     {quantity}
                                 </div>
                                 <button
                                     onClick={() => setQuantity((q) => q + 1)}
                                     disabled={addingState !== "idle"}
-                                    className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                                    className="w-12 h-12 sm:w-11 sm:h-11 flex items-center justify-center rounded-xl border border-gray-200 text-gray-600 text-xl disabled:opacity-40 disabled:cursor-not-allowed active:bg-gray-100"
                                 >
                                     +
                                 </button>
@@ -602,16 +604,16 @@ export default function WishlistModal({
                     {isSelectedVariantOOS || isResinAnyOOS ? (
                         <button
                             onClick={goToPDP}
-                            className="w-full h-[48px] mt-8 font-semibold rounded-xl border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-2 text-sm"
+                            className="w-full h-12 sm:h-[48px] mt-6 sm:mt-8 font-semibold rounded-xl border-2 border-orange-400 text-orange-500 hover:bg-orange-50 active:bg-orange-100 transition flex items-center justify-center gap-2 text-sm active:scale-[0.98]"
                         >
-                            <Bell size={14} />
+                            <Bell size={16} className="sm:w-3.5 sm:h-3.5" />
                             Notify Me — View Product
                         </button>
                     ) : (
                         <Button
                             disabled={!canAddToCart || addingState !== "idle"}
                             onClick={handleAddToCart}
-                            className={`w-full h-[48px] mt-8 font-semibold transition-all duration-200 ${
+                            className={`w-full h-12 sm:h-[48px] mt-6 sm:mt-8 font-semibold transition-all duration-200 active:scale-[0.98] ${
                                 addingState === "success"
                                     ? "bg-green-600 text-white hover:bg-green-600"
                                     : "bg-black text-white hover:bg-gray-800"
@@ -636,7 +638,7 @@ export default function WishlistModal({
                     <button
                         onClick={goToPDP}
                         disabled={addingState === "loading"}
-                        className="w-full text-sm mt-3 text-gray-500 hover:text-black disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full text-sm mt-3 text-gray-500 hover:text-black disabled:opacity-40 disabled:cursor-not-allowed py-2 active:scale-[0.98]"
                     >
                         View full details →
                     </button>

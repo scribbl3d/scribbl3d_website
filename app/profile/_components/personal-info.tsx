@@ -12,7 +12,7 @@ interface PersonalInfoProps {
 export function PersonalInfo({ user }: PersonalInfoProps) {
   return (
     <motion.div
-      className="space-y-8"
+      className="space-y-4 md:space-y-8"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, staggerChildren: 0.2 }}

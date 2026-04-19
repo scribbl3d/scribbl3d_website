@@ -24,7 +24,7 @@ export default async function sendStatusEmail(
   }
 
   // Email subject and status-specific content
-  let subject = `Your Order #${order.id.slice(-6)} Status Update: ${status}`;
+  let subject = `Your Order #${order.id.slice(-8).toUpperCase()} Status Update: ${status}`;
   let headerIcon = "";
   let headerTitle = "";
   let headerMsg = "";
@@ -134,7 +134,7 @@ export default async function sendStatusEmail(
           <table class="summary-table">
             <tr>
               <td class="label">Order Number:</td>
-              <td class="value">#${order.id.slice(-6)}</td>
+              <td class="value">#${order.id.slice(-8).toUpperCase()}</td>
             </tr>
             <tr>
               <td class="label">Order Date:</td>

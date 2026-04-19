@@ -16,6 +16,7 @@ import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { TablePagination } from "../components/TablePagination";
 
+import { formatOrderIdRaw } from "@/lib/format-order-id";
 import { Order } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -124,8 +125,8 @@ export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
                 <TableBody>
                     {paginatedOrders.map((order) => (
                         <TableRow key={order.id}>
-                            <TableCell className="font-mono">
-                                {order.id.slice(-5)}
+                            <TableCell className="font-mono text-xs">
+                                {formatOrderIdRaw(order.id)}
                             </TableCell>
 
                             <TableCell>

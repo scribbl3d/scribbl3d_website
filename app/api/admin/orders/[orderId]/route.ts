@@ -12,7 +12,7 @@ async function sendShippingEmail(order: any, trackingInfo: any) {
     await sendEmail({
         to: order.user.email,
         subject: "Your Order Has Been Shipped! - Scribbl3D",
-        html: `<p>Your order #${order.id.slice(-6)} has been shipped.</p>`,
+        html: `<p>Your order #${order.id.slice(-8).toUpperCase()} has been shipped.</p>`,
     });
 }
 

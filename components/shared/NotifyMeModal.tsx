@@ -75,18 +75,18 @@ export function NotifyMeModal({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} maxWidth="sm" showClose={false}>
-            <ModalHeader>
-                <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                            <Bell size={16} className="text-blue-600" />
+        <Modal isOpen={isOpen} onClose={onClose} maxWidth="sm" showClose={false} mobileFullscreen={true}>
+            <ModalHeader className="sm:pb-3">
+                <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <Bell size={18} className="text-blue-600 sm:w-4 sm:h-4" />
                         </div>
-                        <div>
-                            <h2 className="text-sm font-bold text-gray-900">
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-sm sm:text-base font-bold text-gray-900">
                                 Notify Me When Back
                             </h2>
-                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 break-all">
                                 {productName}
                                 {variantLabel ? ` — ${variantLabel}` : ""}
                             </p>
@@ -94,43 +94,44 @@ export function NotifyMeModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-black mt-0.5"
+                        className="text-gray-400 hover:text-gray-900 transition-colors flex-shrink-0 -mr-1 sm:mr-0 p-1 sm:p-0"
+                        aria-label="Close"
                     >
-                        <X size={18} />
+                        <X size={20} className="sm:w-[18px] sm:h-[18px]" />
                     </button>
                 </div>
             </ModalHeader>
 
-            <ModalBody>
+            <ModalBody className="pb-6 sm:pb-5">
                 {done ? (
-                    <div className="flex flex-col items-center py-6 text-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                            <Check size={22} className="text-green-600" />
+                    <div className="flex flex-col items-center py-6 sm:py-8 text-center gap-3 sm:gap-3.5">
+                        <div className="w-14 h-14 sm:w-12 sm:h-12 rounded-full bg-green-50 flex items-center justify-center">
+                            <Check size={26} className="text-green-600 sm:w-[22px] sm:h-[22px]" />
                         </div>
-                        <p className="text-base font-bold text-gray-900">
+                        <p className="text-base sm:text-lg font-bold text-gray-900">
                             You're on the list!
                         </p>
-                        <p className="text-sm text-gray-500 leading-relaxed">
+                        <p className="text-sm sm:text-[13px] text-gray-600 leading-relaxed px-2">
                             We'll notify you on{" "}
-                            <span className="font-semibold text-gray-700">
+                            <span className="font-semibold text-gray-900 break-all">
                                 {email}
                             </span>{" "}
                             and{" "}
-                            <span className="font-semibold text-gray-700">
+                            <span className="font-semibold text-gray-900">
                                 {phone}
                             </span>{" "}
                             as soon as this item is back in stock.
                         </p>
                         <button
                             onClick={onClose}
-                            className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
+                            className="mt-3 sm:mt-2 px-8 py-3 sm:py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors active:scale-[0.98]"
                         >
                             Got it
                         </button>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-3.5">
-                        <p className="text-xs text-gray-500 leading-relaxed">
+                    <div className="flex flex-col gap-4 sm:gap-3.5">
+                        <p className="text-xs sm:text-[13px] text-gray-600 leading-relaxed">
                             {variantLabel
                                 ? `${variantLabel} is currently out of stock. Leave your details and we'll notify you the moment it's available.`
                                 : "This item is currently out of stock. Leave your details and we'll let you know the moment it's available."}
@@ -162,13 +163,13 @@ export function NotifyMeModal({
                         <button
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+                            className="w-full h-12 sm:h-11 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm sm:text-[13px] font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2 sm:mt-1 active:scale-[0.98]"
                         >
                             {submitting ? (
                                 <LoadingSpinner size="sm" color="white" />
                             ) : (
                                 <>
-                                    <Bell size={14} /> Notify Me
+                                    <Bell size={16} className="sm:w-3.5 sm:h-3.5" /> Notify Me
                                 </>
                             )}
                         </button>

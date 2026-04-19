@@ -2,6 +2,7 @@
 
 import WishlistModal from "@/app/profile/_components/wishlist-modal";
 import { WishlistGridItem } from "@/app/profile/_components/wishlist.types";
+import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
 import {
@@ -14,7 +15,6 @@ import {
     Plus,
     ShoppingCart,
     Star,
-    X,
 } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -106,185 +106,6 @@ function TruckIcon() {
     );
 }
 
-/* ── Notify Me Modal ── */
-function NotifyMeModal({
-    product,
-    variantId,
-    variantLabel,
-    onClose,
-}: {
-    product: any;
-    variantId?: string;
-    variantLabel?: string;
-    onClose: () => void;
-}) {
-    const { data: session } = useSession();
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState((session?.user?.email as string) ?? "");
-    const [phone, setPhone] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-    const [done, setDone] = useState(false);
-
-    const handleSubmit = async () => {
-        if (!email.trim() || !phone.trim()) {
-            toast({
-                title: "Email and phone are required",
-                variant: "destructive",
-            });
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const res = await fetch("/api/stock-notifications", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productId: product.id,
-                    productName: product.name,
-                    productType: "prebuilt",
-                    variantId: variantId ?? null,
-                    variantLabel: variantLabel ?? null,
-                    email: email.trim(),
-                    phone: phone.trim(),
-                    name: name.trim() || null,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                toast({
-                    title: data.error || "Something went wrong",
-                    variant: "destructive",
-                });
-                return;
-            }
-            setDone(true);
-        } catch {
-            toast({ title: "Request failed", variant: "destructive" });
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
-                <div className="flex items-start justify-between p-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                            <Bell size={16} className="text-[#2563EB]" />
-                        </div>
-                        <div>
-                            <h2 className="text-sm font-bold text-gray-900">
-                                Notify Me When Back
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
-                                {product.name}
-                                {variantLabel ? ` — ${variantLabel}` : ""}
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-black mt-0.5"
-                    >
-                        <X size={18} />
-                    </button>
-                </div>
-                <div className="p-5">
-                    {done ? (
-                        <div className="flex flex-col items-center py-6 text-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                                <Check size={22} className="text-green-600" />
-                            </div>
-                            <p className="text-base font-bold text-gray-900">
-                                You're on the list!
-                            </p>
-                            <p className="text-sm text-gray-500 leading-relaxed">
-                                We'll notify you on{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {email}
-                                </span>{" "}
-                                and{" "}
-                                <span className="font-semibold text-gray-700">
-                                    {phone}
-                                </span>{" "}
-                                as soon as this item is back in stock.
-                            </p>
-                            <button
-                                onClick={onClose}
-                                className="mt-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition"
-                            >
-                                Got it
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col gap-3.5">
-                            <p className="text-xs text-gray-500 leading-relaxed">
-                                This product is currently out of stock. Leave
-                                your details and we'll let you know the moment
-                                it's available.
-                            </p>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Name{" "}
-                                    <span className="text-gray-400 normal-case font-normal">
-                                        (optional)
-                                    </span>
-                                </label>
-                                <input
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="Your name"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Email{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="you@example.com"
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                    Phone Number{" "}
-                                    <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    placeholder="10-digit mobile number"
-                                    maxLength={15}
-                                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 transition"
-                                />
-                            </div>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="w-full h-11 bg-[#2563EB] hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
-                            >
-                                {submitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <>
-                                        <Bell size={14} /> Notify Me
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
 
 /* ── buildWishlistItem helper ── */
 function buildWishlistItem(product: any): WishlistGridItem {
@@ -405,161 +226,153 @@ function SimilarProductCard({ product }: { product: any }) {
             ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
             : "One size";
 
+    const isOutOfStock = product.inStock === false;
+
     return (
         <>
-            <div
-                onClick={() =>
-                    product.slug &&
-                    router.push(`/prebuilt-products/${product.slug}`)
-                }
-                className="group flex flex-col bg-white rounded-2xl border border-gray-100 overflow-hidden w-full h-full cursor-pointer transition-all hover:shadow-lg hover:border-gray-200"
-            >
+            <div className="bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                 <div
-                    className="relative overflow-hidden bg-[#f9f9f9]"
-                    style={{ aspectRatio: "1 / 0.9" }}
+                    onClick={() =>
+                        product.slug &&
+                        router.push(`/prebuilt-products/${product.slug}`)
+                    }
+                    className="flex flex-col h-full cursor-pointer"
                 >
-                    {mainImage ? (
-                        <Image
-                            src={mainImage}
-                            alt={product.name}
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-gray-300 text-xs">
-                            No image
-                        </div>
-                    )}
-                    {/* Trending Now badge on image */}
-                    {product.highlighted && (
-                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
-                            <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-lg">
-                                <svg className="w-2 h-2 sm:w-2.5 sm:h-2.5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                                Trending Now
+                    {/* IMAGE — square on all sizes */}
+                    <div className="relative aspect-square w-full bg-white overflow-hidden">
+                        {mainImage ? (
+                            <Image
+                                src={mainImage}
+                                alt={product.name}
+                                fill
+                                className="object-contain"
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center h-full text-gray-300 text-xs">
+                                No image
+                            </div>
+                        )}
+                        {/* Trending Now badge on image */}
+                        {product.highlighted && (
+                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-10">
+                                <div className="inline-flex items-center gap-1 bg-gradient-to-r from-[#1e1b4b] to-[#4338ca] text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full shadow-lg">
+                                    <svg
+                                        className="w-2 h-2 sm:w-2.5 sm:h-2.5"
+                                        fill="currentColor"
+                                        viewBox="0 0 20 20"
+                                    >
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    Trending Now
+                                </div>
+                            </div>
+                        )}
+                        {isOutOfStock && (
+                            <div className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-full z-10">
+                                Out of Stock
+                            </div>
+                        )}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleWishlist(e);
+                            }}
+                            disabled={isWishlistLoading}
+                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
+                        >
+                            {isWishlistLoading ? (
+                                <div className="w-3 h-3 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                            ) : (
+                                <Heart
+                                    className={`w-3 h-3 sm:w-5 sm:h-5 transition ${
+                                        isFavorite
+                                            ? "fill-red-500 text-red-500"
+                                            : "text-gray-400"
+                                    }`}
+                                />
+                            )}
+                        </button>
+                    </div>
+
+                    {/* CONTENT */}
+                    <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
+                        {/* Name */}
+                        <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
+                            {product.name}
+                        </h3>
+
+                        {/* Colour swatches */}
+                        {uniqueColors.length > 0 && (
+                            <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 flex-wrap">
+                                {uniqueColors.map((c, i) => (
+                                    <span
+                                        key={i}
+                                        title={c.name}
+                                        className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-gray-300 flex-shrink-0"
+                                        style={{ backgroundColor: c.hex }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Description — hidden on mobile */}
+                        {product.shortDescription && (
+                            <p className="hidden sm:block text-[13px] leading-[20px] text-[#4A5565] mt-1 line-clamp-2">
+                                {product.shortDescription}
+                            </p>
+                        )}
+
+                        {/* Sizes — hidden on mobile */}
+                        <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5">
+                            <div>
+                                <strong>Sizes:</strong> {sizeString}
                             </div>
                         </div>
-                    )}
-                    {product.inStock === false && (
-                        <div className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full z-10">
-                            Out of Stock
-                        </div>
-                    )}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleWishlist(e);
-                        }}
-                        disabled={isWishlistLoading}
-                        className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-gray-400 shadow-sm backdrop-blur-md transition-colors hover:text-red-500"
-                    >
-                        {isWishlistLoading ? (
-                            <div className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
-                        ) : (
-                            <Heart
-                                size={20}
-                                className={
-                                    isFavorite
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-400"
-                                }
-                            />
-                        )}
-                    </button>
-                </div>
-                <div className="p-4 flex flex-col flex-1">
-                    <h3 className="text-base font-medium text-[#101828] mb-2 line-clamp-2 h-[48px]">
-                        {product.name}
-                    </h3>
-                    <p className="text-sm text-[#4A5565] mb-4 line-clamp-2 h-[40px]">
-                        {product.shortDescription}
-                    </p>
-                    <div className="mb-4 pb-4 border-b border-gray-200 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#6A7282]">
-                                Available Sizes:
-                            </span>
-                            <span className="text-xs text-[#364153]">
-                                {sizeString}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#6A7282]">
-                                Colour Options:
-                            </span>
-                            {uniqueColors.length > 0 ? (
-                                <div className="flex items-center gap-2">
-                                    {uniqueColors.slice(0, 5).map((c, i) => (
-                                        <div
-                                            key={i}
-                                            title={c.name}
-                                            className={`w-6 h-6 rounded-full flex items-center justify-center border ${i === 0 ? "border-black" : "border-gray-300"}`}
-                                        >
-                                            <div
-                                                className="w-4 h-4 rounded-full"
-                                                style={{
-                                                    backgroundColor: c.hex,
-                                                }}
-                                            />
-                                        </div>
-                                    ))}
-                                    {uniqueColors.length > 5 && (
-                                        <span className="text-[10px] text-gray-400">
-                                            +{uniqueColors.length - 5}
-                                        </span>
-                                    )}
-                                </div>
-                            ) : (
-                                <span className="text-xs text-[#364153]">
-                                    Standard
-                                </span>
-                            )}
-                        </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#6A7282]">
-                                Starts at
-                            </span>
-                            <span className="text-base font-semibold text-[#1a1a1a]">
-                                ₹{variant?.price?.toLocaleString()}
-                            </span>
-                            {discount > 0 && (
-                                <span className="text-xs text-gray-400 line-through">
+                </div>
+
+                {/* FOOTER */}
+                <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
+                    <hr className="hidden sm:block my-3" />
+
+                    <div className="flex items-center gap-2 mt-1 mb-2 sm:mb-3 flex-wrap">
+                        <span className="text-sm sm:text-base font-semibold text-[#1a1a1a]">
+                            ₹{variant?.price?.toLocaleString()}
+                        </span>
+                        {discount > 0 && (
+                            <>
+                                <span className="text-[10px] sm:text-xs text-gray-400 line-through">
                                     ₹{variant?.originalPrice?.toLocaleString()}
                                 </span>
-                            )}
-                        </div>
-                        {discount > 0 && (
-                            <span className="rounded-full bg-[#e8f5e9] px-2 py-1 text-[10px] font-semibold text-[#2e7d32]">
-                                {discount}% OFF
-                            </span>
+                                <span className="rounded-full bg-[#e8f5e9] px-1.5 py-0.5 sm:px-2 sm:py-1 text-[9px] sm:text-[10px] font-semibold text-[#2e7d32]">
+                                    {discount}% OFF
+                                </span>
+                            </>
                         )}
                     </div>
-                    <span className="text-[10px] text-gray-400 mb-4">
-                        (incl. GST)
-                    </span>
-                    {product.inStock !== false && (
+
+                    {!isOutOfStock && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveItem(buildWishlistItem(product));
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold transition-all bg-[#1E1E1E] text-white hover:bg-black active:scale-[0.97]"
+                            className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center bg-black text-white hover:bg-gray-900"
                         >
                             Select Variants
                         </button>
                     )}
-                    {product.inStock === false && (
+
+                    {isOutOfStock && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setShowNotifyModal(true);
                             }}
-                            className="w-full rounded-[10px] py-2.5 text-sm font-semibold border-2  border-blue-200 text-blue-500 hover:text-blue-700  transition-all flex items-center justify-center gap-2"
+                            className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center gap-1.5 border-2 border-blue-200 text-blue-500 hover:text-blue-700"
                         >
-                            <Bell size={13} /> Notify Me When Back in Stock
+                            <Bell size={12} className="sm:w-[14px] sm:h-[14px]" />
+                            Notify Me
                         </button>
                     )}
                 </div>
@@ -571,10 +384,13 @@ function SimilarProductCard({ product }: { product: any }) {
                     onClose={() => setActiveItem(null)}
                 />
             )}
-            {showNotifyModal && (
+            {showNotifyModal && product && (
                 <NotifyMeModal
-                    product={product}
+                    isOpen={showNotifyModal}
                     onClose={() => setShowNotifyModal(false)}
+                    productId={product.id}
+                    productName={product.name}
+                    productType="prebuilt"
                 />
             )}
         </>
@@ -667,14 +483,14 @@ function SimilarProductsCarousel({
                     onMouseLeave={() => {
                         isHoveringRef.current = false;
                     }}
-                    className="flex gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4"
+                    className="flex gap-3 sm:gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                     <style>{`div::-webkit-scrollbar{display:none}`}</style>
                     {doubled.map((p: any, index: number) => (
                         <div
                             key={`${p.id}-${index}`}
-                            className="snap-start flex-shrink-0 w-[85%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
+                            className="snap-start flex-shrink-0 w-[45%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
                         >
                             <SimilarProductCard product={p} />
                         </div>
@@ -709,14 +525,10 @@ export default function PrebuiltProductPDP() {
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
-    const [activeTab, setActiveTab] = useState<
-        "specifications" | "features" | "support" | "care"
-    >("specifications");
+    const [activeTab, setActiveTab] = useState<"specifications" | "features" | "support" | "care">("specifications");
 
     // ── Customization state ──
-    const [customizationChoice, setCustomizationChoice] = useState<
-        "yes" | "no" | null
-    >(null);
+    const [customizationChoice, setCustomizationChoice] = useState<"yes" | "no" | null>(null);
     const [customizationText, setCustomizationText] = useState("");
 
     useEffect(() => {
@@ -1252,7 +1064,7 @@ export default function PrebuiltProductPDP() {
                                                 key={i}
                                                 size={13}
                                                 className={
-                                                    i <
+                                                    i < 
                                                     Math.round(
                                                         Number(avgRating),
                                                     )
@@ -1276,29 +1088,38 @@ export default function PrebuiltProductPDP() {
                             )}
                         </div>
 
-                        <div className="border-t border-b border-gray-100 py-3">
-                            <p className="text-xs text-gray-400 mb-1">Price</p>
-                            {originalPrice > displayPrice && (
-                                <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="text-sm text-gray-400 line-through">
-                                        ₹{originalPrice.toLocaleString("en-IN")}
-                                    </span>
-                                    {discount > 0 && (
-                                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md">
-                                            {discount}% off
-                                        </span>
+                        <div className="border-t border-b border-gray-100 py-4">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Price</p>
+                            
+                            <div className="flex items-end gap-3 mb-2">
+                                <div className="flex-1">
+                                    <p className="text-3xl font-bold text-gray-900 tracking-tight leading-none">
+                                        ₹{displayPrice.toLocaleString("en-IN")}
+                                    </p>
+                                    {originalPrice > displayPrice && (
+                                        <p className="text-sm text-gray-400 line-through mt-1">
+                                            ₹{originalPrice.toLocaleString("en-IN")}
+                                        </p>
                                     )}
                                 </div>
-                            )}
-                            <p className="text-3xl font-bold text-gray-900 tracking-tight">
-                                ₹{displayPrice.toLocaleString("en-IN")}
-                            </p>
+                                {discount > 0 && (
+                                    <div className="flex-shrink-0">
+                                        <span className="inline-block text-xs font-bold text-white bg-green-600 px-3 py-1.5 rounded-lg shadow-sm">
+                                            {discount}% OFF
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
                             {originalPrice > displayPrice && (
-                                <p className="text-xs text-green-600 font-semibold mt-0.5">
-                                    Save ₹{(originalPrice - displayPrice).toLocaleString("en-IN")}
-                                </p>
+                                <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 mb-2">
+                                    <p className="text-sm text-green-700 font-semibold">
+                                        You save ₹{(originalPrice - displayPrice).toLocaleString("en-IN")}
+                                    </p>
+                                </div>
                             )}
-                            <p className="text-xs text-gray-400 mt-1">
+                            
+                            <p className="text-xs text-gray-500 leading-relaxed">
                                 MRP inclusive of all taxes. Shipping calculated at checkout.
                             </p>
                         </div>
@@ -1852,7 +1673,7 @@ export default function PrebuiltProductPDP() {
                                                                 key={i}
                                                                 size={11}
                                                                 className={
-                                                                    i <
+                                                                    i < 
                                                                     review.rating
                                                                         ? "fill-yellow-400 text-yellow-400"
                                                                         : "text-gray-200"
@@ -1885,16 +1706,19 @@ export default function PrebuiltProductPDP() {
                 )}
             </div>
 
-            {showNotifyModal && (
+            {showNotifyModal && product && (
                 <NotifyMeModal
-                    product={product}
+                    isOpen={showNotifyModal}
+                    onClose={() => setShowNotifyModal(false)}
+                    productId={product.id}
+                    productName={product.name}
+                    productType="prebuilt"
                     variantId={
                         isVariantOutOfStock ? selectedVariant?.id : undefined
                     }
                     variantLabel={
                         isVariantOutOfStock ? variantLabel : undefined
                     }
-                    onClose={() => setShowNotifyModal(false)}
                 />
             )}
         </div>

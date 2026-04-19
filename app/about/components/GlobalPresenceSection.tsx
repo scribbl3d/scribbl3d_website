@@ -49,15 +49,14 @@ export default function GlobalPresenceSection() {
     const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
     return (
-        <section className="bg-white px-6 py-16 lg:py-[120px]">
-            <div className="max-w-[1240px] mx-auto flex flex-col lg:flex-row gap-12 lg:gap-24 items-center lg:items-start">
+        <section className="bg-white px-4 py-10 sm:px-6 sm:py-16 lg:py-[120px]">
+            <div className="max-w-[1240px] mx-auto flex flex-col lg:flex-row gap-8 sm:gap-12 lg:gap-24 items-center lg:items-start">
                 {/* ── Left text column ── */}
                 <div className="w-full lg:w-[578px] flex-shrink-0">
                     {/* Badge */}
-                    <span className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-6">
+                    <span className="inline-flex items-center gap-1.5 sm:gap-2 bg-blue-50 text-blue-700 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-4 sm:mb-6">
                         <svg
-                            width="14"
-                            height="14"
+                            className="w-3 h-3 sm:w-[14px] sm:h-[14px]"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -73,7 +72,7 @@ export default function GlobalPresenceSection() {
                     </span>
 
                     {/* Headline */}
-                    <div className="mb-6 text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+                    <div className="mb-4 sm:mb-6 text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
                         <SplitText className="text-gray-900 inline-block mr-2">
                             Beyond Our Platform:
                         </SplitText>
@@ -84,7 +83,7 @@ export default function GlobalPresenceSection() {
                     </div>
 
                     {/* Paragraph */}
-                    <AnimatedSubtext className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8">
+                    <AnimatedSubtext className="text-sm sm:text-lg text-gray-600 leading-relaxed mb-6 sm:mb-8">
                         While our direct platform offers the best technical
                         support and exclusive B2B pricing, Scribbl3D is also
                         available across leading global and local marketplaces —
@@ -93,11 +92,10 @@ export default function GlobalPresenceSection() {
                     </AnimatedSubtext>
 
                     {/* Verified Badge Card */}
-                    <div className="w-full flex items-center gap-4 bg-gray-50 border border-gray-200 rounded-3xl p-5">
-                        <div className="flex items-center justify-center shrink-0 w-12 h-12 rounded-2xl bg-blue-600 text-white shadow-[0_10px_15px_-3px_rgba(37,99,235,0.2),0_4px_6px_-4px_rgba(37,99,235,0.2)]">
+                    <div className="w-full flex items-center gap-3 sm:gap-4 bg-gray-50 border border-gray-200 rounded-2xl sm:rounded-3xl p-4 sm:p-5">
+                        <div className="flex items-center justify-center shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-600 text-white shadow-[0_10px_15px_-3px_rgba(37,99,235,0.2),0_4px_6px_-4px_rgba(37,99,235,0.2)]">
                             <svg
-                                width="20"
-                                height="20"
+                                className="w-4 h-4 sm:w-5 sm:h-5"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -111,10 +109,10 @@ export default function GlobalPresenceSection() {
                         </div>
 
                         <div className="flex flex-col gap-0.5">
-                            <span className="text-sm font-bold text-gray-900">
+                            <span className="text-xs sm:text-sm font-bold text-gray-900">
                                 Verified Merchant
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-[10px] sm:text-xs text-gray-500">
                                 Official storefront across all major platforms
                             </span>
                         </div>
@@ -122,7 +120,7 @@ export default function GlobalPresenceSection() {
                 </div>
 
                 {/* ── Marketplace cards grid ── */}
-                <div className="w-full lg:flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 place-items-center sm:place-items-stretch mt-8 lg:mt-0">
+                <div className="w-full lg:flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 place-items-center sm:place-items-stretch mt-6 sm:mt-8 lg:mt-0">
                     {MARKETPLACES.map((m) => {
                         const isHovered = hoveredCard === m.name;
 
@@ -132,9 +130,8 @@ export default function GlobalPresenceSection() {
                                 href={LINKS[m.name.toLowerCase()] || "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="group flex flex-col items-center bg-white relative transition-all duration-300 w-full max-w-[150px] rounded-[32px] pt-[34px] pb-6 px-3"
+                                className="group flex flex-col items-center bg-white relative transition-all duration-300 w-full max-w-[130px] sm:max-w-[150px] h-[220px] sm:h-[286px] rounded-2xl sm:rounded-[32px] pt-6 sm:pt-[34px] pb-4 sm:pb-6 px-2 sm:px-3"
                                 style={{
-                                    height: "286px",
                                     border: isHovered
                                         ? `2px solid ${m.bg}`
                                         : "2px solid #F3F4F6",
@@ -149,16 +146,16 @@ export default function GlobalPresenceSection() {
                                 onMouseLeave={() => setHoveredCard(null)}
                             >
                                 {/* Top Logo Container */}
-                                <div className="flex items-center justify-center shrink-0 overflow-hidden w-20 h-20 rounded-lg">
+                                <div className="flex items-center justify-center shrink-0 overflow-hidden w-14 h-14 sm:w-20 sm:h-20 rounded-lg">
                                     {LOGOS[m.logo]}
                                 </div>
 
                                 {/* Middle Text Area */}
-                                <div className="text-center w-full mt-5">
-                                    <h4 className="text-xl font-black tracking-tight text-gray-900 mb-1">
+                                <div className="text-center w-full mt-3 sm:mt-5">
+                                    <h4 className="text-base sm:text-xl font-black tracking-tight text-gray-900 mb-1">
                                         {m.name}
                                     </h4>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mx-auto max-w-[85px] leading-tight">
+                                    <p className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest text-gray-400 mx-auto max-w-[70px] sm:max-w-[85px] leading-tight">
                                         {m.sub ? m.sub.split(" ")[0] : ""}
                                         <br />
                                         {m.sub
@@ -178,8 +175,7 @@ export default function GlobalPresenceSection() {
                                     }}
                                 >
                                     <svg
-                                        width="20"
-                                        height="20"
+                                        className="w-4 h-4 sm:w-5 sm:h-5"
                                         viewBox="0 0 24 24"
                                         fill="none"
                                         stroke="currentColor"

@@ -899,23 +899,23 @@ type GroupedSpecs = Record<string, Specification[]>;
 
 function DescriptionTab({ description, features, applications }) {
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Product Description
                 </h3>
-                <span className="text-sm text-gray-700">{description}</span>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 mt-2">
+                <span className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">{description}</span>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 mt-4 sm:mt-6">
                     Key Features
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     {features.map((feature) => (
                         <div
                             key={feature.id}
-                            className="flex items-start gap-3"
+                            className="flex items-start gap-2 sm:gap-3"
                         >
-                            <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                            <span className="text-sm text-gray-700">
+                            <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <span className="text-sm sm:text-base text-gray-700">
                                 {feature.title}
                             </span>
                         </div>
@@ -923,14 +923,14 @@ function DescriptionTab({ description, features, applications }) {
                 </div>
             </div>
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Ideal Applications
                 </h3>
                 <div className="flex flex-wrap gap-2">
                     {applications.map((app) => (
                         <span
                             key={app.id}
-                            className="px-4 py-2 bg-blue-100 text-blue-800 text-sm font-medium rounded-full"
+                            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium rounded-full"
                         >
                             {app.name}
                         </span>
@@ -947,22 +947,22 @@ function SpecificationsTab({
     specifications: GroupedSpecs;
 }) {
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
             {Object.entries(specifications).map(([category, specs]) => (
                 <div key={category}>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                         {category}
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                         {specs.map((spec) => (
                             <div
                                 key={spec.id}
-                                className="flex justify-between gap-4 py-2 border-b border-gray-100"
+                                className="flex justify-between gap-3 sm:gap-4 py-2 border-b border-gray-100"
                             >
-                                <span className="text-sm text-gray-600 shrink-0 w-[35%] sm:max-w-[45%]">
+                                <span className="text-xs sm:text-sm text-gray-600 shrink-0 w-[40%] sm:max-w-[45%]">
                                     {spec.label}
                                 </span>
-                                <span className="text-sm font-medium text-gray-900 text-left sm:text-right flex-1 break-words">
+                                <span className="text-xs sm:text-sm font-medium text-gray-900 text-left sm:text-right flex-1 break-words">
                                     {spec.value}
                                 </span>
                             </div>
@@ -976,12 +976,12 @@ function SpecificationsTab({
 
 function CompatibilityTab({ compatibility, technology }) {
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Compatible Printers
                 </h3>
-                <span className="text-sm text-gray-700">
+                <span className="text-sm sm:text-base text-gray-700 leading-relaxed">
                     This resin is compatible with most{" "}
                     <span className="font-medium text-gray-900">
                         {technology}
@@ -990,24 +990,24 @@ function CompatibilityTab({ compatibility, technology }) {
                     <span className="font-medium text-gray-900">405 nm</span>{" "}
                     UV wavelength.
                 </span>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 mt-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 mt-4 sm:mt-6">
                     Key Features
                 </h3>
-                <div className="border border-[#E5E7EB] rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8">
+                <div className="border border-[#E5E7EB] rounded-lg p-3 sm:p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2.5 sm:gap-y-3 gap-x-6 sm:gap-x-8">
                         {compatibility?.map((c) => (
                             <div
                                 key={c.id}
-                                className="flex items-center gap-2 text-sm text-gray-700"
+                                className="flex items-center gap-2 text-xs sm:text-sm text-gray-700"
                             >
-                                <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
                                 <span>{c.name}</span>
                             </div>
                         ))}
                     </div>
                 </div>
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 mt-4">
-                    <p className="text-sm text-blue-700">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 sm:px-4 sm:py-3 mt-3 sm:mt-4">
+                    <p className="text-xs sm:text-sm text-blue-700 leading-relaxed">
                         <span className="font-medium">Note:</span> Always
                         verify compatibility with your specific printer model
                         and check manufacturer recommendations for optimal
@@ -1021,14 +1021,15 @@ function CompatibilityTab({ compatibility, technology }) {
 
 function SafetyTab({ downloads }) {
     return (
-        <div className="space-y-6">
-            <div className="rounded-lg border border-[#FFF085] bg-[#FEFCE8] p-4">
+        <div className="space-y-5 sm:space-y-6">
+            <div className="rounded-lg border border-[#FFF085] bg-[#FEFCE8] p-3 sm:p-4">
                 <div className="flex items-center gap-2 mb-2">
                     <svg
                         width="16"
                         height="16"
                         viewBox="0 0 24 24"
                         fill="none"
+                        className="flex-shrink-0"
                     >
                         <path
                             d="M12 9v4m0 4h.01M10.29 3.86l-7.4 12.8A2 2 0 004.6 20h14.8a2 2 0 001.71-3.34l-7.4-12.8a2 2 0 00-3.42 0z"
@@ -1038,11 +1039,11 @@ function SafetyTab({ downloads }) {
                             strokeLinejoin="round"
                         />
                     </svg>
-                    <h4 className="text-sm font-medium text-[#733E0A]">
+                    <h4 className="text-xs sm:text-sm font-medium text-[#733E0A]">
                         Safety Warnings
                     </h4>
                 </div>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-[#894B00]">
+                <ul className="list-disc pl-4 sm:pl-5 space-y-1 sm:space-y-1.5 text-xs sm:text-sm text-[#894B00] leading-relaxed">
                     <li>May cause skin irritation and allergic reactions</li>
                     <li>Harmful if swallowed or inhaled</li>
                     <li>Keep out of reach of children and pets</li>
@@ -1051,30 +1052,30 @@ function SafetyTab({ downloads }) {
                 </ul>
             </div>
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                     Storage Instructions
                 </h3>
-                <p className="text-gray-700">
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
                     Store in a cool, dry place away from direct sunlight. Keep
                     bottle tightly sealed when not in use. Ideal storage
                     temperature: 15–35°C.
                 </p>
             </div>
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                     Handling Guidelines
                 </h3>
-                <p className="text-gray-700">
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
                     Always wear nitrile gloves and safety glasses when handling
                     uncured resin. Work in a well-ventilated area. Avoid skin
                     contact and inhalation.
                 </p>
             </div>
             <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                     Disposal Instructions
                 </h3>
-                <p className="text-gray-700">
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
                     Do not pour uncured resin down the drain. Cure all waste
                     resin under UV light before disposal. Follow local
                     regulations for chemical waste disposal.
@@ -1082,7 +1083,7 @@ function SafetyTab({ downloads }) {
             </div>
             {downloads && downloads.length > 0 ? (
                 <>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
                         Safety Downloads
                     </h3>
                     {downloads.map((download) => (
@@ -1091,27 +1092,27 @@ function SafetyTab({ downloads }) {
                             href={download.downloadUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                            className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
                         >
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                    <Download className="w-5 h-5 text-blue-600" />
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-200 transition-colors flex-shrink-0">
+                                    <Download className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                                 </div>
-                                <div>
-                                    <h4 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="text-sm sm:text-base font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
                                         {download.title}
                                     </h4>
                                     {download.description && (
-                                        <p className="text-sm text-gray-600">
+                                        <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
                                             {download.description}
                                         </p>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 text-blue-600 font-medium text-sm">
-                                <span>Download</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-blue-600 font-medium text-xs sm:text-sm flex-shrink-0 ml-2">
+                                <span className="hidden sm:inline">Download</span>
                                 <svg
-                                    className="w-4 h-4"
+                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -1128,9 +1129,9 @@ function SafetyTab({ downloads }) {
                     ))}
                 </>
             ) : (
-                <div className="text-center py-8">
-                    <Download className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-600">
+                <div className="text-center py-6 sm:py-8">
+                    <Download className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+                    <p className="text-sm sm:text-base text-gray-600">
                         No downloads available for this resin.
                     </p>
                 </div>

@@ -11,27 +11,16 @@ const CHECKS = [
 
 export default function OurStorySection() {
     return (
-        <section className="bg-white px-6 py-10 lg:py-16">
+        <section className="bg-white px-4 py-8 sm:px-6 sm:py-10 lg:py-16">
             {/* Reduced lg:gap-[96px] to lg:gap-[64px] to give text more horizontal room */}
-            <div className="max-w-[1280px] mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-[64px]">
+            <div className="max-w-[1280px] mx-auto flex flex-col lg:flex-row items-center gap-8 sm:gap-12 lg:gap-[64px]">
                 {/* ── Text column ── */}
                 <div className="w-full lg:flex-1 lg:min-w-[500px]">
                     {/* Badge */}
                     <span
+                        className="inline-flex items-center gap-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-full px-3 py-1.5 text-[10px] sm:text-[11px] font-bold tracking-wide uppercase mb-3 sm:mb-4"
                         style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 8,
-                            background: "#F8FAFC",
-                            border: "1px solid #E2E8F0",
-                            borderRadius: 32,
-                            padding: "6px 14px",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            letterSpacing: "0.06em",
                             color: BRAND.blue,
-                            marginBottom: 16, // Reduced from 24px
-                            textTransform: "uppercase",
                             fontFamily: "'Inter', sans-serif",
                         }}
                     >
@@ -54,12 +43,8 @@ export default function OurStorySection() {
 
                     {/* Headline */}
                     <h2
+                        className="text-[26px] sm:text-[32px] lg:text-[44px] font-extrabold leading-tight text-[#101828] mb-3 sm:mb-4"
                         style={{
-                            fontSize: "clamp(32px, 6vw, 44px)", // Slightly reduced max size
-                            fontWeight: 800,
-                            lineHeight: 1.2,
-                            color: "#101828",
-                            margin: "0 0 16px", // Reduced from 24px
                             fontFamily: "'Inter', sans-serif",
                             letterSpacing: "0.35px",
                         }}
@@ -75,14 +60,8 @@ export default function OurStorySection() {
                     </h2>
 
                     {/* Paragraphs - Reduced font size to 16px and tightened line height/margins */}
-                    <p
-                        style={{
-                            fontSize: 16,
-                            color: "#4A5565",
-                            lineHeight: "26px",
-                            margin: "0 0 16px",
+                    <p className="text-sm sm:text-base text-[#4A5565] leading-relaxed mb-3 sm:mb-4" style={{
                             fontFamily: "'Inter', sans-serif",
-                            fontWeight: 400,
                             letterSpacing: "-0.2px",
                         }}
                     >
@@ -93,14 +72,8 @@ export default function OurStorySection() {
                         manufacturing technology and real-world application.
                     </p>
 
-                    <p
-                        style={{
-                            fontSize: 16,
-                            color: "#4A5565",
-                            lineHeight: "26px",
-                            margin: "0 0 16px",
+                    <p className="text-sm sm:text-base text-[#4A5565] leading-relaxed mb-3 sm:mb-4" style={{
                             fontFamily: "'Inter', sans-serif",
-                            fontWeight: 400,
                             letterSpacing: "-0.2px",
                         }}
                     >
@@ -112,14 +85,8 @@ export default function OurStorySection() {
                         smarter execution from idea to production.
                     </p>
 
-                    <p
-                        style={{
-                            fontSize: 16,
-                            color: "#4A5565",
-                            lineHeight: "26px",
-                            margin: "0 0 28px", // Reduced from 40px
+                    <p className="text-sm sm:text-base text-[#4A5565] leading-relaxed mb-5 sm:mb-7" style={{
                             fontFamily: "'Inter', sans-serif",
-                            fontWeight: 400,
                             letterSpacing: "-0.2px",
                         }}
                     >
@@ -129,36 +96,19 @@ export default function OurStorySection() {
                     </p>
 
                     {/* Checklist Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-8 lg:mb-0 mb-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 sm:gap-y-3 gap-x-6 sm:gap-x-8 lg:mb-0 mb-4">
                         {CHECKS.map((c) => (
                             <div
                                 key={c}
+                                className="flex items-center gap-2 sm:gap-2.5 text-sm sm:text-[15px] font-bold leading-tight text-[#101828]"
                                 style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 10,
-                                    fontSize: 15, // Slightly scaled down checklist text
-                                    fontWeight: 700,
-                                    lineHeight: "24px",
-                                    color: "#101828",
                                     fontFamily: "'Inter', sans-serif",
                                     letterSpacing: "-0.31px",
                                 }}
                             >
-                                <span
-                                    style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        color: "#059669",
-                                        width: 18,
-                                        height: 18,
-                                        flexShrink: 0,
-                                    }}
-                                >
+                                <span className="flex items-center justify-center text-[#059669] w-4 h-4 sm:w-[18px] sm:h-[18px] flex-shrink-0">
                                     <svg
-                                        width="18"
-                                        height="18"
+                                        className="w-full h-full"
                                         viewBox="0 0 24 24"
                                         fill="none"
                                         stroke="currentColor"
@@ -177,11 +127,11 @@ export default function OurStorySection() {
                 </div>
 
                 {/* ── Image column ── */}
-                <div className="w-full lg:flex-1 lg:max-w-[540px] rounded-[32px] overflow-hidden relative shadow-[0_20px_40px_rgba(0,0,0,0.06)]">
+                <div className="w-full lg:flex-1 lg:max-w-[540px] rounded-2xl sm:rounded-[32px] overflow-hidden relative shadow-[0_10px_30px_rgba(0,0,0,0.06)] sm:shadow-[0_20px_40px_rgba(0,0,0,0.06)] bg-white">
                     <img
                         src="/about/story.jpg"
                         alt="Scribbl3D workspace"
-                        className="w-full h-full object-cover aspect-[4/5] lg:aspect-[4/3] block"
+                        className="w-full h-full object-contain sm:object-cover aspect-[4/3] sm:aspect-[4/5] lg:aspect-[4/3] block"
                     />
                 </div>
             </div>

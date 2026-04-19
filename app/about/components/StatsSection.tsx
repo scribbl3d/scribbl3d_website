@@ -18,49 +18,18 @@ function StatCard({ icon, value, suffix, label, active }: StatCardProps) {
     return (
         <>
             {/* Icon */}
-            <div
-                style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 14,
-                    backgroundColor: "#EFF6FF",
-                    color: "#2563EB",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 22,
-                    marginBottom: 12,
-                }}
-            >
+            <div className="w-10 h-10 sm:w-[52px] sm:h-[52px] rounded-[12px] sm:rounded-[14px] bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center text-lg sm:text-[22px] mb-2 sm:mb-3">
                 {icon}
             </div>
 
             {/* Number */}
-            <div
-                style={{
-                    fontSize: 26,
-                    fontWeight: 800,
-                    color: "#0F172A",
-                    lineHeight: 1,
-                    marginBottom: 6,
-                    fontFamily: "'DM Sans', sans-serif",
-                }}
-            >
+            <div className="text-xl sm:text-[26px] font-extrabold text-[#0F172A] leading-none mb-1 sm:mb-1.5">
                 {count}
                 {suffix}
             </div>
 
             {/* Label */}
-            <div
-                style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "#64748B",
-                    textAlign: "center",
-                }}
-            >
+            <div className="text-[9px] sm:text-[10px] font-bold tracking-wider uppercase text-[#64748B] text-center">
                 {label}
             </div>
         </>
@@ -96,16 +65,7 @@ export default function StatsSection() {
                 borderBottom: "1px solid #E2E8F0",
             }}
         >
-            <div
-                style={{
-                    maxWidth: 1080,
-                    margin: "0 auto",
-                    padding: "24px",
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, 1fr)",
-                    gap: "16px",
-                }}
-            >
+            <div className="max-w-[1080px] mx-auto px-4 py-4 sm:py-6 grid grid-cols-2 gap-3 sm:gap-4">
                 {STATS.map((s) => {
                     // ✅ Looks for "experience" to match your constants.ts file
                     const isExperienceStat = s.label
@@ -123,16 +83,7 @@ export default function StatsSection() {
                     return (
                         <div
                             key={s.label}
-                            style={{
-                                background: "#F8FAFC",
-                                borderRadius: 16,
-                                padding: "24px 16px",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                minHeight: 140,
-                            }}
+                            className="bg-[#F8FAFC] rounded-2xl sm:rounded-[16px] py-4 px-3 sm:py-6 sm:px-4 flex flex-col items-center justify-center min-h-[110px] sm:min-h-[140px]"
                         >
                             <StatCard
                                 icon={s.icon}
@@ -149,7 +100,7 @@ export default function StatsSection() {
             {/* Desktop layout */}
             <style jsx>{`
                 @media (min-width: 768px) {
-                    div {
+                    .max-w-[1080px] {
                         grid-template-columns: repeat(4, 1fr) !important;
                         gap: 24px !important;
                         padding: 40px 24px !important;

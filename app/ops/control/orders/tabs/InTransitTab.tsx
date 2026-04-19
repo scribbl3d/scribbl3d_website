@@ -25,6 +25,7 @@ import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { TablePagination } from "../components/TablePagination";
 
 import { ChevronDown, Package } from "lucide-react";
+import { formatOrderIdRaw } from "@/lib/format-order-id";
 import { Order, PickupInfo } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -229,8 +230,8 @@ export function InTransitTab({
 
                         return (
                             <TableRow key={order.id}>
-                                <TableCell className="font-mono">
-                                    {order.id.slice(-5)}
+                                <TableCell className="font-mono text-xs">
+                                    {formatOrderIdRaw(order.id)}
                                 </TableCell>
 
                                 <TableCell>

@@ -10,6 +10,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Eye } from "lucide-react";
+import { formatOrderIdRaw } from "@/lib/format-order-id";
 import { Order } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
 
@@ -64,8 +66,8 @@ export function OrdersTable({
                         return (
                             <TableRow key={order.id}>
                                 {/* ORDER ID */}
-                                <TableCell className="font-mono">
-                                    {order.id.slice(-5)}
+                                <TableCell className="font-mono text-xs">
+                                    {formatOrderIdRaw(order.id)}
                                 </TableCell>
 
                                 {/* CUSTOMER */}

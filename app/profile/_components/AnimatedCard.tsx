@@ -25,11 +25,11 @@ export function AnimatedCard({
       transition={{ duration: 0.5 }}
     >
       <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+        <CardHeader className="pb-4 md:pb-6">
+          <CardTitle className="text-base md:text-lg">{title}</CardTitle>
+          <CardDescription className="text-xs md:text-sm">{description}</CardDescription>
         </CardHeader>
-        <CardContent>{children}</CardContent>
+        <CardContent className="pt-0">{children}</CardContent>
       </Card>
     </motion.div>
   );

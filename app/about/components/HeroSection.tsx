@@ -56,7 +56,7 @@ function SplitHeadline({ text }: { text: string }) {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="font-manrope font-extrabold tracking-tight leading-[1.05] sm:leading-[0.95] text-white text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl flex flex-wrap"
+            className="font-manrope font-extrabold tracking-tight leading-[1.1] sm:leading-[0.95] text-white text-[28px] sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl flex flex-wrap"
         >
             {words.map((word, i) => (
                 <motion.span
@@ -125,7 +125,7 @@ export default function HeroSection() {
     const buttonLink = heroData?.buttonLink || "/#ecosystem"; // Defaults to the anchor link format
 
     return (
-        <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[500px] overflow-hidden bg-[#0a0a0f]">
+        <section className="relative w-full h-[60vh] sm:h-[75vh] lg:h-[100vh] min-h-[450px] overflow-hidden bg-[#0a0a0f]">
             {/* Background */}
             <img
                 src={mediaUrl}
@@ -137,7 +137,7 @@ export default function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/60 to-transparent sm:from-black sm:via-black/50 sm:to-transparent" />
 
             {/* Content */}
-            <div className="relative z-10 h-full flex flex-col justify-end sm:justify-center px-5 sm:px-10 lg:px-16 pt-[90px] pb-16 sm:pb-0 max-w-[1400px] mx-auto">
+            <div className="relative z-10 h-full flex flex-col justify-end sm:justify-center px-4 sm:px-10 lg:px-16 pt-[80px] pb-10 sm:pb-0 max-w-[1400px] mx-auto">
                 {/* Headline */}
                 <SplitHeadline text={headline} />
 
@@ -148,7 +148,7 @@ export default function HeroSection() {
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true }}
-                        className="font-manrope font-extrabold text-blue-500 leading-tight text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-3 sm:mt-4"
+                        className="font-manrope font-extrabold text-blue-500 leading-tight text-xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl mt-2 sm:mt-4"
                     >
                         {headlineAccent}
                     </motion.h2>
@@ -161,7 +161,7 @@ export default function HeroSection() {
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true }}
-                        className="mt-4 sm:mt-8 text-sm sm:text-lg md:text-xl lg:text-2xl max-w-xs sm:max-w-md lg:max-w-xl font-light leading-relaxed text-white/80"
+                        className="mt-3 sm:mt-8 text-xs sm:text-lg md:text-xl lg:text-2xl max-w-[280px] sm:max-w-md lg:max-w-xl font-light leading-relaxed text-white/80"
                     >
                         {subtext}
                     </motion.p>
@@ -174,7 +174,7 @@ export default function HeroSection() {
                         initial="hidden"
                         whileInView="visible"
                         viewport={{ once: true }}
-                        className="mt-6 sm:mt-10"
+                        className="mt-4 sm:mt-10"
                     >
                         {/* Changed <a> to Next.js <Link> */}
                         <Link
