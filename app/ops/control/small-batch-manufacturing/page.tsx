@@ -133,7 +133,7 @@ export default function SmallBatchManufacturingPage() {
                 </div>
             </div>
 
-            <Card className="rounded-[32px] border-none shadow-2xl ring-1 ring-gray-100 overflow-hidden bg-white">
+            <Card className="rounded-[32px] border-none shadow-2xl ring-1 ring-gray-100 bg-white overflow-y-hidden">
                 <CardHeader className="bg-white border-b px-8 py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <CardTitle className="text-lg font-black">
@@ -152,8 +152,8 @@ export default function SmallBatchManufacturingPage() {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                    <ScrollArea className="h-[600px]">
-                        <Table>
+                    <div className="overflow-auto max-h-[600px]">
+                        <Table className="min-w-[800px]">
                             <TableHeader className="bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md">
                                 <TableRow>
                                     <TableHead className="font-black text-[10px] uppercase tracking-widest text-gray-500 py-5 px-8">
@@ -216,7 +216,7 @@ export default function SmallBatchManufacturingPage() {
                                 ))}
                             </TableBody>
                         </Table>
-                    </ScrollArea>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -240,8 +240,8 @@ export default function SmallBatchManufacturingPage() {
                         </p>
                     </DialogHeader>
 
-                    <ScrollArea className="max-h-[75vh] p-10 bg-white">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
+                    <ScrollArea className="max-h-[75vh] p-4 sm:p-10 bg-white">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-12">
                             {/* CLIENT & SHIPPING SECTION */}
                             <div className="md:col-span-4 space-y-8">
                                 <div className="space-y-4">
@@ -308,7 +308,7 @@ export default function SmallBatchManufacturingPage() {
                                                     {p.quantity} Units
                                                 </span>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-6">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                                 <div className="space-y-3">
                                                     <div className="space-y-1">
                                                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">

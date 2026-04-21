@@ -545,7 +545,7 @@ export default function PrinterFormPage() {
                 </div>
 
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+                    <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 sm:gap-8">
                         {/* LEFT COLUMN */}
                         <div className="lg:col-span-2 space-y-6">
                             {/* 1. Basic Info */}
@@ -1032,7 +1032,7 @@ export default function PrinterFormPage() {
                                                                         Dimensions
                                                                         (mm)
                                                                     </label>
-                                                                    <div className="flex gap-2 items-center">
+                                                                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                                                                         <input
                                                                             type="number"
                                                                             placeholder="L"
@@ -1267,7 +1267,7 @@ export default function PrinterFormPage() {
 
                             {/* Features & Applications */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <div className="grid md:grid-cols-2 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div>
                                         <div className="flex justify-between items-center mb-3">
                                             <label className="text-sm font-medium text-gray-700">
@@ -1546,7 +1546,7 @@ export default function PrinterFormPage() {
                                     "Build Volume (mm) *",
                                     <Settings className="w-4 h-4" />,
                                 )}
-                                <div className="grid grid-cols-3 gap-3">
+                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                                     <div className="text-center">
                                         <label className="block text-xs text-gray-500 mb-1">
                                             L
@@ -1616,7 +1616,7 @@ export default function PrinterFormPage() {
                                     "Images",
                                     <ImageIcon className="w-4 h-4" />,
                                 )}
-                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 sm:gap-3 mb-4">
                                     {formData.images.map((img, idx) => (
                                         <div
                                             key={idx}

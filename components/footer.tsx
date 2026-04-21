@@ -152,19 +152,26 @@ export default function Footer() {
                             </div>
 
                             {/* Google Maps */}
-                            <div className="w-full h-[160px] sm:h-[180px] rounded-lg overflow-hidden border border-white/10">
-                                <iframe
-                                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d224345.83942620313!2d77.0688991053991!3d28.646677471842192!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d03f16cba9e61%3A0xdf0f2715fa434bee!2sNangloi!5e0!3m2!1sen!2sin!4v1638280991682!5m2!1sen!2sin"
-                                    width="100%"
-                                    height="160"
-                                    className="sm:!h-[180px]"
-                                    style={{ border: 0 }}
-                                    allowFullScreen
-                                    loading="lazy"
-                                    referrerPolicy="no-referrer-when-downgrade"
-                                    title="Google Maps Location"
-                                />
-                            </div>
+                            <a
+                                href="https://maps.app.goo.gl/h6uMQDsBXFQTtwYt6?g_st=iw"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full"
+                            >
+                                <div className="w-full h-[160px] sm:h-[180px] rounded-lg overflow-hidden border border-white/10 hover:border-white/20 transition-colors cursor-pointer">
+                                    <iframe
+                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d224345.83942620313!2d77.0688991053991!3d28.646677471842192!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d03f16cba9e61%3A0xdf0f2715fa434bee!2sNangloi!5e0!3m2!1sen!2sin!4v1638280991682!5m2!1sen!2sin"
+                                        width="100%"
+                                        height="160"
+                                        className="sm:!h-[180px] pointer-events-none"
+                                        style={{ border: 0 }}
+                                        allowFullScreen
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        title="Google Maps Location"
+                                    />
+                                </div>
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -454,7 +454,7 @@ export default function ResinFormPage() {
                 <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
                     {/* BASIC */}
                     <Section title="Basic Details">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <Input
                                 label="Name"
                                 value={formData.name}
@@ -562,7 +562,7 @@ export default function ResinFormPage() {
                             <label className="font-medium text-sm">
                                 Material
                             </label>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-4 rounded bg-gray-50">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border p-4 rounded bg-gray-50">
                                 {MATERIAL_OPTIONS.map((opt) => {
                                     const currentVal = getAttrValue(
                                         MANDATORY_LABELS.MATERIAL,
@@ -607,7 +607,7 @@ export default function ResinFormPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium mb-1">
                                     Washable
@@ -746,7 +746,7 @@ export default function ResinFormPage() {
 
                     {/* WEIGHTS */}
                     <Section title="Weights & Pricing">
-                        <div className="grid grid-cols-12 gap-2 text-sm font-semibold text-gray-500 mb-2">
+                        <div className="hidden sm:grid grid-cols-12 gap-2 text-sm font-semibold text-gray-500 mb-2">
                             <div className="col-span-3">Weight (g)</div>
                             <div className="col-span-3">Selling Price (₹)</div>
                             <div className="col-span-2">MRP (₹)</div>
@@ -765,9 +765,9 @@ export default function ResinFormPage() {
                             return (
                                 <div
                                     key={i}
-                                    className="grid grid-cols-12 gap-3 items-center mb-4"
+                                    className="flex flex-col sm:grid sm:grid-cols-12 gap-3 items-stretch sm:items-center mb-4 p-3 sm:p-0 border sm:border-0 rounded sm:rounded-none"
                                 >
-                                    <div className="col-span-3">
+                                    <div className="sm:col-span-3">
                                         <input
                                             placeholder="1000"
                                             value={w.weightInGrams}
@@ -782,7 +782,7 @@ export default function ResinFormPage() {
                                             className="w-full border px-3 py-2 rounded"
                                         />
                                     </div>
-                                    <div className="col-span-3">
+                                    <div className="sm:col-span-3">
                                         <input
                                             placeholder="Price"
                                             type="number"
@@ -806,7 +806,7 @@ export default function ResinFormPage() {
                                             </p>
                                         )}
                                     </div>
-                                    <div className="col-span-2">
+                                    <div className="sm:col-span-2">
                                         <input
                                             placeholder="MRP"
                                             type="number"
@@ -825,7 +825,7 @@ export default function ResinFormPage() {
                                             className="w-full border px-3 py-2 rounded"
                                         />
                                     </div>
-                                    <div className="col-span-2 flex items-center">
+                                    <div className="sm:col-span-2 flex items-center">
                                         {mrp > 0 ? (
                                             <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
                                                 {discount}% OFF
@@ -837,7 +837,7 @@ export default function ResinFormPage() {
                                         )}
                                     </div>
                                     {/* Per-weight inStock toggle */}
-                                    <div className="col-span-1 flex items-center">
+                                    <div className="sm:col-span-1 flex items-center">
                                         <Toggle
                                             value={w.inStock ?? true}
                                             onChange={(v) =>
@@ -853,7 +853,7 @@ export default function ResinFormPage() {
                                             small
                                         />
                                     </div>
-                                    <div className="col-span-1 flex items-center justify-center">
+                                    <div className="sm:col-span-1 flex items-center justify-center">
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -886,8 +886,8 @@ export default function ResinFormPage() {
                                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4"
                             >
                                 <div className="flex justify-between items-start mb-6 border-b pb-4">
-                                    <div className="flex-1 mr-8 space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex-1 mr-4 sm:mr-8 space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <Input
                                                 label="Colour Name"
                                                 value={c.name}
@@ -992,7 +992,7 @@ export default function ResinFormPage() {
                                         <ImageIcon className="w-4 h-4" />
                                         <h3>Gallery Images</h3>
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                         {c.images.map((img, idx) => (
                                             <div
                                                 key={idx}
@@ -1073,7 +1073,7 @@ export default function ResinFormPage() {
                                         return (
                                             <div
                                                 key={i}
-                                                className="grid grid-cols-3 gap-2 mb-2"
+                                                className="flex flex-col sm:grid sm:grid-cols-3 gap-2 mb-2"
                                             >
                                                 <input
                                                     value={s.label}
@@ -1163,7 +1163,7 @@ export default function ResinFormPage() {
                         {formData.downloads.map((d, i) => (
                             <div
                                 key={i}
-                                className="grid grid-cols-3 gap-2 mb-2"
+                                className="flex flex-col sm:grid sm:grid-cols-3 gap-2 mb-2"
                             >
                                 <input
                                     placeholder="Title"

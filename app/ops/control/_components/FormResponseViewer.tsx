@@ -84,7 +84,7 @@ export function FormResponseViewer<
         );
 
     return (
-        <Card className="rounded-[24px] overflow-hidden border-none ring-1 ring-gray-200 shadow-2xl bg-white">
+        <Card className="rounded-[24px] border-none ring-1 ring-gray-200 shadow-2xl bg-white overflow-y-hidden">
             <CardHeader className="bg-white border-b px-8 py-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <CardTitle className="text-2xl font-black tracking-tight">
@@ -104,8 +104,8 @@ export function FormResponseViewer<
             </CardHeader>
 
             <CardContent className="p-0">
-                <ScrollArea className="h-[650px]">
-                    <Table>
+                <div className="overflow-auto max-h-[650px]">
+                    <Table className="min-w-[800px]">
                         <TableHeader className="bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md">
                             <TableRow>
                                 {columns.map((c: any) => (
@@ -154,7 +154,7 @@ export function FormResponseViewer<
                             ))}
                         </TableBody>
                     </Table>
-                </ScrollArea>
+                </div>
             </CardContent>
 
             <Dialog
@@ -185,8 +185,8 @@ export function FormResponseViewer<
                         </div>
                     </DialogHeader>
 
-                    <ScrollArea className="max-h-[75vh] p-10 bg-white">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <ScrollArea className="max-h-[75vh] p-4 sm:p-10 bg-white">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-12">
                             {/* SECTION: CLIENT INFO */}
                             <div className="space-y-6">
                                 <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] border-b pb-2">
@@ -228,7 +228,7 @@ export function FormResponseViewer<
                                     Technical Specifications
                                 </h3>
                                 <div className="grid gap-6">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <DetailItem
                                             label="Technology"
                                             value={selectedResponse?.technology}
@@ -242,7 +242,7 @@ export function FormResponseViewer<
                                             icon={Package}
                                         />
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <DetailItem
                                             label="Base Material"
                                             value={selectedResponse?.material}

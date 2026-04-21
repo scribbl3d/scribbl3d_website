@@ -470,7 +470,7 @@ export default function PrebuiltProductForm({
             <LoadingModal open={loading} isEdit={mode === "edit"} />
 
             {/* Sticky Header */}
-            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 sm:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => router.back()}
@@ -504,17 +504,17 @@ export default function PrebuiltProductForm({
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button
                         onClick={() => router.back()}
-                        className="px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         Discard
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={isPending}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {isPending ? "Saving..." : "Save Product"}
                     </button>
@@ -522,7 +522,7 @@ export default function PrebuiltProductForm({
             </div>
 
             {/* Body */}
-            <div className="max-w-screen-xl mx-auto px-8 py-8 grid grid-cols-[1fr_360px] gap-6 items-start">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-8 py-6 sm:py-8 flex flex-col lg:grid lg:grid-cols-[1fr_360px] gap-6 items-start">
                 <div className="flex flex-col gap-6">
                     {/* Basic Details */}
                     <Card title="Basic Details" icon="📄">
@@ -577,7 +577,7 @@ export default function PrebuiltProductForm({
                                     placeholder="Detailed product description..."
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <Label required>Category</Label>
                                     <Select
@@ -696,7 +696,7 @@ export default function PrebuiltProductForm({
                             {attributes.map((attr, i) => (
                                 <div
                                     key={i}
-                                    className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center"
+                                    className="flex flex-col sm:grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-stretch sm:items-center"
                                 >
                                     <Input
                                         value={attr.label}
@@ -795,7 +795,7 @@ export default function PrebuiltProductForm({
                                             </button>
                                         )}
                                     </div>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {/* Price */}
                                         <div>
                                             <Label>Sale Price (₹)</Label>
@@ -940,7 +940,7 @@ export default function PrebuiltProductForm({
                                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-1">
                                                 Dimensions (mm)
                                             </p>
-                                            <div className="grid grid-cols-3 gap-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                 <div>
                                                     <Label>Length</Label>
                                                     <Input
@@ -1025,9 +1025,9 @@ export default function PrebuiltProductForm({
                 </div>
 
                 {/* Right column: Images */}
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-6 w-full lg:w-auto">
                     <Card title="Images" icon="🖼">
-                        <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 mb-3">
                             {images.map((img, i) => (
                                 <div
                                     key={i}

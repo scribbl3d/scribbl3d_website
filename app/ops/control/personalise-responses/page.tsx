@@ -127,7 +127,7 @@ export default function PersonaliseResponsesPage() {
                 </div>
             )}
 
-            <Card className="rounded-[24px] overflow-hidden border-none ring-1 ring-gray-200 shadow-2xl bg-white">
+            <Card className="rounded-[24px] border-none ring-1 ring-gray-200 shadow-2xl bg-white overflow-y-hidden">
                 <CardHeader className="bg-white border-b px-8 py-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <CardTitle className="text-2xl font-black tracking-tight">
@@ -146,8 +146,8 @@ export default function PersonaliseResponsesPage() {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                    <ScrollArea className="h-[650px]">
-                        <Table>
+                    <div className="overflow-auto max-h-[650px]">
+                        <Table className="min-w-[800px]">
                             <TableHeader className="bg-gray-50/50 sticky top-0 z-10 backdrop-blur-md">
                                 <TableRow>
                                     <TableHead className="font-bold text-[11px] uppercase tracking-widest text-gray-500 py-5 px-8">
@@ -215,7 +215,7 @@ export default function PersonaliseResponsesPage() {
                                 ))}
                             </TableBody>
                         </Table>
-                    </ScrollArea>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -247,8 +247,8 @@ export default function PersonaliseResponsesPage() {
                         </div>
                     </DialogHeader>
 
-                    <ScrollArea className="max-h-[75vh] p-10 bg-white">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <ScrollArea className="max-h-[75vh] p-4 sm:p-10 bg-white">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-12">
                             {/* SECTION: CONTACT INFO */}
                             <div className="space-y-6">
                                 <h3 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] border-b pb-2">
@@ -329,7 +329,7 @@ export default function PersonaliseResponsesPage() {
 
                             {/* SECTION: METADATA */}
                             <div className="col-span-1 md:col-span-2 border-t pt-6">
-                                <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-gray-500">
                                     <div>
                                         <span className="font-bold">
                                             Submitted:
