@@ -6,6 +6,7 @@ import { ArrowLeft, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FormResponseViewer } from "../_components/FormResponseViewer";
+import { useMarkViewed } from "@/hooks/use-mark-viewed";
 
 interface Form3DResponse {
     id: string;
@@ -50,6 +51,8 @@ export default function Form3DResponsesPage() {
     const [responses, setResponses] = useState<Form3DResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    useMarkViewed("form3d-responses");
 
     useEffect(() => {
         fetchResponses();

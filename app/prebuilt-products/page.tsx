@@ -39,7 +39,7 @@ export default function PrebuiltPage() {
             >
                 <PrebuiltHero />
 
-                <div className="container mx-auto px-4 py-12">
+                <div className="container mx-auto px-4 pt-6 pb-12">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />

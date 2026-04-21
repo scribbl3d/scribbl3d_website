@@ -502,7 +502,7 @@ export default function PrinterFormPage() {
 
                 {/* Header */}
                 <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                         <div className="flex items-center gap-4">
                             <button
                                 type="button"
@@ -512,30 +512,30 @@ export default function PrinterFormPage() {
                                 <ArrowLeft className="w-5 h-5 text-gray-600" />
                             </button>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900">
+                                <h1 className="text-lg sm:text-xl font-bold text-gray-900">
                                     {isEdit
                                         ? "Edit Printer"
                                         : "Add New Printer"}
                                 </h1>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-xs sm:text-sm text-gray-500">
                                     {isEdit
                                         ? `Editing: ${formData.name}`
                                         : "Create a new product listing"}
                                 </p>
                             </div>
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
                             <button
                                 type="button"
                                 onClick={() => router.back()}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                             >
                                 Discard
                             </button>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 disabled:opacity-50"
                             >
                                 <Save className="w-4 h-4" />
                                 {loading ? "Saving..." : "Save Product"}
@@ -544,8 +544,8 @@ export default function PrinterFormPage() {
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                         {/* LEFT COLUMN */}
                         <div className="lg:col-span-2 space-y-6">
                             {/* 1. Basic Info */}

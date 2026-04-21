@@ -3,6 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useMarkViewed } from "@/hooks/use-mark-viewed";
 
 import { CreateShipmentDialog } from "./components/CreateShipmentDialog";
 import { PickupRequestDialog } from "./components/PickupRequestDialog";
@@ -34,6 +35,7 @@ const PICKUP_LOCATION = "Scribbl3D";
 
 export default function OrdersPage() {
     const { orders, fetchOrders } = useOrders();
+    useMarkViewed("orders");
 
     // ================= STATE =================
     const [activeOrder, setActiveOrder] = useState<Order | null>(null);
@@ -240,7 +242,7 @@ export default function OrdersPage() {
 
     // ================= RENDER =================
     return (
-        <div className="px-6 py-6 space-y-6">
+        <div className="px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
             {/* ===== HEADER ===== */}
             <div className="space-y-2">
                 <Link
@@ -250,36 +252,38 @@ export default function OrdersPage() {
                     ← Back to Admin
                 </Link>
 
-                <h1 className="text-3xl font-bold tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                     Manage Orders
                 </h1>
             </div>
 
             {/* ===== TABS WRAPPER ===== */}
-            <div className="rounded-2xl border-2 border-border bg-background shadow-md">
+            <div className="rounded-lg sm:rounded-2xl border-2 border-border bg-background shadow-md">
                 <Tabs defaultValue="payment">
                     {/* ===== STICKY TABS ===== */}
-                    <TabsList className="sticky top-[64px] z-30 flex w-full justify-center gap-10 border-b-2 border-border bg-background/95 px-6 py-4 backdrop-blur">
-                        {[
-                            { value: "payment", label: "Payment" },
-                            { value: "failed", label: "Failed" },
-                            { value: "confirmed", label: "Confirmed" },
-                            { value: "transit", label: "Transit" },
-                            { value: "delivered", label: "Delivered" },
-                            { value: "cancelled", label: "Cancelled" },
-                        ].map((tab) => (
-                            <TabsTrigger
-                                key={tab.value}
-                                value={tab.value}
-                                className="relative px-3 py-2 text-base font-semibold text-muted-foreground transition-all hover:text-foreground data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:-bottom-[14px] data-[state=active]:after:left-0 data-[state=active]:after:h-[3px] data-[state=active]:after:w-full data-[state=active]:after:rounded-full data-[state=active]:after:bg-foreground"
-                            >
-                                {tab.label}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+                    <div className="sticky top-[64px] z-30 border-b-2 border-border bg-background/95 backdrop-blur overflow-x-auto">
+                        <TabsList className="flex w-full justify-start sm:justify-center gap-4 sm:gap-6 lg:gap-10 px-3 sm:px-6 py-3 sm:py-4 min-w-max sm:min-w-0">
+                            {[
+                                { value: "payment", label: "Payment" },
+                                { value: "failed", label: "Failed" },
+                                { value: "confirmed", label: "Confirmed" },
+                                { value: "transit", label: "Transit" },
+                                { value: "delivered", label: "Delivered" },
+                                { value: "cancelled", label: "Cancelled" },
+                            ].map((tab) => (
+                                <TabsTrigger
+                                    key={tab.value}
+                                    value={tab.value}
+                                    className="relative px-2 sm:px-3 py-2 text-sm sm:text-base font-semibold text-muted-foreground transition-all hover:text-foreground data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:-bottom-[14px] data-[state=active]:after:left-0 data-[state=active]:after:h-[3px] data-[state=active]:after:w-full data-[state=active]:after:rounded-full data-[state=active]:after:bg-foreground whitespace-nowrap"
+                                >
+                                    {tab.label}
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </div>
 
                     {/* ===== CONTENT ===== */}
-                    <div className="p-6">
+                    <div className="p-3 sm:p-6">
                         <TabsContent value="payment">
                             <PaymentPendingTab
                                 orders={orders.filter(filters.paymentPending)}

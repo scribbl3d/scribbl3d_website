@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useMarkViewed } from "@/hooks/use-mark-viewed";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES */
@@ -79,6 +80,8 @@ export default function SmallBatchManufacturingPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedResponse, setSelectedResponse] =
         useState<SmallBatchRequest | null>(null);
+
+    useMarkViewed("small-batch-manufacturing");
 
     useEffect(() => {
         fetchRequests();

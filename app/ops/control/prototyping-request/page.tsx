@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useMarkViewed } from "@/hooks/use-mark-viewed";
 
 interface PrototypingRequest {
     id: string;
@@ -78,6 +79,8 @@ export default function PrototypingRequestsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedResponse, setSelectedResponse] =
         useState<PrototypingRequest | null>(null);
+
+    useMarkViewed("prototyping-requests");
 
     useEffect(() => {
         fetchRequests();

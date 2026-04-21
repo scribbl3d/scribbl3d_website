@@ -181,9 +181,9 @@ export default function SearchSortControl({
 
     /* -------------------- RENDER -------------------- */
     return (
-        <div className="relative flex items-start gap-4 w-full">
+        <div className="relative flex flex-col md:flex-row items-start gap-4 w-full">
             {/* LEFT COLUMN — SEARCH INPUT */}
-            <div className="flex flex-col w-[350px] relative">
+            <div className="flex flex-col w-full md:w-[350px] relative">
                 {/* INPUT BOX */}
                 <div
                     className={`flex items-center rounded-lg overflow-hidden bg-white border h-[45px]
@@ -318,7 +318,7 @@ export default function SearchSortControl({
             <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
-                className="border rounded-md px-3 py-2 h-[45px]"
+                className="border rounded-md px-3 py-2 h-[45px] w-full md:w-auto"
             >
                 <option value="">Sort By</option>
                 {sortOptions.map((opt) => (

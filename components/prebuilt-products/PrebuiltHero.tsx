@@ -1,119 +1,143 @@
+"use client";
+
 import { motion } from "framer-motion";
-import Container from "./Container";
-import H3 from "./H3";
-import Hero from "./Hero";
-import SplitText from "./SplitText";
-type HeroContentProps = {
-    onClick: () => void;
-};
-const translateContainer = {
-    initial: {
-        opacity: 0,
-    },
-    animate: {
-        opacity: 1,
-        transition: {
-            duration: 0.1,
-            when: "beforeChildren",
-            staggerChildren: 0.2,
-        },
+import { useEffect, useState } from "react";
+
+const staggerContainer = {
+    hidden: {},
+    visible: {
+        transition: { staggerChildren: 0.08, delayChildren: 0.15 },
     },
 };
-const container = {
-    initial: {
-        opacity: 0,
-    },
-    animate: {
-        opacity: 1,
-        transition: {
-            duration: 0.1,
-            when: "beforeChildren",
-            staggerChildren: 0.2,
-        },
-    },
-};
-const headingsTwo = {
-    initial: { y: -20, opacity: 0 },
-    animate: {
+
+const wordVariant = {
+    hidden: { y: 60, opacity: 0 },
+    visible: {
         y: 0,
         opacity: 1,
-        transition: {
-            duration: 1,
-            type: "tween",
-        },
+        transition: { type: "spring", damping: 15, stiffness: 100 },
     },
 };
 
-const wavyHeadings = {
-    initial: { y: "100%" },
-    animate: {
+const subtextVariant = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
         y: 0,
-        transition: {
-            duration: 0.5,
-            type: "tween",
-        },
+        opacity: 1,
+        transition: { duration: 0.6, ease: "easeOut", delay: 0.8 },
     },
 };
 
-const HeroContent = ({ onClick }: HeroContentProps) => {
-    return (
-        <Container>
-            <div
-                style={{
-                    paddingTop:
-                        "clamp(3rem, calc((100vw - 1439px) * 80), 5rem)",
-                }}
-            >
-                <motion.div
-                    initial="initial"
-                    whileInView="animate"
-                    variants={translateContainer}
-                    className="text-white w-full 
-                2xs:w-[94%] sm:w-[600px] md:w-[680px] lg:w-[700px] xl:w-[810px] 2xl:w-[1100px] 3xl:w-[1200px]
-                "
-                >
-                    <SplitText
-                        className="flex flex-wrap gap-x-2 sm:gap-x-3 text-white"
-                        variants={wavyHeadings}
-                    >
-                        Discover&nbsp;Cutting-Edge 3D Printers
-                    </SplitText>
-                </motion.div>
-
-                <motion.div
-                    initial="initial"
-                    whileInView="animate"
-                    variants={container}
-                    className="overflow-x-hidden"
-                >
-                    <motion.div variants={headingsTwo}>
-                        <H3 className="font-normal text-white mt-0.8 sm:mt-2.4 xl:mt-5 sm:text-[2.6rem] lg:text-5xl">
-                            Explore our extensive selection of 3D printers.
-                        </H3>
-                    </motion.div>
-                </motion.div>
-            </div>
-        </Container>
-    );
+type HeroData = {
+    mediaUrl: string;
+    mediaType: string;
+    headline: string | null;
+    subtext: string | null;
 };
 
-const PrinterHero = () => {
-    return (
-        <div>
-            <Hero
-                content={
-                    <HeroContent
-                        onClick={() => {
-                            /*NOTHING FOR ON CLICK */
-                        }}
-                    />
+const FALLBACK: HeroData = {
+    mediaUrl:
+        "https://res.cloudinary.com/dlbrgchrh/video/upload/v1767461878/printer-images/doef4s0pr9mzikpb6hzu.mp4",
+    mediaType: "video",
+    headline: "Discover Cutting-Edge Prebuilt Products",
+    subtext: "Explore our extensive selection of prebuilt 3D products.",
+};
+
+interface PrebuiltHeroProps {
+    animate?: boolean;
+}
+
+export default function PrebuiltHero({ animate = true }: PrebuiltHeroProps) {
+    const [hero, setHero] = useState<HeroData>(FALLBACK);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch("/api/page-hero/prebuilt-products");
+                const data = await res.json();
+                if (data?.mediaUrl) {
+                    setHero({
+                        mediaUrl: data.mediaUrl,
+                        mediaType: data.mediaType || "video",
+                        headline: data.headline,
+                        subtext: data.subtext,
+                    });
                 }
-                url="https://res.cloudinary.com/dlbrgchrh/video/upload/v1767461878/printer-images/doef4s0pr9mzikpb6hzu.mp4"
-                type="video"
-                wrapperClass="xl:h-[830px] 2xl:h-screen"
-            />
-        </div>
-    );
-};
+            } catch {
+                // Keep fallback
+            }
+        })();
+    }, []);
 
-export default PrinterHero;
+    const hasText = hero.headline || hero.subtext;
+
+    return (
+        <section className="relative w-full overflow-hidden bg-[#f0f0f0] mt-[72px]">
+            {/* Background media — full width, natural height */}
+            {hero.mediaType === "video" ? (
+                <video
+                    src={hero.mediaUrl}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="w-full h-auto block"
+                />
+            ) : (
+                <img
+                    src={hero.mediaUrl}
+                    alt={hero.headline || "Hero"}
+                    className="w-full h-auto block"
+                />
+            )}
+
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+
+            {/* Content — vertically centered, left-aligned */}
+            {hasText && (
+                <div className="absolute inset-0 z-10 flex flex-col justify-center px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto">
+                    {hero.headline && (
+                        <motion.h1
+                            variants={staggerContainer}
+                            initial="hidden"
+                            {...(animate
+                                ? {
+                                      whileInView: "visible",
+                                      viewport: { once: false, amount: 0.2 },
+                                  }
+                                : {})}
+                            className="font-manrope text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-[0.95] tracking-tighter"
+                        >
+                            {hero.headline.split(" ").map((word, i) => (
+                                <motion.span
+                                    key={i}
+                                    variants={wordVariant}
+                                    className="inline-block mr-[0.25em]"
+                                >
+                                    {word}
+                                </motion.span>
+                            ))}
+                        </motion.h1>
+                    )}
+
+                    {hero.subtext && (
+                        <motion.p
+                            variants={subtextVariant}
+                            initial="hidden"
+                            {...(animate
+                                ? {
+                                      whileInView: "visible",
+                                      viewport: { once: false, amount: 0.2 },
+                                  }
+                                : {})}
+                            className="mt-3 sm:mt-5 text-base sm:text-lg md:text-xl lg:text-2xl font-light text-white/80 max-w-xl leading-relaxed"
+                        >
+                            {hero.subtext}
+                        </motion.p>
+                    )}
+                </div>
+            )}
+        </section>
+    );
+}

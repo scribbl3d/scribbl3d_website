@@ -1092,3 +1092,10 @@ model StockNotification {
   notifiedAt   DateTime?
   createdAt    DateTime  @default(now())
 }
+
+model AdminViewTracker {
+  id              String   @id @default(cuid())
+  section         String   @unique
+  lastViewedAt    DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

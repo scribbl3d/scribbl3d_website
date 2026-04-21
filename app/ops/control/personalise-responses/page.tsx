@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useMarkViewed } from "@/hooks/use-mark-viewed";
 
 interface PersonaliseFormResponse {
     id: string;
@@ -58,6 +59,8 @@ export default function PersonaliseResponsesPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedResponse, setSelectedResponse] =
         useState<PersonaliseFormResponse | null>(null);
+
+    useMarkViewed("personalise-responses");
 
     useEffect(() => {
         fetchResponses();

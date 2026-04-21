@@ -431,18 +431,18 @@ export default function ResinFormPage() {
 
                 {/* HEADER */}
                 <div className="sticky top-0 bg-white border-b z-20 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between">
+                    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                         <div className="flex items-center gap-3">
                             <button type="button" onClick={() => router.back()}>
-                                <ArrowLeft />
+                                <ArrowLeft className="w-5 h-5" />
                             </button>
-                            <h1 className="text-xl font-bold">
+                            <h1 className="text-lg sm:text-xl font-bold">
                                 {isEdit ? "Edit Resin" : "Add New Resin"}
                             </h1>
                         </div>
                         <button
                             disabled={loading}
-                            className="flex items-center gap-2 bg-black text-white px-5 py-2 rounded hover:bg-gray-800 transition"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-black text-white px-5 py-2 rounded hover:bg-gray-800 transition text-sm sm:text-base"
                         >
                             <Save className="w-4 h-4" />
                             {loading ? "Saving…" : "Save"}
@@ -451,10 +451,10 @@ export default function ResinFormPage() {
                 </div>
 
                 {/* CONTENT */}
-                <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-6 sm:space-y-8">
                     {/* BASIC */}
                     <Section title="Basic Details">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
                                 label="Name"
                                 value={formData.name}
@@ -468,7 +468,7 @@ export default function ResinFormPage() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Input
                                 label="Brand"
                                 value={formData.brand}

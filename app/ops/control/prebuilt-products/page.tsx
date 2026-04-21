@@ -3,6 +3,7 @@
 import { ArrowLeft, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import HeroBannerEditor from "../_components/HeroBannerEditor";
 import SearchSortControl from "../_components/SearchSortControl";
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -85,8 +86,8 @@ export default function PrebuiltProductsPage() {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* ── Header ── */}
-            <div className="bg-white border-b border-gray-200 px-8 py-5">
-                <div className="max-w-screen-xl mx-auto flex items-center justify-between">
+            <div className="bg-white border-b border-gray-200 px-3 sm:px-8 py-4 sm:py-5">
+                <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                     <div className="flex items-center gap-3">
                         <Link
                             href="/ops/control"
@@ -95,17 +96,17 @@ export default function PrebuiltProductsPage() {
                             <ArrowLeft className="w-5 h-5" />
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
+                            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                                 Prebuilt Products
                             </h1>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-xs sm:text-sm text-gray-500">
                                 {totalCount} total products
                             </p>
                         </div>
                     </div>
                     <Link
                         href="/ops/control/prebuilt-products/new"
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
                     >
                         <Plus className="w-4 h-4" />
                         Add New Product
@@ -113,7 +114,9 @@ export default function PrebuiltProductsPage() {
                 </div>
             </div>
 
-            <div className="max-w-screen-xl mx-auto px-8 py-8">
+            <div className="max-w-screen-xl mx-auto px-3 sm:px-8 py-4 sm:py-8">
+                <HeroBannerEditor page="prebuilt-products" />
+                
                 {/* 🔍 SEARCH + SORT CONTROL */}
                 <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm">
                     <SearchSortControl
@@ -143,7 +146,7 @@ export default function PrebuiltProductsPage() {
                     />
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hidden md:block">
                     {/* ── Toolbar ── */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <h2 className="text-base font-bold text-gray-900">
@@ -343,6 +346,112 @@ export default function PrebuiltProductsPage() {
                     <div className="px-6 py-3 border-t border-gray-100 text-xs text-gray-400">
                         Showing {products.length} of {totalCount} total products
                     </div>
+                </div>
+
+                {/* ── MOBILE CARDS ── */}
+                <div className="md:hidden space-y-3">
+                    {loading ? (
+                        <div className="py-12 text-center">
+                            <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-300" />
+                        </div>
+                    ) : products.length === 0 ? (
+                        <div className="py-12 text-center text-gray-400 bg-white rounded-lg border">
+                            No products found.{" "}
+                            <Link
+                                href="/ops/control/prebuilt-products/new"
+                                className="text-blue-500 underline"
+                            >
+                                Add a product
+                            </Link>
+                        </div>
+                    ) : (
+                        products.map((product) => {
+                            const v = product.variants?.[0];
+                            return (
+                                <div
+                                    key={product.id}
+                                    className="bg-white border rounded-lg p-4 space-y-3"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-lg">
+                                                {product.name}
+                                            </h3>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                {product.shortDescription}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Link
+                                                href={`/ops/control/prebuilt-products/${product.id}`}
+                                                className="p-2 rounded-lg border text-gray-500"
+                                            >
+                                                <Edit className="w-4 h-4" />
+                                            </Link>
+                                            <button
+                                                onClick={() => handleDelete(product.id)}
+                                                className="p-2 rounded-lg bg-red-600 text-white"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-gray-500">Price:</span>
+                                            <p className="font-semibold">
+                                                {v?.price ? formatPrice(v.price) : "—"}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">Category:</span>
+                                            <p className="font-semibold">{product.category}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">Variants:</span>
+                                            <p className="font-semibold">
+                                                {product.variants?.length || 0}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">Customizable:</span>
+                                            <p className="font-semibold">
+                                                {product.isCustomizable ? "Yes" : "No"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-gray-400 pt-2 border-t">
+                                        Updated: {formatDate(product.updatedAt)}
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+
+                    {/* MOBILE PAGINATION */}
+                    {totalPages > 1 && (
+                        <div className="flex justify-center gap-2 pt-4">
+                            <button
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                className="px-3 py-1 border rounded disabled:opacity-50 text-sm"
+                            >
+                                Prev
+                            </button>
+                            <span className="px-3 py-1 text-sm">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                disabled={currentPage === totalPages}
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                                }
+                                className="px-3 py-1 border rounded disabled:opacity-50 text-sm"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

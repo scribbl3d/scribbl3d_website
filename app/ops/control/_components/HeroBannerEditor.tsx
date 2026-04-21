@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageIcon, Loader2, Upload, VideoIcon } from "lucide-react";
+import { ImageIcon, Loader2, Trash2, Upload, VideoIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 type PageHero = {
@@ -95,6 +95,37 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
         } catch (err) {
             console.error("Save failed:", err);
             alert("Failed to save hero banner");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Delete
+    const handleDelete = async () => {
+        if (!confirm("Are you sure you want to delete this hero banner? The page will use the default fallback.")) {
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/admin/page-hero/${page}`, {
+                method: "DELETE",
+            });
+
+            if (res.ok) {
+                setHero(null);
+                setPreviewUrl("");
+                setHeadline("");
+                setSubtext("");
+                setFile(null);
+                alert("Hero banner deleted! Page will now use the default fallback.");
+            } else {
+                const err = await res.json();
+                alert(err.error || "Failed to delete");
+            }
+        } catch (err) {
+            console.error("Delete failed:", err);
+            alert("Failed to delete hero banner");
         } finally {
             setSaving(false);
         }
@@ -214,17 +245,31 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
                         background media without text overlay.
                     </div>
 
-                    {/* Save */}
-                    <button
-                        onClick={handleSave}
-                        disabled={saving || !previewUrl}
-                        className="px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {saving && (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleSave}
+                            disabled={saving || !previewUrl}
+                            className="flex-1 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {saving && (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            )}
+                            {hero ? "Update Hero" : "Save Hero"}
+                        </button>
+
+                        {hero && (
+                            <button
+                                onClick={handleDelete}
+                                disabled={saving}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                title="Delete hero banner and use fallback"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                            </button>
                         )}
-                        {hero ? "Update Hero" : "Save Hero"}
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>

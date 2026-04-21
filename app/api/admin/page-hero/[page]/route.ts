@@ -115,3 +115,64 @@ export async function PUT(
         );
     }
 }
+
+// DELETE — remove hero for a page and clean up Cloudinary
+export async function DELETE(
+    _req: Request,
+    { params }: RouteContext
+) {
+    const { page } = await params;
+
+    try {
+        // First, get the current hero to extract Cloudinary public_id
+        const hero = await prisma.pageHero.findUnique({
+            where: { page },
+        });
+
+        if (!hero) {
+            return NextResponse.json(
+                { error: "Hero not found" },
+                { status: 404 }
+            );
+        }
+
+        // Extract public_id from Cloudinary URL
+        // URL format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/v{version}/{public_id}.{format}
+        if (hero.mediaUrl && hero.mediaUrl.includes("cloudinary.com")) {
+            try {
+                const urlParts = hero.mediaUrl.split("/");
+                const uploadIndex = urlParts.indexOf("upload");
+                if (uploadIndex !== -1 && urlParts.length > uploadIndex + 2) {
+                    // Get everything after "upload/v{version}/"
+                    const pathAfterUpload = urlParts.slice(uploadIndex + 2).join("/");
+                    // Remove file extension to get public_id
+                    const publicId = pathAfterUpload.replace(/\.[^/.]+$/, "");
+
+                    // Delete from Cloudinary
+                    const resourceType = hero.mediaType === "video" ? "video" : "image";
+                    await cloudinary.uploader.destroy(publicId, {
+                        resource_type: resourceType,
+                    });
+                    
+                    console.log(`Deleted from Cloudinary: ${publicId}`);
+                }
+            } catch (cloudinaryErr) {
+                console.error("Cloudinary deletion failed:", cloudinaryErr);
+                // Continue with DB deletion even if Cloudinary fails
+            }
+        }
+
+        // Delete from database
+        await prisma.pageHero.delete({
+            where: { page },
+        });
+
+        return NextResponse.json({ success: true, message: "Hero deleted successfully" });
+    } catch (err: any) {
+        console.error("PageHero DELETE failed:", err);
+        return NextResponse.json(
+            { error: err.message || "Failed to delete hero" },
+            { status: 500 }
+        );
+    }
+}

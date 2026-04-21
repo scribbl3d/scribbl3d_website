@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useMarkViewed } from "@/hooks/use-mark-viewed";
 
 const PAGE_SIZE = 20;
 
@@ -50,19 +51,19 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default function StockNotificationsPage() {
+    const router = useRouter();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<"all" | "pending" | "notified">("all");
-    const [typeFilter, setTypeFilter] = useState<
-        "all" | "prebuilt" | "printer" | "resin"
-    >("all");
     const [search, setSearch] = useState("");
     const [markingId, setMarkingId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const router = useRouter();
+    const [filter, setFilter] = useState<"all" | "pending" | "notified">("all");
+    const [typeFilter, setTypeFilter] = useState<"all" | "printer" | "prebuilt" | "resin">("all");
+
+    useMarkViewed("stock-notifications");
 
     const fetchNotifications = async (pageNum = page) => {
         setLoading(true);
