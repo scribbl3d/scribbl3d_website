@@ -1,8 +1,32 @@
 User-agent: *
 Allow: /
 
-# Disallow private/admin routes
-Disallow: /api/
+# Allow public API routes for product data (needed for page rendering)
+Allow: /api/printers
+Allow: /api/resins
+Allow: /api/filaments
+Allow: /api/prebuilt-products
+Allow: /api/blog
+Allow: /api/products
+
+# Disallow private/admin API routes
+Disallow: /api/auth/
+Disallow: /api/admin/
+Disallow: /api/ops/
+Disallow: /api/cart
+Disallow: /api/checkout
+Disallow: /api/orders
+Disallow: /api/payment
+Disallow: /api/profile/
+Disallow: /api/wishlist
+Disallow: /api/user/
+Disallow: /api/upload
+Disallow: /api/register
+Disallow: /api/login
+Disallow: /api/send-otp
+Disallow: /api/verify-otp
+
+# Disallow private/admin pages
 Disallow: /ops/
 Disallow: /checkout
 Disallow: /cart
