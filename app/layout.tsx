@@ -12,6 +12,8 @@ import WhatsAppSupportButton from "@/components/WhatsAppSupportButton";
 import type React from "react";
 import { Providers } from "./providers";
 import { defaultMetadata } from "@/lib/metadata";
+import OrganizationSchema from "@/components/seo/OrganizationSchema";
+import WebsiteSchema from "@/components/seo/WebsiteSchema";
 
 const geistSans = localFont({
     src: "./fonts/GeistVF.woff",
@@ -69,12 +71,16 @@ export default async function RootLayout({
     return (
         <html lang="en">
             <head>
+                <link rel="manifest" href="/manifest.json" />
                 <link rel="preconnect" href="https://res.cloudinary.com" />
                 <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+                <meta name="theme-color" content="#000000" />
             </head>
             <body
                 className={`bg-background text-foreground ${geistSans.variable} ${geistMono.variable} ${gilroy.variable}  ${manrope.variable} ${mplus1.variable} ${lato.variable} ${aboreto.variable} antialiased`}
             >
+                <OrganizationSchema />
+                <WebsiteSchema />
                 <Providers session={session}>{children}</Providers>
                 <WhatsAppSupportButton
                     phoneNumber="919599523434"

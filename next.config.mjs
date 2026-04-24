@@ -67,6 +67,27 @@ const nextConfig = {
                     },
                 ],
             },
+            {
+                source: '/:path*',
+                headers: [
+                    {
+                        key: 'X-Robots-Tag',
+                        value: 'index, follow',
+                    },
+                ],
+            },
+        ];
+    },
+
+    trailingSlash: false,
+
+    async redirects() {
+        return [
+            {
+                source: '/home',
+                destination: '/',
+                permanent: true,
+            },
         ];
     },
 };
