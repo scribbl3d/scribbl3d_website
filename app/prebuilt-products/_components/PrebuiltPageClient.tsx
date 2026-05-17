@@ -6,12 +6,19 @@ import PrebuiltProductGrid from "@/components/prebuilt-products/PrebuiltProductG
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useEffect, useState } from "react";
 
-export default function PrebuiltPageClient() {
+interface Props {
+    initialProducts?: any[];
+}
+
+export default function PrebuiltPageClient({
+    initialProducts = [],
+}: Props) {
     const isInitialLoading = useAutoImageLoader();
-    const [loading, setLoading] = useState(true);
-    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(initialProducts.length === 0);
+    const [products, setProducts] = useState(initialProducts);
 
     useEffect(() => {
+        if (initialProducts.length > 0) return;
         const fetchProducts = async () => {
             try {
                 const res = await fetch("/api/prebuilt-products");
@@ -24,6 +31,7 @@ export default function PrebuiltPageClient() {
             }
         };
         fetchProducts();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

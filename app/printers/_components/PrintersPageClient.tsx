@@ -25,17 +25,25 @@ function usePageLimit() {
     return limit;
 }
 
-export default function PrintersPageClient() {
+interface Props {
+    initialPrinters?: any[];
+    initialTotal?: number;
+}
+
+export default function PrintersPageClient({
+    initialPrinters = [],
+    initialTotal = 0,
+}: Props) {
     const isInitialLoading = useAutoImageLoader();
     const searchParams = useSearchParams();
     const brandApplied = useRef(false);
     const gridRef = useRef<HTMLDivElement>(null);
     const PAGE_LIMIT = usePageLimit();
 
-    const [printers, setPrinters] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [initialLoad, setInitialLoad] = useState(true);
-    const [total, setTotal] = useState(0);
+    const [printers, setPrinters] = useState<any[]>(initialPrinters);
+    const [loading, setLoading] = useState(false);
+    const [initialLoad, setInitialLoad] = useState(initialPrinters.length === 0);
+    const [total, setTotal] = useState(initialTotal);
 
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 

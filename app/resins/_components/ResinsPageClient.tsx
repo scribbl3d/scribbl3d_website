@@ -23,14 +23,24 @@ export type ResinFiltersState = {
     price: [number, number] | null;
 };
 
+/* ================= PROPS ================= */
+
+interface Props {
+    initialResins?: any[];
+    initialTotal?: number;
+}
+
 /* ================= PAGE ================= */
 
-export default function ResinsPageClient() {
+export default function ResinsPageClient({
+    initialResins = [],
+    initialTotal = 0,
+}: Props) {
     /* ================= DATA ================= */
     const isInitialLoading = useAutoImageLoader();
-    const [resins, setResins] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [total, setTotal] = useState(0);
+    const [resins, setResins] = useState<any[]>(initialResins);
+    const [loading, setLoading] = useState(false);
+    const [total, setTotal] = useState(initialTotal);
 
     /* ================= RESPONSIVE PAGE LIMIT ================= */
 
