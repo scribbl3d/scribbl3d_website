@@ -1,7 +1,13 @@
 import { Metadata } from 'next';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://scribbl3d.com';
+const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 const siteName = 'Scribbl3D';
+
+export function truncateAtWord(s: string, n: number): string {
+  if (s.length <= n) return s;
+  const truncated = s.slice(0, s.lastIndexOf(' ', n));
+  return truncated ? `${truncated}…` : s.slice(0, n) + '…';
+}
 
 export const defaultMetadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -206,6 +212,7 @@ export function generateStructuredData(type: 'product' | 'blogPost', data: any) 
         price: data.price,
         priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         availability: data.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        itemCondition: 'https://schema.org/NewCondition',
         seller: {
           '@type': 'Organization',
           name: 'Scribbl3D',

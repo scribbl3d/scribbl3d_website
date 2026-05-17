@@ -72,7 +72,7 @@ export async function generateMetadata({
     const { category } = await params;
     const title = CATEGORY_TITLES[category] || "Category";
     const description = `Explore our ${title.toLowerCase()} collection of premium 3D printed products. High-quality custom designs and ready-to-ship items available at Scribbl3D.`;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://scribbl3d.com';
+    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
     
     return {
         title: `${title} - Premium 3D Printed Products`,

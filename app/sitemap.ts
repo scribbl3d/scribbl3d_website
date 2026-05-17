@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { MetadataRoute } from 'next';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://scribbl3d.com';
+  const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
   
   try {
     const [printers, resins, prebuiltProducts, blogs, categories] = await Promise.all([

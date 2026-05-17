@@ -2,6 +2,7 @@ import BlogPostLayout from "../_components/blog-post-layout";
 import { prisma } from "@/lib/prisma";
 import { generateBlogMetadata } from "@/lib/metadata";
 import { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
 
 type BlogPageProps = {
     params: Promise<{ slug: string }>;
@@ -42,7 +43,17 @@ export async function generateMetadata({
 }
 
 export default async function BlogPostPage({ params }: BlogPageProps) {
-    const slug = (await params).slug;
+    const identifier = (await params).slug;
 
-    return <BlogPostLayout slug={slug} />;
+    // If accessed via CUID (id), redirect to the canonical slug URL
+    const blog = await prisma.blog.findFirst({
+        where: { OR: [{ slug: identifier }, { id: identifier }] },
+        select: { id: true, slug: true },
+    });
+
+    if (blog && blog.slug && blog.slug !== identifier) {
+        permanentRedirect(`/blog/${blog.slug}`);
+    }
+
+    return <BlogPostLayout slug={identifier} />;
 }

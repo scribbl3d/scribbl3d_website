@@ -1,6 +1,6 @@
 import Script from 'next/script';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://scribbl3d.com';
+const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 
 export default function OrganizationSchema() {
   const organizationData = {
