@@ -74,6 +74,14 @@ export default function Form3DResponsesPage() {
         }
     };
 
+    const handleDelete = async (id: string) => {
+        const res = await fetch(`/api/admin/form3d-responses/${id}`, {
+            method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete");
+        setResponses((prev) => prev.filter((r) => r.id !== id));
+    };
+
     const columns: Column[] = [
         {
             key: "firstName",
@@ -232,6 +240,7 @@ export default function Form3DResponsesPage() {
                 detailsColumns={detailsColumns}
                 isLoading={isLoading}
                 error={error || undefined}
+                onDelete={handleDelete}
             />
         </div>
     );

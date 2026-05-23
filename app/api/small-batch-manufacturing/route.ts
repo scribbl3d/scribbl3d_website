@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { sendAdminNotification } from "@/lib/email";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -153,6 +154,29 @@ export async function POST(request: Request) {
             console.log(`  - colors: ${JSON.stringify(p.colors)}`);
         });
         console.log(`\n========================================\n`);
+
+        // Fire-and-forget admin email notification
+        sendAdminNotification({
+            type: "small-batch-manufacturing",
+            details: {
+                "Name": fullName || "—",
+                "Email": email || "—",
+                "Phone": phone || "—",
+                "Company": company,
+                "Address": address || "—",
+                "Total Products": result.products.length,
+            },
+            subItems: result.products.map((p) => ({
+                "Technology": p.technology || "—",
+                "Material": p.material || "—",
+                "Material Subtype": p.materialSubtype,
+                "Color Mode": p.colorMode || "—",
+                "Colors": Array.isArray(p.colors) ? (p.colors as string[]).join(", ") : "—",
+                "Quantity": p.quantity,
+                "Notes": p.notes || "—",
+                "Design File": p.designFile ? "Attached" : "None",
+            })),
+        }).catch((err) => console.error("[Admin Email] Small batch notification failed:", err));
 
         return NextResponse.json({ success: true, data: result });
     } catch (error: any) {

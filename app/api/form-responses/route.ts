@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { sendAdminNotification } from "@/lib/email";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -69,38 +70,62 @@ export async function POST(request: Request) {
 
         const quantityStr = formData.get("quantity") as string;
 
+        const firstName = (formData.get("firstName") as string) || "";
+        const lastName = (formData.get("lastName") as string) || "";
+        const email = (formData.get("email") as string) || "";
+        const phone = (formData.get("phone") as string) || "";
+        const address = (formData.get("address") as string) || "";
+        const company = (formData.get("company") as string) || null;
+        const requirement = (formData.get("requirement") as string) || "";
+        const fileExtension = (formData.get("fileExtension") as string) || "";
+        const productionType = (formData.get("productionType") as string) || "";
+        const printingTechnology = (formData.get("printingTechnology") as string) || null;
+        const materialFamily = (formData.get("materialFamily") as string) || null;
+        const material = (formData.get("material") as string) || null;
+        const color = (formData.get("color") as string) || null;
+
         const formResponse = await prisma.form3DResponse.create({
             data: {
-                // Files
                 fileReference: fileReferenceUrl,
                 additionalFile: additionalFileUrl,
-
-                // Project details
-                requirement: (formData.get("requirement") as string) || "",
-                fileExtension: (formData.get("fileExtension") as string) || "",
-
-                // Manufacturing / production
-                productionType:
-                    (formData.get("productionType") as string) || "",
+                requirement,
+                fileExtension,
+                productionType,
                 quantity: quantityStr ? parseInt(quantityStr) : null,
-
-                // Technology, material & colour
-                printingTechnology:
-                    (formData.get("printingTechnology") as string) || null,
-                materialFamily:
-                    (formData.get("materialFamily") as string) || null,
-                material: (formData.get("material") as string) || null,
-                color: (formData.get("color") as string) || null,
-
-                // Customer details
-                firstName: (formData.get("firstName") as string) || "",
-                lastName: (formData.get("lastName") as string) || "",
-                email: (formData.get("email") as string) || "",
-                phone: (formData.get("phone") as string) || "",
-                address: (formData.get("address") as string) || "",
-                company: (formData.get("company") as string) || null,
+                printingTechnology,
+                materialFamily,
+                material,
+                color,
+                firstName,
+                lastName,
+                email,
+                phone,
+                address,
+                company,
             },
         });
+
+        // Fire-and-forget admin email notification
+        sendAdminNotification({
+            type: "form3d-response",
+            details: {
+                "Name": `${firstName} ${lastName}`.trim() || "—",
+                "Email": email || "—",
+                "Phone": phone || "—",
+                "Company": company,
+                "Address": address || "—",
+                "Requirement": requirement || "—",
+                "File Extension": fileExtension || "—",
+                "Production Type": productionType || "—",
+                "Quantity": quantityStr || "—",
+                "Printing Technology": printingTechnology,
+                "Material Family": materialFamily,
+                "Material": material,
+                "Color": color,
+                "Reference File": fileReferenceUrl ? "Attached" : "None",
+                "Additional File": additionalFileUrl ? "Attached" : "None",
+            },
+        }).catch((err) => console.error("[Admin Email] Form3D notification failed:", err));
 
         return NextResponse.json(formResponse);
     } catch (error) {

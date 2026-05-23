@@ -15,6 +15,7 @@ import {
     Phone,
     Search,
     Settings,
+    Trash2,
     User,
     X,
 } from "lucide-react"; // All icons imported here
@@ -55,13 +56,36 @@ interface FormResponseViewerProps<T> {
     }[];
     isLoading?: boolean;
     error?: string;
+    onDelete?: (id: string) => Promise<void>;
 }
+
+const getFileNameFromUrl = (url: string): string => {
+    if (!url) return "";
+    try {
+        const parts = url.split("/");
+        return parts[parts.length - 1];
+    } catch {
+        return url;
+    }
+};
 
 export function FormResponseViewer<
     T extends { id: string; createdAt: string },
->({ title, responses, columns, isLoading, error }: FormResponseViewerProps<T>) {
+>({ title, responses, columns, isLoading, error, onDelete }: FormResponseViewerProps<T>) {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedResponse, setSelectedResponse] = useState<any | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    const handleDelete = async (id: string) => {
+        if (!onDelete) return;
+        if (!confirm("Are you sure you want to delete this request? This action cannot be undone.")) return;
+        setDeletingId(id);
+        try {
+            await onDelete(id);
+        } finally {
+            setDeletingId(null);
+        }
+    };
 
     const renderValue = (v: any) => {
         if (v === null || v === undefined || v === "")
@@ -70,11 +94,13 @@ export function FormResponseViewer<
         return String(v);
     };
 
-    const filtered = responses.filter((r: any) =>
-        Object.values(r).some((v) =>
-            String(v).toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
-    );
+    const filtered = responses.filter((r: any) => {
+        const term = searchTerm.toLowerCase();
+        const name = (r.fullName || r.firstName || "").toLowerCase();
+        const lastName = (r.lastName || "").toLowerCase();
+        const email = (r.email || "").toLowerCase();
+        return name.includes(term) || lastName.includes(term) || email.includes(term);
+    });
 
     if (isLoading)
         return (
@@ -93,7 +119,7 @@ export function FormResponseViewer<
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input
-                            placeholder="Search requests..."
+                            placeholder="Search by name or email..."
                             // FIXED: value={searchTerm || ""} prevents the "uncontrolled to controlled" error
                             value={searchTerm || ""}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -138,17 +164,31 @@ export function FormResponseViewer<
                                         </TableCell>
                                     ))}
                                     <TableCell className="text-right px-8">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="rounded-lg font-bold border-gray-300 hover:bg-black hover:text-white transition-all shadow-sm"
-                                            onClick={() =>
-                                                setSelectedResponse(r)
-                                            }
-                                        >
-                                            <Eye className="h-3.5 w-3.5 mr-2" />
-                                            View Details
-                                        </Button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="rounded-lg font-bold border-gray-300 hover:bg-black hover:text-white transition-all shadow-sm"
+                                                onClick={() =>
+                                                    setSelectedResponse(r)
+                                                }
+                                            >
+                                                <Eye className="h-3.5 w-3.5 mr-2" />
+                                                View Details
+                                            </Button>
+                                            {onDelete && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-lg font-bold border-red-200 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                                    onClick={() => handleDelete(r.id)}
+                                                    disabled={deletingId === r.id}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                                    {deletingId === r.id ? "Deleting..." : "Delete"}
+                                                </Button>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -175,7 +215,6 @@ export function FormResponseViewer<
                                 Detailed Project Brief
                             </DialogTitle>
                             <p className="text-gray-400 text-xs mt-2 font-mono uppercase tracking-widest">
-                                ID: {selectedResponse?.id} •{" "}
                                 {selectedResponse?.createdAt &&
                                     format(
                                         new Date(selectedResponse.createdAt),
@@ -297,8 +336,8 @@ export function FormResponseViewer<
                                                 >
                                                     <FileText className="h-5 w-5 text-blue-500" />
                                                     <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-gray-800">
-                                                            Design File {i + 1}
+                                                        <span className="text-xs font-bold text-gray-800 truncate max-w-[200px]">
+                                                            {getFileNameFromUrl(url)}
                                                         </span>
                                                         <span className="text-[10px] text-gray-400">
                                                             Download Raw

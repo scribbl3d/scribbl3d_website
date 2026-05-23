@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendAdminNotification } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +25,21 @@ export async function POST(request: Request) {
         userId,
       },
     });
+
+    // Fire-and-forget admin email notification
+    sendAdminNotification({
+      type: "personalise-response",
+      details: {
+        "Name": contactDetails?.name || "—",
+        "Email": contactDetails?.email || "—",
+        "Phone": contactDetails?.phone || "—",
+        "Aware of 3D Printing": isAware ? "Yes" : "No",
+        "Categories": Array.isArray(categories) ? categories.join(", ") : String(categories || "—"),
+        "Statue Details": statueDetails || "—",
+        "Want More Info": wantMore ? "Yes" : "No",
+      },
+    }).catch((err) => console.error("[Admin Email] Personalise notification failed:", err));
+
     return NextResponse.json({ success: true, data: formResponse });
   } catch (error) {
     console.error("Failed to create personalise form response:", error);

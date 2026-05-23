@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
     ArrowLeft,
-    Building2,
     ClipboardList,
     Eye,
     ListChecks,
@@ -237,7 +236,6 @@ export default function PersonaliseResponsesPage() {
                                 Personalise Product Response
                             </DialogTitle>
                             <p className="text-gray-400 text-xs mt-2 font-mono uppercase tracking-widest">
-                                ID: {selectedResponse?.id} •{" "}
                                 {selectedResponse?.createdAt &&
                                     format(
                                         new Date(selectedResponse.createdAt),
@@ -269,11 +267,6 @@ export default function PersonaliseResponsesPage() {
                                         label="Phone Number"
                                         value={selectedResponse?.phone}
                                         icon={Phone}
-                                    />
-                                    <DetailItem
-                                        label="User ID"
-                                        value={selectedResponse?.userId}
-                                        icon={Building2}
                                     />
                                 </div>
                             </div>

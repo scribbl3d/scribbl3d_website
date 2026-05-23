@@ -1,5 +1,5 @@
 import { recordDiscountUsage } from "@/app/cart/utils/validateDiscountEligibility";
-import { sendOrderConfirmation } from "@/lib/email/index";
+import { sendOrderConfirmation, sendAdminNotification } from "@/lib/email/index";
 import { mapOrderToEmailData } from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
@@ -177,6 +177,36 @@ export async function POST(req: NextRequest) {
             } else {
                 console.log("[Email] Skipping email - no user email found");
             }
+
+            // Fire-and-forget admin email notification for confirmed order
+            const orderItems = Array.isArray(updatedOrder.items) ? updatedOrder.items as any[] : [];
+            const shippingAddr = updatedOrder.shippingAddress as any;
+            sendAdminNotification({
+                type: "order-confirmed",
+                details: {
+                    "Order ID": `#${updatedOrder.id.slice(-8).toUpperCase()}`,
+                    "Customer Name": updatedOrder.user?.name || shippingAddr?.name || "—",
+                    "Customer Email": updatedOrder.user?.email || "—",
+                    "Phone": shippingAddr?.phone || "—",
+                    "Payment Method": updatedOrder.paymentMethod || "—",
+                    "Subtotal": `₹${updatedOrder.subtotal}`,
+                    "Discount": updatedOrder.discountAmount ? `₹${updatedOrder.discountAmount} (${updatedOrder.discountCode || ""})` : "—",
+                    "Shipping": `₹${updatedOrder.shippingPrice} (${updatedOrder.shippingMode || "Surface"})`,
+                    "Tax": `₹${updatedOrder.tax || 0}`,
+                    "Total Amount": `₹${updatedOrder.totalAmount}`,
+                    "Shipping Address": shippingAddr
+                        ? `${shippingAddr.name}, ${shippingAddr.line1}${shippingAddr.line2 ? ", " + shippingAddr.line2 : ""}, ${shippingAddr.city}, ${shippingAddr.state} - ${shippingAddr.pincode}`
+                        : "—",
+                },
+                subItems: orderItems.map((item: any) => ({
+                    "Item": item.name || "—",
+                    "Type": item.itemType || "—",
+                    "Quantity": item.quantity || 1,
+                    "Price": `₹${item.price || 0}`,
+                    "Size": item.size,
+                    "Color": item.color,
+                })),
+            }).catch((err) => console.error("[Admin Email] Order confirmed notification failed:", err));
 
             return NextResponse.json({ success: true });
         }

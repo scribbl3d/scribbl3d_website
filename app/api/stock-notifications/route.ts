@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { sendAdminNotification } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,19 @@ export async function POST(request: NextRequest) {
                 name: name?.trim() || null,
             },
         });
+
+        // Fire-and-forget admin email notification
+        sendAdminNotification({
+            type: "stock-notification",
+            details: {
+                "Customer Name": name?.trim() || "—",
+                "Customer Email": email || "—",
+                "Customer Phone": phoneClean || "—",
+                "Product Name": productName || "—",
+                "Product Type": productType || "prebuilt",
+                "Variant": variantLabel || "—",
+            },
+        }).catch((err) => console.error("[Admin Email] Stock notification email failed:", err));
 
         return NextResponse.json(
             { success: true, notification },

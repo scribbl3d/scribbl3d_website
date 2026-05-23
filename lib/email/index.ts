@@ -10,6 +10,10 @@ export type {
     OrderItem,
     ShipmentEmailData,
 } from "./templates/types";
+export type { AdminNotificationType } from "./templates/adminNotification";
+
+// Templates
+export { adminNotificationTemplate } from "./templates/adminNotification";
 
 // Templates
 export { orderCancelledTemplate } from "./templates/orderCancelled";
@@ -26,11 +30,15 @@ import { orderCancelledTemplate } from "./templates/orderCancelled";
 import { orderConfirmationTemplate } from "./templates/orderConfirmation";
 import { orderDeliveredTemplate } from "./templates/orderDelivered";
 import { orderShippedTemplate } from "./templates/orderShipped";
+import { adminNotificationTemplate } from "./templates/adminNotification";
+import type { AdminNotificationType } from "./templates/adminNotification";
 import type {
     CancelEmailData,
     OrderEmailData,
     ShipmentEmailData,
 } from "./templates/types";
+
+const ADMIN_NOTIFICATION_EMAIL = "logistics.scribbl3d@gmail.com";
 
 /**
  * Send order confirmation email after successful payment
@@ -73,5 +81,34 @@ export async function sendOrderCancelled(data: CancelEmailData) {
         to: data.customerEmail,
         subject: `Order Cancelled — #${data.orderId.slice(-8).toUpperCase()}`,
         html: orderCancelledTemplate(data),
+    });
+}
+
+/**
+ * Send admin notification email to logistics when a new item
+ * appears in any admin dashboard table.
+ */
+export async function sendAdminNotification({
+    type,
+    details,
+    subItems,
+}: {
+    type: AdminNotificationType;
+    details: Record<string, string | number | null | undefined>;
+    subItems?: Array<Record<string, string | number | null | undefined>>;
+}) {
+    const subjectMap: Record<AdminNotificationType, string> = {
+        "order-confirmed": "New Order Confirmed",
+        "personalise-response": "New Personalise Form Response",
+        "form3d-response": "New 3D Printing Request",
+        "prototyping-request": "New Prototyping Request",
+        "small-batch-manufacturing": "New Small Batch Manufacturing Request",
+        "stock-notification": "New Out-of-Stock Notification",
+    };
+
+    return sendEmail({
+        to: ADMIN_NOTIFICATION_EMAIL,
+        subject: `[Scribbl3D Admin] ${subjectMap[type]}`,
+        html: adminNotificationTemplate({ type, details, subItems }),
     });
 }

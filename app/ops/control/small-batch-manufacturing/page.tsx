@@ -31,6 +31,7 @@ import {
     Phone,
     Search,
     Settings,
+    Trash2,
     User,
 } from "lucide-react";
 import Link from "next/link";
@@ -80,6 +81,7 @@ export default function SmallBatchManufacturingPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedResponse, setSelectedResponse] =
         useState<SmallBatchRequest | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useMarkViewed("small-batch-manufacturing");
 
@@ -101,11 +103,29 @@ export default function SmallBatchManufacturingPage() {
         }
     };
 
-    const filteredRequests = requests.filter((r) =>
-        [r.fullName, r.email, r.company].some((v) =>
-            v?.toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
-    );
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this request? This action cannot be undone.")) return;
+        setDeletingId(id);
+        try {
+            const res = await fetch(`/api/small-batch-manufacturing/${id}`, {
+                method: "DELETE",
+            });
+            if (!res.ok) throw new Error("Failed to delete");
+            setRequests((prev) => prev.filter((r) => r.id !== id));
+        } catch (err) {
+            console.error("Delete failed:", err);
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const filteredRequests = requests.filter((r) => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (r.fullName || "").toLowerCase().includes(term) ||
+            (r.email || "").toLowerCase().includes(term)
+        );
+    });
 
     if (isLoading)
         return (
@@ -200,17 +220,29 @@ export default function SmallBatchManufacturingPage() {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-right px-8">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="rounded-lg font-black text-[10px] uppercase tracking-widest border-gray-300 hover:bg-black hover:text-white"
-                                                onClick={() =>
-                                                    setSelectedResponse(r)
-                                                }
-                                            >
-                                                <Eye className="h-3.5 w-3.5 mr-2" />{" "}
-                                                View Details
-                                            </Button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-lg font-black text-[10px] uppercase tracking-widest border-gray-300 hover:bg-black hover:text-white"
+                                                    onClick={() =>
+                                                        setSelectedResponse(r)
+                                                    }
+                                                >
+                                                    <Eye className="h-3.5 w-3.5 mr-2" />{" "}
+                                                    View Details
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-lg font-bold border-red-200 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                                    onClick={() => handleDelete(r.id)}
+                                                    disabled={deletingId === r.id}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                                    {deletingId === r.id ? "Deleting..." : "Delete"}
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -231,7 +263,6 @@ export default function SmallBatchManufacturingPage() {
                             Manufacturing Brief
                         </DialogTitle>
                         <p className="text-gray-400 text-[10px] mt-2 font-mono uppercase tracking-[0.3em]">
-                            REF: {selectedResponse?.id} •{" "}
                             {selectedResponse?.createdAt &&
                                 format(
                                     new Date(selectedResponse.createdAt),

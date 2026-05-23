@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { sendAdminNotification } from "@/lib/email";
 
 /* ───────────── Cloudinary Config ───────────── */
 cloudinary.config({
@@ -80,24 +81,55 @@ export async function POST(req: Request) {
                   : null;
 
         /* ───────────── Prisma Database Entry ───────────── */
+        const email = (formData.get("email") as string) || "";
+        const phone = (formData.get("phone") as string) || "";
+        const address = (formData.get("address") as string) || "";
+        const company = (formData.get("company") as string) || null;
+        const projectType = (formData.get("projectType") as string) || "";
+        const technology = (formData.get("technology") as string) || "";
+        const materialVal = (formData.get("material") as string) || "";
+        const materialSubtype = (formData.get("subtype") as string) || null;
+        const specialRequirements = (formData.get("notes") as string) || null;
+
         const response = await prisma.prototypingRequest.create({
             data: {
-                projectType: (formData.get("projectType") as string) || "",
-                technology: (formData.get("technology") as string) || "",
-                material: (formData.get("material") as string) || "",
-                materialSubtype: (formData.get("subtype") as string) || null,
+                projectType,
+                technology,
+                material: materialVal,
+                materialSubtype,
                 colors: colors,
                 designFiles: designFiles,
                 quantityType: quantityType || null,
                 quantityNumber: quantityNumber,
-                specialRequirements: (formData.get("notes") as string) || null,
+                specialRequirements,
                 fullName: fullName,
-                email: (formData.get("email") as string) || "",
-                phone: (formData.get("phone") as string) || "",
-                address: (formData.get("address") as string) || "",
-                company: (formData.get("company") as string) || null,
+                email,
+                phone,
+                address,
+                company,
             },
         });
+
+        // Fire-and-forget admin email notification
+        sendAdminNotification({
+            type: "prototyping-request",
+            details: {
+                "Name": fullName || "—",
+                "Email": email || "—",
+                "Phone": phone || "—",
+                "Company": company,
+                "Address": address || "—",
+                "Project Type": projectType || "—",
+                "Technology": technology || "—",
+                "Material": materialVal || "—",
+                "Material Subtype": materialSubtype,
+                "Colors": Array.isArray(colors) ? colors.join(", ") : "—",
+                "Quantity Type": quantityType || "—",
+                "Quantity": quantityNumber != null ? String(quantityNumber) : "—",
+                "Special Requirements": specialRequirements,
+                "Design Files": designFiles.length > 0 ? `${designFiles.length} file(s) uploaded` : "None",
+            },
+        }).catch((err) => console.error("[Admin Email] Prototyping notification failed:", err));
 
         return NextResponse.json({ success: true, data: response });
     } catch (error) {

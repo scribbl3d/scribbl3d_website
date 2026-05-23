@@ -1,5 +1,8 @@
 import { sendEmail as sesEmail } from "@/lib/email/sendEmail";
 
+export { sendAdminNotification } from "@/lib/email/index";
+export type { AdminNotificationType } from "@/lib/email/index";
+
 // Default sender email
 const DEFAULT_FROM_EMAIL =
     process.env.ZEPTOMAIL_FROM_EMAIL || "supplychain@scribbl3d.com";
