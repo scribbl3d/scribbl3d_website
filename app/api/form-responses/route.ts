@@ -23,7 +23,7 @@ async function uploadToCloudinary(
                 {
                     folder: folder,
                     resource_type: "raw",
-                    public_id: file.name.replace(/\.[^/.]+$/, ""),
+                    public_id: file.name,
                     use_filename: true,
                     unique_filename: false,
                 },

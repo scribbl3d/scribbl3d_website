@@ -58,7 +58,8 @@ export async function POST(req: Request) {
             const file = files[i];
             if (file instanceof File && file.size > 0) {
                 // Construct custom name: fullname_datetime_index
-                const customFileName = `${cleanName}_${timestamp}_${i + 1}`;
+                const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+                const customFileName = `${cleanName}_${timestamp}_${i + 1}${ext}`;
 
                 const url = await uploadToCloudinary(file, customFileName);
                 designFiles.push(url);

@@ -89,7 +89,8 @@ export async function POST(request: Request) {
                     quantity: specs.quantity,
                 });
 
-                const customFileName = `${cleanName}_${timestamp}_batch_${i + 1}`;
+                const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
+                const customFileName = `${cleanName}_${timestamp}_batch_${i + 1}${ext}`;
                 const fileUrl = await uploadToCloudinary(file, customFileName);
 
                 if (fileUrl) {
