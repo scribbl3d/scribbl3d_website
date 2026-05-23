@@ -54,10 +54,15 @@ function NotifyMeModal({
 
     const handleSubmit = async () => {
         if (!email.trim() || !phone.trim()) {
-            toast({
-                title: "Email and phone are required",
-                variant: "destructive",
-            });
+            toast({ title: "Email and phone are required", variant: "destructive" });
+            return;
+        }
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim())) {
+            toast({ title: "Please enter a valid email address", variant: "destructive" });
+            return;
+        }
+        if (!/^\d{10}$/.test(phone.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, ""))) {
+            toast({ title: "Please enter a valid 10-digit phone number", variant: "destructive" });
             return;
         }
         setSubmitting(true);
@@ -231,10 +236,15 @@ function VariantNotifyModal({
 
     const handleSubmit = async () => {
         if (!email.trim() || !phone.trim()) {
-            toast({
-                title: "Email and phone are required",
-                variant: "destructive",
-            });
+            toast({ title: "Email and phone are required", variant: "destructive" });
+            return;
+        }
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.trim())) {
+            toast({ title: "Please enter a valid email address", variant: "destructive" });
+            return;
+        }
+        if (!/^\d{10}$/.test(phone.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, ""))) {
+            toast({ title: "Please enter a valid 10-digit phone number", variant: "destructive" });
             return;
         }
         setSubmitting(true);

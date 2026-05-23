@@ -25,7 +25,9 @@ export { orderShippedTemplate } from "./templates/orderShipped";
 // Convenience functions — use these in your API routes
 // ─────────────────────────────────────────────────
 
+import { generateInvoicePdfBuffer } from "@/lib/invoice/generateInvoicePdf";
 import { sendEmail } from "./sendEmail";
+import type { EmailAttachment } from "./sendEmail-zeptomail";
 import { orderCancelledTemplate } from "./templates/orderCancelled";
 import { orderConfirmationTemplate } from "./templates/orderConfirmation";
 import { orderDeliveredTemplate } from "./templates/orderDelivered";
@@ -41,13 +43,35 @@ import type {
 const ADMIN_NOTIFICATION_EMAIL = "logistics.scribbl3d@gmail.com";
 
 /**
- * Send order confirmation email after successful payment
+ * Send order confirmation email after successful payment.
+ * Generates and attaches the Tax Invoice PDF.
  */
 export async function sendOrderConfirmation(data: OrderEmailData) {
+    let attachments: EmailAttachment[] | undefined;
+
+    try {
+        const { buffer, invoiceNumber } = await generateInvoicePdfBuffer(data.orderId);
+        attachments = [
+            {
+                content: buffer.toString("base64"),
+                mime_type: "application/pdf",
+                name: `Invoice_${invoiceNumber.replace(/\//g, "_")}.pdf`,
+            },
+        ];
+        console.log(`[Email] Invoice PDF generated for order ${data.orderId} (${invoiceNumber})`);
+    } catch (err: any) {
+        console.error(
+            `[Email] Failed to generate invoice PDF for order ${data.orderId}:`,
+            err?.message || err,
+        );
+        // Continue sending the email without attachment
+    }
+
     return sendEmail({
         to: data.customerEmail,
-        subject: `Order Confirmed — #${data.orderId.slice(-8).toUpperCase()}`,
+        subject: `Order Confirmed — Tax Invoice #${data.orderId.slice(-8).toUpperCase()}`,
         html: orderConfirmationTemplate(data),
+        attachments,
     });
 }
 
@@ -97,6 +121,8 @@ export async function sendAdminNotification({
     details: Record<string, string | number | null | undefined>;
     subItems?: Array<Record<string, string | number | null | undefined>>;
 }) {
+    console.log(`[Admin Email] sendAdminNotification called — type: ${type}, to: ${ADMIN_NOTIFICATION_EMAIL}`);
+
     const subjectMap: Record<AdminNotificationType, string> = {
         "order-confirmed": "New Order Confirmed",
         "personalise-response": "New Personalise Form Response",
@@ -106,9 +132,22 @@ export async function sendAdminNotification({
         "stock-notification": "New Out-of-Stock Notification",
     };
 
-    return sendEmail({
-        to: ADMIN_NOTIFICATION_EMAIL,
-        subject: `[Scribbl3D Admin] ${subjectMap[type]}`,
-        html: adminNotificationTemplate({ type, details, subItems }),
-    });
+    try {
+        const subject = `[Scribbl3D Admin] ${subjectMap[type]}`;
+        console.log(`[Admin Email] Generating template for "${subject}"...`);
+        const html = adminNotificationTemplate({ type, details, subItems });
+        console.log(`[Admin Email] Template generated (${html.length} chars). Calling sendEmail...`);
+
+        const result = await sendEmail({
+            to: ADMIN_NOTIFICATION_EMAIL,
+            subject,
+            html,
+        });
+
+        console.log(`[Admin Email] sendEmail returned:`, JSON.stringify(result));
+        return result;
+    } catch (err) {
+        console.error(`[Admin Email] sendAdminNotification THREW:`, err);
+        throw err;
+    }
 }

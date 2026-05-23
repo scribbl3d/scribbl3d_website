@@ -17,11 +17,18 @@ const client = token ? new SendMailClient({ url, token }) : null;
 // Types
 // ─────────────────────────────────────────────
 
+export interface EmailAttachment {
+  content: string;   // base64-encoded file content
+  mime_type: string;  // e.g. "application/pdf"
+  name: string;       // filename e.g. "Invoice_SCR_2025-26_000001.pdf"
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }
 
 interface ZeptoMailResponse {
@@ -34,7 +41,7 @@ interface ZeptoMailResponse {
 // Core send function
 // ─────────────────────────────────────────────
 
-export async function sendEmail({ to, subject, html, text }: EmailOptions) {
+export async function sendEmail({ to, subject, html, text, attachments }: EmailOptions) {
   try {
     if (!client) {
       console.error("❌ Email service not configured: ZeptoMail client is not initialized");
@@ -71,6 +78,7 @@ export async function sendEmail({ to, subject, html, text }: EmailOptions) {
       subject: subject,
       htmlbody: html,
       textbody: text || stripHtml(html),
+      ...(attachments?.length ? { attachments: attachments } : {}),
     }) as ZeptoMailResponse;
 
     console.log(`✅ [Email] Sent "${subject}" to ${to} (Response: ${JSON.stringify(response)})`);

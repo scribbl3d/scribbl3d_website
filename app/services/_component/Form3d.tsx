@@ -422,11 +422,14 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
                     return !value ? "Last name is required" : "";
                 case "email":
                     if (!value) return "Email is required";
-                    if (!/\S+@\S+\.\S+/.test(value as string))
+                    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value as string))
                         return "Please enter a valid email";
                     return "";
                 case "phone":
-                    return !value ? "Phone number is required" : "";
+                    if (!value) return "Phone number is required";
+                    if (!/^\d{10}$/.test(String(value).replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, "")))
+                        return "Please enter a valid 10-digit phone number";
+                    return "";
                 case "address":
                     return !value ? "Address is required" : "";
                 default:

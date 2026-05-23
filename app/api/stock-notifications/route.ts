@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { sendAdminNotification } from "@/lib/email";
+import { sendAdminNotification } from "@/lib/email/index";
+import { sanitizeWithLimit, sanitizeOptional, isRateLimited } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -19,17 +20,25 @@ interface ProductLookup {
    ============================================================================ */
 export async function POST(request: NextRequest) {
     try {
+        // Rate limit by IP
+        const ip = request.headers.get("x-forwarded-for") || "unknown";
+        if (isRateLimited(`stock:${ip}`, 10, 60_000)) {
+            return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+        }
+
         const body = await request.json();
         const {
             productId,
-            productName,
             productType,
-            email,
-            phone,
-            name,
             variantId,
-            variantLabel,
         } = body;
+
+        // Sanitize string inputs
+        const productName = sanitizeWithLimit(body.productName, 300);
+        const email = String(body.email || "").trim().toLowerCase();
+        const phone = String(body.phone || "").trim();
+        const name = sanitizeOptional(body.name, 200);
+        const variantLabel = sanitizeOptional(body.variantLabel, 200);
 
         if (!productId || !productName || !email || !phone) {
             return NextResponse.json(
@@ -40,7 +49,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             return NextResponse.json(
                 { error: "Invalid email address" },
@@ -48,10 +57,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const phoneClean = phone.replace(/\D/g, "");
+        const phoneClean = phone.replace(/\D/g, "").slice(-10);
         if (phoneClean.length < 10) {
             return NextResponse.json(
-                { error: "Invalid phone number" },
+                { error: "Invalid phone number (10 digits required)" },
                 { status: 400 },
             );
         }
@@ -86,6 +95,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Fire-and-forget admin email notification
+        console.log("[Admin Email] Attempting to send Stock Notification admin email...");
         sendAdminNotification({
             type: "stock-notification",
             details: {
@@ -96,7 +106,8 @@ export async function POST(request: NextRequest) {
                 "Product Type": productType || "prebuilt",
                 "Variant": variantLabel || "—",
             },
-        }).catch((err) => console.error("[Admin Email] Stock notification email failed:", err));
+        }).then((res) => console.log("[Admin Email] Stock notification result:", JSON.stringify(res)))
+          .catch((err) => console.error("[Admin Email] Stock notification email failed:", err));
 
         return NextResponse.json(
             { success: true, notification },

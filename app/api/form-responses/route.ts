@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
-import { sendAdminNotification } from "@/lib/email";
+import { sendAdminNotification } from "@/lib/email/index";
+import {
+    sanitizeWithLimit, sanitizeOptional,
+    isValidEmail, normalizeEmail, isValidPhone, normalizePhone,
+    checkRequired, isRateLimited, isValidDesignFile,
+} from "@/lib/validation";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -47,42 +52,76 @@ export async function POST(request: Request) {
     try {
         const formData = await request.formData();
 
-        // Handle file uploads to Cloudinary
+        // Rate limit by IP
+        const ip = request.headers.get("x-forwarded-for") || "unknown";
+        if (isRateLimited(`form3d:${ip}`, 5, 60_000)) {
+            return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+        }
+
+        // Extract and sanitize text fields first for validation
+        const firstName = sanitizeWithLimit((formData.get("firstName") as string) || "", 100);
+        const lastName = sanitizeWithLimit((formData.get("lastName") as string) || "", 100);
+        const email = ((formData.get("email") as string) || "").trim().toLowerCase();
+        const phone = ((formData.get("phone") as string) || "").trim();
+        const requirement = sanitizeWithLimit((formData.get("requirement") as string) || "", 2000);
+        const fileExtension = sanitizeWithLimit((formData.get("fileExtension") as string) || "", 50);
+
+        // Validate required fields
+        const reqError = checkRequired([
+            { value: firstName, name: "First Name" },
+            { value: lastName, name: "Last Name" },
+            { value: email, name: "Email" },
+            { value: phone, name: "Phone" },
+            { value: requirement, name: "Requirement" },
+            { value: fileExtension, name: "File Extension" },
+        ]);
+        if (reqError) {
+            return NextResponse.json({ error: reqError }, { status: 400 });
+        }
+
+        if (!isValidEmail(email)) {
+            return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+        }
+        if (!isValidPhone(phone)) {
+            return NextResponse.json({ error: "Invalid phone number (10 digits required)" }, { status: 400 });
+        }
+
+        // Validate uploaded files
         const fileReference = formData.get("fileReference");
-        let fileReferenceUrl: string | null = null;
-
         if (fileReference instanceof File && fileReference.size > 0) {
-            fileReferenceUrl = await uploadToCloudinary(
-                fileReference,
-                "form3d-requests/reference",
-            );
+            const fileCheck = isValidDesignFile(fileReference);
+            if (!fileCheck.valid) {
+                return NextResponse.json({ error: `Reference file: ${fileCheck.error}` }, { status: 400 });
+            }
         }
-
         const additionalFile = formData.get("additionalFile");
-        let additionalFileUrl: string | null = null;
-
         if (additionalFile instanceof File && additionalFile.size > 0) {
-            additionalFileUrl = await uploadToCloudinary(
-                additionalFile,
-                "form3d-requests/additional",
-            );
+            const fileCheck = isValidDesignFile(additionalFile);
+            if (!fileCheck.valid) {
+                return NextResponse.json({ error: `Additional file: ${fileCheck.error}` }, { status: 400 });
+            }
         }
 
-        const quantityStr = formData.get("quantity") as string;
+        // Upload files to Cloudinary
+        let fileReferenceUrl: string | null = null;
+        if (fileReference instanceof File && fileReference.size > 0) {
+            fileReferenceUrl = await uploadToCloudinary(fileReference, "form3d-requests/reference");
+        }
+        let additionalFileUrl: string | null = null;
+        if (additionalFile instanceof File && additionalFile.size > 0) {
+            additionalFileUrl = await uploadToCloudinary(additionalFile, "form3d-requests/additional");
+        }
 
-        const firstName = (formData.get("firstName") as string) || "";
-        const lastName = (formData.get("lastName") as string) || "";
-        const email = (formData.get("email") as string) || "";
-        const phone = (formData.get("phone") as string) || "";
-        const address = (formData.get("address") as string) || "";
-        const company = (formData.get("company") as string) || null;
-        const requirement = (formData.get("requirement") as string) || "";
-        const fileExtension = (formData.get("fileExtension") as string) || "";
-        const productionType = (formData.get("productionType") as string) || "";
-        const printingTechnology = (formData.get("printingTechnology") as string) || null;
-        const materialFamily = (formData.get("materialFamily") as string) || null;
-        const material = (formData.get("material") as string) || null;
-        const color = (formData.get("color") as string) || null;
+        // Sanitize remaining fields
+        const address = sanitizeOptional((formData.get("address") as string), 500) || "";
+        const company = sanitizeOptional((formData.get("company") as string), 200);
+        const productionType = sanitizeOptional((formData.get("productionType") as string), 100) || "";
+        const printingTechnology = sanitizeOptional((formData.get("printingTechnology") as string), 100);
+        const materialFamily = sanitizeOptional((formData.get("materialFamily") as string), 100);
+        const material = sanitizeOptional((formData.get("material") as string), 100);
+        const color = sanitizeOptional((formData.get("color") as string), 100);
+        const quantityStr = (formData.get("quantity") as string) || "";
+        const quantity = quantityStr ? Number.parseInt(quantityStr, 10) : null;
 
         const formResponse = await prisma.form3DResponse.create({
             data: {
@@ -91,21 +130,22 @@ export async function POST(request: Request) {
                 requirement,
                 fileExtension,
                 productionType,
-                quantity: quantityStr ? parseInt(quantityStr) : null,
+                quantity: Number.isNaN(quantity as number) ? null : quantity,
                 printingTechnology,
                 materialFamily,
                 material,
                 color,
                 firstName,
                 lastName,
-                email,
-                phone,
+                email: normalizeEmail(email),
+                phone: normalizePhone(phone),
                 address,
                 company,
             },
         });
 
         // Fire-and-forget admin email notification
+        console.log("[Admin Email] Attempting to send Form3D admin notification...");
         sendAdminNotification({
             type: "form3d-response",
             details: {
@@ -125,7 +165,8 @@ export async function POST(request: Request) {
                 "Reference File": fileReferenceUrl ? "Attached" : "None",
                 "Additional File": additionalFileUrl ? "Attached" : "None",
             },
-        }).catch((err) => console.error("[Admin Email] Form3D notification failed:", err));
+        }).then((res) => console.log("[Admin Email] Form3D notification result:", JSON.stringify(res)))
+          .catch((err) => console.error("[Admin Email] Form3D notification failed:", err));
 
         return NextResponse.json(formResponse);
     } catch (error) {

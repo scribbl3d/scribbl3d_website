@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
-import { sendAdminNotification } from "@/lib/email";
+import { sendAdminNotification } from "@/lib/email/index";
+import {
+    sanitizeWithLimit, sanitizeOptional, sanitizeStringArray, safeJsonParse,
+    isValidEmail, normalizeEmail, isValidPhone, normalizePhone,
+    checkRequired, isRateLimited, isValidDesignFile,
+} from "@/lib/validation";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -43,12 +48,37 @@ export async function POST(request: Request) {
     try {
         const formData = await request.formData();
 
-        const fullName = formData.get("fullName") as string;
-        const email = formData.get("email") as string;
-        const phone = formData.get("phone") as string;
-        const address = formData.get("address") as string;
-        const company = (formData.get("company") as string) || null;
+        // Rate limit by IP
+        const ip = request.headers.get("x-forwarded-for") || "unknown";
+        if (isRateLimited(`smallbatch:${ip}`, 5, 60_000)) {
+            return NextResponse.json({ success: false, error: "Too many requests. Please try again later." }, { status: 429 });
+        }
+
+        // Extract and sanitize contact fields
+        const fullName = sanitizeWithLimit((formData.get("fullName") as string) || "", 200);
+        const email = ((formData.get("email") as string) || "").trim().toLowerCase();
+        const phone = ((formData.get("phone") as string) || "").trim();
+        const address = sanitizeWithLimit((formData.get("address") as string) || "", 500);
+        const company = sanitizeOptional((formData.get("company") as string), 200);
         const applyToAll = formData.get("applyToAll") === "true";
+
+        // Validate required fields
+        const reqError = checkRequired([
+            { value: fullName, name: "Full Name" },
+            { value: email, name: "Email" },
+            { value: phone, name: "Phone" },
+            { value: address, name: "Address" },
+        ]);
+        if (reqError) {
+            return NextResponse.json({ success: false, error: reqError }, { status: 400 });
+        }
+
+        if (!isValidEmail(email)) {
+            return NextResponse.json({ success: false, error: "Invalid email address" }, { status: 400 });
+        }
+        if (!isValidPhone(phone)) {
+            return NextResponse.json({ success: false, error: "Invalid phone number (10 digits required)" }, { status: 400 });
+        }
 
         console.log("\n========================================");
         console.log("📥 FORM SUBMISSION RECEIVED");
@@ -62,9 +92,13 @@ export async function POST(request: Request) {
             .split(".")[0];
         const cleanName = fullName.trim().replace(/\s+/g, "_");
 
-        const productCount = parseInt(
-            (formData.get("productCount") as string) || "0",
+        const productCount = Number.parseInt(
+            (formData.get("productCount") as string) || "0", 10,
         );
+
+        if (productCount <= 0 || productCount > 50) {
+            return NextResponse.json({ success: false, error: "Invalid product count (1-50)" }, { status: 400 });
+        }
 
         console.log(`\nProcessing ${productCount} products...\n`);
 
@@ -79,7 +113,16 @@ export async function POST(request: Request) {
             console.log(`Specs received (raw): ${specsRaw}`);
 
             if (file && file.size > 0 && specsRaw) {
-                const specs = JSON.parse(specsRaw);
+                // Validate file
+                const fileCheck = isValidDesignFile(file);
+                if (!fileCheck.valid) {
+                    return NextResponse.json({ success: false, error: `Product ${i + 1} file: ${fileCheck.error}` }, { status: 400 });
+                }
+
+                const specs = safeJsonParse<Record<string, any> | null>(specsRaw, null);
+                if (!specs || typeof specs !== "object") {
+                    return NextResponse.json({ success: false, error: `Product ${i + 1}: invalid specification data` }, { status: 400 });
+                }
 
                 console.log(`✅ Parsed specs:`, {
                     tech: specs.tech,
@@ -97,13 +140,13 @@ export async function POST(request: Request) {
                 if (fileUrl) {
                     const productData = {
                         designFile: fileUrl,
-                        quantity: parseInt(specs.quantity) || 0,
-                        notes: specs.notes || "",
-                        technology: specs.tech,
-                        material: specs.material,
-                        materialSubtype: specs.subtype || null,
-                        colorMode: specs.colorMode,
-                        colors: specs.colors || [],
+                        quantity: Number.parseInt(String(specs.quantity), 10) || 0,
+                        notes: sanitizeOptional(specs.notes, 2000) || "",
+                        technology: sanitizeWithLimit(specs.tech || "", 100),
+                        material: sanitizeWithLimit(specs.material || "", 100),
+                        materialSubtype: sanitizeOptional(specs.subtype, 100),
+                        colorMode: sanitizeWithLimit(specs.colorMode || "", 50),
+                        colors: sanitizeStringArray(specs.colors),
                     };
 
                     console.log(`📦 Data to be saved to DB:`, productData);
@@ -128,8 +171,8 @@ export async function POST(request: Request) {
         const result = await prisma.smallBatchRequest.create({
             data: {
                 fullName,
-                email,
-                phone,
+                email: normalizeEmail(email),
+                phone: normalizePhone(phone),
                 address,
                 company,
                 products: {
@@ -156,6 +199,7 @@ export async function POST(request: Request) {
         console.log(`\n========================================\n`);
 
         // Fire-and-forget admin email notification
+        console.log("[Admin Email] Attempting to send Small Batch admin notification...");
         sendAdminNotification({
             type: "small-batch-manufacturing",
             details: {
@@ -176,7 +220,8 @@ export async function POST(request: Request) {
                 "Notes": p.notes || "—",
                 "Design File": p.designFile ? "Attached" : "None",
             })),
-        }).catch((err) => console.error("[Admin Email] Small batch notification failed:", err));
+        }).then((res) => console.log("[Admin Email] Small batch notification result:", JSON.stringify(res)))
+          .catch((err) => console.error("[Admin Email] Small batch notification failed:", err));
 
         return NextResponse.json({ success: true, data: result });
     } catch (error: any) {

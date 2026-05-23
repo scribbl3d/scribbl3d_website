@@ -283,9 +283,11 @@ export default function SmallBatchManufacturingForm({
                 if (!contact.fullName)
                     errs["fullName"] = "Full name is required";
                 if (!contact.email) errs["email"] = "Email is required";
-                else if (!/\S+@\S+\.\S+/.test(contact.email))
+                else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contact.email))
                     errs["email"] = "Please enter a valid email";
                 if (!contact.phone) errs["phone"] = "Phone number is required";
+                else if (!/^\d{10}$/.test(contact.phone.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, "")))
+                    errs["phone"] = "Please enter a valid 10-digit phone number";
                 if (!contact.address) errs["address"] = "Address is required";
             }
         } else if (sameForAll === false) {
@@ -306,9 +308,11 @@ export default function SmallBatchManufacturingForm({
                 if (!contact.fullName)
                     errs["fullName"] = "Full name is required";
                 if (!contact.email) errs["email"] = "Email is required";
-                else if (!/\S+@\S+\.\S+/.test(contact.email))
+                else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(contact.email))
                     errs["email"] = "Please enter a valid email";
                 if (!contact.phone) errs["phone"] = "Phone number is required";
+                else if (!/^\d{10}$/.test(contact.phone.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, "")))
+                    errs["phone"] = "Please enter a valid 10-digit phone number";
                 if (!contact.address) errs["address"] = "Address is required";
             }
         }

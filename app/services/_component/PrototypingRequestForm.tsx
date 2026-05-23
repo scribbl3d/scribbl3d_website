@@ -317,9 +317,11 @@ export default function PrototypingRequestForm() {
         if (current === "contact") {
             if (!form.fullName) errs.fullName = "Full name is required";
             if (!form.email) errs.email = "Email is required";
-            else if (!/\S+@\S+\.\S+/.test(form.email))
+            else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email))
                 errs.email = "Please enter a valid email";
             if (!form.phone) errs.phone = "Phone number is required";
+            else if (!/^\d{10}$/.test(form.phone.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, "")))
+                errs.phone = "Please enter a valid 10-digit phone number";
             if (!form.address) errs.address = "Address is required";
         }
         return errs;

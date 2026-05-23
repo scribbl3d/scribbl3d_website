@@ -1,7 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
-import { sendAdminNotification } from "@/lib/email";
+import { sendAdminNotification } from "@/lib/email/index";
+import {
+    sanitizeWithLimit, sanitizeOptional, sanitizeStringArray, safeJsonParse,
+    isValidEmail, normalizeEmail, isValidPhone, normalizePhone,
+    checkRequired, isRateLimited, isValidDesignFile,
+} from "@/lib/validation";
 
 /* ───────────── Cloudinary Config ───────────── */
 cloudinary.config({
@@ -41,38 +46,71 @@ export async function POST(req: Request) {
     try {
         const formData = await req.formData();
 
-        // Extract basic info for renaming logic
-        const fullName = (formData.get("fullName") as string) || "Anonymous";
-        const cleanName = fullName.trim().replace(/\s+/g, "_"); // Replace spaces with underscores
+        // Rate limit by IP
+        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        if (isRateLimited(`prototyping:${ip}`, 5, 60_000)) {
+            return NextResponse.json({ success: false, error: "Too many requests. Please try again later." }, { status: 429 });
+        }
 
-        // Generate timestamp (YYYYMMDD_HHMMSS)
-        const timestamp = new Date()
-            .toISOString()
-            .replace(/[-:T]/g, "")
-            .split(".")[0];
+        // Extract and sanitize text fields
+        const fullName = sanitizeWithLimit((formData.get("fullName") as string) || "", 200);
+        const email = ((formData.get("email") as string) || "").trim().toLowerCase();
+        const phone = ((formData.get("phone") as string) || "").trim();
+        const address = sanitizeOptional((formData.get("address") as string), 500);
+        const company = sanitizeOptional((formData.get("company") as string), 200);
+        const projectType = sanitizeWithLimit((formData.get("projectType") as string) || "", 100);
+        const technology = sanitizeWithLimit((formData.get("technology") as string) || "", 100);
+        const materialVal = sanitizeWithLimit((formData.get("material") as string) || "", 100);
+        const materialSubtype = sanitizeOptional((formData.get("subtype") as string), 100);
+        const specialRequirements = sanitizeOptional((formData.get("notes") as string), 2000);
 
-        /* ───────────── Files & Renaming Logic ───────────── */
+        // Validate required fields
+        const reqError = checkRequired([
+            { value: fullName, name: "Full Name" },
+            { value: email, name: "Email" },
+            { value: phone, name: "Phone" },
+            { value: projectType, name: "Project Type" },
+            { value: technology, name: "Technology" },
+            { value: materialVal, name: "Material" },
+        ]);
+        if (reqError) {
+            return NextResponse.json({ success: false, error: reqError }, { status: 400 });
+        }
+
+        if (!isValidEmail(email)) {
+            return NextResponse.json({ success: false, error: "Invalid email address" }, { status: 400 });
+        }
+        if (!isValidPhone(phone)) {
+            return NextResponse.json({ success: false, error: "Invalid phone number (10 digits required)" }, { status: 400 });
+        }
+
+        // File renaming logic
+        const cleanName = fullName.trim().replace(/\s+/g, "_");
+        const timestamp = new Date().toISOString().replace(/[-:T]/g, "").split(".")[0];
+
+        /* ───────────── Files & Validation ───────────── */
         const files = formData.getAll("files") as File[];
         const designFiles: string[] = [];
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (file instanceof File && file.size > 0) {
-                // Construct custom name: fullname_datetime_index
+                const fileCheck = isValidDesignFile(file);
+                if (!fileCheck.valid) {
+                    return NextResponse.json({ success: false, error: `File ${i + 1}: ${fileCheck.error}` }, { status: 400 });
+                }
                 const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : "";
                 const customFileName = `${cleanName}_${timestamp}_${i + 1}${ext}`;
-
                 const url = await uploadToCloudinary(file, customFileName);
                 designFiles.push(url);
             }
         }
 
         /* ───────────── Data Parsing ───────────── */
-        const colors = JSON.parse((formData.get("colors") as string) || "[]");
-        const quantityType = formData.get("quantityType") as string;
+        const colors = sanitizeStringArray(safeJsonParse((formData.get("colors") as string), []));
+        const quantityType = sanitizeOptional((formData.get("quantityType") as string), 50);
         const quantityNumberRaw = formData.get("quantityNumber");
 
-        // Automation: If single unit, force count to 1. Else, parse input.
         const quantityNumber =
             quantityType === "single"
                 ? 1
@@ -81,36 +119,27 @@ export async function POST(req: Request) {
                   : null;
 
         /* ───────────── Prisma Database Entry ───────────── */
-        const email = (formData.get("email") as string) || "";
-        const phone = (formData.get("phone") as string) || "";
-        const address = (formData.get("address") as string) || "";
-        const company = (formData.get("company") as string) || null;
-        const projectType = (formData.get("projectType") as string) || "";
-        const technology = (formData.get("technology") as string) || "";
-        const materialVal = (formData.get("material") as string) || "";
-        const materialSubtype = (formData.get("subtype") as string) || null;
-        const specialRequirements = (formData.get("notes") as string) || null;
-
         const response = await prisma.prototypingRequest.create({
             data: {
                 projectType,
                 technology,
                 material: materialVal,
                 materialSubtype,
-                colors: colors,
-                designFiles: designFiles,
-                quantityType: quantityType || null,
-                quantityNumber: quantityNumber,
+                colors,
+                designFiles,
+                quantityType,
+                quantityNumber: Number.isNaN(quantityNumber as number) ? null : quantityNumber,
                 specialRequirements,
-                fullName: fullName,
-                email,
-                phone,
+                fullName,
+                email: normalizeEmail(email),
+                phone: normalizePhone(phone),
                 address,
                 company,
             },
         });
 
         // Fire-and-forget admin email notification
+        console.log("[Admin Email] Attempting to send Prototyping admin notification...");
         sendAdminNotification({
             type: "prototyping-request",
             details: {
@@ -129,7 +158,8 @@ export async function POST(req: Request) {
                 "Special Requirements": specialRequirements,
                 "Design Files": designFiles.length > 0 ? `${designFiles.length} file(s) uploaded` : "None",
             },
-        }).catch((err) => console.error("[Admin Email] Prototyping notification failed:", err));
+        }).then((res) => console.log("[Admin Email] Prototyping notification result:", JSON.stringify(res)))
+          .catch((err) => console.error("[Admin Email] Prototyping notification failed:", err));
 
         return NextResponse.json({ success: true, data: response });
     } catch (error) {

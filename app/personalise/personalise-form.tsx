@@ -109,14 +109,19 @@ export default function PersonaliseForm({ userSession }: PersonaliseFormProps) {
       if (!formData.contactDetails.name) {
         contactErrors.name = "Name is required";
       }
-      if (!formData.contactDetails.email && !formData.contactDetails.phone) {
-        contactErrors.email = "Please provide either email or phone number";
-      }
-      if (
-        formData.contactDetails.email &&
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactDetails.email)
+      if (!formData.contactDetails.email) {
+        contactErrors.email = "Email is required";
+      } else if (
+        !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.contactDetails.email)
       ) {
-        contactErrors.email = "Invalid email address";
+        contactErrors.email = "Please enter a valid email address";
+      }
+      if (!formData.contactDetails.phone) {
+        contactErrors.phone = "Phone number is required";
+      } else if (
+        !/^\d{10}$/.test(formData.contactDetails.phone.replace(/[\s\-()]/g, "").replace(/^\+\d{1,3}/, "").replace(/^0/, ""))
+      ) {
+        contactErrors.phone = "Please enter a valid 10-digit phone number";
       }
 
       if (Object.keys(contactErrors).length > 0) {

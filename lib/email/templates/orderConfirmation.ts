@@ -47,9 +47,21 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
         .join("");
 
     const body = `
-        ${heading("Order Confirmed!")}
+        ${heading("Order Confirmed — Tax Invoice")}
         ${paragraph(`Hi ${firstName},`)}
         ${paragraph("Thank you for your order with Scribbl3D. We've successfully received your payment, and your order is now confirmed.")}
+
+        <!-- Tax Invoice Attachment Notice -->
+        <div style="background-color:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:24px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                    <td style="font-size:14px;color:#1e40af;font-weight:600;">Your Tax Invoice is attached to this email as a PDF.</td>
+                </tr>
+                <tr>
+                    <td style="font-size:13px;color:#3b82f6;padding-top:4px;">Please save it for your records. If GST details were provided, they have been included accordingly.</td>
+                </tr>
+            </table>
+        </div>
 
         <!-- Order Details -->
         <div style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px;">
@@ -121,8 +133,6 @@ export function orderConfirmationTemplate(data: OrderEmailData): string {
         ${paragraph(`${shippingAddress.name}<br/>${shippingAddress.line1}${shippingAddress.line2 ? `, ${shippingAddress.line2}` : ""}<br/>${shippingAddress.city}, ${shippingAddress.state} – ${shippingAddress.pincode}<br/>Phone: ${shippingAddress.phone}`)}
 
         ${divider()}
-
-        ${paragraph("Your Tax Invoice is attached to this email for your records. If GST details were provided, they have been included accordingly.")}
 
         <!-- Estimated Dispatch Timeline -->
         <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;color:#18181b;">Estimated Dispatch Timeline</h3>
