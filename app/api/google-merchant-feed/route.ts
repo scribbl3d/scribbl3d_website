@@ -42,8 +42,12 @@ function googleCategory(category: string): string {
         return "Apparel &amp; Accessories > Clothing Accessories > Keychains";
     if (lower.includes("figurine") || lower.includes("statue") || lower.includes("collectible"))
         return "Home &amp; Garden > Decor > Figurines";
-    if (lower.includes("watch") || lower.includes("holder") || lower.includes("organizer") || lower.includes("utilit"))
-        return "Home &amp; Garden > Decor > Desk &amp; Shelf Clocks";
+    if (lower.includes("cosplay") || lower.includes("mask") || lower.includes("helmet") || lower.includes("sword") || lower.includes("weapon"))
+        return "Arts &amp; Entertainment > Hobbies &amp; Creative Arts > Collectibles";
+    if (lower.includes("utilit") || lower.includes("holder") || lower.includes("organizer") || lower.includes("stand") || lower.includes("mount"))
+        return "Office Supplies > Office Equipment > Desk Organizers";
+    if (lower.includes("bookmark"))
+        return "Office Supplies > General Office Supplies > Bookmarks";
     if (lower.includes("lamp") || lower.includes("light"))
         return "Home &amp; Garden > Lighting > Lamps";
     if (lower.includes("vase") || lower.includes("planter"))
@@ -112,7 +116,7 @@ export async function GET() {
 
         // ── Prebuilt Products ────────────────────────────────────────────
         for (const product of prebuiltProducts) {
-            const link = `${BASE_URL}/prebuilt-products/${product.slug}`;
+            const link = `${BASE_URL}/prebuilt-products/${encodeURIComponent(product.slug || '')}`;
             const mainImage =
                 product.images.find((i) => i.isMain)?.url ||
                 product.images[0]?.url;
@@ -156,7 +160,7 @@ export async function GET() {
                         ? esc(variant.sizeName)
                         : undefined,
                     "g:shipping_weight": product.weight
-                        ? `${product.weight} kg`
+                        ? `${product.weight} g`
                         : undefined,
                     "g:identifier_exists": "no",
                     "g:google_product_category": googleCategory(product.category),
@@ -210,7 +214,7 @@ export async function GET() {
                             : undefined,
                     "g:availability": "in_stock",
                     "g:condition": "new",
-                    "g:brand": esc(resin.brand),
+                    "g:brand": esc(resin.brand.trim()),
                     "g:product_type": "3D Printing Resin",
                     "g:shipping_weight": `${weight.weightInGrams} g`,
                     "g:identifier_exists": "no",
@@ -230,11 +234,9 @@ export async function GET() {
             const link = `${BASE_URL}/printers/${printer.slug}`;
             const imageUrl = printer.images[0]?.url || "";
 
-            // Printer prices are stored in paise — divide by 100
-            const priceInr = printer.price / 100;
-            const originalPriceInr = printer.originalPrice
-                ? printer.originalPrice / 100
-                : null;
+            // Printer prices are stored in INR (not paise)
+            const priceInr = printer.price;
+            const originalPriceInr = printer.originalPrice || null;
 
             const fields: Record<string, string | undefined> = {
                 "g:id": `printer-${printer.id}`,
@@ -256,7 +258,7 @@ export async function GET() {
                         : undefined,
                 "g:availability": "in_stock",
                 "g:condition": "new",
-                "g:brand": esc(printer.brand),
+                "g:brand": esc(printer.brand.trim()),
                 "g:product_type": "3D Printer",
                 "g:shipping_weight": printer.weight
                     ? `${printer.weight} g`
