@@ -31,6 +31,28 @@ function formatPrice(amount: number): string {
     return `${amount.toFixed(2)} INR`;
 }
 
+/**
+ * Map internal prebuilt-product category → Google product taxonomy.
+ * Full list: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
+ */
+function googleCategory(category: string): string {
+    const lower = category.toLowerCase();
+    if (lower.includes("keychain") || lower.includes("keyring"))
+        return "Apparel & Accessories > Clothing Accessories > Keychains";
+    if (lower.includes("figurine") || lower.includes("statue") || lower.includes("collectible"))
+        return "Home & Garden > Decor > Figurines";
+    if (lower.includes("watch") || lower.includes("holder") || lower.includes("organizer") || lower.includes("utilit"))
+        return "Home & Garden > Decor > Desk & Shelf Clocks";
+    if (lower.includes("lamp") || lower.includes("light"))
+        return "Home & Garden > Lighting > Lamps";
+    if (lower.includes("vase") || lower.includes("planter"))
+        return "Home & Garden > Decor > Vases";
+    if (lower.includes("articulated") || lower.includes("toy"))
+        return "Toys & Games > Toys";
+    // Safe fallback
+    return "Home & Garden > Decor";
+}
+
 /** Build a single <item> block */
 function item(fields: Record<string, string | undefined>): string {
     let xml = "    <item>\n";
@@ -135,6 +157,8 @@ export async function GET() {
                     "g:shipping_weight": product.weight
                         ? `${product.weight} kg`
                         : undefined,
+                    "g:identifier_exists": "no",
+                    "g:google_product_category": googleCategory(product.category),
                 };
 
                 // If there's an original price higher than sale price, set price = original
@@ -188,6 +212,8 @@ export async function GET() {
                     "g:brand": esc(resin.brand),
                     "g:product_type": "3D Printing Resin",
                     "g:shipping_weight": `${weight.weightInGrams} g`,
+                    "g:identifier_exists": "no",
+                    "g:google_product_category": "Hardware > Tool Accessories > 3D Printer Accessories",
                 };
 
                 if (weight.originalPrice && weight.originalPrice > weight.price) {
@@ -234,6 +260,8 @@ export async function GET() {
                 "g:shipping_weight": printer.weight
                     ? `${printer.weight} g`
                     : undefined,
+                "g:identifier_exists": "no",
+                "g:google_product_category": "Electronics > Print, Copy, Scan & Fax > 3D Printers",
             };
 
             items += item(fields);
