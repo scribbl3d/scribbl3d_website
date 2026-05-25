@@ -37,20 +37,21 @@ function formatPrice(amount: number): string {
  */
 function googleCategory(category: string): string {
     const lower = category.toLowerCase();
+    // Return XML-safe strings (& pre-escaped, > kept literal as Google's separator)
     if (lower.includes("keychain") || lower.includes("keyring"))
-        return "Apparel & Accessories > Clothing Accessories > Keychains";
+        return "Apparel &amp; Accessories > Clothing Accessories > Keychains";
     if (lower.includes("figurine") || lower.includes("statue") || lower.includes("collectible"))
-        return "Home & Garden > Decor > Figurines";
+        return "Home &amp; Garden > Decor > Figurines";
     if (lower.includes("watch") || lower.includes("holder") || lower.includes("organizer") || lower.includes("utilit"))
-        return "Home & Garden > Decor > Desk & Shelf Clocks";
+        return "Home &amp; Garden > Decor > Desk &amp; Shelf Clocks";
     if (lower.includes("lamp") || lower.includes("light"))
-        return "Home & Garden > Lighting > Lamps";
+        return "Home &amp; Garden > Lighting > Lamps";
     if (lower.includes("vase") || lower.includes("planter"))
-        return "Home & Garden > Decor > Vases";
+        return "Home &amp; Garden > Decor > Vases";
     if (lower.includes("articulated") || lower.includes("toy"))
-        return "Toys & Games > Toys";
+        return "Toys &amp; Games > Toys";
     // Safe fallback
-    return "Home & Garden > Decor";
+    return "Home &amp; Garden > Decor";
 }
 
 /** Build a single <item> block */
@@ -261,7 +262,7 @@ export async function GET() {
                     ? `${printer.weight} g`
                     : undefined,
                 "g:identifier_exists": "no",
-                "g:google_product_category": "Electronics > Print, Copy, Scan & Fax > 3D Printers",
+                "g:google_product_category": "Electronics > Print, Copy, Scan &amp; Fax > 3D Printers",
             };
 
             items += item(fields);
