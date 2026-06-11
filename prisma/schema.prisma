@@ -100,26 +100,20 @@ model WishlistItem {
   // item types
   productId          String?
   prebuiltProductId  String?
-
   printerId          String?
   resinId            String?
-
-
-
   resinColourId      String?
   resinWeightId      String?
-
- 
+  filamentId         String?
 
   createdAt          DateTime @default(now())
 
   wishlist           Wishlist @relation(fields: [wishlistId], references: [id])
-
   product            Product?         @relation(fields: [productId], references: [id])
-
-  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
+  prebuiltProduct    PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
   printer            Printer?         @relation(fields: [printerId], references: [id])
   resin              Resin?           @relation(fields: [resinId], references: [id])
+  filament           Filament?        @relation(fields: [filamentId], references: [id])
 }
 
 model AboutHero {
@@ -153,6 +147,8 @@ model CartItem {
   resinId           String?
   resinColourId     String?
   resinWeightId     String?
+  filamentId        String?
+  filamentVariantId String?
 
   addedAt       DateTime @default(now())
   customization String?
@@ -165,8 +161,10 @@ model CartItem {
   resin           Resin?            @relation(fields: [resinId], references: [id], onDelete: Cascade)
   resinColour     ResinColour?      @relation(fields: [resinColourId], references: [id], onDelete: SetNull)
   resinWeight     ResinWeight?      @relation(fields: [resinWeightId], references: [id], onDelete: SetNull)
+  filament        Filament?         @relation(fields: [filamentId], references: [id], onDelete: SetNull)
+  filamentVariant FilamentVariant?  @relation(fields: [filamentVariantId], references: [id], onDelete: SetNull)
 
-  @@unique([cartId, productId, prebuiltVariantId, productSizeId, productColorId, printerId, resinId, resinColourId, resinWeightId])
+  @@unique([cartId, productId, prebuiltVariantId, productSizeId, productColorId, printerId, resinId, resinColourId, resinWeightId, filamentId, filamentVariantId])
 }
 
 
@@ -458,17 +456,20 @@ model Review {
   userId            String
   productId         String?
   prebuiltProductId String?
+  filamentId        String?
  
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
   product           Product?         @relation(fields: [productId], references: [id])
+  filament          Filament?        @relation(fields: [filamentId], references: [id])
   user              User             @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([productId])
   @@index([prebuiltProductId])
+  @@index([filamentId])
 }
 
 model Announcement {
@@ -1098,4 +1099,150 @@ model AdminViewTracker {
   section         String   @unique
   lastViewedAt    DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// FILAMENT MODELS
+// ============================================
+
+model Filament {
+  id               String   @id @default(cuid())
+  slug             String?  @unique
+  
+  // Basic Info
+  name             String   // e.g., "PLA Silk Gold" - REQUIRED (copied from other table)
+  shortDescription String?
+  longDescription  String?  @db.Text
+  
+  // Categorization - All optional since you're migrating data
+  material         String?  // e.g., "PLA", "ABS", "PETG"
+  finishType       String?  // e.g., "Silk", "Matte", "Glossy"
+  brand            String?  // e.g., "Scribbl3D", "eSUN"
+  category         String?  // e.g., "PLA Silk", "ABS Standard"
+  
+  // Color Info (each color is a separate product) - Optional
+  colorName        String?  // e.g., "Gold", "Silver"
+  hexCode          String?  // e.g., "#FFD700"
+  
+  // Media
+  images           String[] @default([]) // Array of Cloudinary URLs
+  
+  // Features & Details
+  features         String[] @default([])
+  applications     String[] @default([]) // e.g., ["Prototyping", "Decorative"]
+  compatibility    String[] @default([]) // e.g., ["Ender 3", "Prusa i3"]
+  
+  // Stock
+  inStock          Boolean  @default(true)
+  
+  // Timestamps
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  variants         FilamentVariant[]
+  specifications   FilamentSpecification[]
+  downloads        FilamentDownload[]
+  relatedColors    FilamentColorGroup[] @relation("FilamentInGroup")
+  
+  // Cart & Wishlist
+  cartItems        CartItem[]
+  wishlistItems    WishlistItem[]
+  reviews          Review[]
+  
+  @@index([category, material])
+  @@index([slug])
+}
+
+// Color grouping - shows all available colors for a material+finish combo
+model FilamentColorGroup {
+  id          String   @id @default(cuid())
+  
+  // Group identifier (e.g., "PLA Silk")
+  category    String   // e.g., "PLA Silk"
+  material    String   // e.g., "PLA"
+  finishType  String   // e.g., "Silk"
+  
+  // Reference to all color variants in this group
+  filamentId  String
+  filament    Filament @relation("FilamentInGroup", fields: [filamentId], references: [id], onDelete: Cascade)
+  
+  displayOrder Int     @default(0) // For sorting colors in PDP
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@index([filamentId])
+}
+
+// Variants: Different diameter/spool combinations for same color
+model FilamentVariant {
+  id            String   @id @default(cuid())
+  filamentId    String
+  
+  // Variant details
+  diameter      String   // e.g., "1.75mm", "2.85mm", "3mm"
+  spoolWeight   String   // e.g., "250g", "500g", "1kg", "3kg"
+  
+  // Pricing
+  price         Int      // Current price in rupees
+  originalPrice Int?     // Original price in rupees (for discount calculation)
+  
+  // Stock
+  inStock       Boolean  @default(true)
+  
+  // Display
+  isDefault     Boolean  @default(false) // Default variant to show
+  displayOrder  Int      @default(0)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  filament      Filament @relation(fields: [filamentId], references: [id], onDelete: Cascade)
+  cartItems     CartItem[]
+  
+  @@unique([filamentId, diameter, spoolWeight])
+  @@index([filamentId])
+}
+
+// Specifications: Technical details
+model FilamentSpecification {
+  id         String   @id @default(cuid())
+  filamentId String
+  
+  category   String   // e.g., "Printing", "Physical", "Mechanical"
+  key        String   // e.g., "Nozzle Temperature", "Density"
+  value      String   // e.g., "200-220°C", "1.24 g/cm³"
+  
+  displayOrder Int    @default(0)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  filament   Filament @relation(fields: [filamentId], references: [id], onDelete: Cascade)
+  
+  @@index([filamentId, category])
+}
+
+// Downloads: TDS, MSDS, etc.
+model FilamentDownload {
+  id           String   @id @default(cuid())
+  filamentId   String
+  
+  title        String   // e.g., "Technical Data Sheet", "MSDS"
+  description  String?  // Optional description
+  fileUrl      String   // Cloudinary URL or external link
+  fileType     String   // e.g., "PDF", "DOC"
+  
+  displayOrder Int      @default(0)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  filament     Filament @relation(fields: [filamentId], references: [id], onDelete: Cascade)
+  
+  @@index([filamentId])
 }

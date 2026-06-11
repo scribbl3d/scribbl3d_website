@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request, { params }: { params: any }) {
+export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
     try {
-        const slug = params.slug as string;
+        const { slug } = await params;
 
         const product = await db.prebuiltProducts.findUnique({
             where: { slug },

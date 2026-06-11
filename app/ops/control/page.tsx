@@ -59,7 +59,12 @@ export default function AdminPage() {
                 </Link>
                 <Link href="/ops/control/products" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
-                        Filaments
+                        Filaments (Old)
+                    </Button>
+                </Link>
+                <Link href="/ops/control/filaments-new" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg">
+                        Filament New
                     </Button>
                 </Link>
                 <Link href="/ops/control/prebuilt-products" className="block">

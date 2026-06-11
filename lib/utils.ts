@@ -130,3 +130,26 @@ export function getPhonePeErrorMessage(code: string): string {
     "An unknown error occurred"
   );
 }
+
+export function getSwatchStyle(hexCode?: string, colorName?: string): React.CSSProperties {
+  if (!hexCode) {
+    return {
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    };
+  }
+  
+  // Special handling for transparent/clear colors
+  if (colorName && (colorName.toLowerCase().includes('transparent') || colorName.toLowerCase().includes('clear'))) {
+    return {
+      background: `linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc),
+                   linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)`,
+      backgroundSize: '8px 8px',
+      backgroundPosition: '0 0, 4px 4px',
+      backgroundColor: hexCode,
+    };
+  }
+  
+  return {
+    backgroundColor: hexCode,
+  };
+}
