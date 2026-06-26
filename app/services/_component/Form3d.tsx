@@ -495,13 +495,41 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
         const { name, files } = e.target;
         if (files?.[0]) {
             const file = files[0];
-            if (name === "fileReference" && file.size > 10 * 1024 * 1024) {
+            const ALLOWED_EXTENSIONS = [".obj", ".stl", ".xt", ".stp", ".step", ".3mf", ".jpg", ".png", ".pdf"];
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+            
+            // Get file extension
+            const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+            
+            // Validate file type
+            if (ext && !ALLOWED_EXTENSIONS.includes(ext)) {
+                setErrors((p) => ({
+                    ...p,
+                    [name]: `File type "${ext}" not allowed. Please use: ${ALLOWED_EXTENSIONS.join(", ")}`,
+                }));
+                e.target.value = ""; // Clear the input
+                return;
+            }
+            
+            // Validate file size
+            if (file.size === 0) {
+                setErrors((p) => ({
+                    ...p,
+                    [name]: "File is empty",
+                }));
+                e.target.value = "";
+                return;
+            }
+            
+            if (file.size > MAX_FILE_SIZE) {
                 setErrors((p) => ({
                     ...p,
                     [name]: "File size must be less than 10MB",
                 }));
+                e.target.value = "";
                 return;
             }
+            
             setFormData((p) => ({ ...p, [name]: file }));
             setErrors((p) => ({ ...p, [name]: "" }));
         }
@@ -556,9 +584,10 @@ export function Form3D({ onSubmit }: { onSubmit?: () => void }) {
             });
 
             if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
                 setErrors((p) => ({
                     ...p,
-                    submit: "Failed to submit. Please try again.",
+                    submit: errorData.error || "Failed to submit. Please try again.",
                 }));
                 return;
             }

@@ -180,7 +180,23 @@ export async function POST(req: NextRequest) {
 
             // Fire-and-forget admin email notification for confirmed order
             const orderItems = Array.isArray(updatedOrder.items) ? updatedOrder.items as any[] : [];
-            const shippingAddr = updatedOrder.shippingAddress as any;
+            const rawShippingAddr = updatedOrder.shippingAddress as any;
+            
+            // Parse shipping address to handle different field name variations
+            const parsedAddr = rawShippingAddr 
+                ? (typeof rawShippingAddr === "string" ? JSON.parse(rawShippingAddr) : rawShippingAddr)
+                : null;
+            
+            const shippingAddr = parsedAddr ? {
+                name: parsedAddr.name || parsedAddr.fullName || "",
+                line1: parsedAddr.line1 || parsedAddr.addressLine1 || parsedAddr.street || parsedAddr.address || "",
+                line2: parsedAddr.line2 || parsedAddr.addressLine2 || "",
+                city: parsedAddr.city || "",
+                state: parsedAddr.state || "",
+                pincode: parsedAddr.pincode || parsedAddr.postalCode || parsedAddr.zip || "",
+                phone: parsedAddr.phone || parsedAddr.mobile || "",
+            } : null;
+            
             sendAdminNotification({
                 type: "order-confirmed",
                 details: {
@@ -195,7 +211,7 @@ export async function POST(req: NextRequest) {
                     "Tax": `₹${updatedOrder.tax || 0}`,
                     "Total Amount": `₹${updatedOrder.totalAmount}`,
                     "Shipping Address": shippingAddr
-                        ? `${shippingAddr.name}, ${shippingAddr.line1}${shippingAddr.line2 ? ", " + shippingAddr.line2 : ""}, ${shippingAddr.city}, ${shippingAddr.state} - ${shippingAddr.pincode}`
+                        ? `${shippingAddr.line1}${shippingAddr.line2 ? ", " + shippingAddr.line2 : ""}, ${shippingAddr.city}, ${shippingAddr.state} - ${shippingAddr.pincode}`
                         : "—",
                 },
                 subItems: orderItems.map((item: any) => ({

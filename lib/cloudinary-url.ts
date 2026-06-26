@@ -24,3 +24,12 @@ export function getThumbnailUrl(url: string): string {
         `/upload/w_160,h_160,c_pad,b_white,q_auto,f_auto/`,
     );
 }
+
+// Tiny low-quality blur placeholder — 20px wide, heavy blur
+export function getLqipUrl(url: string): string {
+    if (!url || !url.includes("res.cloudinary.com")) return "";
+    return url.replace(
+        "/upload/",
+        `/upload/w_20,e_blur:800,q_10,f_webp/`,
+    );
+}

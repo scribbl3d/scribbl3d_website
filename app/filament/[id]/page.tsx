@@ -11,6 +11,8 @@ import { toast } from "@/components/ui/use-toast";
 import { FilamentProductTile } from "@/components/filaments/FilamentProductTile";
 import { getSwatchStyle } from "@/lib/utils";
 import SimilarFilamentsCarousel from "@/components/filaments/SimilarFilamentsCarousel";
+import { PdpImage } from "@/components/shared/PdpImage";
+import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
 
 const FINISH_BADGE: Record<string, string> = {
     Silk: "bg-purple-100 text-purple-700",
@@ -180,10 +182,9 @@ export default function FilamentPDPPage() {
                             onMouseLeave={() => setIsHovering(false)}
                         >
                             <div className="relative w-full aspect-square bg-white rounded-lg overflow-hidden">
-                                <img
-                                    src={f.images[currentImg]}
+                                <PdpImage
+                                    src={getPdpImageUrl(f.images[currentImg])}
                                     alt={f.name}
-                                    className="w-full h-full object-contain transition-opacity duration-300"
                                 />
                                 {totalImgs > 1 && (
                                     <>
@@ -202,7 +203,7 @@ export default function FilamentPDPPage() {
                             {f.images.map((img, i) => (
                                 <button key={i} onClick={() => setCurrentImg(i)}
                                     className={`w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 overflow-hidden flex-shrink-0 transition ${i === currentImg ? "border-blue-600" : "border-gray-200 hover:border-gray-400"}`}>
-                                    <img src={img} alt="" className="w-full h-full object-contain" />
+                                    <PdpImage src={getThumbnailUrl(img)} alt="" loading="lazy" />
                                 </button>
                             ))}
                         </div>

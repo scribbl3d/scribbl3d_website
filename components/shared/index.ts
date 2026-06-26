@@ -6,3 +6,4 @@ export { ProductSkeleton } from "./ProductSkeleton";
 export { NotifyMeModal } from "./NotifyMeModal";
 export { ImageCarousel } from "./ImageCarousel";
 export { Shimmer } from "./Shimmer";
+export { PdpImage } from "./PdpImage";

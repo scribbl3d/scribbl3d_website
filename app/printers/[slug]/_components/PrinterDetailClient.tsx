@@ -6,6 +6,7 @@ import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 import { StockBadge } from "@/components/ui/stock-badge";
 import { toast } from "@/components/ui/use-toast";
 import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
+import { PdpImage } from "@/components/shared/PdpImage";
 import { useCart } from "@/providers/CartProvider";
 import { useImageCarousel } from "@/hooks/use-image-carousel";
 import { ArrowLeft, Bell, Check, Download, Heart } from "lucide-react";
@@ -207,11 +208,9 @@ export default function PrinterDetailClient({ printer }: { printer: any }) {
                             <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden">
                                 {printer.images && printer.images.length > 0 ? (
                                     <>
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
+                                        <PdpImage
                                             src={getPdpImageUrl(printer.images[carousel.current]?.url)}
                                             alt={printer.name}
-                                            className="w-full h-full object-contain"
                                         />
 
                                         {/* Nav arrows on hover/touch — only if we have > 1 image */}
@@ -263,13 +262,11 @@ export default function PrinterDetailClient({ printer }: { printer: any }) {
                                             : "border-gray-300"
                                     }`}
                                 >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
+                                    <PdpImage
                                         src={getThumbnailUrl(image.url)}
                                         alt={
                                             image.altText || `View ${index + 1}`
                                         }
-                                        className="w-full h-full object-contain"
                                         loading="lazy"
                                     />
                                 </button>

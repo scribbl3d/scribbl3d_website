@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import SimilarResinsCarousel from "@/components/resins/SimilarResinsCarousel";
 import { toast } from "@/components/ui/use-toast";
 import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
+import { PdpImage } from "@/components/shared/PdpImage";
 import { useCart } from "@/providers/CartProvider";
 import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -292,13 +293,12 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
                                                 transform: `translateX(-${current * 100}%)`,
                                             }}
                                         >
-                                            {images.map((img) => (
+                                            {images.map((img, idx) => (
                                                 <div
                                                     key={img.id}
                                                     className="relative min-w-full h-full"
                                                 >
-                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img
+                                                    <PdpImage
                                                         src={getPdpImageUrl(
                                                             img.url,
                                                         )}
@@ -306,8 +306,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
                                                             img.altText ||
                                                             resin.name
                                                         }
-                                                        className="w-full h-full object-contain"
-                                                        loading="eager"
+                                                        loading={idx === 0 ? "eager" : "lazy"}
                                                     />
                                                 </div>
                                             ))}
@@ -366,11 +365,9 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
                                             : "border-gray-300"
                                     }`}
                                 >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
+                                    <PdpImage
                                         src={getThumbnailUrl(img.url)}
                                         alt={img.altText || `View ${idx + 1}`}
-                                        className="w-full h-full object-contain"
                                         loading="lazy"
                                     />
                                 </button>

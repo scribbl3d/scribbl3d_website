@@ -207,17 +207,33 @@ export default function OrdersPage() {
 
     async function handleDownloadInvoice(order: Order) {
         try {
+            console.log(`📄 Downloading invoice for order: ${order.id}`);
+            
             const res = await fetch(`/api/orders/${order.id}/invoice`, {
                 credentials: "include",
             });
 
             if (!res.ok) {
-                const text = await res.text(); // better debugging
-                console.error("Invoice API error:", text);
-                throw new Error("Failed to download invoice");
+                let errorMsg = "Failed to download invoice";
+                try {
+                    const errorData = await res.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch {
+                    const text = await res.text();
+                    errorMsg = text || errorMsg;
+                }
+                console.error("Invoice API error:", errorMsg);
+                throw new Error(errorMsg);
             }
 
             const blob = await res.blob();
+            
+            // Verify we got a PDF
+            if (blob.type !== "application/pdf") {
+                console.error("Invalid response type:", blob.type);
+                throw new Error("Invalid response: Expected PDF file");
+            }
+            
             const url = URL.createObjectURL(blob);
 
             const a = document.createElement("a");
@@ -234,9 +250,11 @@ export default function OrdersPage() {
             document.body.removeChild(a);
 
             URL.revokeObjectURL(url);
-        } catch (err) {
+            
+            console.log(`✅ Invoice downloaded successfully: ${a.download}`);
+        } catch (err: any) {
             console.error("❌ Invoice download failed:", err);
-            alert("Failed to download invoice. Please try again.");
+            alert(`Failed to download invoice: ${err.message || "Unknown error"}. Please try again.`);
         }
     }
 

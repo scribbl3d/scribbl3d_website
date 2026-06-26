@@ -20,6 +20,8 @@ import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PdpImage } from "@/components/shared/PdpImage";
+import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
 
 function Shimmer({ className = "" }: { className?: string }) {
     return (
@@ -889,16 +891,13 @@ export default function PrebuiltProductDetailClient({ product }: { product: any 
                                                     key={idx}
                                                     className="relative min-w-full h-full"
                                                 >
-                                                    <Image
-                                                        src={img.url}
+                                                    <PdpImage
+                                                        src={getPdpImageUrl(img.url)}
                                                         alt={
                                                             img.altText ||
                                                             product.name
                                                         }
-                                                        fill
-                                                        className="object-contain"
-                                                        priority={idx === 0}
-                                                        sizes="(max-width: 768px) 100vw, 50vw"
+                                                        loading={idx === 0 ? "eager" : "lazy"}
                                                     />
                                                 </div>
                                             ))}
@@ -962,12 +961,10 @@ export default function PrebuiltProductDetailClient({ product }: { product: any 
                                             : "border-gray-300"
                                     }`}
                                 >
-                                    <Image
-                                        src={img.url}
+                                    <PdpImage
+                                        src={getThumbnailUrl(img.url)}
                                         alt={img.altText || `View ${idx + 1}`}
-                                        width={80}
-                                        height={80}
-                                        className="w-full h-full object-contain"
+                                        loading="lazy"
                                     />
                                 </button>
                             ))}

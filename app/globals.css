@@ -189,3 +189,12 @@
 .animate-brand-marquee {
   animation: brand-marquee 15s linear infinite;
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: 250% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}

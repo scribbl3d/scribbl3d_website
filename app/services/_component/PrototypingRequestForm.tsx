@@ -388,10 +388,13 @@ export default function PrototypingRequestForm() {
                 method: "POST",
                 body: fd,
             });
-            if (!res.ok) throw new Error();
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+                throw new Error(errorData.error || "Submission failed");
+            }
             setSuccess(true);
-        } catch {
-            setStepErrors({ submit: "Submission failed. Please try again." });
+        } catch (err: any) {
+            setStepErrors({ submit: err.message || "Submission failed. Please try again." });
         } finally {
             setSubmitting(false);
         }
@@ -854,17 +857,49 @@ export default function PrototypingRequestForm() {
                     <input
                         type="file"
                         multiple
+                        accept=".stl,.step,.stp,.obj,.3mf,.iges,.igs,.fbx,.dxf,.dwg,.pdf,.zip,.rar,.7z"
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                         onChange={(e) => {
-                            setForm((p) => ({
-                                ...p,
-                                files: Array.from(e.target.files!),
-                            }));
-                            setStepErrors((p) => {
-                                const n = { ...p };
-                                delete n.files;
-                                return n;
+                            const files = Array.from(e.target.files || []);
+                            const ALLOWED_EXTENSIONS = [".stl", ".step", ".stp", ".obj", ".3mf", ".iges", ".igs", ".fbx", ".dxf", ".dwg", ".pdf", ".zip", ".rar", ".7z"];
+                            const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+                            
+                            // Validate each file
+                            const invalidFiles: string[] = [];
+                            const validFiles: File[] = [];
+                            
+                            files.forEach((file) => {
+                                const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+                                
+                                if (file.size === 0) {
+                                    invalidFiles.push(`${file.name}: File is empty`);
+                                } else if (file.size > MAX_FILE_SIZE) {
+                                    invalidFiles.push(`${file.name}: File too large (max 50MB)`);
+                                } else if (ext && !ALLOWED_EXTENSIONS.includes(ext)) {
+                                    invalidFiles.push(`${file.name}: File type "${ext}" not allowed. Please use: ${ALLOWED_EXTENSIONS.join(", ")}`);
+                                } else {
+                                    validFiles.push(file);
+                                }
                             });
+                            
+                            if (invalidFiles.length > 0) {
+                                setStepErrors((p) => ({
+                                    ...p,
+                                    files: invalidFiles.join("; "),
+                                }));
+                                // Clear the input
+                                e.target.value = "";
+                            } else {
+                                setForm((p) => ({
+                                    ...p,
+                                    files: validFiles,
+                                }));
+                                setStepErrors((p) => {
+                                    const n = { ...p };
+                                    delete n.files;
+                                    return n;
+                                });
+                            }
                         }}
                     />
                     <UploadCloud className="h-6 w-6 text-zinc-300 mx-auto mb-2" />

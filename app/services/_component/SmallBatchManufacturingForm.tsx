@@ -370,10 +370,14 @@ export default function SmallBatchManufacturingForm({
                 method: "POST",
                 body: formData,
             });
-            if (res.ok) setSuccess(true);
-            else throw new Error();
-        } catch {
-            setStepErrors({ submit: "Submission failed. Please try again." });
+            if (res.ok) {
+                setSuccess(true);
+            } else {
+                const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+                throw new Error(errorData.error || "Submission failed");
+            }
+        } catch (err: any) {
+            setStepErrors({ submit: err.message || "Submission failed. Please try again." });
         } finally {
             setSubmitting(false);
         }
@@ -543,11 +547,45 @@ export default function SmallBatchManufacturingForm({
                             >
                                 <input
                                     type="file"
+                                    accept=".stl,.step,.stp,.obj,.3mf,.iges,.igs,.fbx,.dxf,.dwg,.pdf,.zip,.rar,.7z"
                                     className="absolute inset-0 opacity-0 cursor-pointer"
                                     onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const ALLOWED_EXTENSIONS = [".stl", ".step", ".stp", ".obj", ".3mf", ".iges", ".igs", ".fbx", ".dxf", ".dwg", ".pdf", ".zip", ".rar", ".7z"];
+                                            const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+                                            const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : "";
+                                            
+                                            if (file.size === 0) {
+                                                setStepErrors((prev) => ({
+                                                    ...prev,
+                                                    [`file_${i}`]: "File is empty",
+                                                }));
+                                                e.target.value = "";
+                                                return;
+                                            }
+                                            
+                                            if (file.size > MAX_FILE_SIZE) {
+                                                setStepErrors((prev) => ({
+                                                    ...prev,
+                                                    [`file_${i}`]: "File too large (max 50MB)",
+                                                }));
+                                                e.target.value = "";
+                                                return;
+                                            }
+                                            
+                                            if (ext && !ALLOWED_EXTENSIONS.includes(ext)) {
+                                                setStepErrors((prev) => ({
+                                                    ...prev,
+                                                    [`file_${i}`]: `File type "${ext}" not allowed. Please use: ${ALLOWED_EXTENSIONS.join(", ")}`,
+                                                }));
+                                                e.target.value = "";
+                                                return;
+                                            }
+                                        }
+                                        
                                         const updated = [...products];
-                                        updated[i].file =
-                                            e.target.files?.[0] || null;
+                                        updated[i].file = file || null;
                                         setProducts(updated);
                                         setStepErrors((prev) => {
                                             const n = { ...prev };
