@@ -96,9 +96,9 @@ export default function SimilarFilamentsCarousel({
                             className="snap-start flex-shrink-0 w-[48%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
                         >
                             <Link href={`/filament/${filament.slug || filament.id}`}>
-                                <div className="bg-white rounded-lg sm:rounded-xl border overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+                                <div className="bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                                     {/* IMAGE */}
-                                    <div className="relative aspect-square bg-white overflow-hidden">
+                                    <div className="relative aspect-square w-full bg-white overflow-hidden">
                                         {filament.images?.[0] && (
                                             <img
                                                 src={filament.images[0]}
@@ -106,54 +106,46 @@ export default function SimilarFilamentsCarousel({
                                                 className="w-full h-full object-contain"
                                             />
                                         )}
-                                        {/* Out of Stock Badge */}
+                                        {/* Stock Badge */}
                                         {!filament.inStock && (
-                                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full z-10">
+                                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
                                                 Out of Stock
                                             </div>
                                         )}
+                                        {/* Finish Badge - moves to bottom when out of stock */}
+                                        <div className={`absolute ${!filament.inStock ? 'bottom-1.5 left-1.5 sm:bottom-3 sm:left-3' : 'top-1.5 left-1.5 sm:top-3 sm:left-3'} z-[2]`}>
+                                            <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full text-gray-700 bg-gray-100">
+                                                {filament.finishType}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {/* CONTENT */}
-                                    <div className="px-2.5 pt-2 sm:p-4 flex-1">
-                                        <div className="flex gap-1.5 mb-1 sm:mb-2">
-                                            <span className="inline-block px-1.5 py-px sm:px-2 sm:py-0.5 text-[9px] sm:text-[10px] font-semibold text-purple-700 bg-purple-100 rounded-full">
-                                                {filament.finishType}
-                                            </span>
-                                            <span className="inline-block px-1.5 py-px sm:px-2 sm:py-0.5 text-[9px] sm:text-[10px] font-semibold text-blue-700 bg-blue-100 rounded-full">
-                                                {filament.material}
-                                            </span>
-                                        </div>
-                                        <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-1 sm:line-clamp-2 mb-1">
+                                    <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
+                                        <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
                                             {filament.name}
                                         </h3>
-                                        <p className="hidden sm:block text-xs text-gray-600 line-clamp-2 mt-1">
+                                        <p className="hidden sm:block text-[13px] leading-[20px] text-[#4A5565] mt-1 line-clamp-2">
                                             {filament.shortDescription}
                                         </p>
                                     </div>
 
                                     {/* FOOTER */}
-                                    <div className="mt-auto px-2.5 pb-2.5 sm:px-4 sm:pb-4">
-                                        <hr className="hidden sm:block mb-3" />
+                                    <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
+                                        <hr className="hidden sm:block my-3" />
                                         
                                         {/* Price */}
-                                        <div className="mb-2">
+                                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
+                                            <span className="text-base sm:text-lg font-black text-gray-900">₹{filament.price.toLocaleString("en-IN")}</span>
                                             {filament.originalPrice && filament.originalPrice > filament.price && (
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="text-[10px] sm:text-xs text-gray-400 line-through">
-                                                        ₹{filament.originalPrice.toLocaleString("en-IN")}
-                                                    </span>
-                                                    <span className="text-[9px] sm:text-[10px] font-semibold text-green-600 bg-green-100 px-1 py-0.5 rounded">
-                                                        {filament.discount}% off
-                                                    </span>
-                                                </div>
+                                                <>
+                                                    <span className="text-[11px] sm:text-sm text-gray-400 line-through">₹{filament.originalPrice.toLocaleString("en-IN")}</span>
+                                                    <span className="text-[9px] sm:text-[11px] font-bold text-green-600">{filament.discount}% OFF</span>
+                                                </>
                                             )}
-                                            <p className="text-base sm:text-xl font-bold text-gray-900">
-                                                ₹{filament.price.toLocaleString("en-IN")}
-                                            </p>
                                         </div>
 
-                                        <button className="w-full h-8 sm:h-10 text-[11px] sm:text-sm bg-black text-white font-semibold rounded-md hover:bg-gray-900 transition">
+                                        <button className="w-full mt-2 sm:mt-3 h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center bg-black text-white hover:bg-gray-900">
                                             View Details
                                         </button>
                                     </div>

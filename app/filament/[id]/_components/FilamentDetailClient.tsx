@@ -287,7 +287,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                 </button>
                             </div>
 
-                            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-20">{f.name}</h1>
+                            <h1 className="text-lg sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-16 sm:pr-20 leading-tight">{f.name}</h1>
                             
                             <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                                 <span className={`px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full ${FINISH_BADGE[f.finishType] ?? "bg-green-100 text-green-700"}`}>{f.finishType}</span>
@@ -295,7 +295,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                 <span className="px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full bg-green-100 text-green-700">±0.02 mm Tolerance</span>
                             </div>
                             
-                            <p className="text-sm sm:text-base text-gray-700 mb-3 leading-relaxed break-words">{f.shortDescription}</p>
+                            <p className="text-xs sm:text-base text-gray-700 mb-3 leading-relaxed break-words">{f.shortDescription}</p>
 
                             {/* Price */}
                             <div className="mb-4">
@@ -307,11 +307,11 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                         </>
                                     )}
                                 </div>
-                                <p className="text-2xl sm:text-4xl font-bold text-gray-900 mt-1">₹{displayPrice.toLocaleString("en-IN")}</p>
+                                <p className="text-xl sm:text-4xl font-bold text-gray-900 mt-1">₹{displayPrice.toLocaleString("en-IN")}</p>
                                 {originalPrice && originalPrice > displayPrice && (
-                                    <p className="text-sm text-green-600 font-medium mt-1">Save ₹{(originalPrice - displayPrice).toLocaleString("en-IN")}</p>
+                                    <p className="text-xs sm:text-sm text-green-600 font-medium mt-1">Save ₹{(originalPrice - displayPrice).toLocaleString("en-IN")}</p>
                                 )}
-                                <p className="text-xs text-gray-500 mt-2">MRP inclusive of all taxes. Shipping calculated at checkout.</p>
+                                <p className="text-[10px] sm:text-xs text-gray-500 mt-1.5 sm:mt-2">MRP inclusive of all taxes. Shipping calculated at checkout.</p>
                             </div>
 
                             <hr className="mb-4 border-gray-100" />
@@ -319,7 +319,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                             {/* Colour */}
                             {f.colours && f.colours.length > 0 && (
                                 <div className="mb-4">
-                                    <p className="text-sm font-semibold text-gray-800 mb-2.5">
+                                    <p className="text-xs sm:text-sm font-semibold text-gray-800 mb-2">
                                         Colour: <span className="font-normal text-gray-500">{f.colorName}</span>
                                     </p>
                                     <div className="flex gap-2.5 flex-wrap">
@@ -349,7 +349,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                             {/* Diameter Selection */}
                             {uniqueDiameters.length > 0 && (
                                 <div className="mb-4">
-                                    <p className="text-sm font-semibold text-gray-800 mb-2.5">Diameter</p>
+                                    <p className="text-xs sm:text-sm font-semibold text-gray-800 mb-2">Diameter</p>
                                     <div className="flex gap-2 flex-wrap">
                                         {uniqueDiameters.map((diameter: string) => {
                                             // Check if any variant with this diameter is in stock
@@ -374,7 +374,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                                         }
                                                     }}
                                                     disabled={!hasStockForDiameter}
-                                                    className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-medium transition-all ${
                                                         selectedDiameter === diameter 
                                                             ? "border-gray-900 bg-gray-900 text-white" 
                                                             : hasStockForDiameter
@@ -382,7 +382,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                                                 : "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
                                                     }`}>
                                                     {diameter}
-                                                    {!hasStockForDiameter && " (Out of Stock)"}
+                                                    {!hasStockForDiameter && <span className="hidden sm:inline"> (Out of Stock)</span>}
                                                 </button>
                                             );
                                         })}
@@ -393,7 +393,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                             {/* Spool Size Selection */}
                             {selectedDiameter && (
                                 <div className="mb-4">
-                                    <p className="text-sm font-semibold text-gray-800 mb-2.5">Spool Size</p>
+                                    <p className="text-xs sm:text-sm font-semibold text-gray-800 mb-2">Spool Size</p>
                                     <div className="flex gap-2 flex-wrap">
                                         {(() => {
                                             // Get only spool sizes that exist for selected diameter
@@ -414,7 +414,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                                     key={item.spoolWeight} 
                                                     onClick={() => item.inStock && setSelectedSpoolSize(item.spoolWeight)}
                                                     disabled={!item.inStock}
-                                                    className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl border text-xs sm:text-sm font-medium transition-all ${
                                                         selectedSpoolSize === item.spoolWeight 
                                                             ? "border-gray-900 bg-gray-900 text-white" 
                                                             : item.inStock
@@ -422,7 +422,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                                                                 : "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
                                                     }`}>
                                                     {item.spoolWeight}
-                                                    {!item.inStock && " (Out of Stock)"}
+                                                    {!item.inStock && <span className="hidden sm:inline"> (Out of Stock)</span>}
                                                 </button>
                                             ));
                                         })()}
@@ -431,8 +431,8 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                             )}
 
                             {/* Quantity */}
-                            <div className="mb-5">
-                                <p className="text-sm font-semibold text-gray-800 mb-2.5">Quantity</p>
+                            <div className="mb-4">
+                                <p className="text-xs sm:text-sm font-semibold text-gray-800 mb-2">Quantity</p>
                                 <div className="flex items-center gap-3">
                                     <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 rounded-xl border border-gray-200 text-gray-600 text-xl flex items-center justify-center hover:bg-gray-50">−</button>
                                     <div className="flex-1 max-w-[80px] h-10 border border-gray-200 rounded-xl flex items-center justify-center font-bold text-gray-900">{quantity}</div>
