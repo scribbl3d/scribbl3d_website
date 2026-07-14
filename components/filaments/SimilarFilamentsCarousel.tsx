@@ -22,6 +22,7 @@ type Filament = {
     discount?: number;
     images: string[];
     shortDescription?: string;
+    inStock?: boolean;
 };
 
 export default function SimilarFilamentsCarousel({
@@ -109,6 +110,12 @@ export default function SimilarFilamentsCarousel({
                                             className="absolute inset-0 opacity-20"
                                             style={{ backgroundColor: filament.hexCode || '#cccccc' }}
                                         />
+                                        {/* Out of Stock Badge */}
+                                        {!filament.inStock && (
+                                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full z-10">
+                                                Out of Stock
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* CONTENT */}

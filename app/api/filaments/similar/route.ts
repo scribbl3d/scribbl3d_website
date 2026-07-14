@@ -42,8 +42,12 @@ export async function GET(req: NextRequest) {
         // Get price from first variant for each filament
         const filamentsWithPrice = await Promise.all(
             filaments.map(async (filament) => {
+                // Try to get in-stock variant first, then any variant
                 const firstVariant = await prisma.filamentVariant.findFirst({
                     where: { filamentId: filament.id, inStock: true },
+                    orderBy: [{ isDefault: "desc" }, { price: "asc" }],
+                }) || await prisma.filamentVariant.findFirst({
+                    where: { filamentId: filament.id },
                     orderBy: [{ isDefault: "desc" }, { price: "asc" }],
                 });
 
@@ -52,12 +56,14 @@ export async function GET(req: NextRequest) {
                 const discount = originalPrice
                     ? Math.round(((originalPrice - price) / originalPrice) * 100)
                     : 0;
+                const inStock = firstVariant?.inStock || false;
 
                 return {
                     ...filament,
                     price,
                     originalPrice,
                     discount,
+                    inStock,
                 };
             })
         );
