@@ -48,7 +48,17 @@ export default function MobileFilamentFilters({
         fetchFilterOptions();
     }, []);
 
-    if (!isOpen) return null;
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [isOpen]);
 
     const toggleArrayFilter = (key: keyof FilamentFiltersState, value: string) => {
         setFilters((prev) => {
@@ -72,11 +82,26 @@ export default function MobileFilamentFilters({
         });
     };
 
+    if (!isOpen) return null;
+
     return (
-        <div className="fixed inset-0 z-50 lg:hidden">
-            <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-            
-            <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white shadow-xl flex flex-col">
+        <>
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={onClose}
+            />
+
+            {/* Bottom Sheet */}
+            <div
+                className={`
+                    fixed inset-x-0 bottom-0 z-50 lg:hidden
+                    bg-white rounded-t-2xl
+                    transform transition-transform duration-300 ease-out
+                    ${isOpen ? "translate-y-0" : "translate-y-full"}
+                    max-h-[90vh] flex flex-col
+                `}
+            >
                 <div className="flex items-center justify-between p-4 border-b">
                     <h2 className="text-lg font-bold">Filters</h2>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
@@ -130,10 +155,11 @@ export default function MobileFilamentFilters({
                             />
                         </div>
 
-                        <div className="p-4 border-t space-y-2">
+                        {/* Footer */}
+                        <div className="flex gap-3 px-4 py-4 border-t border-gray-100 bg-white">
                             <button
                                 onClick={clearAll}
-                                className="w-full py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50"
+                                className="flex-1 py-3 px-4 rounded-xl border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                             >
                                 Clear All
                             </button>
@@ -142,7 +168,7 @@ export default function MobileFilamentFilters({
                                     onApply();
                                     onClose();
                                 }}
-                                className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700"
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 transition-colors"
                             >
                                 Apply Filters
                             </button>
@@ -150,7 +176,7 @@ export default function MobileFilamentFilters({
                     </>
                 )}
             </div>
-        </div>
+        </>
     );
 }
 

@@ -6,10 +6,7 @@ import Link from "next/link";
 import { Heart, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { ImageCarousel } from "@/components/shared/ImageCarousel";
 import FilamentVariantModal, { FilamentVariantItem } from "./FilamentVariantModal";
-import { getSwatchStyle } from "@/lib/utils";
-import { StockBadge } from "@/components/ui/stock-badge";
 import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 
 interface FilamentProductTileProps {
@@ -143,76 +140,97 @@ export function FilamentProductTile({
     };
 
     return (
-        <div className="w-full bg-white rounded-2xl overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300 flex flex-col border border-gray-100 relative group">
-            
-            {/* Image Section */}
-            <Link href={`/filament/${slug || id}`} className="block relative bg-white aspect-square p-6 flex items-center justify-center">
-                {/* Stock Badge - Top Left */}
-                <StockBadge inStock={inStock} size="sm" className="top-3 left-3" />
-                
-                {/* Finish-type Badge - Top Left (when in stock) or Bottom Left (when out of stock) */}
-                <div className={`absolute left-3 z-[2] ${!inStock ? 'bottom-3' : 'top-3'}`}>
-                    <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full ${badgeClass}`}>
-                        {finishBadge}
-                    </span>
+        <div className="bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
+            <Link href={`/filament/${slug || id}`} className="flex flex-col h-full">
+                {/* IMAGE — square on all sizes */}
+                <div className="relative aspect-square w-full bg-white overflow-hidden">
+                    {images[0] && (
+                        <img
+                            src={images[0]}
+                            alt={name}
+                            className="w-full h-full object-contain"
+                            loading="eager"
+                        />
+                    )}
+                    {/* Stock Badge */}
+                    {!inStock && (
+                        <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                            Out of Stock
+                        </div>
+                    )}
+                    {/* Finish Badge - on image */}
+                    <div className={`absolute ${!inStock ? 'bottom-1.5 left-1.5 sm:bottom-3 sm:left-3' : 'top-1.5 left-1.5 sm:top-3 sm:left-3'} z-[2]`}>
+                        <span className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full ${badgeClass}`}>
+                            {finishBadge}
+                        </span>
+                    </div>
+                    {/* Wishlist */}
+                    <button
+                        onClick={handleWishlistToggle}
+                        disabled={isWishlistLoading}
+                        className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
+                    >
+                        {isWishlistLoading ? (
+                            <div className="w-3 h-3 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                        ) : (
+                            <Heart className={`w-3 h-3 sm:w-5 sm:h-5 transition ${isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                        )}
+                    </button>
                 </div>
 
-                {/* Wishlist */}
-                <button
-                    className="absolute top-3 right-3 z-[3] w-8 h-8 flex items-center justify-center bg-white/80 hover:bg-white rounded-full shadow-sm"
-                    onClick={handleWishlistToggle}
-                    disabled={isWishlistLoading}
-                >
-                    {isWishlistLoading ? (
-                        <div className="h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    ) : (
-                        <Heart className={`w-4 h-4 ${isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
-                    )}
-                </button>
-
-                <ImageCarousel images={images} name={name} />
-            </Link>
-
-            {/* Details Section */}
-            <div className="p-5 flex flex-col flex-1">
-                
-
-                <Link href={`/filament/${slug || id}`} className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 leading-tight mb-1.5 line-clamp-2">
+                {/* CONTENT */}
+                <div className="px-2.5 pt-2 pb-0 sm:px-5 sm:pt-4 sm:pb-0">
+                    {/* Name */}
+                    <h3 className="text-[13px] leading-tight sm:text-[15px] sm:leading-snug font-bold text-gray-900 line-clamp-1 sm:line-clamp-2">
                         {name}
                     </h3>
-                    <p className="text-xs font-medium text-gray-500 mb-4">
+
+                    {/* Description — hidden on mobile */}
+                    <p className="hidden sm:block text-[13px] leading-[20px] text-[#4A5565] mt-1 line-clamp-2">
                         {shortDescription}
                     </p>
-                </Link>
 
-                <div className="flex items-center justify-between mt-auto mb-4">
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-black text-gray-900 tracking-tight">₹{price}</span>
-                            {originalPrice > price && (
-                                <span className="text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                                    {discount}% OFF
-                                </span>
-                            )}
+                    {/* Specs — hidden on mobile */}
+                    <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5">
+                        <div>
+                            <strong>Diameter:</strong> {diameter || "1.75mm"} | <strong>Weight:</strong> {weight || "1kg"}
                         </div>
-                        {originalPrice > price && (
-                            <span className="text-xs text-gray-400 line-through">₹{originalPrice}</span>
-                        )}
                     </div>
                 </div>
+            </Link>
 
-                {/* Primary CTA - Select Variants (only when in stock) */}
+            {/* FOOTER */}
+            <div className="mt-auto px-2.5 pb-2.5 sm:px-5 sm:pb-4">
+                <hr className="hidden sm:block my-3" />
+
+                {/* Price */}
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
+                    <span className="text-base sm:text-lg font-black text-gray-900">₹{price}</span>
+                    {originalPrice > price && (
+                        <>
+                            <span className="text-[10px] sm:text-xs text-gray-400 line-through">₹{originalPrice}</span>
+                            <span className="text-[9px] sm:text-[11px] font-bold text-green-600 bg-green-50 px-1 py-0.5 sm:px-1.5 rounded">
+                                {discount}% OFF
+                            </span>
+                        </>
+                    )}
+                </div>
+
+                {/* Select Variants — hidden when OOS */}
                 {inStock && (
                     <button
-                        className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-black transition-colors flex items-center justify-center"
-                        onClick={handleSelectVariants}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleSelectVariants(e);
+                        }}
+                        className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center bg-black text-white hover:bg-gray-900"
                     >
                         Select Variants
                     </button>
                 )}
 
-                {/* Notify Me - only when out of stock */}
+                {/* Notify Me — only when OOS */}
                 {!inStock && (
                     <button
                         onClick={(e) => {
@@ -220,9 +238,9 @@ export function FilamentProductTile({
                             e.stopPropagation();
                             setShowNotifyModal(true);
                         }}
-                        className="w-full py-2.5 border-2 border-blue-200 text-blue-500 hover:text-blue-700 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                        className="w-full h-8 sm:h-10 text-[11px] sm:text-sm font-semibold rounded-md sm:rounded-lg transition flex items-center justify-center gap-1.5 border-2 border-blue-200 text-blue-500 hover:text-blue-700"
                     >
-                        <Bell size={14} />
+                        <Bell size={12} className="sm:w-[14px] sm:h-[14px]" />
                         Notify Me
                     </button>
                 )}
