@@ -98,7 +98,7 @@ export default function SimilarFilamentsCarousel({
                             <Link href={`/filament/${filament.slug || filament.id}`}>
                                 <div className="bg-white rounded-lg sm:rounded-xl border overflow-hidden hover:shadow-lg transition flex flex-col h-full">
                                     {/* IMAGE */}
-                                    <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                                    <div className="relative aspect-square bg-white overflow-hidden">
                                         {filament.images?.[0] && (
                                             <img
                                                 src={filament.images[0]}
@@ -106,10 +106,6 @@ export default function SimilarFilamentsCarousel({
                                                 className="w-full h-full object-contain"
                                             />
                                         )}
-                                        <div 
-                                            className="absolute inset-0 opacity-20"
-                                            style={{ backgroundColor: filament.hexCode || '#cccccc' }}
-                                        />
                                         {/* Out of Stock Badge */}
                                         {!filament.inStock && (
                                             <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full z-10">
@@ -131,10 +127,7 @@ export default function SimilarFilamentsCarousel({
                                         <h3 className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-1 sm:line-clamp-2 mb-1">
                                             {filament.name}
                                         </h3>
-                                        <p className="text-[10px] sm:text-xs text-gray-600 mb-1">
-                                            Color: {filament.colorName}
-                                        </p>
-                                        <p className="hidden sm:block text-xs text-gray-600 line-clamp-2">
+                                        <p className="hidden sm:block text-xs text-gray-600 line-clamp-2 mt-1">
                                             {filament.shortDescription}
                                         </p>
                                     </div>
