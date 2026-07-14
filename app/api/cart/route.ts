@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
+// Force dynamic rendering and no caching for cart data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /* =========================
    TYPES
 ========================= */
@@ -23,6 +27,7 @@ type CartResponseItem = {
     machineDimensionLength?: number | null;
     machineDimensionWidth?: number | null;
     machineDimensionHeight?: number | null;
+    inStock?: boolean;
     _orphaned?: boolean;
     _error?: boolean;
 };
@@ -89,10 +94,12 @@ export async function POST(req: Request) {
             resinId,
             resinColourId,
             resinWeightId,
+            filamentId,
+            filamentVariantId,
             quantity = 1,
         } = body;
 
-        if (!productId && !prebuiltProductId && !printerId && !resinId) {
+        if (!productId && !prebuiltProductId && !printerId && !resinId && !filamentId) {
             return NextResponse.json(
                 { error: "Invalid cart item" },
                 { status: 400 },
@@ -141,6 +148,34 @@ export async function POST(req: Request) {
             }
         }
 
+        if (filamentId) {
+            if (!filamentVariantId) {
+                return NextResponse.json(
+                    { error: "Filament variant required" },
+                    { status: 400 },
+                );
+            }
+            const variant = await prisma.filamentVariant.findFirst({
+                where: {
+                    id: filamentVariantId,
+                    filamentId: filamentId,
+                },
+                select: { id: true, inStock: true },
+            });
+            if (!variant) {
+                return NextResponse.json(
+                    { error: "Invalid filament variant" },
+                    { status: 400 },
+                );
+            }
+            if (!variant.inStock) {
+                return NextResponse.json(
+                    { error: "Filament variant out of stock" },
+                    { status: 400 },
+                );
+            }
+        }
+
         let cart = await prisma.cart.findFirst({
             where: { userId: session.user.id },
         });
@@ -159,6 +194,10 @@ export async function POST(req: Request) {
             whereClause.resinId = resinId;
             whereClause.resinColourId = resinColourId;
             whereClause.resinWeightId = resinWeightId;
+        }
+        if (filamentId) {
+            whereClause.filamentId = filamentId;
+            whereClause.filamentVariantId = filamentVariantId;
         }
 
         const existingItem = await prisma.cartItem.findFirst({
@@ -182,6 +221,8 @@ export async function POST(req: Request) {
                     resinId,
                     resinColourId,
                     resinWeightId,
+                    filamentId,
+                    filamentVariantId,
                 },
             });
         }
@@ -241,6 +282,8 @@ export async function GET() {
                             },
                         },
                         resinWeight: true,
+                        filament: true,
+                        filamentVariant: true,
                     },
                 },
             },
@@ -257,9 +300,7 @@ export async function GET() {
                 /* ---------- RESIN ---------- */
                 if (item.resinId) {
                     let resin = item.resin;
-                    let resinWeight = item.resinWeight;
-                    let resinColour = item.resinColour as any;
-
+                    
                     // If resin itself is gone, item is orphaned
                     if (!resin) {
                         items.push({
@@ -272,6 +313,31 @@ export async function GET() {
                             _orphaned: true,
                         });
                         continue;
+                    }
+
+                    // Fetch fresh variant data to get updated prices
+                    let resinWeight = item.resinWeight;
+                    let resinColour = item.resinColour as any;
+                    
+                    if (item.resinWeightId) {
+                        const freshWeight = await prisma.resinWeight.findUnique({
+                            where: { id: item.resinWeightId },
+                        });
+                        if (freshWeight) {
+                            resinWeight = freshWeight;
+                        }
+                    }
+                    
+                    if (item.resinColourId) {
+                        const freshColour = await prisma.resinColour.findUnique({
+                            where: { id: item.resinColourId },
+                            include: {
+                                images: { orderBy: { sortOrder: "asc" } },
+                            },
+                        });
+                        if (freshColour) {
+                            resinColour = freshColour as any;
+                        }
                     }
 
                     const missingVariant = !resinWeight || !resinColour;
@@ -300,6 +366,64 @@ export async function GET() {
                             : null,
                         color: resinColour?.name ?? null,
                         colorHex: resinColour?.hexCode ?? null,
+                        _orphaned: missingVariant,
+                    });
+                    continue;
+                }
+
+                /* ---------- FILAMENT ---------- */
+                if (item.filamentId) {
+                    const filament = item.filament;
+                    
+                    // If filament itself is gone, item is orphaned
+                    if (!filament) {
+                        items.push({
+                            id: item.id,
+                            itemType: "unknown",
+                            name: "Product no longer available",
+                            price: 0,
+                            quantity: item.quantity,
+                            images: [],
+                            _orphaned: true,
+                        });
+                        continue;
+                    }
+
+                    // Fetch fresh variant data to get updated price
+                    let filamentVariant = item.filamentVariant;
+                    if (item.filamentVariantId) {
+                        const freshVariant = await prisma.filamentVariant.findUnique({
+                            where: { id: item.filamentVariantId },
+                        });
+                        if (freshVariant) {
+                            filamentVariant = freshVariant;
+                        }
+                    }
+
+                    const missingVariant = !filamentVariant;
+                    const isFilamentOutOfStock = filament.inStock === false;
+                    const isVariantOutOfStock = filamentVariant ? filamentVariant.inStock === false : false;
+                    const isOutOfStock = isFilamentOutOfStock || isVariantOutOfStock || missingVariant;
+                    
+                    const images = (filament as any)?.images?.length > 0 
+                        ? (filament as any).images 
+                        : [];
+
+                    items.push({
+                        id: item.id,
+                        sourceId: filament.id,
+                        itemType: "filament",
+                        name: filament.name,
+                        slug: (filament as any).slug ?? null,
+                        price: missingVariant ? 0 : safeNum(filamentVariant?.price),
+                        quantity: item.quantity,
+                        images,
+                        size: filamentVariant
+                            ? `${filamentVariant.diameter} - ${filamentVariant.spoolWeight}`
+                            : null,
+                        color: (filament as any).colorName ?? null,
+                        colorHex: (filament as any).hexCode ?? null,
+                        inStock: !isOutOfStock,
                         _orphaned: missingVariant,
                     });
                     continue;
@@ -442,7 +566,14 @@ export async function GET() {
             }
         }
 
-        return NextResponse.json({ items });
+        const response = NextResponse.json({ items });
+        
+        // Add no-cache headers to prevent any caching
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        
+        return response;
     } catch (error) {
         console.error("GET /api/cart error:", error);
         return NextResponse.json({ items: [] });

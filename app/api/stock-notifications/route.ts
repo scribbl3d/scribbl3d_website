@@ -176,9 +176,16 @@ export async function GET(request: NextRequest) {
                     .map((n) => n.productId),
             ),
         );
+        const filamentIds = Array.from(
+            new Set(
+                notifications
+                    .filter((n) => n.productType === "filament")
+                    .map((n) => n.productId),
+            ),
+        );
 
         // ── Product-level stock lookup ────────────────────────────────────
-        const [prebuiltRows, printerRows, resinRows] = await Promise.all([
+        const [prebuiltRows, printerRows, resinRows, filamentRows] = await Promise.all([
             prebuiltIds.length > 0
                 ? prisma.prebuiltProducts.findMany({
                       where: { id: { in: prebuiltIds } },
@@ -197,14 +204,22 @@ export async function GET(request: NextRequest) {
                       select: { id: true, inStock: true, slug: true },
                   })
                 : [],
+            filamentIds.length > 0
+                ? prisma.filament.findMany({
+                      where: { id: { in: filamentIds } },
+                      select: { id: true, inStock: true, slug: true },
+                  })
+                : [],
         ]);
 
         const prebuiltMap = new Map<string, ProductLookup>();
         const printerMap = new Map<string, ProductLookup>();
         const resinMap = new Map<string, ProductLookup>();
+        const filamentMap = new Map<string, ProductLookup>();
         prebuiltRows.forEach((p) => prebuiltMap.set(p.id, p as ProductLookup));
         printerRows.forEach((p) => printerMap.set(p.id, p as ProductLookup));
         resinRows.forEach((p) => resinMap.set(p.id, p as ProductLookup));
+        filamentRows.forEach((p) => filamentMap.set(p.id, p as ProductLookup));
 
         // ── Variant-level stock lookup ────────────────────────────────────
         const prebuiltVariantIds = Array.from(
@@ -264,6 +279,8 @@ export async function GET(request: NextRequest) {
                 productData = printerMap.get(n.productId);
             else if (n.productType === "resin")
                 productData = resinMap.get(n.productId);
+            else if (n.productType === "filament")
+                productData = filamentMap.get(n.productId);
             else productData = prebuiltMap.get(n.productId);
 
             let variantInStock: boolean | null = null;

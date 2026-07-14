@@ -48,6 +48,14 @@ export async function GET() {
                             weights: true,
                         },
                     },
+                    filament: {
+                        include: {
+                            variants: {
+                                where: { inStock: true },
+                                orderBy: { price: "asc" },
+                            },
+                        },
+                    },
                 },
             },
         },
@@ -153,7 +161,28 @@ export async function GET() {
                 };
             }
 
-            /* ================= PRODUCT (FILAMENT) ================= */
+            /* ================= FILAMENT ================= */
+            if (item.filament) {
+                const defaultVariant = item.filament.variants.find(v => v.isDefault) || item.filament.variants[0];
+                const price = defaultVariant?.price || 0;
+                const originalPrice = defaultVariant?.originalPrice || null;
+                
+                return {
+                    id: item.id,
+                    itemType: "filament",
+                    title: item.filament.name,
+                    image: item.filament.images?.[0] ?? null,
+                    badge: item.filament.material ?? null,
+                    price,
+                    originalPrice,
+                    requiresOptions: false,
+                    slug: item.filament.slug,
+                    inStock: item.filament.inStock ?? true,
+                    cartPayload: { filamentId: item.filament.id },
+                };
+            }
+
+            /* ================= PRODUCT (OLD) ================= */
             if (item.product) {
                 return {
                     id: item.id,
@@ -187,9 +216,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { productId, prebuiltProductId, printerId, resinId } = body;
+    const { productId, prebuiltProductId, printerId, resinId, filamentId } = body;
 
-    const types = { productId, prebuiltProductId, printerId, resinId };
+    const types = { productId, prebuiltProductId, printerId, resinId, filamentId };
     const activeType = Object.entries(types).filter(
         ([_, v]) => typeof v === "string",
     );
@@ -225,6 +254,7 @@ export async function POST(req: Request) {
             prebuiltProductId: prebuiltProductId ?? null,
             printerId: printerId ?? null,
             resinId: resinId ?? null,
+            filamentId: filamentId ?? null,
         },
     });
 

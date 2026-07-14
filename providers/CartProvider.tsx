@@ -19,7 +19,7 @@ import React, {
 export type CartItem = {
     id: string;
     sourceId?: string;
-    itemType: "product" | "prebuilt" | "printer" | "resin" | "unknown";
+    itemType: "product" | "prebuilt" | "printer" | "resin" | "filament" | "unknown";
     name: string;
     slug?: string | null;
     price: number;
@@ -33,6 +33,7 @@ export type CartItem = {
     machineDimensionLength?: number | null;
     machineDimensionWidth?: number | null;
     machineDimensionHeight?: number | null;
+    inStock?: boolean;
 };
 
 export type AddToCartPayload = {
@@ -43,6 +44,8 @@ export type AddToCartPayload = {
     resinId?: string;
     resinColourId?: string;
     resinWeightId?: string;
+    filamentId?: string;
+    filamentVariantId?: string;
     quantity?: number;
 };
 
@@ -148,7 +151,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!session) return;
 
         try {
-            const res = await fetch("/api/cart");
+            const res = await fetch("/api/cart", { cache: 'no-store' });
             if (!res.ok) return;
 
             const data = await res.json();

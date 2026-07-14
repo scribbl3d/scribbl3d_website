@@ -91,3 +91,36 @@ export async function GET() {
 
     return NextResponse.json({ diagnostics }, { status: 200 });
 }
+
+// DELETE broken filament items (null variantId)
+export async function DELETE() {
+    const session = (await getServerSession(authOptions as any)) as {
+        user?: { id?: string };
+    } | null;
+
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const cart = await prisma.cart.findFirst({
+        where: { userId: session.user.id },
+    });
+
+    if (!cart) {
+        return NextResponse.json({ message: "No cart found" });
+    }
+
+    // Delete filament items with null variant IDs
+    const result = await prisma.cartItem.deleteMany({
+        where: {
+            cartId: cart.id,
+            filamentId: { not: null },
+            filamentVariantId: null,
+        },
+    });
+
+    return NextResponse.json({ 
+        message: "Deleted broken filament items",
+        deletedCount: result.count 
+    });
+}

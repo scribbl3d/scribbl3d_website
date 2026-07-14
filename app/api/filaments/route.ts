@@ -22,14 +22,18 @@ export async function GET(request: Request) {
         const order = searchParams.get("order") === "desc" ? "desc" : "asc";
 
         // Pagination
-        const page = parseInt(searchParams.get("page") || "1");
-        const limit = parseInt(searchParams.get("limit") || "9");
+        const page = Number.parseInt(searchParams.get("page") || "1");
+        const limit = Number.parseInt(searchParams.get("limit") || "9");
         const skip = (page - 1) * limit;
 
         // Build WHERE clause
+        const materialArray = material ? material.split(",").map(m => m.trim()) : [];
+        
         const whereConditions: Prisma.FilamentWhereInput = {
             AND: [
-                material ? { material } : {},
+                materialArray.length > 0 ? {
+                    OR: materialArray.map(m => ({ material: m }))
+                } : {},
                 finishType ? { finishType } : {},
                 brand ? { brand } : {},
                 inStock !== null ? { inStock: inStock === "true" } : {},
@@ -56,36 +60,44 @@ export async function GET(request: Request) {
         }
 
         // Build ORDER BY clause
-        let orderByClause: any = [];
+        let orderByClause: any = {};
         if (sortBy === "price") {
-            // Sort by minimum variant price
-            orderByClause = { createdAt: order };
+            // Note: Sorting by price requires sorting by variant price, which is complex
+            // For now, we'll fetch all and sort in memory after transformation
+            orderByClause = { createdAt: "desc" };
+        } else if (sortBy === "updatedAt") {
+            orderByClause = { updatedAt: order };
         } else if (sortBy === "name") {
             orderByClause = { name: order };
         } else {
             orderByClause = { createdAt: order };
         }
 
-        // Fetch filaments with variants
-        const [filaments, totalCount] = await Promise.all([
-            prisma.filament.findMany({
-                where: whereConditions,
-                orderBy: orderByClause,
-                skip,
-                take: limit,
-                include: {
-                    variants: {
-                        where: { inStock: true },
-                        orderBy: { price: "asc" },
-                    },
+        // Fetch filaments with variants - optimized query
+        const filaments = await prisma.filament.findMany({
+            where: whereConditions,
+            orderBy: orderByClause,
+            skip,
+            take: limit,
+            include: {
+                variants: {
+                    orderBy: { price: "asc" },
+                    take: 10, // Increased to show all variants including out of stock
                 },
-            }),
-            prisma.filament.count({ where: whereConditions }),
-        ]);
+            },
+        });
+
+        // Get total count separately to avoid timeout
+        const totalCount = await prisma.filament.count({ where: whereConditions });
 
         // Transform data for frontend
         const transformedFilaments = filaments.map((filament) => {
             const defaultVariant = filament.variants.find(v => v.isDefault) || filament.variants[0];
+            const price = defaultVariant?.price || 0;
+            const originalPrice = defaultVariant?.originalPrice || null;
+            const discount = originalPrice && originalPrice > price 
+                ? Math.round(((originalPrice - price) / originalPrice) * 100) 
+                : 0;
             
             return {
                 id: filament.id,
@@ -107,14 +119,24 @@ export async function GET(request: Request) {
                 createdAt: filament.createdAt,
                 updatedAt: filament.updatedAt,
                 // Default variant info for listing
-                price: defaultVariant?.price || 0,
-                originalPrice: defaultVariant?.originalPrice || null,
+                price,
+                originalPrice,
+                discount,
                 diameter: defaultVariant?.diameter || null,
                 spoolWeight: defaultVariant?.spoolWeight || null,
                 // All variants for selection
                 variants: filament.variants,
             };
         });
+
+        // Sort by price if requested (after transformation since we need variant prices)
+        if (sortBy === "price") {
+            transformedFilaments.sort((a, b) => {
+                const priceA = a.price || 0;
+                const priceB = b.price || 0;
+                return order === "asc" ? priceA - priceB : priceB - priceA;
+            });
+        }
 
         return NextResponse.json({
             filaments: transformedFilaments,

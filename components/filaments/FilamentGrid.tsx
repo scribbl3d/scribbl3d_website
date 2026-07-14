@@ -40,6 +40,7 @@ export default function FilamentGrid({ filaments, page, total, limit, onPageChan
                         weight={filament.weight}
                         diameter={filament.diameter}
                         isInWishlist={filament.isInWishlist || false}
+                        inStock={filament.inStock !== false}
                         onWishlistToggle={async () => {
                             // Handle wishlist toggle
                             console.log("Wishlist toggle for", filament.id);

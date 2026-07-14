@@ -87,9 +87,9 @@ export default function FilamentsPage() {
         try {
             const params = new URLSearchParams();
             
-            // Material filters
+            // Material filters - send all selected materials
             if (filters.materialTypes.length > 0) {
-                params.append("material", filters.materialTypes[0]);
+                params.append("material", filters.materialTypes.join(","));
             }
 
             // Finish type filters
@@ -123,14 +123,22 @@ export default function FilamentsPage() {
             }
 
             // Sorting
-            params.append("sortBy", sortBy === "new" ? "createdAt" : "price");
-            params.append("order", sortBy === "price_desc" ? "desc" : "asc");
+            if (sortBy === "new") {
+                params.append("sortBy", "updatedAt");
+                params.append("order", "desc");
+            } else if (sortBy === "price_asc") {
+                params.append("sortBy", "price");
+                params.append("order", "asc");
+            } else if (sortBy === "price_desc") {
+                params.append("sortBy", "price");
+                params.append("order", "desc");
+            }
             
             // Pagination
             params.append("page", String(page));
             params.append("limit", String(limit));
 
-            const res = await fetch(`/api/filament?${params.toString()}`);
+            const res = await fetch(`/api/filaments?${params.toString()}`);
             const data = await res.json();
 
             setFilaments(data.filaments || []);

@@ -1,7 +1,8 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X, Loader2 } from "lucide-react";
 import { FilamentFiltersState } from "./FilamentFilters";
+import { useEffect, useState } from "react";
 
 interface MobileFilamentFiltersProps {
     isOpen: boolean;
@@ -11,11 +12,15 @@ interface MobileFilamentFiltersProps {
     onApply: () => void;
 }
 
-const materialTypes = ["PLA", "ABS", "PETG", "TPU", "Nylon", "Wood Fill", "Metal Fill"];
-const finishTypes = ["Matte", "Glossy", "Silk", "Metallic", "Translucent"];
-const brands = ["eSUN", "Hatchbox", "Overture", "Polymaker", "Prusament"];
-const diameters = ["1.75mm", "2.85mm", "3mm"];
-const spoolWeights = ["250g", "500g", "1kg", "2kg"];
+type FilterOptions = {
+    materials: string[];
+    finishTypes: string[];
+    brands: string[];
+    printerCompatibility: string[];
+    diameters: string[];
+    spoolWeights: string[];
+    priceRange: { min: number; max: number };
+};
 
 export default function MobileFilamentFilters({
     isOpen,
@@ -24,6 +29,25 @@ export default function MobileFilamentFilters({
     setFilters,
     onApply,
 }: MobileFilamentFiltersProps) {
+    const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch filter options when component mounts
+    useEffect(() => {
+        const fetchFilterOptions = async () => {
+            try {
+                const res = await fetch("/api/filaments/filters");
+                const data = await res.json();
+                setFilterOptions(data);
+            } catch (err) {
+                console.error("Failed to fetch filter options:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchFilterOptions();
+    }, []);
+
     if (!isOpen) return null;
 
     const toggleArrayFilter = (key: keyof FilamentFiltersState, value: string) => {
@@ -60,60 +84,71 @@ export default function MobileFilamentFilters({
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                    <FilterSection
-                        title="Material Type"
-                        options={materialTypes}
-                        selected={filters.materialTypes}
-                        onToggle={(v) => toggleArrayFilter("materialTypes", v)}
-                    />
+                {loading || !filterOptions ? (
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">Loading filters...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                            <FilterSection
+                                title="Material Type"
+                                options={filterOptions.materials}
+                                selected={filters.materialTypes}
+                                onToggle={(v) => toggleArrayFilter("materialTypes", v)}
+                            />
 
-                    <FilterSection
-                        title="Finish"
-                        options={finishTypes}
-                        selected={filters.finishTypes}
-                        onToggle={(v) => toggleArrayFilter("finishTypes", v)}
-                    />
+                            <FilterSection
+                                title="Finish"
+                                options={filterOptions.finishTypes}
+                                selected={filters.finishTypes}
+                                onToggle={(v) => toggleArrayFilter("finishTypes", v)}
+                            />
 
-                    <FilterSection
-                        title="Brand"
-                        options={brands}
-                        selected={filters.brands}
-                        onToggle={(v) => toggleArrayFilter("brands", v)}
-                    />
+                            <FilterSection
+                                title="Brand"
+                                options={filterOptions.brands}
+                                selected={filters.brands}
+                                onToggle={(v) => toggleArrayFilter("brands", v)}
+                            />
 
-                    <FilterSection
-                        title="Diameter"
-                        options={diameters}
-                        selected={filters.diameters}
-                        onToggle={(v) => toggleArrayFilter("diameters", v)}
-                    />
+                            <FilterSection
+                                title="Diameter"
+                                options={filterOptions.diameters}
+                                selected={filters.diameters}
+                                onToggle={(v) => toggleArrayFilter("diameters", v)}
+                            />
 
-                    <FilterSection
-                        title="Spool Weight"
-                        options={spoolWeights}
-                        selected={filters.spoolWeights}
-                        onToggle={(v) => toggleArrayFilter("spoolWeights", v)}
-                    />
-                </div>
+                            <FilterSection
+                                title="Spool Weight"
+                                options={filterOptions.spoolWeights}
+                                selected={filters.spoolWeights}
+                                onToggle={(v) => toggleArrayFilter("spoolWeights", v)}
+                            />
+                        </div>
 
-                <div className="p-4 border-t space-y-2">
-                    <button
-                        onClick={clearAll}
-                        className="w-full py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50"
-                    >
-                        Clear All
-                    </button>
-                    <button
-                        onClick={() => {
-                            onApply();
-                            onClose();
-                        }}
-                        className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700"
-                    >
-                        Apply Filters
-                    </button>
-                </div>
+                        <div className="p-4 border-t space-y-2">
+                            <button
+                                onClick={clearAll}
+                                className="w-full py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Clear All
+                            </button>
+                            <button
+                                onClick={() => {
+                                    onApply();
+                                    onClose();
+                                }}
+                                className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700"
+                            >
+                                Apply Filters
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );

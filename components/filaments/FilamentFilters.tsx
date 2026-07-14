@@ -3,8 +3,8 @@
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export type FilamentFiltersState = {
     materialTypes: string[];
@@ -17,6 +17,7 @@ export type FilamentFiltersState = {
 };
 
 
+// Default fallback values
 export const FILTER_META = {
     materialTypes: ["PLA", "PLA+", "PETG", "ABS", "TPU", "ASA", "Nylon", "Carbon Fiber"],
     finishTypes: ["Matte", "Silk", "Glossy", "Metallic", "Carbon Fiber", "Transparent", "Marble", "Wood"],
@@ -27,6 +28,16 @@ export const FILTER_META = {
     price: { min: 500, max: 5000 }
 };
 
+type FilterOptions = {
+    materials: string[];
+    finishTypes: string[];
+    brands: string[];
+    printerCompatibility: string[];
+    diameters: string[];
+    spoolWeights: string[];
+    priceRange: { min: number; max: number };
+};
+
 export default function FilamentFilters({
     filters,
     setFilters,
@@ -34,7 +45,35 @@ export default function FilamentFilters({
     filters: FilamentFiltersState;
     setFilters: React.Dispatch<React.SetStateAction<FilamentFiltersState>>;
 }) {
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["advanced"]));
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    // Fetch real filter options from API
+    useEffect(() => {
+        const fetchFilterOptions = async () => {
+            try {
+                const res = await fetch("/api/filaments/filters");
+                const data = await res.json();
+                setFilterOptions(data);
+            } catch (err) {
+                console.error("Failed to fetch filter options:", err);
+                // Use fallback values
+                setFilterOptions({
+                    materials: FILTER_META.materialTypes,
+                    finishTypes: FILTER_META.finishTypes,
+                    brands: FILTER_META.brands,
+                    printerCompatibility: FILTER_META.printerCompatibility,
+                    diameters: FILTER_META.diameters,
+                    spoolWeights: FILTER_META.spoolWeights,
+                    priceRange: FILTER_META.price,
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchFilterOptions();
+    }, []);
 
     const toggleArray = (key: keyof FilamentFiltersState, value: string) => {
         setFilters((prev) => {
@@ -65,6 +104,21 @@ export default function FilamentFilters({
         FILTER_META.price.max,
     ];
 
+    if (loading) {
+        return (
+            <Card className="p-6 shadow-sm border-gray-100">
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <p className="text-sm text-gray-600">Loading filters...</p>
+                </div>
+            </Card>
+        );
+    }
+
+    if (!filterOptions) {
+        return null;
+    }
+
     return (
         <Card className="p-6 space-y-4 shadow-sm border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Filters</h3>
@@ -73,7 +127,7 @@ export default function FilamentFilters({
             <div className="border-b border-gray-100 pb-4">
                 <p className="font-semibold text-gray-900 mb-3 text-sm">Material Type</p>
                 <div className="space-y-2.5">
-                    {FILTER_META.materialTypes.map((m) => (
+                    {filterOptions.materials.map((m) => (
                         <Item
                             key={m}
                             label={m}
@@ -91,7 +145,7 @@ export default function FilamentFilters({
                 isExpanded={expandedSections.has("finish")}
                 onToggle={() => toggleSection("finish")}
             >
-                {FILTER_META.finishTypes.map((f) => (
+                {filterOptions.finishTypes.map((f) => (
                     <Item
                         key={f}
                         label={f}
@@ -107,7 +161,7 @@ export default function FilamentFilters({
                 isExpanded={expandedSections.has("brand")}
                 onToggle={() => toggleSection("brand")}
             >
-                {FILTER_META.brands.map((b) => (
+                {filterOptions.brands.map((b) => (
                     <Item
                         key={b}
                         label={b}
@@ -123,8 +177,8 @@ export default function FilamentFilters({
 
                 <div className="px-1">
                     <Slider
-                        min={FILTER_META.price.min}
-                        max={FILTER_META.price.max}
+                        min={filterOptions.priceRange.min}
+                        max={filterOptions.priceRange.max}
                         step={100}
                         value={priceValue}
                         onValueChange={(v) =>
@@ -144,13 +198,13 @@ export default function FilamentFilters({
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
                             <input
                                 type="number"
-                                min={FILTER_META.price.min}
+                                min={filterOptions.priceRange.min}
                                 max={priceValue[1]}
                                 value={priceValue[0]}
                                 onChange={(e) =>
                                     setFilters((p) => ({
                                         ...p,
-                                        price: [Number(e.target.value) || FILTER_META.price.min, priceValue[1]],
+                                        price: [Number(e.target.value) || filterOptions.priceRange.min, priceValue[1]],
                                     }))
                                 }
                                 className="w-full pl-7 pr-2 py-1.5 border border-gray-200 rounded-md text-sm focus:ring-1 focus:ring-blue-500"
@@ -164,12 +218,12 @@ export default function FilamentFilters({
                             <input
                                 type="number"
                                 min={priceValue[0]}
-                                max={FILTER_META.price.max}
+                                max={filterOptions.priceRange.max}
                                 value={priceValue[1]}
                                 onChange={(e) =>
                                     setFilters((p) => ({
                                         ...p,
-                                        price: [priceValue[0], Number(e.target.value) || FILTER_META.price.max],
+                                        price: [priceValue[0], Number(e.target.value) || filterOptions.priceRange.max],
                                     }))
                                 }
                                 className="w-full pl-7 pr-2 py-1.5 border border-gray-200 rounded-md text-sm focus:ring-1 focus:ring-blue-500"
@@ -191,7 +245,7 @@ export default function FilamentFilters({
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Printer Compatibility</p>
                         <div className="space-y-2">
-                            {FILTER_META.printerCompatibility.map((p) => (
+                            {filterOptions.printerCompatibility.map((p) => (
                                 <Item key={p} label={p} checked={filters.printerCompatibility.includes(p)} onChange={() => toggleArray("printerCompatibility", p)} />
                             ))}
                         </div>
@@ -200,7 +254,7 @@ export default function FilamentFilters({
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Diameter</p>
                         <div className="space-y-2">
-                            {FILTER_META.diameters.map((d) => (
+                            {filterOptions.diameters.map((d) => (
                                 <Item key={d} label={d} checked={filters.diameters.includes(d)} onChange={() => toggleArray("diameters", d)} />
                             ))}
                         </div>
@@ -209,7 +263,7 @@ export default function FilamentFilters({
                     <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Spool Weight</p>
                         <div className="space-y-2">
-                            {FILTER_META.spoolWeights.map((s) => (
+                            {filterOptions.spoolWeights.map((s) => (
                                 <Item key={s} label={s} checked={filters.spoolWeights.includes(s)} onChange={() => toggleArray("spoolWeights", s)} />
                             ))}
                         </div>

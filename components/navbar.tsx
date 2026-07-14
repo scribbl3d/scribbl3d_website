@@ -15,7 +15,7 @@ import { NavbarClient } from "./navbar-client";
 const navItems = [
     { name: "Personalise", href: "/personalise" },
     { name: "Products", href: "/prebuilt-products" },
-    { name: "Filaments", href: "/filaments" },
+    { name: "Filaments", href: "/filament" },
     { name: "Printers", href: "/printers" },
     { name: "Resins", href: "/resins" },
     { name: "Services", href: "/services" },

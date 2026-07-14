@@ -8,6 +8,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getSwatchStyle } from "@/lib/utils";
+import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 
 export interface FilamentVariantItem {
     id: string;
@@ -48,23 +49,91 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
     }, []);
 
     /* ── state ── */
-    const [selectedDiameter, setSelectedDiameter] = useState<string | null>(
-        item.diameters.length === 1 ? item.diameters[0] : null
-    );
-    const [selectedWeight, setSelectedWeight] = useState<string | null>(
-        item.spoolWeights.length === 1 ? item.spoolWeights[0] : null
-    );
+    const [variants, setVariants] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedDiameter, setSelectedDiameter] = useState<string | null>(null);
+    const [selectedWeight, setSelectedWeight] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [addingState, setAddingState] = useState<"idle" | "loading" | "success">("idle");
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
 
-    const availableDiameters = item.diameters.length > 0
-        ? item.diameters
-        : DIAMETER_OPTIONS;
-    const availableWeights = item.spoolWeights.length > 0
-        ? item.spoolWeights
-        : ["250g", "500g", "1 kg", "3 kg"];
+    /* ── fetch variants from dedicated API ── */
+    useEffect(() => {
+        const fetchVariants = async () => {
+            try {
+                // Use ID to fetch variants (the [slug] route handles both slug and ID)
+                const res = await fetch(`/api/filaments/${item.id}/variants`);
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch: ${res.status}`);
+                }
+                const data = await res.json();
+                setVariants(data.variants || []);
+            } catch (err) {
+                console.error("Failed to fetch variants:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchVariants();
+    }, [item.id]);
 
-    const canAdd = !!(selectedDiameter && selectedWeight) && item.inStock;
+    // Extract unique diameters from all variants
+    const availableDiameters = Array.from(new Set(variants.map(v => v.diameter))).sort();
+    
+    // Extract weights ONLY for the selected diameter (or all if no diameter selected)
+    const availableWeights = selectedDiameter
+        ? Array.from(new Set(
+            variants
+                .filter(v => v.diameter === selectedDiameter)
+                .map(v => v.spoolWeight)
+          )).sort()
+        : Array.from(new Set(variants.map(v => v.spoolWeight))).sort();
+
+    // Auto-select if only one option available
+    useEffect(() => {
+        if (!loading && variants.length > 0) {
+            if (availableDiameters.length === 1 && !selectedDiameter) {
+                setSelectedDiameter(availableDiameters[0]);
+            }
+        }
+    }, [loading, variants, availableDiameters, selectedDiameter]);
+
+    useEffect(() => {
+        if (!loading && selectedDiameter) {
+            const weightsForDiameter = variants
+                .filter(v => v.diameter === selectedDiameter)
+                .map(v => v.spoolWeight);
+            if (weightsForDiameter.length === 1 && !selectedWeight) {
+                setSelectedWeight(weightsForDiameter[0]);
+            }
+        }
+    }, [loading, selectedDiameter, variants, selectedWeight]);
+
+    // Find the selected variant
+    const selectedVariant = variants.find(
+        v => v.diameter === selectedDiameter && v.spoolWeight === selectedWeight
+    );
+    
+    // Check if selected variant is in stock
+    const isSelectedVariantInStock = selectedVariant ? selectedVariant.inStock : false;
+    const canAdd = !!(selectedDiameter && selectedWeight && isSelectedVariantInStock);
+    
+    // Get variants for selected diameter to show stock status
+    const variantsForDiameter = selectedDiameter
+        ? variants.filter(v => v.diameter === selectedDiameter)
+        : [];
+    
+    // Check if a specific weight option is in stock for selected diameter
+    const isWeightInStock = (weight: string) => {
+        if (!selectedDiameter) return true;
+        const variant = variantsForDiameter.find(v => v.spoolWeight === weight);
+        return variant ? variant.inStock : false;
+    };
+    
+    // Check if a diameter has any in-stock variants
+    const isDiameterAvailable = (diameter: string) => {
+        return variants.some(v => v.diameter === diameter && v.inStock);
+    };
 
     /* ── handlers ── */
     const handleAddToCart = async () => {
@@ -82,9 +151,14 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
             return;
         }
 
+        if (!selectedVariant) {
+            toast({ title: "Please select a variant", variant: "destructive" });
+            return;
+        }
+
         setAddingState("loading");
         try {
-            await addToCart({ productId: item.id, quantity });
+            await addToCart({ filamentId: item.id, filamentVariantId: selectedVariant.id, quantity });
             setAddingState("success");
             toast({
                 title: "Added to Cart",
@@ -95,6 +169,10 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
             setAddingState("idle");
             toast({ title: "Failed to add item", description: "Something went wrong. Please try again.", variant: "destructive" });
         }
+    };
+    
+    const handleNotifyMe = () => {
+        setShowNotifyModal(true);
     };
 
     const goToPDP = () => {
@@ -146,6 +224,17 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
 
                 {/* BODY */}
                 <div className="p-4 sm:p-5 pb-6 overflow-y-auto flex-1 space-y-5">
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <p className="text-sm text-gray-600">Loading options...</p>
+                        </div>
+                    ) : variants.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                            <p className="text-sm text-gray-600">No variants available</p>
+                        </div>
+                    ) : (
+                        <>
 
                     {/* PRICE */}
                     <div className="flex items-end gap-2">
@@ -165,19 +254,29 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
                     <div>
                         <p className="text-sm font-semibold text-gray-800 mb-2.5">Diameter</p>
                         <div className="flex gap-2 flex-wrap">
-                            {availableDiameters.map((d) => (
-                                <button
-                                    key={d}
-                                    onClick={() => setSelectedDiameter(d)}
-                                    className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                        selectedDiameter === d
-                                            ? "border-gray-900 bg-gray-900 text-white"
-                                            : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
-                                    }`}
-                                >
-                                    {d}
-                                </button>
-                            ))}
+                                {availableDiameters.map((d) => {
+                                    const hasStock = isDiameterAvailable(d);
+                                    return (
+                                        <button
+                                            key={d}
+                                            onClick={() => {
+                                                setSelectedDiameter(d);
+                                                setSelectedWeight(null);
+                                            }}
+                                            disabled={!hasStock}
+                                            className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                selectedDiameter === d
+                                                    ? "border-gray-900 bg-gray-900 text-white"
+                                                    : hasStock
+                                                        ? "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
+                                                        : "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
+                                            }`}
+                                        >
+                                            {d}
+                                            {!hasStock && " (Out of Stock)"}
+                                        </button>
+                                    );
+                                })}
                         </div>
                     </div>
 
@@ -185,20 +284,27 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
                     <div>
                         <p className="text-sm font-semibold text-gray-800 mb-2.5">Spool Size</p>
                         <div className="flex gap-2 flex-wrap">
-                            {availableWeights.map((w) => (
-                                <button
-                                    key={w}
-                                    onClick={() => setSelectedWeight(w)}
-                                    className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
-                                        selectedWeight === w
-                                            ? "border-gray-900 bg-gray-900 text-white"
-                                            : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
-                                    }`}
-                                >
-                                    {w}
-                                </button>
-                            ))}
+                                {availableWeights.map((w) => {
+                                    const inStock = isWeightInStock(w);
+                                    return (
+                                        <button
+                                            key={w}
+                                            onClick={() => setSelectedWeight(w)}
+                                            className={`px-4 py-2 rounded-xl border text-sm font-medium transition-all ${
+                                                selectedWeight === w
+                                                    ? "border-gray-900 bg-gray-900 text-white"
+                                                    : "border-gray-200 text-gray-700 hover:border-gray-700 hover:bg-gray-50"
+                                            }`}
+                                        >
+                                            {w}
+                                            {!inStock && " (Out of Stock)"}
+                                        </button>
+                                    );
+                                })}
                         </div>
+                        {selectedDiameter && variantsForDiameter.length === 0 && (
+                            <p className="text-xs text-gray-500 mt-2">No variants available for this diameter</p>
+                        )}
                     </div>
 
                     {/* QUANTITY */}
@@ -224,17 +330,27 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
                             </button>
                         </div>
                     </div>
+                        </>
+                    )}
                 </div>
 
                 {/* FOOTER CTAs */}
                 <div className="p-4 sm:p-5 pt-0 space-y-2 flex-shrink-0">
-                    {!item.inStock ? (
+                    {loading ? (
                         <button
-                            onClick={goToPDP}
-                            className="w-full h-12 font-semibold rounded-xl border-2 border-orange-400 text-orange-500 hover:bg-orange-50 transition flex items-center justify-center gap-2 text-sm"
+                            disabled
+                            className="w-full h-12 font-semibold rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                        >
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Loading...
+                        </button>
+                    ) : selectedDiameter && selectedWeight && !isSelectedVariantInStock ? (
+                        <button
+                            onClick={handleNotifyMe}
+                            className="w-full h-12 font-semibold rounded-xl border-2 border-blue-200 text-blue-500 hover:text-blue-700 transition flex items-center justify-center gap-2 text-sm"
                         >
                             <Bell size={16} />
-                            Notify Me — View Product
+                            Notify Me When Back in Stock
                         </button>
                     ) : (
                         <button
@@ -244,7 +360,7 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
                                 addingState === "success"
                                     ? "bg-green-600 text-white"
                                     : canAdd
-                                    ? "bg-gray-900 hover:bg-black text-white"
+                                    ? "bg-blue-600 hover:bg-blue-700 text-white"
                                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
                             }`}
                         >
@@ -253,7 +369,7 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
                             ) : addingState === "success" ? (
                                 <><Check className="w-4 h-4" /> Added to Cart!</>
                             ) : canAdd ? (
-                                `Add to Cart · ₹${(item.price * quantity).toLocaleString("en-IN")}`
+                                "Add to Cart"
                             ) : (
                                 "Select all options"
                             )}
@@ -262,12 +378,25 @@ export default function FilamentVariantModal({ item, onClose }: FilamentVariantM
 
                     <button
                         onClick={goToPDP}
-                        disabled={addingState === "loading"}
+                        disabled={addingState === "loading" || loading}
                         className="w-full text-sm text-gray-500 hover:text-black disabled:opacity-40 py-2 transition text-center"
                     >
                         View full details →
                     </button>
                 </div>
+                
+                {/* Notify Me Modal */}
+                {showNotifyModal && selectedVariant && (
+                    <NotifyMeModal
+                        isOpen={showNotifyModal}
+                        onClose={() => setShowNotifyModal(false)}
+                        productId={item.id}
+                        productName={item.name}
+                        productType="filament"
+                        variantId={selectedVariant.id}
+                        variantLabel={`${selectedDiameter} - ${selectedWeight}`}
+                    />
+                )}
             </div>
         </div>
     );

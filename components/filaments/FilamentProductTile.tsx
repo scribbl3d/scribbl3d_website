@@ -3,12 +3,14 @@
 import { useAuthToast } from "@/hooks/useAuthToast";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Heart } from "lucide-react";
-import { useState } from "react";
+import { Heart, Bell } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { ImageCarousel } from "@/components/shared/ImageCarousel";
 import FilamentVariantModal, { FilamentVariantItem } from "./FilamentVariantModal";
 import { getSwatchStyle } from "@/lib/utils";
+import { StockBadge } from "@/components/ui/stock-badge";
+import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 
 interface FilamentProductTileProps {
     id: string;
@@ -26,6 +28,7 @@ interface FilamentProductTileProps {
     diameter?: string;
     isInWishlist: boolean;
     onWishlistToggle: () => Promise<void>;
+    inStock?: boolean;
 }
 
 export function FilamentProductTile({
@@ -42,13 +45,35 @@ export function FilamentProductTile({
     finishType = "Matte",
     weight = "1kg",
     diameter = "1.75mm",
-    isInWishlist,
+    isInWishlist: initialIsInWishlist,
     onWishlistToggle,
+    inStock = true,
 }: FilamentProductTileProps) {
+    const [isInWishlist, setIsInWishlist] = useState(initialIsInWishlist);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [showVariantModal, setShowVariantModal] = useState(false);
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
     const { data: session } = useSession();
     const { showAuthToast } = useAuthToast();
+
+    // Check wishlist status on mount
+    useEffect(() => {
+        if (!session || !id) return;
+        
+        const checkWishlist = async () => {
+            try {
+                const res = await fetch(`/api/wishlist/check?filamentId=${id}`);
+                const data = await res.json();
+                if (data.isAuthenticated) {
+                    setIsInWishlist(data.isInWishlist);
+                }
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        };
+        
+        checkWishlist();
+    }, [session, id]);
 
     const handleWishlistToggle = async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -60,12 +85,20 @@ export function FilamentProductTile({
         }
 
         setIsWishlistLoading(true);
+        const wasInWishlist = isInWishlist;
+        setIsInWishlist(!wasInWishlist);
+        
         try {
-            await onWishlistToggle();
+            await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ filamentId: id }),
+            });
             toast({
-                title: isInWishlist ? "Removed from Wishlist" : "Added to Wishlist",
+                title: wasInWishlist ? "Removed from Wishlist" : "Added to Wishlist",
             });
         } catch (error) {
+            setIsInWishlist(wasInWishlist);
             toast({ title: "Error", variant: "destructive" });
         } finally {
             setIsWishlistLoading(false);
@@ -114,8 +147,11 @@ export function FilamentProductTile({
             
             {/* Image Section */}
             <Link href={`/filament/${slug || id}`} className="block relative bg-white aspect-square p-6 flex items-center justify-center">
-                {/* Finish-type Badge */}
-                <div className="absolute top-3 left-3 z-[2]">
+                {/* Stock Badge - Top Left */}
+                <StockBadge inStock={inStock} size="sm" className="top-3 left-3" />
+                
+                {/* Finish-type Badge - Top Left (when in stock) or Bottom Left (when out of stock) */}
+                <div className={`absolute left-3 z-[2] ${!inStock ? 'bottom-3' : 'top-3'}`}>
                     <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full ${badgeClass}`}>
                         {finishBadge}
                     </span>
@@ -166,13 +202,30 @@ export function FilamentProductTile({
                     </div>
                 </div>
 
-                {/* Primary CTA */}
-                <button
-                    className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-black transition-colors flex items-center justify-center"
-                    onClick={handleSelectVariants}
-                >
-                    Select Variants
-                </button>
+                {/* Primary CTA - Select Variants (only when in stock) */}
+                {inStock && (
+                    <button
+                        className="w-full py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-black transition-colors flex items-center justify-center"
+                        onClick={handleSelectVariants}
+                    >
+                        Select Variants
+                    </button>
+                )}
+
+                {/* Notify Me - only when out of stock */}
+                {!inStock && (
+                    <button
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowNotifyModal(true);
+                        }}
+                        className="w-full py-2.5 border-2 border-blue-200 text-blue-500 hover:text-blue-700 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Bell size={14} />
+                        Notify Me
+                    </button>
+                )}
             </div>
 
             {/* Variant picker modal */}
@@ -180,6 +233,17 @@ export function FilamentProductTile({
                 <FilamentVariantModal
                     item={variantItem}
                     onClose={() => setShowVariantModal(false)}
+                />
+            )}
+
+            {/* Notify Me modal */}
+            {showNotifyModal && (
+                <NotifyMeModal
+                    isOpen={showNotifyModal}
+                    onClose={() => setShowNotifyModal(false)}
+                    productId={id}
+                    productName={name}
+                    productType="filament"
                 />
             )}
         </div>

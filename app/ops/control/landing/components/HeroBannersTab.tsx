@@ -598,7 +598,7 @@ export default function HeroBannersTab() {
                                                 buttonLink: e.target.value,
                                             }))
                                         }
-                                        placeholder="/filaments"
+                                        placeholder="/filament"
                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent outline-none"
                                     />
                                 </div>

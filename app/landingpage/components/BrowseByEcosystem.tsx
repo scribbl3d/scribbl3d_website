@@ -9,7 +9,7 @@ const CATEGORIES = [
         name: "Filaments",
         description: "Materials built for consistent, high-quality prints.",
         image: "/landing/ecosystem/filament.webp",
-        href: "/filaments",
+        href: "/filament",
         buttonText: "Explore Materials",
         type: "hero", // large card — col-span-2, row-span-2
     },

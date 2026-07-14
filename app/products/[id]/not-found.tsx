@@ -9,7 +9,7 @@ export default function ProductNotFound() {
         Sorry, we could not find the product you are looking for.
       </p>
       <Button asChild>
-        <Link href="/filaments">Browse Filaments</Link>
+        <Link href="/filament">Browse Filaments</Link>
       </Button>
     </div>
   );

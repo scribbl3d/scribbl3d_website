@@ -151,20 +151,65 @@ export async function PUT(
                 },
             });
 
-            // Delete existing variants and create new ones
-            await tx.filamentVariant.deleteMany({ where: { filamentId: id } });
-            if (variants.length > 0) {
-                await tx.filamentVariant.createMany({
-                    data: variants.map((v: any, index: number) => ({
-                        filamentId: id,
-                        diameter: v.diameter,
-                        spoolWeight: v.spoolWeight,
-                        price: Number.parseInt(v.price),
-                        originalPrice: v.originalPrice ? Number.parseInt(v.originalPrice) : undefined,
-                        inStock: v.inStock !== false,
-                        isDefault: v.isDefault || false,
-                        displayOrder: index,
-                    })),
+            // Update or create variants (preserve IDs to avoid breaking cart references)
+            const existingVariants = await tx.filamentVariant.findMany({
+                where: { filamentId: id },
+            });
+
+            // Create a map of existing variants by diameter+spoolWeight
+            const existingMap = new Map(
+                existingVariants.map(v => [`${v.diameter}-${v.spoolWeight}`, v])
+            );
+
+            // Track which variants we're keeping
+            const variantsToKeep = new Set<string>();
+
+            // Upsert each variant
+            for (let index = 0; index < variants.length; index++) {
+                const v = variants[index];
+                const key = `${v.diameter}-${v.spoolWeight}`;
+                variantsToKeep.add(key);
+                
+                const existing = existingMap.get(key);
+                
+                if (existing) {
+                    // Update existing variant (preserves ID and cart references)
+                    await tx.filamentVariant.update({
+                        where: { id: existing.id },
+                        data: {
+                            price: Number(v.price),
+                            originalPrice: v.originalPrice ? Number(v.originalPrice) : null,
+                            inStock: v.inStock !== false,
+                            isDefault: v.isDefault || false,
+                            displayOrder: index,
+                        },
+                    });
+                } else {
+                    // Create new variant
+                    await tx.filamentVariant.create({
+                        data: {
+                            filamentId: id,
+                            diameter: v.diameter,
+                            spoolWeight: v.spoolWeight,
+                            price: Number(v.price),
+                            originalPrice: v.originalPrice ? Number(v.originalPrice) : null,
+                            inStock: v.inStock !== false,
+                            isDefault: v.isDefault || false,
+                            displayOrder: index,
+                        },
+                    });
+                }
+            }
+
+            // Delete variants that are no longer in the list
+            const variantsToDelete = existingVariants.filter(
+                v => !variantsToKeep.has(`${v.diameter}-${v.spoolWeight}`)
+            );
+            if (variantsToDelete.length > 0) {
+                await tx.filamentVariant.deleteMany({
+                    where: {
+                        id: { in: variantsToDelete.map(v => v.id) },
+                    },
                 });
             }
 

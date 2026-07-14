@@ -887,6 +887,12 @@ function CartItemCard({
                                     </h3>
                                 )}
                                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                    {/* Out of Stock Badge */}
+                                    {item.inStock === false && (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-red-100 text-xs text-red-600 font-semibold">
+                                            Out of Stock
+                                        </span>
+                                    )}
                                     {displayColor && (
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-xs text-gray-600">
                                             <span
@@ -938,7 +944,7 @@ function CartItemCard({
                                             item.quantity - 1,
                                         )
                                     }
-                                    disabled={item.quantity <= 1}
+                                    disabled={item.quantity <= 1 || item.inStock === false}
                                     className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <Minus className="w-3.5 h-3.5" />
@@ -954,7 +960,8 @@ function CartItemCard({
                                             item.quantity + 1,
                                         )
                                     }
-                                    className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors"
+                                    disabled={item.inStock === false}
+                                    className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <Plus className="w-3.5 h-3.5" />
                                 </button>

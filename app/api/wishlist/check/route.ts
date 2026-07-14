@@ -20,8 +20,9 @@ export async function GET(req: Request) {
     const prebuiltProductId = searchParams.get("prebuiltProductId");
     const printerId = searchParams.get("printerId");
     const resinId = searchParams.get("resinId");
+    const filamentId = searchParams.get("filamentId");
 
-    if (!productId && !prebuiltProductId && !printerId && !resinId) {
+    if (!productId && !prebuiltProductId && !printerId && !resinId && !filamentId) {
         return NextResponse.json({ error: "Invalid params" }, { status: 400 });
     }
 
@@ -44,6 +45,7 @@ export async function GET(req: Request) {
                 prebuiltProductId ? { prebuiltProductId } : undefined,
                 printerId ? { printerId } : undefined,
                 resinId ? { resinId } : undefined,
+                filamentId ? { filamentId } : undefined,
             ].filter(Boolean) as any[],
         },
     });

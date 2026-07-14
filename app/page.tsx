@@ -198,7 +198,7 @@ async function getLandingData() {
             image: latestFilament.images?.[0] || null,
             type: "filament",
             updatedAt: latestFilament.updatedAt,
-            href: `/filaments`,
+            href: `/filament`,
         });
     }
 

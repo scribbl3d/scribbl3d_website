@@ -13,6 +13,7 @@ import { getSwatchStyle } from "@/lib/utils";
 import SimilarFilamentsCarousel from "@/components/filaments/SimilarFilamentsCarousel";
 import { PdpImage } from "@/components/shared/PdpImage";
 import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
+import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 
 const FINISH_BADGE: Record<string, string> = {
     Silk: "bg-purple-100 text-purple-700",
@@ -36,14 +37,16 @@ export default function FilamentPDPPage() {
     const [selectedSpoolSize, setSelectedSpoolSize] = useState<string>("");
     const [quantity, setQuantity] = useState(1);
     const [isFav, setIsFav] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [cartState, setCartState] = useState<"idle"|"loading"|"success">("idle");
     const [activeTab, setActiveTab] = useState("description");
+    const [showNotifyModal, setShowNotifyModal] = useState(false);
 
     // Fetch filament data by slug
     useEffect(() => {
         const fetchFilament = async () => {
             try {
-                const res = await fetch(`/api/filament/${slug}`);
+                const res = await fetch(`/api/filaments/${slug}`);
                 if (!res.ok) throw new Error("Filament not found");
                 const data = await res.json();
                 setFilament(data);
@@ -60,6 +63,25 @@ export default function FilamentPDPPage() {
         };
         if (slug) fetchFilament();
     }, [slug]);
+
+    // Check wishlist status
+    useEffect(() => {
+        if (!session || !filament?.id) return;
+        
+        const checkWishlist = async () => {
+            try {
+                const res = await fetch(`/api/wishlist/check?filamentId=${filament.id}`);
+                const data = await res.json();
+                if (data.isAuthenticated) {
+                    setIsFav(data.isInWishlist);
+                }
+            } catch (err) {
+                console.error("Wishlist check failed", err);
+            }
+        };
+        
+        checkWishlist();
+    }, [session, filament?.id]);
 
     // Image carousel effect - must be before early returns
     const totalImgs = filament?.images?.length || 0;
@@ -135,6 +157,11 @@ export default function FilamentPDPPage() {
     const displayPrice = selectedVariantData?.price || 0;
     const originalPrice = selectedVariantData?.originalPrice || null;
     const discount = originalPrice ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100) : 0;
+    
+    // Check if out of stock
+    const isVariantOutOfStock = selectedVariantData ? !selectedVariantData.inStock : false;
+    const isFilamentOutOfStock = f?.inStock === false;
+    const isOutOfStock = isFilamentOutOfStock || isVariantOutOfStock;
 
     const handleAddToCart = async () => {
         if (!session) {
@@ -146,9 +173,23 @@ export default function FilamentPDPPage() {
             });
             return;
         }
+        
+        if (!selectedVariantData?.id) {
+            toast({
+                title: "Variant Required",
+                description: "Please select a diameter and spool size.",
+                variant: "destructive",
+            });
+            return;
+        }
+        
         setCartState("loading");
         try {
-            await addToCart({ productId: f.id, quantity });
+            await addToCart({ 
+                filamentId: f.id, 
+                filamentVariantId: selectedVariantData.id, 
+                quantity 
+            });
             setCartState("success");
             toast({ title: "Added to Cart", description: `${f.name} has been added to your cart.` });
             setTimeout(() => setCartState("idle"), 2000);
@@ -164,7 +205,7 @@ export default function FilamentPDPPage() {
             {/* Back bar */}
             <div className="bg-white border-b border-gray-200 sticky top-16 z-40 sm:static">
                 <div className="container mx-auto px-4 py-3.5 sm:py-5">
-                    <Link href="/filaments" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                    <Link href="/filament" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to all filaments
                     </Link>
@@ -222,8 +263,45 @@ export default function FilamentPDPPage() {
                                 }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition">
                                     <Share2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                                 </button>
-                                <button onClick={() => setIsFav(v => !v)} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition">
-                                    <Heart className={`w-4 h-4 sm:w-5 sm:h-5 transition ${isFav ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                                <button 
+                                    onClick={async () => {
+                                        if (!session) {
+                                            toast({
+                                                title: "Authentication Required",
+                                                description: "Please log in to add items to your wishlist.",
+                                                variant: "destructive",
+                                                action: <button onClick={() => signIn()} className="px-3 py-1 bg-white text-black rounded text-sm font-semibold">Log in</button>,
+                                            });
+                                            return;
+                                        }
+                                        
+                                        setIsWishlistLoading(true);
+                                        const wasInWishlist = isFav;
+                                        setIsFav(!wasInWishlist);
+                                        
+                                        try {
+                                            await fetch("/api/wishlist", {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ filamentId: f.id }),
+                                            });
+                                            toast({
+                                                title: wasInWishlist ? "Removed from Wishlist" : "Added to Wishlist",
+                                            });
+                                        } catch (error) {
+                                            setIsFav(wasInWishlist);
+                                            toast({ title: "Error", description: "Failed to update wishlist.", variant: "destructive" });
+                                        } finally {
+                                            setIsWishlistLoading(false);
+                                        }
+                                    }}
+                                    disabled={isWishlistLoading}
+                                    className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition">
+                                    {isWishlistLoading ? (
+                                        <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
+                                    ) : (
+                                        <Heart className={`w-4 h-4 sm:w-5 sm:h-5 transition ${isFav ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                                    )}
                                 </button>
                             </div>
 
@@ -381,29 +459,56 @@ export default function FilamentPDPPage() {
                             </div>
 
                             {/* CTAs */}
-                            <div className="space-y-2.5">
+                            <div className="space-y-2 sm:space-y-3">
                                 <button
                                     onClick={handleAddToCart}
-                                    disabled={cartState !== "idle"}
-                                    className={`w-full h-12 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 ${cartState === "success" ? "bg-green-600 text-white" : "bg-gray-900 hover:bg-black text-white disabled:opacity-60"}`}>
-                                    {cartState === "loading" ? (
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    disabled={cartState !== "idle" || isOutOfStock}
+                                    className={`relative w-full py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg transition-colors flex items-center justify-center ${
+                                        isOutOfStock 
+                                            ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                                            : cartState === "success" 
+                                                ? "bg-green-600 text-white" 
+                                                : "bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60"
+                                    }`}>
+                                    {isOutOfStock ? (
+                                        "Out of Stock"
+                                    ) : cartState === "loading" ? (
+                                        <>
+                                            <span className="opacity-0">Add to Cart</span>
+                                            <span className="absolute inset-0 flex items-center justify-center">
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            </span>
+                                        </>
                                     ) : cartState === "success" ? (
                                         <><Check className="w-5 h-5" /> Added to Cart!</>
                                     ) : (
-                                        `Add to Cart · ₹${(displayPrice * quantity).toLocaleString("en-IN")}`
+                                        "Add to Cart"
                                     )}
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        const variant = selectedVariantData ? `${selectedVariantData.diameter} - ${selectedVariantData.spoolWeight}` : '';
-                                        const color = f.colours?.[selectedColour]?.name || f.colorName || '';
-                                        const msg = `Hi, I'd like to order ${f.name} (${color}, ${variant}).`;
-                                        window.open(`https://wa.me/919599523434?text=${encodeURIComponent(msg)}`, "_blank");
-                                    }}
-                                    className="w-full h-12 font-semibold rounded-xl border border-gray-200 text-gray-700 text-sm hover:bg-gray-50 transition">
-                                    Contact Sales
-                                </button>
+                                
+                                {/* Notify Me — only when out of stock */}
+                                {isOutOfStock && (
+                                    <button
+                                        onClick={() => setShowNotifyModal(true)}
+                                        className="w-full py-2.5 sm:py-3 text-sm sm:text-base font-semibold rounded-lg border-2 border-blue-200 text-blue-500 hover:text-blue-700 transition-all flex items-center justify-center gap-2">
+                                        <Bell size={16} />
+                                        Notify Me When Back in Stock
+                                    </button>
+                                )}
+                                
+                                {/* Contact Sales — hidden when out of stock */}
+                                {!isOutOfStock && (
+                                    <button
+                                        onClick={() => {
+                                            const variant = selectedVariantData ? `${selectedVariantData.diameter} - ${selectedVariantData.spoolWeight}` : '';
+                                            const color = f.colours?.[selectedColour]?.name || f.colorName || '';
+                                            const msg = `Hi, I'd like to order ${f.name} (${color}, ${variant}).`;
+                                            window.open(`https://wa.me/919599523434?text=${encodeURIComponent(msg)}`, "_blank");
+                                        }}
+                                        className="w-full py-2.5 sm:py-3 bg-white text-sm sm:text-base text-gray-700 font-semibold rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                        Contact Sales
+                                    </button>
+                                )}
                             </div>
 
                             {/* Trust badges */}
@@ -466,6 +571,19 @@ export default function FilamentPDPPage() {
                 {/* Similar Filaments - Same Material */}
                 <SimilarFilamentsCarousel currentFilamentId={f.id} material={f.material} />
             </div>
+            
+            {/* Notify Me Modal */}
+            {showNotifyModal && f && (
+                <NotifyMeModal
+                    isOpen={showNotifyModal}
+                    onClose={() => setShowNotifyModal(false)}
+                    productId={f.id}
+                    productName={f.name}
+                    productType="filament"
+                    variantId={selectedVariantData?.id}
+                    variantLabel={selectedVariantData ? `${selectedVariantData.diameter} - ${selectedVariantData.spoolWeight}` : undefined}
+                />
+            )}
         </div>
     );
 }

@@ -101,7 +101,7 @@ export default function Footer() {
                                     {[
                                         { name: "3D Printers", href: "/printers" },
                                         { name: "Resins", href: "/resins" },
-                                        { name: "Filaments", href: "/filaments" },
+                                        { name: "Filaments", href: "/filament" },
                                         { name: "Pre-built Models", href: "/prebuilt-products" },
                                     ].map((link) => (
                                         <li key={link.name}>

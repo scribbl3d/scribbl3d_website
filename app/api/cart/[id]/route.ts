@@ -228,21 +228,6 @@ export async function GET() {
                                     : null,
                             ]);
 
-                        // Log for debugging — remove after confirming fix
-                        console.log(
-                            `[CART DEBUG] Resin item ${item.id}:`,
-                            JSON.stringify({
-                                resinId: item.resinId,
-                                resinWeightId: item.resinWeightId,
-                                resinColourId: item.resinColourId,
-                                resinFound: !!resin,
-                                weightFound: !!resinWeight,
-                                weightPrice: resinWeight?.price,
-                                colourFound: !!resinColour,
-                                colourName: resinColour?.name,
-                            }),
-                        );
-
                         if (!resin) {
                             return {
                                 id: item.id,
@@ -370,6 +355,52 @@ export async function GET() {
                             colorHex: prebuiltVariant?.colorHex ?? null,
                             size: prebuiltVariant?.sizeName ?? null,
                             customization: item.customization ?? null,
+                        };
+                    }
+
+                    /* ---------- FILAMENT ---------- */
+                    if (item.filamentId) {
+                        // Always do direct lookups for live data
+                        const [filament, filamentVariant] = await Promise.all([
+                            prisma.filament.findUnique({
+                                where: { id: item.filamentId },
+                            }),
+                            item.filamentVariantId
+                                ? prisma.filamentVariant.findUnique({
+                                      where: { id: item.filamentVariantId },
+                                  })
+                                : null,
+                        ]);
+
+                        if (!filament) {
+                            return {
+                                id: item.id,
+                                itemType: "unknown" as const,
+                                name: "Product no longer available",
+                                price: 0,
+                                quantity: item.quantity,
+                                images: [],
+                                _orphaned: true,
+                            };
+                        }
+
+                        const images = (filament as any)?.images?.length > 0 
+                            ? (filament as any).images 
+                            : [];
+
+                        return {
+                            id: item.id,
+                            sourceId: filament.id,
+                            itemType: "filament" as const,
+                            name: filament.name,
+                            price: safeNum(filamentVariant?.price),
+                            quantity: item.quantity,
+                            images,
+                            size: filamentVariant
+                                ? `${filamentVariant.diameter} - ${filamentVariant.spoolWeight}`
+                                : null,
+                            color: (filament as any).colorName ?? null,
+                            colorHex: (filament as any).hexCode ?? null,
                         };
                     }
 

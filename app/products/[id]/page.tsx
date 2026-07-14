@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import FilamentProductPage from "@/components/filament-product-page";
 
 async function getProduct(id: string) {
   // Try regular product first
@@ -38,33 +37,17 @@ export default async function ProductPage({ params }: PageProps) {
     notFound();
   }
 
-  // Transform the product data to match FilamentProductPage props
-  const productData = {
-    ...product,
-    reviews: product.reviews || [],
-    colors: product.colors || [
-      { id: "1", name: product.color, hexCode: product.color },
-    ],
-    sizes: product.sizes || [
-      {
-        id: "1",
-        name: "1kg",
-        price: product.price,
-        originalPrice: product.originalPrice,
-      },
-    ],
-    material: product.category,
-    diameter: "1.75mm",
-    temperature: "190-210°C",
-    description:
-      product.productdesc || product.description || "No description available",
-    weight: product.weight || 1000, // fallback to 1kg in grams
-  };
-
+  // Note: Filaments are now handled by /filament/[id] route
+  // This page only handles regular products and prebuilt products
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-      <div className="max-w-[1440px] w-full pb-8">
-        <FilamentProductPage {...productData} />
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+        <p className="text-gray-600 mb-4">{product.description || product.productdesc}</p>
+        <div className="text-2xl font-bold text-blue-600">
+          ₹{product.price?.toLocaleString("en-IN")}
+        </div>
+        {/* TODO: Add proper product display component */}
       </div>
     </div>
   );

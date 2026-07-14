@@ -51,18 +51,18 @@ function useWishlist(productHref: string) {
                 checkKey: "printerId",
             };
         if (
-            productHref.startsWith("/filaments/") ||
+            productHref.startsWith("/filament/") ||
             productHref.startsWith("/products/")
         ) {
-            const slug = productHref.startsWith("/filaments/")
-                ? productHref.split("/filaments/")[1]
+            const slug = productHref.startsWith("/filament/")
+                ? productHref.split("/filament/")[1]
                 : productHref.split("/products/")[1];
             return {
                 type: "filament",
                 slug,
-                apiPath: "products",
-                wishlistKey: "productId",
-                checkKey: "productId",
+                apiPath: "filaments",
+                wishlistKey: "filamentId",
+                checkKey: "filamentId",
             };
         }
         if (productHref.startsWith("/resins/"))
@@ -98,7 +98,7 @@ function useWishlist(productHref: string) {
                 let id: string | null = null;
 
                 if (info.type === "filament") {
-                    // Filaments: href is /products/{productId} or /filaments/{productId}
+                    // Filaments: href is /products/{productId} or /filament/{productId}
                     // The slug IS the product ID — use it directly
                     id = info.slug!;
                 } else {

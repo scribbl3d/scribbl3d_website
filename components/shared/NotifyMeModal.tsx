@@ -13,7 +13,7 @@ interface NotifyMeModalProps {
     onClose: () => void;
     productId: string;
     productName: string;
-    productType: "resin" | "printer" | "prebuilt";
+    productType: "resin" | "printer" | "prebuilt" | "filament";
     variantId?: string;
     variantLabel?: string;
 }
