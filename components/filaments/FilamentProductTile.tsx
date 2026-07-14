@@ -189,13 +189,6 @@ export function FilamentProductTile({
                     <p className="hidden sm:block text-[13px] leading-[20px] text-[#4A5565] mt-1 line-clamp-2">
                         {shortDescription}
                     </p>
-
-                    {/* Specs — hidden on mobile */}
-                    <div className="hidden sm:block text-[13px] text-gray-700 mt-1.5">
-                        <div>
-                            <strong>Diameter:</strong> {diameter || "1.75mm"} | <strong>Weight:</strong> {weight || "1kg"}
-                        </div>
-                    </div>
                 </div>
             </Link>
 
