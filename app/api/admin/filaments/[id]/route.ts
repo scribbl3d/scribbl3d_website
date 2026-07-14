@@ -177,8 +177,8 @@ export async function PUT(
                     await tx.filamentVariant.update({
                         where: { id: existing.id },
                         data: {
-                            price: Number(v.price),
-                            originalPrice: v.originalPrice ? Number(v.originalPrice) : null,
+                            price: parseInt(v.price),
+                            originalPrice: v.originalPrice ? parseInt(v.originalPrice) : null,
                             inStock: v.inStock !== false,
                             isDefault: v.isDefault || false,
                             displayOrder: index,
@@ -191,8 +191,8 @@ export async function PUT(
                             filamentId: id,
                             diameter: v.diameter,
                             spoolWeight: v.spoolWeight,
-                            price: Number(v.price),
-                            originalPrice: v.originalPrice ? Number(v.originalPrice) : null,
+                            price: parseInt(v.price),
+                            originalPrice: v.originalPrice ? parseInt(v.originalPrice) : null,
                             inStock: v.inStock !== false,
                             isDefault: v.isDefault || false,
                             displayOrder: index,
