@@ -3,7 +3,7 @@
 import { useAuthToast } from "@/hooks/useAuthToast";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Heart, Bell } from "lucide-react";
+import { Heart, Bell, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import FilamentVariantModal, { FilamentVariantItem } from "./FilamentVariantModal";
@@ -50,8 +50,11 @@ export function FilamentProductTile({
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [showVariantModal, setShowVariantModal] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const { data: session } = useSession();
     const { showAuthToast } = useAuthToast();
+
+    // No auto-rotation, manual control only
 
     // Check wishlist status on mount
     useEffect(() => {
@@ -143,12 +146,12 @@ export function FilamentProductTile({
         <div className="bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
             <Link href={`/filament/${slug || id}`} className="flex flex-col h-full">
                 {/* IMAGE — square on all sizes */}
-                <div className="relative aspect-square w-full bg-white overflow-hidden">
-                    {images[0] && (
+                <div className="relative aspect-square w-full bg-white overflow-hidden group">
+                    {images[currentImageIndex] && (
                         <img
-                            src={images[0]}
+                            src={images[currentImageIndex]}
                             alt={name}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain transition-opacity duration-300"
                             loading="eager"
                         />
                     )}
@@ -176,6 +179,53 @@ export function FilamentProductTile({
                             <Heart className={`w-3 h-3 sm:w-5 sm:h-5 transition ${isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
                         )}
                     </button>
+                    
+                    {/* Left/Right arrows - only show if multiple images */}
+                    {images.length > 1 && (
+                        <>
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+                                }}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-8 sm:h-8 bg-white/80 hover:bg-white rounded-full shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-8 sm:h-8 bg-white/80 hover:bg-white rounded-full shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
+                            </button>
+                        </>
+                    )}
+                    
+                    {/* Image dots - only show if multiple images */}
+                    {images.length > 1 && (
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                            {images.map((_, index) => (
+                                <button
+                                    key={index}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setCurrentImageIndex(index);
+                                    }}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                        index === currentImageIndex
+                                            ? 'bg-gray-900 w-4'
+                                            : 'bg-gray-400 hover:bg-gray-600'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* CONTENT */}
