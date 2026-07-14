@@ -118,8 +118,12 @@ export async function POST(req: Request) {
                 include: {
                     items: {
                         include: {
-                            /* ── Filament (product) ── */
+                            /* ── Product ── */
                             product: true,
+
+                            /* ── Filament ── */
+                            filament: true,
+                            filamentVariant: true,
 
                             /* ── Printer ── */
                             printer: {
@@ -200,7 +204,22 @@ export async function POST(req: Request) {
                     };
                 }
 
-                /* ── Filament (product) ── */
+                /* ── Filament ── */
+                if (item.filament) {
+                    return {
+                        itemType: "filament",
+                        name: item.filament.name,
+                        quantity: item.quantity,
+                        price: item.filamentVariant?.price ?? 0,
+                        size: item.filamentVariant
+                            ? `${item.filamentVariant.diameter} - ${item.filamentVariant.spoolWeight}`
+                            : null,
+                        color: item.filament.colorName ?? null,
+                        image: item.filament.images?.[0] ?? null,
+                    };
+                }
+
+                /* ── Product ── */
                 if (item.product) {
                     return {
                         itemType: "product",
