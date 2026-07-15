@@ -50,7 +50,7 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
     const activeMaterialHeader = filters.materialTypes.length === 1 ? filters.materialTypes[0] : null;
 
     useEffect(() => {
-        const update = () => setLimit(window.innerWidth < 1024 ? 10 : 9);
+        const update = () => setLimit(window.innerWidth < 1280 ? 10 : 9);
         update();
         window.addEventListener("resize", update);
         return () => window.removeEventListener("resize", update);
@@ -78,6 +78,10 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
 
     useEffect(() => {
         fetchFilaments();
+        // Scroll to top when page changes (but not on initial load)
+        if (page > 1) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters, sortBy, page, limit]);
 
@@ -95,29 +99,35 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
                 params.append("material", filters.materialTypes.join(","));
             }
 
-            // Finish type filters
+            // Finish type filters - send all selected
             if (filters.finishTypes.length > 0) {
-                params.append("finishType", filters.finishTypes[0]);
+                params.append("finishType", filters.finishTypes.join(","));
             }
 
-            // Brand filters
+            // Brand filters - send all selected
             if (filters.brands.length > 0) {
-                params.append("brand", filters.brands[0]);
+                params.append("brand", filters.brands.join(","));
             }
 
-            // Diameter filters
+            // Diameter filters - send all selected
             if (filters.diameters.length > 0) {
-                params.append("diameter", filters.diameters[0]);
+                params.append("diameter", filters.diameters.join(","));
             }
 
-            // Spool weight filters
+            // Spool weight filters - send all selected
             if (filters.spoolWeights.length > 0) {
-                params.append("spoolWeight", filters.spoolWeights[0]);
+                params.append("spoolWeight", filters.spoolWeights.join(","));
             }
 
-            // Printer compatibility (search in compatibility array)
+            // Printer compatibility - send all selected
             if (filters.printerCompatibility.length > 0) {
-                params.append("search", filters.printerCompatibility.join(" "));
+                params.append("printerCompatibility", filters.printerCompatibility.join(","));
+            }
+
+            // Price range filter
+            if (filters.price) {
+                params.append("minPrice", filters.price[0].toString());
+                params.append("maxPrice", filters.price[1].toString());
             }
 
             // Sorting
@@ -169,7 +179,7 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
 
     return (
         <>
-            <div className="min-h-screen">
+            <div className="min-h-screen overflow-x-hidden">
                 <FilamentHero 
                     animate={true} 
                     activeMaterial={activeMaterialHeader || undefined} 

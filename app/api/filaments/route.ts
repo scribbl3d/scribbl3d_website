@@ -14,6 +14,9 @@ export async function GET(request: Request) {
         const brand = searchParams.get("brand");
         const diameter = searchParams.get("diameter");
         const spoolWeight = searchParams.get("spoolWeight");
+        const printerCompatibility = searchParams.get("printerCompatibility");
+        const minPrice = searchParams.get("minPrice");
+        const maxPrice = searchParams.get("maxPrice");
         const search = searchParams.get("search") || "";
         const inStock = searchParams.get("inStock");
 
@@ -27,15 +30,31 @@ export async function GET(request: Request) {
         const skip = (page - 1) * limit;
 
         // Build WHERE clause
-        const materialArray = material ? material.split(",").map(m => m.trim()) : [];
+        const materialArray = material ? material.split(",").map(m => m.trim()).filter(Boolean) : [];
+        const finishTypeArray = finishType ? finishType.split(",").map(f => f.trim()).filter(Boolean) : [];
+        const brandArray = brand ? brand.split(",").map(b => b.trim()).filter(Boolean) : [];
+        const diameterArray = diameter ? diameter.split(",").map(d => d.trim()).filter(Boolean) : [];
+        const spoolWeightArray = spoolWeight ? spoolWeight.split(",").map(s => s.trim()).filter(Boolean) : [];
+        const printerCompatibilityArray = printerCompatibility ? printerCompatibility.split(",").map(p => p.trim()).filter(Boolean) : [];
         
         const whereConditions: Prisma.FilamentWhereInput = {
             AND: [
                 materialArray.length > 0 ? {
                     OR: materialArray.map(m => ({ material: m }))
                 } : {},
-                finishType ? { finishType } : {},
-                brand ? { brand } : {},
+                finishTypeArray.length > 0 ? {
+                    OR: finishTypeArray.map(f => ({ finishType: f }))
+                } : {},
+                brandArray.length > 0 ? {
+                    OR: brandArray.map(b => ({ brand: b }))
+                } : {},
+                printerCompatibilityArray.length > 0 ? {
+                    OR: printerCompatibilityArray.map(p => ({
+                        compatibility: {
+                            hasSome: [p]
+                        }
+                    }))
+                } : {},
                 inStock !== null ? { inStock: inStock === "true" } : {},
                 search ? {
                     OR: [
@@ -48,14 +67,39 @@ export async function GET(request: Request) {
         };
 
         // Add variant filters if specified
-        if (diameter || spoolWeight) {
+        if (diameterArray.length > 0 || spoolWeightArray.length > 0) {
+            const variantConditions: any[] = [];
+            
+            if (diameterArray.length > 0) {
+                variantConditions.push({
+                    OR: diameterArray.map(d => ({ diameter: d }))
+                });
+            }
+            
+            if (spoolWeightArray.length > 0) {
+                variantConditions.push({
+                    OR: spoolWeightArray.map(s => ({ spoolWeight: s }))
+                });
+            }
+            
+            // Add price range filter on variants if specified
+            if (minPrice || maxPrice) {
+                const priceCondition: any = {};
+                if (minPrice) priceCondition.gte = Number.parseInt(minPrice);
+                if (maxPrice) priceCondition.lte = Number.parseInt(maxPrice);
+                variantConditions.push({ price: priceCondition });
+            }
+            
             whereConditions.variants = {
-                some: {
-                    AND: [
-                        diameter ? { diameter } : {},
-                        spoolWeight ? { spoolWeight } : {},
-                    ],
-                },
+                some: variantConditions.length > 0 ? { AND: variantConditions } : {}
+            };
+        } else if (minPrice || maxPrice) {
+            // Price filter without diameter/spool weight filters
+            const priceCondition: any = {};
+            if (minPrice) priceCondition.gte = Number.parseInt(minPrice);
+            if (maxPrice) priceCondition.lte = Number.parseInt(maxPrice);
+            whereConditions.variants = {
+                some: { price: priceCondition }
             };
         }
 

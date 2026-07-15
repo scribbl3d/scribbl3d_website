@@ -50,12 +50,14 @@ interface FilamentHeroProps {
     onMaterialSelect: (material: string) => void;
 }
 
-const MATERIALS = ["PLA", "PLA+", "PETG", "ABS", "TPU", "ASA", "Nylon", "Carbon Fiber"];
+// Fallback materials in case API fails
+const FALLBACK_MATERIALS = ["PLA", "PLA+", "PETG", "ABS", "TPU", "ASA", "Nylon", "Carbon Fiber"];
 
 export default function FilamentHero({ animate = true, activeMaterial, onMaterialSelect }: FilamentHeroProps) {
     const [hero, setHero] = useState<HeroData>(FALLBACK);
+    const [materials, setMaterials] = useState<string[]>(FALLBACK_MATERIALS);
 
-    // Assuming we might have an API for this like resins/printers
+    // Fetch hero data
     useEffect(() => {
         (async () => {
             try {
@@ -77,12 +79,29 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
         })();
     }, []);
 
+    // Fetch materials from database
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch("/api/filaments/filters");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.materials && data.materials.length > 0) {
+                        setMaterials(data.materials);
+                    }
+                }
+            } catch {
+                // Keep fallback materials
+            }
+        })();
+    }, []);
+
     const hasText = hero.headline || hero.subtext;
 
     return (
         <>
             {/* Background media */}
-            <div className="relative h-[30vh] sm:h-[40vh] md:h-[50vh] w-full bg-white overflow-hidden mt-[72px]">
+            <div className="relative h-[25vh] sm:h-[30vh] md:h-[35vh] w-full bg-white overflow-hidden mt-[72px]">
                 {hero.mediaType === "video" ? (
                     <video
                         src={hero.mediaUrl}
@@ -150,10 +169,10 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
             </div>
 
             {/* Horizontal Material Scroller */}
-            <div className="w-full border-b border-gray-900 bg-black sticky top-[72px] z-40">
+            <div className="w-full border-b border-gray-900 bg-black sticky top-[72px] z-40 overflow-hidden">
                 <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <nav className="flex justify-center space-x-6 sm:space-x-10 overflow-x-auto scrollbar-hide py-4">
-                        {MATERIALS.map((material) => (
+                    <nav className="flex justify-center space-x-4 sm:space-x-6 lg:space-x-10 overflow-x-auto scrollbar-hide py-4">
+                        {materials.map((material) => (
                             <button
                                 key={material}
                                 onClick={() => onMaterialSelect(material)}
