@@ -155,17 +155,17 @@ export function FilamentProductTile({
                             loading="eager"
                         />
                     )}
-                    {/* Stock Badge */}
-                    {!inStock && (
-                        <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
-                            Out of Stock
-                        </div>
-                    )}
-                    {/* Finish Badge - on image */}
-                    <div className={`absolute ${!inStock ? 'bottom-1.5 left-1.5 sm:bottom-3 sm:left-3' : 'top-1.5 left-1.5 sm:top-3 sm:left-3'} z-[2]`}>
-                        <span className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full ${badgeClass}`}>
-                            {finishBadge}
-                        </span>
+                    {/* Badge - Out of Stock or Finish Type */}
+                    <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-[2]">
+                        {!inStock ? (
+                            <span className="bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                                Out of Stock
+                            </span>
+                        ) : (
+                            <span className={`px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full ${badgeClass}`}>
+                                {finishBadge}
+                            </span>
+                        )}
                     </div>
                     {/* Wishlist */}
                     <button

@@ -112,17 +112,17 @@ export default function SimilarFilamentsCarousel({
                                                 className="w-full h-full object-contain"
                                             />
                                         )}
-                                        {/* Stock Badge */}
-                                        {!filament.inStock && (
-                                            <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
-                                                Out of Stock
-                                            </div>
-                                        )}
-                                        {/* Finish Badge - moves to bottom when out of stock */}
-                                        <div className={`absolute ${!filament.inStock ? 'bottom-1.5 left-1.5 sm:bottom-3 sm:left-3' : 'top-1.5 left-1.5 sm:top-3 sm:left-3'} z-[2]`}>
-                                            <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full text-gray-700 bg-gray-100">
-                                                {filament.finishType}
-                                            </span>
+                                        {/* Badge - Out of Stock or Finish Type */}
+                                        <div className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 z-[2]">
+                                            {!filament.inStock ? (
+                                                <span className="bg-red-500 text-white text-[7px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full">
+                                                    Out of Stock
+                                                </span>
+                                            ) : (
+                                                <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[7px] sm:text-[10px] font-bold uppercase tracking-wider rounded-full text-gray-700 bg-gray-100">
+                                                    {filament.finishType}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 

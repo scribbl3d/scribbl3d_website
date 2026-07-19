@@ -2,9 +2,9 @@
 
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import PriceRangeSlider from "@/components/printers/PriceRangeSlider";
 
 export type FilamentFiltersState = {
     materialTypes: string[];
@@ -99,11 +99,6 @@ export default function FilamentFilters({
         });
     };
 
-    const priceValue: [number, number] = filters.price ?? [
-        FILTER_META.price.min,
-        FILTER_META.price.max,
-    ];
-
     if (loading) {
         return (
             <Card className="p-6 shadow-sm border-gray-100">
@@ -172,66 +167,18 @@ export default function FilamentFilters({
             </AccordionSection>
 
             {/* Price */}
-            <div className="border-b border-gray-100 pb-4">
-                <p className="font-semibold text-gray-900 mb-4 text-sm">Price Range (₹)</p>
-
-                <div className="px-1">
-                    <Slider
-                        min={filterOptions.priceRange.min}
-                        max={filterOptions.priceRange.max}
-                        step={100}
-                        value={priceValue}
-                        onValueChange={(v) =>
-                            setFilters((p) => ({
-                                ...p,
-                                price: v as [number, number],
-                            }))
-                        }
-                        className="mb-6"
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Min</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-                            <input
-                                type="number"
-                                min={filterOptions.priceRange.min}
-                                max={priceValue[1]}
-                                value={priceValue[0]}
-                                onChange={(e) =>
-                                    setFilters((p) => ({
-                                        ...p,
-                                        price: [Number(e.target.value) || filterOptions.priceRange.min, priceValue[1]],
-                                    }))
-                                }
-                                className="w-full pl-7 pr-2 py-1.5 border border-gray-200 rounded-md text-sm focus:ring-1 focus:ring-blue-500"
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium text-gray-500 mb-1 block">Max</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-                            <input
-                                type="number"
-                                min={priceValue[0]}
-                                max={filterOptions.priceRange.max}
-                                value={priceValue[1]}
-                                onChange={(e) =>
-                                    setFilters((p) => ({
-                                        ...p,
-                                        price: [priceValue[0], Number(e.target.value) || filterOptions.priceRange.max],
-                                    }))
-                                }
-                                className="w-full pl-7 pr-2 py-1.5 border border-gray-200 rounded-md text-sm focus:ring-1 focus:ring-blue-500"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <PriceRangeSlider
+                min={filterOptions.priceRange.min}
+                max={filterOptions.priceRange.max}
+                minValue={filters.price?.[0] ?? null}
+                maxValue={filters.price?.[1] ?? null}
+                onChange={(minPrice, maxPrice) => {
+                    setFilters((prev) => ({
+                        ...prev,
+                        price: minPrice !== null && maxPrice !== null ? [minPrice, maxPrice] : null,
+                    }));
+                }}
+            />
 
             {/* Advanced Filters */}
             <AccordionSection

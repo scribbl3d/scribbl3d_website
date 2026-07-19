@@ -2,9 +2,9 @@
 
 import { ResinFiltersState } from "@/app/resins/page";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { ChevronDown, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import PriceRangeSlider from "@/components/printers/PriceRangeSlider";
 
 type FiltersMeta = {
     materialTypes: string[];
@@ -224,71 +224,18 @@ export default function MobileResinFilters({
                             </AccordionSection>
 
                             {/* Price - Always Visible */}
-                            <div className="border-b border-gray-200 pb-4">
-                                <p className="text-base font-semibold text-gray-900 mb-4">Price (₹)</p>
-                                
-                                <div className="px-1 mb-5">
-                                    <Slider
-                                        min={meta.price.min}
-                                        max={meta.price.max}
-                                        step={100}
-                                        value={localFilters.price ?? [meta.price.min, meta.price.max]}
-                                        onValueChange={(v) =>
-                                            setLocalFilters((p) => ({
-                                                ...p,
-                                                price: v as [number, number],
-                                            }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">Min</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">₹</span>
-                                            <input
-                                                type="number"
-                                                min={meta.price.min}
-                                                max={(localFilters.price ?? [meta.price.min, meta.price.max])[1]}
-                                                value={(localFilters.price ?? [meta.price.min, meta.price.max])[0]}
-                                                onChange={(e) =>
-                                                    setLocalFilters((p) => ({
-                                                        ...p,
-                                                        price: [
-                                                            Number(e.target.value) || meta.price.min,
-                                                            (p.price ?? [meta.price.min, meta.price.max])[1],
-                                                        ],
-                                                    }))
-                                                }
-                                                className="w-full pl-7 pr-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">Max</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">₹</span>
-                                            <input
-                                                type="number"
-                                                min={(localFilters.price ?? [meta.price.min, meta.price.max])[0]}
-                                                max={meta.price.max}
-                                                value={(localFilters.price ?? [meta.price.min, meta.price.max])[1]}
-                                                onChange={(e) =>
-                                                    setLocalFilters((p) => ({
-                                                        ...p,
-                                                        price: [
-                                                            (p.price ?? [meta.price.min, meta.price.max])[0],
-                                                            Number(e.target.value) || meta.price.max,
-                                                        ],
-                                                    }))
-                                                }
-                                                className="w-full pl-7 pr-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <PriceRangeSlider
+                                min={meta.price.min}
+                                max={meta.price.max}
+                                minValue={localFilters.price?.[0] ?? null}
+                                maxValue={localFilters.price?.[1] ?? null}
+                                onChange={(minPrice, maxPrice) => {
+                                    setLocalFilters((prev) => ({
+                                        ...prev,
+                                        price: minPrice !== null && maxPrice !== null ? [minPrice, maxPrice] : null,
+                                    }));
+                                }}
+                            />
                         </div>
                     )}
                 </div>

@@ -180,12 +180,6 @@ function MobilePriceRangeSlider({
                 />
             </div>
 
-            {/* Min/Max Labels */}
-            <div className="flex justify-between text-xs text-gray-400 mb-4">
-                <span>₹{validMin.toLocaleString("en-IN")}</span>
-                <span>₹{validMax.toLocaleString("en-IN")}</span>
-            </div>
-
             {/* Min/Max Input Fields */}
             <div className="flex gap-3">
                 <div className="flex-1">

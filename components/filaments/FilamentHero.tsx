@@ -51,7 +51,32 @@ interface FilamentHeroProps {
 }
 
 // Fallback materials in case API fails
-const FALLBACK_MATERIALS = ["PLA", "PLA+", "PETG", "ABS", "TPU", "ASA", "Nylon", "Carbon Fiber"];
+const FALLBACK_MATERIALS = ["PLA+", "ABS", "PETG", "TPU", "PA"];
+
+// Custom material order
+const MATERIAL_ORDER = ["PLA+", "ABS", "PETG", "TPU", "PA"];
+
+// Sort materials with custom order
+const sortMaterials = (materials: string[]): string[] => {
+    return materials.sort((a, b) => {
+        const indexA = MATERIAL_ORDER.indexOf(a);
+        const indexB = MATERIAL_ORDER.indexOf(b);
+        
+        // If both are in the custom order, sort by their position
+        if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+        }
+        
+        // If only A is in custom order, it comes first
+        if (indexA !== -1) return -1;
+        
+        // If only B is in custom order, it comes first
+        if (indexB !== -1) return 1;
+        
+        // Otherwise, sort alphabetically
+        return a.localeCompare(b);
+    });
+};
 
 export default function FilamentHero({ animate = true, activeMaterial, onMaterialSelect }: FilamentHeroProps) {
     const [hero, setHero] = useState<HeroData>(FALLBACK);
@@ -87,7 +112,7 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
                 if (res.ok) {
                     const data = await res.json();
                     if (data?.materials && data.materials.length > 0) {
-                        setMaterials(data.materials);
+                        setMaterials(sortMaterials(data.materials));
                     }
                 }
             } catch {

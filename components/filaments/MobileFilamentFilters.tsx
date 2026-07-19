@@ -3,6 +3,7 @@
 import { X, Loader2 } from "lucide-react";
 import { FilamentFiltersState } from "./FilamentFilters";
 import { useEffect, useState } from "react";
+import PriceRangeSlider from "@/components/printers/PriceRangeSlider";
 
 interface MobileFilamentFiltersProps {
     isOpen: boolean;
@@ -152,6 +153,27 @@ export default function MobileFilamentFilters({
                                 options={filterOptions.spoolWeights}
                                 selected={filters.spoolWeights}
                                 onToggle={(v) => toggleArrayFilter("spoolWeights", v)}
+                            />
+
+                            <FilterSection
+                                title="Printer Compatibility"
+                                options={filterOptions.printerCompatibility}
+                                selected={filters.printerCompatibility}
+                                onToggle={(v) => toggleArrayFilter("printerCompatibility", v)}
+                            />
+
+                            {/* Price Range Filter */}
+                            <PriceRangeSlider
+                                min={filterOptions.priceRange.min}
+                                max={filterOptions.priceRange.max}
+                                minValue={filters.price?.[0] ?? null}
+                                maxValue={filters.price?.[1] ?? null}
+                                onChange={(minPrice, maxPrice) => {
+                                    setFilters((prev) => ({
+                                        ...prev,
+                                        price: minPrice !== null && maxPrice !== null ? [minPrice, maxPrice] : null,
+                                    }));
+                                }}
                             />
                         </div>
 

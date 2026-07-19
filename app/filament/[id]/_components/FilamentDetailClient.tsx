@@ -719,18 +719,9 @@ function CompatibilityTab({ compatibility, material, notes }) {
 }
 
 function SafetyTab({ safety, downloads }) {
-    // Use mock safety data if not provided
-    const safetyData = safety || [
-        { icon: "🌡️", title: "Storage Temperature", detail: "Store between 15 – 30 °C in a cool, dry place away from direct sunlight." },
-        { icon: "💧", title: "Moisture Sensitivity", detail: "PLA+ absorbs moisture over time. Re-seal the bag or use a dry box after opening. Dry at 45 °C for 4 h if stringing or popping occurs." },
-        { icon: "🌬️", title: "Ventilation", detail: "Print in a well-ventilated space or with an enclosure filter. PLA+ emits low VOCs but good airflow is still recommended." },
-        { icon: "🔥", title: "Fire & Heat", detail: "PLA+ has a glass transition temperature of ~60 °C. Avoid printing parts that will be exposed to sustained heat above 55 °C." },
-        { icon: "♻️", title: "Disposal", detail: "PLA+ is plant-derived and industrially compostable. Check local facilities — standard home composting is not sufficient." },
-        { icon: "🧤", title: "Handling", detail: "Keep out of reach of children. Avoid prolonged skin contact with molten filament. Never eat or bring near food prep surfaces." },
-    ];
-
     return (
         <div className="space-y-5 sm:space-y-6">
+            {/* Safety Warnings Box */}
             <div className="rounded-lg border border-[#FFF085] bg-[#FEFCE8] p-3 sm:p-4">
                 <div className="flex items-center gap-2 mb-2">
                     <svg
@@ -753,23 +744,62 @@ function SafetyTab({ safety, downloads }) {
                     </h4>
                 </div>
                 <ul className="list-disc pl-4 sm:pl-5 space-y-1 sm:space-y-1.5 text-xs sm:text-sm text-[#894B00] leading-relaxed">
-                    <li>May emit very low VOCs during printing, use in a well-ventilated area</li>
-                    <li>Hotend and heated bed pose burn risks — do not touch during operation</li>
-                    <li>Keep out of reach of children and pets</li>
-                    <li>Keep spool sealed with desiccant when not in use</li>
+                    <li>May emit fumes or odors during printing — always print in a well-ventilated area or with a filtered enclosure</li>
+                    <li>Hotend and heated bed reach high temperatures — never touch during or immediately after operation</li>
+                    <li>Keep away from children and pets at all times</li>
+                    <li>Reseal spool with desiccant when not in use to protect print quality</li>
                 </ul>
             </div>
             
-            {safetyData.map((s, i) => (
-                <div key={i}>
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
-                        {s.icon} {s.title}
-                    </h3>
-                    <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                        {s.detail}
-                    </p>
-                </div>
-            ))}
+            {/* Storage */}
+            <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
+                    Storage
+                </h3>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    Store in a cool, dry place, away from direct sunlight and sources of heat. Keep the spool sealed with desiccant between uses to prevent moisture absorption and maintain consistent print quality.
+                </p>
+            </div>
+
+            {/* Ventilation */}
+            <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
+                    Ventilation
+                </h3>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    Print in a well-ventilated space, ideally with an enclosure or filtration system. Some materials release more fumes than others — if you notice a strong odor while printing, increase airflow or move to a more open space.
+                </p>
+            </div>
+
+            {/* Heat Exposure */}
+            <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
+                    Heat Exposure
+                </h3>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    Printed parts can soften or deform when exposed to prolonged heat, direct sunlight, or hot environments (such as a car interior). Avoid placing finished prints near heat sources.
+                </p>
+            </div>
+
+            {/* Disposal */}
+            <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
+                    Disposal
+                </h3>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    Dispose of unused filament and printed parts responsibly. Check with your local waste management provider for plastics recycling or composting options in your area.
+                </p>
+            </div>
+
+            {/* Handling */}
+            <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
+                    Handling
+                </h3>
+                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    Keep out of reach of children. Avoid contact with molten filament during printing or extrusion. Do not use with food or on food-contact surfaces unless the material is specifically rated as food-safe.
+                </p>
+            </div>
 
             {downloads && downloads.length > 0 ? (
                 <>

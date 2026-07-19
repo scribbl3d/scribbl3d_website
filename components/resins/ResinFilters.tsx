@@ -3,9 +3,9 @@
 import { ResinFiltersState } from "@/app/resins/page";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Slider } from "@/components/ui/slider";
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
+import PriceRangeSlider from "@/components/printers/PriceRangeSlider";
 
 type FiltersMeta = {
     materialTypes: string[];
@@ -59,11 +59,6 @@ export default function ResinFilters({
             return next;
         });
     };
-
-    const priceValue: [number, number] = filters.price ?? [
-        meta.price.min,
-        meta.price.max,
-    ];
 
     return (
         <Card className="p-6 space-y-4">
@@ -145,81 +140,18 @@ export default function ResinFilters({
             </AccordionSection>
 
             {/* ================= PRICE (FINAL UI) ================= */}
-            <div className="border-b border-gray-200 pb-4">
-                <p className="font-medium mb-4">Price (₹)</p>
-
-                <div className="px-1">
-                    <Slider
-                        min={meta.price.min}
-                        max={meta.price.max}
-                        step={100}
-                        value={priceValue}
-                        onValueChange={(v) =>
-                            setFilters((p) => ({
-                                ...p,
-                                price: v as [number, number],
-                            }))
-                        }
-                        className="mb-6"
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                    {/* Min */}
-                    <div>
-                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">Min</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
-                                ₹
-                            </span>
-                            <input
-                                type="number"
-                                min={meta.price.min}
-                                max={priceValue[1]}
-                                value={priceValue[0]}
-                                onChange={(e) =>
-                                    setFilters((p) => ({
-                                        ...p,
-                                        price: [
-                                            Number(e.target.value) ||
-                                                meta.price.min,
-                                            priceValue[1],
-                                        ],
-                                    }))
-                                }
-                                className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Max */}
-                    <div>
-                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">Max</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
-                                ₹
-                            </span>
-                            <input
-                                type="number"
-                                min={priceValue[0]}
-                                max={meta.price.max}
-                                value={priceValue[1]}
-                                onChange={(e) =>
-                                    setFilters((p) => ({
-                                        ...p,
-                                        price: [
-                                            priceValue[0],
-                                            Number(e.target.value) ||
-                                                meta.price.max,
-                                        ],
-                                    }))
-                                }
-                                className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <PriceRangeSlider
+                min={meta.price.min}
+                max={meta.price.max}
+                minValue={filters.price?.[0] ?? null}
+                maxValue={filters.price?.[1] ?? null}
+                onChange={(minPrice, maxPrice) => {
+                    setFilters((prev) => ({
+                        ...prev,
+                        price: minPrice !== null && maxPrice !== null ? [minPrice, maxPrice] : null,
+                    }));
+                }}
+            />
         </Card>
     );
 }
