@@ -39,10 +39,16 @@ export default function SimilarFilamentsCarousel({
 
     const fetchSimilarFilaments = async () => {
         try {
+            if (!material) {
+                setLoading(false);
+                return;
+            }
+            
             const res = await fetch(
-                `/api/filaments/similar?material=${material}&exclude=${currentFilamentId}`
+                `/api/filaments/similar?material=${encodeURIComponent(material)}&exclude=${currentFilamentId}`
             );
             const data = await res.json();
+            
             setFilaments(data.filaments || []);
         } catch (err) {
             console.error("Error fetching similar filaments:", err);

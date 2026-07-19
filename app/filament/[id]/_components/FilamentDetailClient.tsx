@@ -131,6 +131,19 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
     const next = () => setCurrentImg(c => (c + 1) % totalImgs);
     const prev = () => setCurrentImg(c => c === 0 ? totalImgs - 1 : c - 1);
 
+    // Transform specifications from database format to grouped format
+    const specs = filament?.specifications?.reduce((acc: Record<string, {label: string, value: string}[]>, spec: any) => {
+        const category = spec.category || 'General';
+        if (!acc[category]) {
+            acc[category] = [];
+        }
+        acc[category].push({
+            label: spec.key,  // Database field is 'key' not 'label'
+            value: spec.value
+        });
+        return acc;
+    }, {}) || null;
+
     // Find the variant matching selected diameter and spool size
     const selectedVariantData = f.variants?.find((v: any) => 
         v.diameter === selectedDiameter && v.spoolWeight === selectedSpoolSize
@@ -535,7 +548,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                             />
                         )}
                         {activeTab === "specifications" && (
-                            <SpecificationsTab specifications={f.specs} />
+                            <SpecificationsTab specifications={specs} />
                         )}
                         {activeTab === "compatibility" && (
                             <CompatibilityTab
@@ -619,9 +632,15 @@ function DescriptionTab({ description, features, applications }) {
 function SpecificationsTab({
     specifications,
 }: {
-    specifications: Record<string, {label: string, value: string}[]>;
+    specifications: Record<string, {label: string, value: string}[]> | null;
 }) {
-    if (!specifications) return null;
+    if (!specifications || Object.keys(specifications).length === 0) {
+        return (
+            <div className="text-center py-8">
+                <p className="text-gray-500">No specifications available for this product.</p>
+            </div>
+        );
+    }
     
     return (
         <div className="space-y-6 sm:space-y-8">
@@ -631,16 +650,16 @@ function SpecificationsTab({
                         {category}
                     </h3>
                     <div className="space-y-2 sm:space-y-3">
-                        {specs.map((spec) => (
+                        {specs.map((spec, idx) => (
                             <div
-                                key={spec.label}
+                                key={spec.label || idx}
                                 className="flex justify-between gap-3 sm:gap-4 py-2 border-b border-gray-100"
                             >
                                 <span className="text-xs sm:text-sm text-gray-600 shrink-0 w-[40%] sm:max-w-[45%]">
-                                    {spec.label}
+                                    {spec.label || 'N/A'}
                                 </span>
                                 <span className="text-xs sm:text-sm font-medium text-gray-900 text-left sm:text-right flex-1 break-words">
-                                    {spec.value}
+                                    {spec.value || 'N/A'}
                                 </span>
                             </div>
                         ))}
