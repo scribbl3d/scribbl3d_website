@@ -39,17 +39,24 @@ async function getLandingData() {
         }),
 
         // 1 latest filament
-        prisma.product.findFirst({
+        prisma.filament.findFirst({
+            where: { inStock: true },
             orderBy: { updatedAt: "desc" },
             select: {
                 id: true,
+                slug: true,
                 name: true,
-                price: true,
-                originalPrice: true,
+                brand: true,
+                material: true,
+                colorName: true,
                 images: true,
-                category: true,
-                color: true,
+                shortDescription: true,
                 updatedAt: true,
+                variants: {
+                    select: { price: true, originalPrice: true },
+                    take: 1,
+                    orderBy: { price: "asc" },
+                },
             },
         }),
 
@@ -192,13 +199,13 @@ async function getLandingData() {
         newArrivals.push({
             id: latestFilament.id,
             name: latestFilament.name,
-            price: latestFilament.price,
-            originalPrice: latestFilament.originalPrice,
-            description: `${latestFilament.category} · ${latestFilament.color}`,
+            price: latestFilament.variants[0]?.price || 0,
+            originalPrice: latestFilament.variants[0]?.originalPrice || null,
+            description: latestFilament.shortDescription || `${latestFilament.material} · ${latestFilament.colorName}`,
             image: latestFilament.images?.[0] || null,
             type: "filament",
             updatedAt: latestFilament.updatedAt,
-            href: `/filament`,
+            href: `/filament/${latestFilament.slug || latestFilament.id}`,
         });
     }
 

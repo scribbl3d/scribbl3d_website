@@ -10,7 +10,7 @@ import Image from "next/image";
 interface SearchResult {
   id: string;
   name: string;
-  type: "product" | "prebuilt" | "resin" | "printer";
+  type: "product" | "prebuilt" | "resin" | "printer" | "filament";
   price: number | null;
   image: string | null;
   subtitle: string | null;

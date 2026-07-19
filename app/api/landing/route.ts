@@ -39,19 +39,25 @@ export async function GET() {
                 },
             }),
 
-            prisma.product.findMany({
+            prisma.filament.findMany({
+                where: { inStock: true },
                 orderBy: { updatedAt: "desc" },
                 take: 4,
                 select: {
                     id: true,
                     name: true,
-
-                    price: true,
-                    originalPrice: true,
-
-                    category: true,
+                    slug: true,
+                    brand: true,
+                    material: true,
+                    colorName: true,
                     images: true,
+                    shortDescription: true,
                     updatedAt: true,
+                    variants: {
+                        select: { price: true, originalPrice: true },
+                        take: 1,
+                        orderBy: { price: "asc" },
+                    },
                 },
             }),
 
@@ -117,16 +123,17 @@ export async function GET() {
                 updatedAt: p.updatedAt,
                 href: `/printers/${p.slug}`,
             })),
-            ...latestFilaments.map((p) => ({
-                id: p.id,
-                name: p.name,
-
-                price: p.price,
-                originalPrice: p.originalPrice,
-
-                image: p.images?.[0] || null,
+            ...latestFilaments.map((f) => ({
+                id: f.id,
+                name: f.name,
+                slug: f.slug,
+                price: f.variants[0]?.price || 0,
+                originalPrice: f.variants[0]?.originalPrice || null,
+                description: f.shortDescription || `${f.material} · ${f.colorName}`,
+                image: f.images?.[0] || null,
                 type: "filament" as const,
-                updatedAt: p.updatedAt,
+                updatedAt: f.updatedAt,
+                href: `/filament/${f.slug || f.id}`,
             })),
             ...latestResins.map((r) => ({
                 id: r.id,

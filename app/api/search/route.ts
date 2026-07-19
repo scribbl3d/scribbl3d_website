@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     await prisma.$connect();
 
-    const [products, prebuiltProducts, resins, printers] = await Promise.all([
+    const [products, prebuiltProducts, resins, printers, filaments] = await Promise.all([
       prisma.product.findMany({
         where: {
           OR: [
@@ -103,6 +103,32 @@ export async function GET(request: Request) {
         },
         take: 5,
       }),
+      prisma.filament.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: "insensitive" } },
+            { brand: { contains: query, mode: "insensitive" } },
+            { material: { contains: query, mode: "insensitive" } },
+            { colorName: { contains: query, mode: "insensitive" } },
+            { shortDescription: { contains: query, mode: "insensitive" } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          brand: true,
+          material: true,
+          colorName: true,
+          images: true,
+          variants: {
+            select: { price: true },
+            take: 1,
+            orderBy: { price: "asc" },
+          },
+        },
+        take: 5,
+      }),
     ]);
 
     const results = [
@@ -141,6 +167,15 @@ export async function GET(request: Request) {
         subtitle: [p.brand, p.technology].filter(Boolean).join(" · "),
         href: `/printers/${p.slug}`,
         type: "printer" as const,
+      })),
+      ...filaments.map((f) => ({
+        id: f.id,
+        name: f.name,
+        price: f.variants[0]?.price ?? null,
+        image: f.images?.[0] || null,
+        subtitle: [f.brand, f.material, f.colorName].filter(Boolean).join(" · "),
+        href: `/filament/${f.slug || f.id}`,
+        type: "filament" as const,
       })),
     ];
 
