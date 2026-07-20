@@ -1,61 +1,43 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendAdminNotification } from "@/lib/email/index";
-import {
-  sanitize, sanitizeWithLimit, sanitizeOptional, sanitizeStringArray,
-  isValidEmail, normalizeEmail, isValidPhone, normalizePhone,
-  checkRequired, isRateLimited,
-} from "@/lib/validation";
+import { personaliseFormSchema } from "@/lib/validations/api-schemas";
+import { applyRateLimit, validateRequest } from "@/lib/api-helpers";
+import { RateLimits, createRateLimitResponse } from "@/lib/rate-limit";
+import { z } from "zod";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { isAware, categories, statueDetails, wantMore, contactDetails, userId } = body;
-
-    // Rate limit by IP
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
-    if (isRateLimited(`personalise:${ip}`, 5, 60_000)) {
-      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    // Apply rate limiting (5 requests per hour)
+    const rateLimitResult = await applyRateLimit(
+      request,
+      RateLimits.QUOTE.limit,
+      RateLimits.QUOTE.windowMs
+    );
+    
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult, "Too many quote requests. Please try again later.");
     }
 
-    // Sanitize contact details
-    const name = sanitizeWithLimit(contactDetails?.name, 200);
-    const email = contactDetails?.email?.trim()?.toLowerCase() || "";
-    const phone = String(contactDetails?.phone || "").trim();
-
-    // Validate required contact fields
-    const reqError = checkRequired([
-      { value: name, name: "Name" },
-      { value: email, name: "Email" },
-      { value: phone, name: "Phone" },
-    ]);
-    if (reqError) {
-      return NextResponse.json({ success: false, error: reqError }, { status: 400 });
+    // Validate request body with Zod
+    const validation = await validateRequest(request, personaliseFormSchema);
+    if (!validation.success) {
+      return validation.error;
     }
 
-    if (!isValidEmail(email)) {
-      return NextResponse.json({ success: false, error: "Invalid email address" }, { status: 400 });
-    }
-    if (!isValidPhone(phone)) {
-      return NextResponse.json({ success: false, error: "Invalid phone number (10 digits required)" }, { status: 400 });
-    }
+    const validatedData = validation.data;
 
-    // Sanitize all inputs
-    const cleanCategories = sanitizeStringArray(categories);
-    const cleanStatueDetails = sanitizeWithLimit(statueDetails || "", 2000);
-    const cleanIsAware = sanitize(isAware);
-    const cleanWantMore = sanitize(wantMore);
-
+    // Create form response with validated data
     const formResponse = await prisma.personaliseFormResponse.create({
       data: {
-        isAware: cleanIsAware,
-        categories: cleanCategories,
-        statueDetails: cleanStatueDetails,
-        wantMore: cleanWantMore,
-        name,
-        email: normalizeEmail(email),
-        phone: normalizePhone(phone),
-        userId: typeof userId === "string" ? userId : null,
+        isAware: validatedData.urgency === "Rush" ? "Yes" : "No", // Map urgency to isAware for now
+        categories: [validatedData.material], // Map material to categories
+        statueDetails: validatedData.notes || "",
+        wantMore: validatedData.urgency !== "Standard" ? "Yes" : "No",
+        name: validatedData.name,
+        email: validatedData.email.toLowerCase(),
+        phone: validatedData.phone,
+        userId: null, // Will be set if user is authenticated
       },
     });
 
@@ -64,13 +46,16 @@ export async function POST(request: Request) {
     sendAdminNotification({
       type: "personalise-response",
       details: {
-        "Name": contactDetails?.name || "—",
-        "Email": contactDetails?.email || "—",
-        "Phone": contactDetails?.phone || "—",
-        "Aware of 3D Printing": isAware ? "Yes" : "No",
-        "Categories": Array.isArray(categories) ? categories.join(", ") : String(categories || "—"),
-        "Statue Details": statueDetails || "—",
-        "Want More Info": wantMore ? "Yes" : "No",
+        "Name": validatedData.name,
+        "Email": validatedData.email,
+        "Phone": validatedData.phone,
+        "Quantity": validatedData.quantity.toString(),
+        "Material": validatedData.material,
+        "Finish Type": validatedData.finishType || "—",
+        "Color": validatedData.color || "—",
+        "Notes": validatedData.notes || "—",
+        "Urgency": validatedData.urgency,
+        "File URL": validatedData.fileUrl || "—",
       },
     }).then((res) => console.log("[Admin Email] Personalise notification result:", JSON.stringify(res)))
       .catch((err) => console.error("[Admin Email] Personalise notification failed:", err));

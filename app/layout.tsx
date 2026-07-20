@@ -14,6 +14,7 @@ import { Providers } from "./providers";
 import { defaultMetadata } from "@/lib/metadata";
 import OrganizationSchema from "@/components/seo/OrganizationSchema";
 import WebsiteSchema from "@/components/seo/WebsiteSchema";
+import LocalBusinessSchema from "@/components/seo/LocalBusinessSchema";
 
 const geistSans = localFont({
     src: "./fonts/GeistVF.woff",
@@ -81,6 +82,7 @@ export default async function RootLayout({
             >
                 <OrganizationSchema />
                 <WebsiteSchema />
+                <LocalBusinessSchema />
                 <Providers session={session}>{children}</Providers>
                 <WhatsAppSupportButton
                     phoneNumber="919599523434"

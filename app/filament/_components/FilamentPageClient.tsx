@@ -187,6 +187,16 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
                 />
 
                 <div className="container mx-auto px-4 py-8">
+                    {/* Breadcrumb Navigation */}
+                    <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6" aria-label="Breadcrumb">
+                        <a href="/" className="hover:text-blue-600 transition-colors">Home</a>
+                        <span>/</span>
+                        <span className="text-gray-900 font-medium">3D Printer Filaments</span>
+                    </nav>
+
+                    {/* SEO H1 - Hidden visually but present for crawlers */}
+                    <h1 className="sr-only">3D Printer Filaments Online India - PLA, PETG, ABS, TPU, Nylon</h1>
+
                     <div className="flex gap-8">
                         {/* Sidebar (Desktop) */}
                         <div className="hidden lg:block lg:w-1/4 xl:w-1/5">

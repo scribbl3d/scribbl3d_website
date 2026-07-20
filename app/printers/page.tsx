@@ -9,6 +9,18 @@ export const metadata: Metadata = {
     },
     description:
         'Shop FDM and resin 3D printers from Bambu Lab, Creality, Anycubic, Elegoo, and Phrozen. Best prices in India, fast shipping, expert support.',
+    keywords: [
+        '3D printers India',
+        'buy 3D printer online',
+        'Bambu Lab India',
+        'Creality printer',
+        'Anycubic printer',
+        'FDM printer',
+        'resin printer',
+        'SLA printer',
+        'best 3D printer India',
+        'Scribbl3D'
+    ],
     alternates: { canonical: 'https://www.scribbl3d.com/printers' },
     openGraph: {
         title: 'Buy 3D Printers Online in India | Scribbl3D',
@@ -18,6 +30,18 @@ export const metadata: Metadata = {
         type: 'website',
         locale: 'en_IN',
         siteName: 'Scribbl3D',
+        images: [{
+            url: 'https://www.scribbl3d.com/og-printers.png',
+            width: 1200,
+            height: 630,
+            alt: '3D Printers - FDM & Resin from Top Brands'
+        }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Buy 3D Printers Online in India | Scribbl3D',
+        description: 'Shop FDM and resin 3D printers from Bambu Lab, Creality, Anycubic, Elegoo, Phrozen. Best prices in India.',
+        images: ['https://www.scribbl3d.com/og-printers.png'],
     },
 };
 
@@ -58,31 +82,5 @@ async function getInitialPrinters() {
 export default async function PrintersPage() {
     const { printers, total } = await getInitialPrinters();
 
-    return (
-        <>
-            {/* Server-rendered for Googlebot — visually hidden, semantically present */}
-            <section className="sr-only" aria-hidden="true">
-                <h1>Buy 3D Printers Online in India</h1>
-                <p>
-                    Shop our complete range of FDM and resin 3D printers from top brands
-                    including Bambu Lab, Creality, Anycubic, Elegoo, and Phrozen. Best
-                    prices in India with fast shipping and expert support.
-                </p>
-                <ul>
-                    {printers.map((printer: any) => (
-                        <li key={printer.id}>
-                            <a href={`/printers/${printer.slug}`}>
-                                <h2>{printer.name}</h2>
-                                <p>{printer.brand} — {printer.technology}</p>
-                                {printer.shortDescription && <p>{printer.shortDescription}</p>}
-                                <p>{printer.priceDisplay}</p>
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-            </section>
-
-            <PrintersPageClient initialPrinters={printers} initialTotal={total} />
-        </>
-    );
+    return <PrintersPageClient initialPrinters={printers} initialTotal={total} />;
 }

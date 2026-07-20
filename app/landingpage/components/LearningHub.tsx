@@ -6,6 +6,7 @@ import { AnimatedSubtext, SplitText } from "./SplitText";
 
 interface BlogItem {
     id: string;
+    slug?: string;
     title: string;
     description?: string | null;
     keywords: string;
@@ -115,7 +116,7 @@ export default function LearningHub({ blogs }: LearningHubProps) {
                                 variants={variant}
                             >
                                 <Link
-                                    href={`/blog/${blog.id}`}
+                                    href={`/blog/${blog.slug || blog.id}`}
                                     className="group block"
                                 >
                                     <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-gray-200">
@@ -157,7 +158,7 @@ export default function LearningHub({ blogs }: LearningHubProps) {
                         return (
                             <Link
                                 key={blog.id}
-                                href={`/blog/${blog.id}`}
+                                href={`/blog/${blog.slug || blog.id}`}
                                 className="flex gap-3 bg-white rounded-xl overflow-hidden border border-gray-100 active:scale-[0.99] transition-transform"
                             >
                                 {/* Thumbnail */}

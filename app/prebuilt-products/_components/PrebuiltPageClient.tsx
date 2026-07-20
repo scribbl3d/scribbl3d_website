@@ -48,6 +48,16 @@ export default function PrebuiltPageClient({
                 <PrebuiltHero />
 
                 <div className="container mx-auto px-4 pt-6 pb-12">
+                    {/* Breadcrumb Navigation */}
+                    <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6" aria-label="Breadcrumb">
+                        <a href="/" className="hover:text-blue-600 transition-colors">Home</a>
+                        <span>/</span>
+                        <span className="text-gray-900 font-medium">3D Printed Products</span>
+                    </nav>
+
+                    {/* SEO H1 - Hidden visually but present for crawlers */}
+                    <h1 className="sr-only">3D Printed Products Online India - Custom Keychains, Lamps, Decor, Figurines</h1>
+
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />

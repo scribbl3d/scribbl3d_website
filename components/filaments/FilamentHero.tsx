@@ -151,7 +151,7 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
                 {hasText && (
                     <div className="absolute inset-0 z-10 flex flex-col justify-center px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto text-center">
                         {hero.headline && (
-                            <motion.h1
+                            <motion.h2
                                 variants={staggerContainer}
                                 initial="hidden"
                                 {...(animate
@@ -171,7 +171,7 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
                                         {word}
                                     </motion.span>
                                 ))}
-                            </motion.h1>
+                            </motion.h2>
                         )}
 
                         {hero.subtext && (

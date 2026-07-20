@@ -5,7 +5,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
   
   try {
-    const [printers, resins, prebuiltProducts, blogs, categories] = await Promise.all([
+    const [printers, resins, filaments, prebuiltProducts, blogs, categories] = await Promise.all([
       prisma.printer.findMany({ 
         where: { inStock: true },
         select: { slug: true, updatedAt: true } 
@@ -13,6 +13,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       prisma.resin.findMany({ 
         where: { inStock: true },
         select: { slug: true, updatedAt: true } 
+      }),
+      prisma.filament.findMany({ 
+        where: { inStock: true },
+        select: { slug: true, id: true, updatedAt: true } 
       }),
       prisma.prebuiltProducts.findMany({ 
         where: { inStock: true },
@@ -94,6 +98,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
+    const filamentPages = filaments.map((filament) => ({
+      url: `${baseUrl}/filament/${filament.slug || filament.id}`,
+      lastModified: filament.updatedAt,
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }));
+
     const prebuiltPages = prebuiltProducts.map((product) => ({
       url: `${baseUrl}/prebuilt-products/${product.slug}`,
       lastModified: product.updatedAt,
@@ -126,6 +137,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...staticPages,
       ...printerPages,
       ...resinPages,
+      ...filamentPages,
       ...prebuiltPages,
       ...blogPages,
       ...categoryPages,

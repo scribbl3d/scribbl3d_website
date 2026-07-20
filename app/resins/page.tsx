@@ -11,6 +11,18 @@ export const metadata: Metadata = {
     },
     description:
         'Shop LCD/MSLA photopolymer resins from Elegoo, Anycubic, Phrozen, and more. 4K, 8K, 10K resolution. Best prices in India, fast shipping.',
+    keywords: [
+        '3D printer resin India',
+        'buy resin online',
+        'LCD resin',
+        'MSLA resin',
+        'Elegoo resin',
+        'Anycubic resin',
+        'Phrozen resin',
+        '8K resin',
+        'photopolymer resin',
+        'Scribbl3D'
+    ],
     alternates: { canonical: 'https://www.scribbl3d.com/resins' },
     openGraph: {
         title: 'Buy 3D Printer Resin Online in India | Scribbl3D',
@@ -20,6 +32,18 @@ export const metadata: Metadata = {
         type: 'website',
         locale: 'en_IN',
         siteName: 'Scribbl3D',
+        images: [{
+            url: 'https://www.scribbl3d.com/og-resins.png',
+            width: 1200,
+            height: 630,
+            alt: '3D Printer Resins - LCD/MSLA from Top Brands'
+        }],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Buy 3D Printer Resin Online in India | Scribbl3D',
+        description: 'Shop LCD/MSLA photopolymer resins from Elegoo, Anycubic, Phrozen. 4K, 8K, 10K resolution.',
+        images: ['https://www.scribbl3d.com/og-resins.png'],
     },
 };
 
@@ -50,34 +74,5 @@ async function getInitialResins() {
 export default async function ResinsPage() {
     const { resins, total } = await getInitialResins();
 
-    return (
-        <>
-            {/* Server-rendered for Googlebot — visually hidden, semantically present */}
-            <section className="sr-only" aria-hidden="true">
-                <h1>Buy 3D Printer Resin Online in India</h1>
-                <p>
-                    Shop our complete range of LCD and MSLA photopolymer 3D printer resins
-                    from top brands including Elegoo, Anycubic, and Phrozen. Available in
-                    4K, 8K, and 10K resolutions for miniatures, prototypes, jewelry, and
-                    dental applications. Free shipping across India.
-                </p>
-                <ul>
-                    {resins.map((resin: any) => (
-                        <li key={resin.id}>
-                            <a href={`/resins/${resin.slug}`}>
-                                <h2>{resin.name}</h2>
-                                <p>{resin.brand} — {resin.technology}</p>
-                                {resin.shortDescription && <p>{resin.shortDescription}</p>}
-                                {resin.weights?.[0] && (
-                                    <p>From ₹{resin.weights[0].price.toLocaleString('en-IN')}</p>
-                                )}
-                            </a>
-                        </li>
-                    ))}
-                </ul>
-            </section>
-
-            <ResinsPageClient initialResins={resins} initialTotal={total} />
-        </>
-    );
+    return <ResinsPageClient initialResins={resins} initialTotal={total} />;
 }

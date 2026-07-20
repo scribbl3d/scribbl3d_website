@@ -2,25 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-
-const resetPasswordSchema = z.object({
-  token: z.string(),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number")
-    .regex(
-      /[^A-Za-z0-9]/,
-      "Password must contain at least one special character"
-    ),
-});
+import { applyRateLimit, validateRequest } from "@/lib/api-helpers";
+import { RateLimits, createRateLimitResponse } from "@/lib/rate-limit";
+import { resetPasswordSchema } from "@/lib/validations/api-schemas";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { token, password } = resetPasswordSchema.parse(body);
+    // Apply rate limiting (5 requests per 15 minutes)
+    const rateLimitResult = await applyRateLimit(
+      req,
+      RateLimits.AUTH.limit,
+      RateLimits.AUTH.windowMs
+    );
+    
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult, "Too many password reset attempts. Please try again later.");
+    }
+
+    // Validate request
+    const validation = await validateRequest(req, resetPasswordSchema);
+    if (!validation.success) {
+      return validation.error;
+    }
+
+    const { token, password } = validation.data;
 
     const user = await db.user.findFirst({
       where: {

@@ -6,26 +6,30 @@ import {
 } from "@/lib/email";
 import { z } from "zod";
 import crypto from "crypto";
-import { rateLimit } from "@/lib/rate-limit";
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email(),
-});
+import { applyRateLimit, validateRequest } from "@/lib/api-helpers";
+import { RateLimits, createRateLimitResponse } from "@/lib/rate-limit";
+import { forgotPasswordSchema } from "@/lib/validations/api-schemas";
 
 export async function POST(req: NextRequest) {
   try {
-    // Apply rate limiting
-    const identifier = req.headers.get("x-forwarded-for") || "unknown";
-    const { success } = await rateLimit(identifier);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded" },
-        { status: 429 }
-      );
+    // Apply rate limiting (5 requests per 15 minutes)
+    const rateLimitResult = await applyRateLimit(
+      req,
+      RateLimits.AUTH.limit,
+      RateLimits.AUTH.windowMs
+    );
+    
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult, "Too many password reset attempts. Please try again later.");
     }
 
-    const body = await req.json();
-    const { email } = forgotPasswordSchema.parse(body);
+    // Validate request
+    const validation = await validateRequest(req, forgotPasswordSchema);
+    if (!validation.success) {
+      return validation.error;
+    }
+
+    const { email } = validation.data;
 
     const user = await db.user.findUnique({ where: { email } });
 

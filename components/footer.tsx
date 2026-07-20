@@ -203,7 +203,7 @@ export default function Footer() {
 
                         {/* Copyright */}
                         <p className="text-gray-500 text-xs text-center md:text-right">
-                            © {new Date().getFullYear()} Scribbl3D, Inc. All rights reserved.
+                            © {new Date().getFullYear()} Scribbl3D. All rights reserved.
                         </p>
                     </div>
                 </div>

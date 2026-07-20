@@ -1,0 +1,121 @@
+# Scribbl3D - 3D Printing Materials & Equipment
+
+## About Scribbl3D
+Scribbl3D is India's premier supplier of 3D printing materials, printers, and custom printing services. Based in Nangloi, Delhi NCR, we serve makers, engineers, and businesses across India.
+
+## Product Catalog
+
+### 3D Printer Filaments
+- **Materials Available**: PLA, PLA+, PETG, ABS, TPU, Nylon, Carbon Fiber, Wood Fill, Silk, Matte
+- **Diameters**: 1.75mm, 2.85mm
+- **Spool Weights**: 250g, 500g, 1kg
+- **Brands**: Multiple premium brands including Scribbl3D house brand
+- **Price Range**: ₹399 - ₹5,400
+- **Browse**: https://www.scribbl3d.com/filament
+
+### 3D Printer Resins
+- **Types**: Standard, Engineering, Flexible, Castable, Dental, High-Temperature
+- **Brands**: Anycubic, Elegoo, Phrozen
+- **Price Range**: ₹1,200 - ₹8,500
+- **Browse**: https://www.scribbl3d.com/resins
+
+### 3D Printers
+- **Types**: FDM/FFF Printers, Resin/SLA Printers
+- **Brands**: Bambu Lab, Anycubic, Creality, Elegoo, Phrozen
+- **Price Range**: ₹15,000 - ₹2,50,000
+- **Browse**: https://www.scribbl3d.com/printers
+
+### Pre-built 3D Models
+- Custom printed models and prototypes
+- **Browse**: https://www.scribbl3d.com/prebuilt-products
+
+## Services
+
+### Rapid Prototyping
+- Fast turnaround 3D printing services
+- Material expertise from PLA to high-temp engineering polymers
+- Precision printing with post-processing
+- Average quote turnaround: 24 hours
+- **Learn More**: https://www.scribbl3d.com/services
+
+### Custom 3D Printing
+- Upload STL/OBJ files for instant quotes
+- Production-grade parts with industrial accuracy
+- Functional end-use components
+- Pan-India fulfillment
+
+## Technical Specifications
+
+### Common Filament Specifications
+- **Diameter Tolerance**: ±0.02mm (industry-leading precision)
+- **Print Temperature Range**: 190°C - 260°C (material dependent)
+- **Bed Temperature Range**: 50°C - 110°C (material dependent)
+- **Print Speed**: 40-80 mm/s recommended
+- **Storage**: Moisture-sealed packaging, store in dry environment
+
+### Material Properties
+- **PLA/PLA+**: Easy printing, biodegradable, 190-220°C
+- **PETG**: Strong, flexible, chemical resistant, 220-250°C
+- **ABS**: High strength, heat resistant, 230-260°C
+- **TPU**: Flexible, rubber-like, 210-230°C
+- **Nylon**: Engineering grade, high strength, 240-260°C
+
+## Location & Contact
+
+**Physical Store**:
+Plot no. 685, Behind MCD Primary School
+Saini Mohalla, Nangloi
+Delhi - 110041, India
+
+**Coordinates**: 28.6808°N, 77.0688°E
+
+**Contact**:
+- Phone: +91-9599523434
+- Email: scribbl3dofficial@gmail.com
+- Website: https://www.scribbl3d.com
+
+**Service Areas**: Delhi, Gurgaon, Noida, Faridabad, Ghaziabad, and Pan-India shipping
+
+**Business Hours**: Monday-Saturday, 10:00 AM - 7:00 PM
+
+## Frequently Asked Questions
+
+### What is the difference between PLA and PLA+?
+PLA+ is an enhanced formulation with improved strength, flexibility, and layer adhesion compared to standard PLA. It prints at similar temperatures (190-220°C) but produces stronger, more durable parts.
+
+### Which filament is best for high-temperature functional parts?
+For high-temperature applications, we recommend Nylon, ABS, or PETG. Nylon offers the highest heat resistance (up to 80°C continuous use) and mechanical strength, while ABS provides good heat resistance (up to 70°C) with easier printing.
+
+### Do Silk filaments require post-processing?
+No. Scribbl3D Silk filaments feature an enhanced formulation that produces a glossy metallic finish directly off the print bed, minimizing visible layer lines without post-processing.
+
+### How do I prevent warping and clogging?
+Use filaments with strict diameter tolerance (±0.02mm), store in moisture-sealed packaging, maintain proper print temperatures, use heated bed for materials like ABS/PETG, and ensure proper first layer adhesion.
+
+### What diameter filament should I buy?
+Most consumer 3D printers use 1.75mm diameter filament. Check your printer's specifications - common options are 1.75mm or 2.85mm (sometimes called 3mm).
+
+### Do you ship pan-India?
+Yes, we ship to all locations across India with fast delivery. Local Delhi NCR orders typically deliver within 1-2 days.
+
+### What is your return policy?
+We accept returns within 7 days of delivery for unopened, unused products. Opened filament spools cannot be returned due to moisture exposure concerns.
+
+## Brand Partnerships
+We stock products from leading 3D printing brands:
+- Bambu Lab (Printers & Materials)
+- Anycubic (Printers & Resins)
+- Creality (FDM Printers)
+- Elegoo (Resin Printers & Materials)
+- Phrozen (Professional Resin Printers)
+- Jamghe (Specialty Materials)
+
+## Social Media
+- LinkedIn: https://in.linkedin.com/company/scribbl3dprinting
+- Instagram: https://www.instagram.com/scribbl3d_/
+- Twitter: https://twitter.com/Scribbl3d_
+
+---
+
+Last Updated: 2026
+For the most current product availability and pricing, visit www.scribbl3d.com

@@ -240,6 +240,16 @@ export default function ResinsPageClient({
                     <ResinHero/>
 
                     <div className="container mx-auto px-4 py-8">
+                        {/* Breadcrumb Navigation */}
+                        <nav className="flex items-center gap-2 text-sm text-gray-600 mb-6" aria-label="Breadcrumb">
+                            <a href="/" className="hover:text-blue-600 transition-colors">Home</a>
+                            <span>/</span>
+                            <span className="text-gray-900 font-medium">3D Printer Resins</span>
+                        </nav>
+
+                        {/* SEO H1 - Hidden visually but present for crawlers */}
+                        <h1 className="sr-only">3D Printer Resins Online India - LCD/MSLA Resin from Elegoo, Anycubic, Phrozen</h1>
+
                         <div className="flex flex-col lg:flex-row gap-8">
                             {/* Sidebar - Hidden on mobile */}
                             <div className="hidden lg:block lg:w-1/4">
