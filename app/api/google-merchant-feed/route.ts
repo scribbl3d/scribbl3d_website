@@ -76,8 +76,8 @@ function item(fields: Record<string, string | undefined>): string {
 
 export async function GET() {
     try {
-        // Fetch all three product types in parallel
-        const [prebuiltProducts, resins, printers] = await Promise.all([
+        // Fetch all four product types in parallel
+        const [prebuiltProducts, resins, printers, filaments] = await Promise.all([
             prisma.prebuiltProducts.findMany({
                 where: { inStock: true },
                 include: {
@@ -108,6 +108,19 @@ export async function GET() {
                 where: { inStock: true },
                 include: {
                     images: { orderBy: { sortOrder: "asc" }, take: 1 },
+                },
+            }),
+            prisma.filament.findMany({
+                where: { inStock: true },
+                include: {
+                    images: { orderBy: { sortOrder: "asc" }, take: 1 },
+                    variants: {
+                        where: { inStock: true },
+                        orderBy: { sortOrder: "asc" },
+                        include: {
+                            images: { orderBy: { sortOrder: "asc" }, take: 1 },
+                        },
+                    },
                 },
             }),
         ]);
@@ -270,13 +283,70 @@ export async function GET() {
             items += item(fields);
         }
 
+        // ── Filaments ────────────────────────────────────────────────────
+        for (const filament of filaments) {
+            const link = `${BASE_URL}/filament/${filament.slug}`;
+            
+            // Use main filament image as fallback
+            const fallbackImage = filament.images[0]?.url || "";
+
+            if (filament.variants.length === 0) continue;
+
+            for (const variant of filament.variants) {
+                // Use variant image if available, otherwise fallback to main filament image
+                const imageUrl = variant.images[0]?.url || fallbackImage;
+                
+                // Build title with variant details
+                const titleParts = [filament.name];
+                if (variant.color) titleParts.push(variant.color);
+                if (variant.weight) {
+                    const weightLabel = variant.weight >= 1000 
+                        ? `${variant.weight / 1000}kg` 
+                        : `${variant.weight}g`;
+                    titleParts.push(weightLabel);
+                }
+                const title = titleParts.join(" — ");
+
+                const fields: Record<string, string | undefined> = {
+                    "g:id": `filament-${variant.id}`,
+                    "g:item_group_id": `filament-${filament.id}`,
+                    "g:title": esc(title),
+                    "g:description": esc(
+                        filament.shortDescription || filament.name,
+                    ),
+                    "g:link": link,
+                    "g:image_link": imageUrl,
+                    "g:price":
+                        variant.originalPrice && variant.originalPrice > variant.price
+                            ? formatPrice(variant.originalPrice)
+                            : formatPrice(variant.price),
+                    "g:sale_price":
+                        variant.originalPrice && variant.originalPrice > variant.price
+                            ? formatPrice(variant.price)
+                            : undefined,
+                    "g:availability": "in_stock",
+                    "g:condition": "new",
+                    "g:brand": esc(filament.brand.trim()),
+                    "g:product_type": "3D Printing Filament",
+                    "g:color": variant.color ? esc(variant.color) : undefined,
+                    "g:shipping_weight": variant.weight
+                        ? `${variant.weight} g`
+                        : undefined,
+                    "g:identifier_exists": "no",
+                    "g:google_product_category": "Hardware > Tool Accessories > 3D Printer Accessories",
+                };
+
+                items += item(fields);
+            }
+        }
+
         // ── Assemble XML ─────────────────────────────────────────────────
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
     <title>Scribbl3D — Product Feed</title>
     <link>${BASE_URL}</link>
-    <description>Google Merchant product feed for Scribbl3D</description>
+    <description>Google Merchant product feed for Scribbl3D — 3D Printers, Filaments, Resins, and Custom Products</description>
 ${items}  </channel>
 </rss>`;
 
