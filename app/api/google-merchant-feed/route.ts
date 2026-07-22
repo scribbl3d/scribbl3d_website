@@ -113,13 +113,9 @@ export async function GET() {
             prisma.filament.findMany({
                 where: { inStock: true },
                 include: {
-                    images: { orderBy: { sortOrder: "asc" }, take: 1 },
                     variants: {
                         where: { inStock: true },
-                        orderBy: { sortOrder: "asc" },
-                        include: {
-                            images: { orderBy: { sortOrder: "asc" }, take: 1 },
-                        },
+                        orderBy: { displayOrder: "asc" },
                     },
                 },
             }),
@@ -287,24 +283,17 @@ export async function GET() {
         for (const filament of filaments) {
             const link = `${BASE_URL}/filament/${filament.slug}`;
             
-            // Use main filament image as fallback
-            const fallbackImage = filament.images[0]?.url || "";
+            // Use main filament image (images is a String array)
+            const imageUrl = filament.images[0] || "";
 
             if (filament.variants.length === 0) continue;
 
             for (const variant of filament.variants) {
-                // Use variant image if available, otherwise fallback to main filament image
-                const imageUrl = variant.images[0]?.url || fallbackImage;
-                
                 // Build title with variant details
                 const titleParts = [filament.name];
-                if (variant.color) titleParts.push(variant.color);
-                if (variant.weight) {
-                    const weightLabel = variant.weight >= 1000 
-                        ? `${variant.weight / 1000}kg` 
-                        : `${variant.weight}g`;
-                    titleParts.push(weightLabel);
-                }
+                if (filament.colorName) titleParts.push(filament.colorName);
+                if (variant.diameter) titleParts.push(variant.diameter);
+                if (variant.spoolWeight) titleParts.push(variant.spoolWeight);
                 const title = titleParts.join(" — ");
 
                 const fields: Record<string, string | undefined> = {
@@ -326,12 +315,10 @@ export async function GET() {
                             : undefined,
                     "g:availability": "in_stock",
                     "g:condition": "new",
-                    "g:brand": esc(filament.brand.trim()),
+                    "g:brand": filament.brand ? esc(filament.brand.trim()) : "Scribbl3D",
                     "g:product_type": "3D Printing Filament",
-                    "g:color": variant.color ? esc(variant.color) : undefined,
-                    "g:shipping_weight": variant.weight
-                        ? `${variant.weight} g`
-                        : undefined,
+                    "g:color": filament.colorName ? esc(filament.colorName) : undefined,
+                    "g:size": variant.diameter ? esc(variant.diameter) : undefined,
                     "g:identifier_exists": "no",
                     "g:google_product_category": "Hardware > Tool Accessories > 3D Printer Accessories",
                 };
