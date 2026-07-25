@@ -103,36 +103,49 @@ export async function GET(request: Request) {
             };
         }
 
-        // Build ORDER BY clause
+        // Build ORDER BY clause for non-price sorting
         let orderByClause: any = {};
-        if (sortBy === "price") {
-            // Note: Sorting by price requires sorting by variant price, which is complex
-            // For now, we'll fetch all and sort in memory after transformation
-            orderByClause = { createdAt: "desc" };
-        } else if (sortBy === "updatedAt") {
+        if (sortBy === "updatedAt") {
             orderByClause = { updatedAt: order };
         } else if (sortBy === "name") {
             orderByClause = { name: order };
-        } else {
+        } else if (sortBy !== "price") {
             orderByClause = { createdAt: order };
         }
 
-        // Fetch filaments with variants - optimized query
-        const filaments = await prisma.filament.findMany({
-            where: whereConditions,
-            orderBy: orderByClause,
-            skip,
-            take: limit,
-            include: {
-                variants: {
-                    orderBy: { price: "asc" },
-                    take: 10, // Increased to show all variants including out of stock
-                },
-            },
-        });
-
-        // Get total count separately to avoid timeout
+        // Get total count
         const totalCount = await prisma.filament.count({ where: whereConditions });
+
+        // For price sorting, we need to fetch ALL matching filaments, transform, sort, then paginate
+        // For other sorting, we can paginate at DB level for better performance
+        let filaments;
+        
+        if (sortBy === "price") {
+            // Fetch ALL matching filaments (without pagination)
+            filaments = await prisma.filament.findMany({
+                where: whereConditions,
+                include: {
+                    variants: {
+                        orderBy: { price: "asc" },
+                        take: 10,
+                    },
+                },
+            });
+        } else {
+            // Fetch with pagination for non-price sorting
+            filaments = await prisma.filament.findMany({
+                where: whereConditions,
+                orderBy: orderByClause,
+                skip,
+                take: limit,
+                include: {
+                    variants: {
+                        orderBy: { price: "asc" },
+                        take: 10,
+                    },
+                },
+            });
+        }
 
         // Transform data for frontend
         const transformedFilaments = filaments.map((filament) => {
@@ -173,17 +186,22 @@ export async function GET(request: Request) {
             };
         });
 
-        // Sort by price if requested (after transformation since we need variant prices)
+        // Sort by price if requested, then paginate in memory
+        let finalFilaments = transformedFilaments;
         if (sortBy === "price") {
-            transformedFilaments.sort((a, b) => {
+            // Sort all results by price
+            finalFilaments.sort((a, b) => {
                 const priceA = a.price || 0;
                 const priceB = b.price || 0;
                 return order === "asc" ? priceA - priceB : priceB - priceA;
             });
+            
+            // Apply pagination in memory
+            finalFilaments = finalFilaments.slice(skip, skip + limit);
         }
 
         return NextResponse.json({
-            filaments: transformedFilaments,
+            filaments: finalFilaments,
             totalItems: totalCount,
             totalPages: Math.ceil(totalCount / limit),
             currentPage: page,
