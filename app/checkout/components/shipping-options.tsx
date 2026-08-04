@@ -188,18 +188,21 @@ export function ShippingOptions() {
                                                                     Calculating...
                                                                 </span>
                                                             </div>
-                                                        ) : option.id ===
-                                                          "free" ? (
+                                                        ) : option.id === "free" ? (
                                                             <p className="text-base sm:text-lg font-semibold text-green-600">
                                                                 Free
                                                             </p>
-                                                        ) : option.price > 0 ? (
-                                                            <p className="text-base sm:text-lg font-semibold">
-                                                                ₹
-                                                                {option.price.toLocaleString(
-                                                                    "en-IN",
-                                                                )}
-                                                            </p>
+                                                        ) : option.id === "premium" ? (
+                                                            // Premium shipping - always show price from API
+                                                            option.price > 0 ? (
+                                                                <p className="text-base sm:text-lg font-semibold">
+                                                                    ₹{option.price.toLocaleString("en-IN")}
+                                                                </p>
+                                                            ) : (
+                                                                <p className="text-base sm:text-lg font-semibold text-amber-600">
+                                                                    ₹0 (Check API)
+                                                                </p>
+                                                            )
                                                         ) : (
                                                             <p className="text-base sm:text-lg font-semibold text-green-600">
                                                                 Free
@@ -207,9 +210,7 @@ export function ShippingOptions() {
                                                         )}
                                                         <p className="text-xs sm:text-sm text-muted-foreground">
                                                             Shipping in{" "}
-                                                            {
-                                                                option.estimatedDays
-                                                            }
+                                                            {option.estimatedDays}
                                                         </p>
                                                     </div>
                                                 )}

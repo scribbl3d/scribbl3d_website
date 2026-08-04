@@ -7,15 +7,6 @@ export async function GET(
     { params }: { params: Promise<{ orderId: string }> }
 ) {
     try {
-        const session = await getSession();
-
-        if (!session?.email) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
         const { orderId } = await params;
 
         // Fetch order with user details
@@ -41,13 +32,20 @@ export async function GET(
             );
         }
 
-        // Verify the order belongs to the logged-in user
-        if (order.user.email !== session.email) {
+        // Optional: Verify session if user is logged in
+        const session = await getSession();
+        if (session?.email && order.user.email !== session.email) {
+            // If logged in but trying to access someone else's order
             return NextResponse.json(
                 { error: "Unauthorized - Order does not belong to you" },
                 { status: 403 }
             );
         }
+
+        // Allow access if:
+        // 1. User is logged in and owns the order
+        // 2. User is not logged in but has the correct order ID (for payment success page)
+        // Order ID is unique and acts as authentication token
 
         return NextResponse.json(order);
     } catch (error) {

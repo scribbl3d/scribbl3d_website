@@ -464,29 +464,53 @@ function CouponModal({
                             const applicableCoupons = coupons.filter(
                                 (coupon) => {
                                     const d = coupon.discount;
+                                    
+                                    console.log("🎫 [Coupon Filter] Checking coupon:", coupon.code);
+                                    console.log("📦 [Coupon Filter] Discount scope:", d.scope);
+                                    console.log("🛒 [Coupon Filter] Cart items:", cartItems.map(i => ({ type: i.itemType, name: i.name })));
+                                    
                                     if (
                                         d.scope === "item_type" &&
                                         d.itemTypes?.length > 0
                                     ) {
+                                        // Normalize allowed types to lowercase for case-insensitive matching
                                         const allowedTypes = d.itemTypes.map(
                                             (t: { itemType: string }) =>
-                                                t.itemType,
+                                                t.itemType?.toLowerCase() || "",
                                         );
+                                        
+                                        console.log("✅ [Coupon Filter] Allowed types (normalized):", allowedTypes);
+                                        console.log("🔍 [Coupon Filter] Cart item types:", cartItems.map(i => i.itemType));
+                                        
                                         const scopedSubtotal = safeSubtotal(
                                             cartItems,
-                                            (item) =>
-                                                allowedTypes.includes(
-                                                    item.itemType,
-                                                ),
+                                            (item) => {
+                                                // Case-insensitive matching for item types
+                                                const itemTypeLower = item.itemType?.toLowerCase() || "";
+                                                const matches = allowedTypes.includes(itemTypeLower);
+                                                console.log(`🔎 [Coupon Filter] Item "${item.name}" (${item.itemType} → ${itemTypeLower}) matches allowed types?`, matches);
+                                                return matches;
+                                            },
                                         );
-                                        if (scopedSubtotal === 0) return false;
+                                        
+                                        console.log("💰 [Coupon Filter] Scoped subtotal:", scopedSubtotal);
+                                        
+                                        if (scopedSubtotal === 0) {
+                                            console.log("❌ [Coupon Filter] Rejected - no matching items");
+                                            return false;
+                                        }
                                     }
                                     if (d.minOrderValue) {
                                         const cartTotal =
                                             safeSubtotal(cartItems);
-                                        if (cartTotal < d.minOrderValue)
+                                        console.log("💵 [Coupon Filter] Min order value:", d.minOrderValue, "Cart total:", cartTotal);
+                                        if (cartTotal < d.minOrderValue) {
+                                            console.log("❌ [Coupon Filter] Rejected - below min order value");
                                             return false;
+                                        }
                                     }
+                                    
+                                    console.log("✅ [Coupon Filter] Coupon passed all checks!");
                                     return true;
                                 },
                             );
@@ -1188,12 +1212,15 @@ export default function ShoppingCart() {
                 discount.scope === "item_type" &&
                 discount.itemTypes?.length > 0
             ) {
+                // Normalize allowed types to lowercase for case-insensitive matching
                 const allowedTypes = discount.itemTypes.map(
-                    (t: { itemType: string }) => t.itemType,
+                    (t: { itemType: string }) => t.itemType?.toLowerCase() || "",
                 );
-                applicableSubtotal = safeSubtotal(localCart, (item) =>
-                    allowedTypes.includes(item.itemType),
-                );
+                applicableSubtotal = safeSubtotal(localCart, (item) => {
+                    // Case-insensitive matching for item types
+                    const itemTypeLower = item.itemType?.toLowerCase() || "";
+                    return allowedTypes.includes(itemTypeLower);
+                });
             } else {
                 applicableSubtotal = safeSubtotal(localCart);
             }
