@@ -260,6 +260,7 @@ export default function CheckoutForm() {
             gstin: "",
             gstCompanyName: "",
             gstAddress: "",
+            state: "",
         },
     });
 

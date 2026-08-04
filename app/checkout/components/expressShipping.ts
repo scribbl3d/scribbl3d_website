@@ -229,10 +229,27 @@ export async function calculateExpressShippingPrice(
 
             const charge = data.charge?.total_amount || data.charge?.charge || 0;
             console.log("💵 [Express Shipping] Charge for this item:", charge);
+            
+            if (charge === 0) {
+                console.warn("⚠️ [Express Shipping] API returned 0 charge - this might be an error");
+            }
+            
             totalPrice += charge;
         }
 
         console.log("✅ [Express Shipping] Total Price:", totalPrice);
+
+        // If total price is 0, something went wrong - use estimate instead
+        if (totalPrice === 0) {
+            console.warn("⚠️ [Express Shipping] Total price is 0, falling back to estimate");
+            const estimate = estimateExpressShipping(cart);
+            return {
+                allowed: estimate.allowed,
+                price: estimate.estimatedPrice,
+                totalWeightKg: estimate.totalWeightKg,
+                reason: estimate.reason,
+            };
+        }
 
         return {
             allowed: true,
@@ -241,7 +258,16 @@ export async function calculateExpressShippingPrice(
         };
     } catch (error) {
         console.error("❌ [Express Shipping] Calculation error:", error);
-        throw error;
+        
+        // Fallback to estimate on error
+        console.log("🔄 [Express Shipping] Using estimate as fallback");
+        const estimate = estimateExpressShipping(cart);
+        return {
+            allowed: estimate.allowed,
+            price: estimate.estimatedPrice,
+            totalWeightKg: estimate.totalWeightKg,
+            reason: estimate.reason,
+        };
     }
 }
 

@@ -107,7 +107,7 @@ const nextConfig = {
                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                             "img-src 'self' data: https: res.cloudinary.com",
                             "font-src 'self' data: https://fonts.gstatic.com",
-                            "connect-src 'self' https://api.cloudinary.com",
+                            "connect-src 'self' https://api.cloudinary.com https://api.postalpincode.in",
                             "frame-src 'self' https://www.google.com",
                             "frame-ancestors 'none'",
                         ].join('; ')
