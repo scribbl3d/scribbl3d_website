@@ -33,13 +33,27 @@ export function GoogleCustomerReviews({
     products = [],
 }: GoogleCustomerReviewsProps) {
     useEffect(() => {
+        console.log("🎯 [Google Customer Reviews] Component mounted with props:", {
+            orderId,
+            email,
+            deliveryCountry,
+            estimatedDeliveryDate,
+            productsCount: products.length
+        });
+
         // Define the render function globally
         (window as any).renderOptIn = function () {
+            console.log("📞 [Google Customer Reviews] renderOptIn called");
+            
             if ((window as any).gapi) {
+                console.log("✅ [Google Customer Reviews] gapi object found");
+                
                 (window as any).gapi.load("surveyoptin", function () {
-                    (window as any).gapi.surveyoptin.render({
+                    console.log("📦 [Google Customer Reviews] surveyoptin module loaded");
+                    
+                    const config = {
                         // REQUIRED FIELDS
-                        merchant_id: 5795203295, // Your Google Merchant Center ID
+                        merchant_id: 5795203295,
                         order_id: orderId,
                         email: email,
                         delivery_country: deliveryCountry,
@@ -47,10 +61,23 @@ export function GoogleCustomerReviews({
 
                         // OPTIONAL FIELDS
                         products: products.length > 0 ? products : undefined,
-                    });
+                    };
+                    
+                    console.log("🚀 [Google Customer Reviews] Rendering survey with config:", config);
+                    
+                    try {
+                        (window as any).gapi.surveyoptin.render(config);
+                        console.log("✅ [Google Customer Reviews] Survey rendered successfully!");
+                    } catch (error) {
+                        console.error("❌ [Google Customer Reviews] Error rendering survey:", error);
+                    }
                 });
+            } else {
+                console.error("❌ [Google Customer Reviews] gapi object not found!");
             }
         };
+        
+        console.log("✅ [Google Customer Reviews] renderOptIn function registered globally");
     }, [orderId, email, deliveryCountry, estimatedDeliveryDate, products]);
 
     return (
@@ -60,10 +87,12 @@ export function GoogleCustomerReviews({
                 src="https://apis.google.com/js/platform.js?onload=renderOptIn"
                 strategy="lazyOnload"
                 onLoad={() => {
-                    console.log("[Google Customer Reviews] Script loaded");
+                    console.log("✅ [Google Customer Reviews] Script loaded successfully!");
+                    console.log("📞 [Google Customer Reviews] renderOptIn should be called automatically");
                 }}
                 onError={(e) => {
-                    console.error("[Google Customer Reviews] Script failed to load:", e);
+                    console.error("❌ [Google Customer Reviews] Script failed to load:", e);
+                    console.error("🔍 Check network tab for script loading errors");
                 }}
             />
         </>
@@ -91,30 +120,58 @@ export function GoogleReviewsBadge({
     region = "IN",
 }: GoogleReviewsBadgeProps) {
     useEffect(() => {
+        console.log("🎯 [Google Reviews Badge] Component mounted with:", {
+            position,
+            region,
+            merchantId: 5795203295
+        });
+
         // Wait for script to load
         const initBadge = () => {
+            console.log("🔄 [Google Reviews Badge] Attempting to initialize badge...");
+            
             if ((window as any).merchantwidget) {
-                (window as any).merchantwidget.start({
+                console.log("✅ [Google Reviews Badge] merchantwidget object found");
+                
+                const config = {
                     // REQUIRED FIELDS
                     merchant_id: 5795203295,
 
                     // OPTIONAL FIELDS
                     position: position,
                     region: region,
-                });
+                };
+                
+                console.log("🚀 [Google Reviews Badge] Starting badge with config:", config);
+                
+                try {
+                    (window as any).merchantwidget.start(config);
+                    console.log("✅ [Google Reviews Badge] Badge initialized successfully!");
+                    console.log("💡 Note: Badge will only show if you have reviews. Otherwise shows 'No rating available'");
+                } catch (error) {
+                    console.error("❌ [Google Reviews Badge] Error initializing badge:", error);
+                }
+            } else {
+                console.warn("⚠️ [Google Reviews Badge] merchantwidget object not found yet");
             }
         };
 
         // Try to initialize immediately if script is already loaded
         if ((window as any).merchantwidget) {
+            console.log("✅ [Google Reviews Badge] Script already loaded, initializing immediately");
             initBadge();
+        } else {
+            console.log("⏳ [Google Reviews Badge] Waiting for script to load...");
         }
 
         // Listen for script load event
         const script = document.getElementById("merchantWidgetScript");
         if (script) {
+            console.log("✅ [Google Reviews Badge] Script element found, adding load listener");
             script.addEventListener("load", initBadge);
             return () => script.removeEventListener("load", initBadge);
+        } else {
+            console.warn("⚠️ [Google Reviews Badge] Script element not found");
         }
     }, [position, region]);
 
@@ -126,10 +183,12 @@ export function GoogleReviewsBadge({
                 src="https://www.gstatic.com/shopping/merchant/merchantwidget.js"
                 strategy="lazyOnload"
                 onLoad={() => {
-                    console.log("[Google Reviews Badge] Script loaded");
+                    console.log("✅ [Google Reviews Badge] Script loaded successfully!");
+                    console.log("🔄 [Google Reviews Badge] Badge initialization should trigger now");
                 }}
                 onError={(e) => {
-                    console.error("[Google Reviews Badge] Script failed to load:", e);
+                    console.error("❌ [Google Reviews Badge] Script failed to load:", e);
+                    console.error("🔍 Check network tab for script loading errors");
                 }}
             />
         </>
