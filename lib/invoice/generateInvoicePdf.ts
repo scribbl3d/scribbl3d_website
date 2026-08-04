@@ -417,7 +417,7 @@ export async function generateInvoicePdfBuffer(
 
     autoTable(doc, {
         startY: y,
-        margin: { left: ml, right: mr },
+        margin: { left: ml, right: mr, top: 14, bottom: 14 },
         head: [
             [
                 "#",
@@ -474,7 +474,12 @@ export async function generateInvoicePdfBuffer(
         theme: "plain",
         styles: {
             overflow: "linebreak",
+            minCellHeight: 8,
         },
+        showHead: 'everyPage',
+        showFoot: 'lastPage',
+        tableLineColor: [220, 220, 220],
+        tableLineWidth: 0.1,
         didParseCell: (data: any) => {
             const col = data.column.index;
             data.cell.styles.halign = "center";

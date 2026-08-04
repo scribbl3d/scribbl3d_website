@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { GoogleReviewsBadge } from "@/components/GoogleCustomerReviews";
 import HeroBanner from "./HeroBanner";
 import BrowseByBrand from "./BrowseByBrand";
 import BrowseByEcosystem from "./BrowseByEcosystem";
@@ -48,6 +49,9 @@ export default function LandingContent({
             <LearningHub blogs={blogs} />
             <CommunityShowcase images={communityImages} />
             <CustomerReviews testimonials={testimonials} />
+            
+            {/* Google Customer Reviews Badge */}
+            <GoogleReviewsBadge position="BOTTOM_RIGHT" region="IN" />
         </>
     );
 }

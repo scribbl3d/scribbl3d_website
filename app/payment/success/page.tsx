@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GoogleCustomerReviews } from "@/components/GoogleCustomerReviews";
 import { formatPrice } from "@/lib/utils";
 import axios from "axios";
 import { CheckCircle } from "lucide-react";
@@ -12,6 +13,7 @@ export default function PaymentSuccessPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [orderStatus, setOrderStatus] = useState("Processing");
+    const [orderDetails, setOrderDetails] = useState<any>(null);
 
     const txnId = searchParams?.get("txnId") || "N/A";
     const amount =
@@ -52,7 +54,7 @@ export default function PaymentSuccessPage() {
         // Clear the success state
         sessionStorage.removeItem("payment_success");
 
-        // Check order status
+        // Check order status and fetch order details
         const checkOrderStatus = async () => {
             try {
                 if (!rawTxnId) return;
@@ -69,8 +71,23 @@ export default function PaymentSuccessPage() {
             }
         };
 
+        // Fetch order details for Google Customer Reviews
+        const fetchOrderDetails = async () => {
+            try {
+                if (!orderId) return;
+
+                const response = await axios.get(`/api/orders/${orderId}`);
+                if (response.data) {
+                    setOrderDetails(response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching order details:", error);
+            }
+        };
+
         checkOrderStatus();
-    }, [ordersRoute, router, searchParams]);
+        fetchOrderDetails();
+    }, [ordersRoute, router, searchParams, orderId]);
 
     useEffect(() => {
         const state = { fromPaymentSuccess: true };
@@ -84,8 +101,23 @@ export default function PaymentSuccessPage() {
         return () => window.removeEventListener("popstate", onPopState);
     }, [ordersRoute, router]);
 
+    // Calculate estimated delivery date (7 days from now)
+    const estimatedDeliveryDate = new Date();
+    estimatedDeliveryDate.setDate(estimatedDeliveryDate.getDate() + 7);
+    const deliveryDateStr = estimatedDeliveryDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            {/* Google Customer Reviews Opt-in */}
+            {orderId && orderDetails?.user?.email && (
+                <GoogleCustomerReviews
+                    orderId={orderId}
+                    email={orderDetails.user.email}
+                    deliveryCountry="IN"
+                    estimatedDeliveryDate={deliveryDateStr}
+                />
+            )}
+
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <div className="flex items-center justify-center mb-4">
