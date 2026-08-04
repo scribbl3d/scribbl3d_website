@@ -190,19 +190,7 @@ export async function calculateExpressShippingPrice(
     try {
         let totalPrice = 0;
 
-        console.log("🚚 [Express Shipping] Calculating for", prepared.items.length, "items");
-        console.log("📦 [Express Shipping] Total weight:", prepared.totalWeightKg, "kg");
-
-        // Calculate shipping for each item/box
         for (const item of prepared.items) {
-            console.log("📮 [Express Shipping] Requesting price for:", {
-                type: item.itemType,
-                weight: item.weight + "g",
-                dimensions: `${item.length}x${item.breadth}x${item.height}cm`,
-                from: originPincode,
-                to: destinationPincode
-            });
-
             const response = await fetch("/api/internal/calculate-shipping", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -220,28 +208,16 @@ export async function calculateExpressShippingPrice(
 
             const data = await response.json();
 
-            console.log("💰 [Express Shipping] API Response:", data);
-
             if (!data.ok) {
-                console.error("❌ [Express Shipping] API Error:", data.error);
                 throw new Error(data.error || "Failed to calculate shipping");
             }
 
             const charge = data.charge?.total_amount || data.charge?.charge || 0;
-            console.log("💵 [Express Shipping] Charge for this item:", charge);
-            
-            if (charge === 0) {
-                console.warn("⚠️ [Express Shipping] API returned 0 charge - this might be an error");
-            }
-            
             totalPrice += charge;
         }
 
-        console.log("✅ [Express Shipping] Total Price:", totalPrice);
-
         // If total price is 0, something went wrong - use estimate instead
         if (totalPrice === 0) {
-            console.warn("⚠️ [Express Shipping] Total price is 0, falling back to estimate");
             const estimate = estimateExpressShipping(cart);
             return {
                 allowed: estimate.allowed,
@@ -257,10 +233,7 @@ export async function calculateExpressShippingPrice(
             totalWeightKg: prepared.totalWeightKg,
         };
     } catch (error) {
-        console.error("❌ [Express Shipping] Calculation error:", error);
-        
         // Fallback to estimate on error
-        console.log("🔄 [Express Shipping] Using estimate as fallback");
         const estimate = estimateExpressShipping(cart);
         return {
             allowed: estimate.allowed,
