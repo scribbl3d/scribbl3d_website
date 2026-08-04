@@ -74,14 +74,24 @@ export default function PaymentSuccessPage() {
         // Fetch order details for Google Customer Reviews
         const fetchOrderDetails = async () => {
             try {
-                if (!orderId) return;
+                if (!orderId) {
+                    console.log("[Google Reviews] No order ID found");
+                    return;
+                }
 
+                console.log("[Google Reviews] Fetching order details for:", orderId);
                 const response = await axios.get(`/api/orders/${orderId}`);
                 if (response.data) {
+                    console.log("[Google Reviews] Order details received:", {
+                        hasEmail: !!response.data?.user?.email,
+                        email: response.data?.user?.email
+                    });
                     setOrderDetails(response.data);
+                } else {
+                    console.log("[Google Reviews] No order data in response");
                 }
             } catch (error) {
-                console.error("Error fetching order details:", error);
+                console.error("[Google Reviews] Error fetching order details:", error);
             }
         };
 
@@ -105,6 +115,32 @@ export default function PaymentSuccessPage() {
     const estimatedDeliveryDate = new Date();
     estimatedDeliveryDate.setDate(estimatedDeliveryDate.getDate() + 7);
     const deliveryDateStr = estimatedDeliveryDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // Debug logging
+    useEffect(() => {
+        console.log("[Google Reviews] Render check:", {
+            hasOrderId: !!orderId,
+            orderId: orderId,
+            hasOrderDetails: !!orderDetails,
+            hasEmail: !!orderDetails?.user?.email,
+            email: orderDetails?.user?.email,
+            deliveryDate: deliveryDateStr
+        });
+    }, [orderId, orderDetails, deliveryDateStr]);
+
+    // Log rendering decision
+    if (orderId && orderDetails?.user?.email) {
+        console.log("[Google Reviews] ✅ Rendering component with:", {
+            orderId,
+            email: orderDetails.user.email,
+            deliveryDate: deliveryDateStr
+        });
+    } else {
+        console.log("[Google Reviews] ❌ NOT rendering - missing:", {
+            orderId: !orderId ? "missing" : "present",
+            email: !orderDetails?.user?.email ? "missing" : "present"
+        });
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
