@@ -1,6 +1,6 @@
 import BlogPostLayout from "../_components/blog-post-layout";
 import { prisma } from "@/lib/prisma";
-import { generateBlogMetadata } from "@/lib/metadata";
+import { generateBlogMetadata, generateStructuredData } from "@/lib/metadata";
 import { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 
@@ -48,12 +48,36 @@ export default async function BlogPostPage({ params }: BlogPageProps) {
     // If accessed via CUID (id), redirect to the canonical slug URL
     const blog = await prisma.blog.findFirst({
         where: { OR: [{ slug: identifier }, { id: identifier }] },
-        select: { id: true, slug: true },
     });
 
-    if (blog && blog.slug && blog.slug !== identifier) {
+    if (!blog) {
+        return <BlogPostLayout slug={identifier} />;
+    }
+
+    if (blog.slug && blog.slug !== identifier) {
         permanentRedirect(`/blog/${blog.slug}`);
     }
 
-    return <BlogPostLayout slug={identifier} />;
+    // Generate BlogPosting structured data
+    const jsonLd = generateStructuredData('blogPost', {
+        title: blog.title,
+        description: blog.description || blog.title,
+        image: blog.heroImage || blog.thumbnailImage,
+        author: 'Scribbl3D',
+        publishedAt: blog.publishedAt?.toISOString(),
+        updatedAt: blog.updatedAt?.toISOString(),
+        slug: blog.slug || blog.id,
+    });
+
+    return (
+        <>
+            {jsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+            )}
+            <BlogPostLayout slug={identifier} />
+        </>
+    );
 }

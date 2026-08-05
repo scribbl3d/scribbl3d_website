@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import PrintersPageClient from './_components/PrintersPageClient';
+import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
 
 export const metadata: Metadata = {
     title: {
@@ -82,5 +83,15 @@ async function getInitialPrinters() {
 export default async function PrintersPage() {
     const { printers, total } = await getInitialPrinters();
 
-    return <PrintersPageClient initialPrinters={printers} initialTotal={total} />;
+    return (
+        <>
+            <CollectionPageSchema
+                name="3D Printers"
+                description="Shop FDM and resin 3D printers from Bambu Lab, Creality, Anycubic, Elegoo, Phrozen"
+                url="https://www.scribbl3d.com/printers"
+                numberOfItems={total}
+            />
+            <PrintersPageClient initialPrinters={printers} initialTotal={total} />
+        </>
+    );
 }

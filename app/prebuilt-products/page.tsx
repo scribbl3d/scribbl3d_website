@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import PrebuiltPageClient from './_components/PrebuiltPageClient';
+import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
 
 export const metadata: Metadata = {
     title: {
@@ -62,5 +63,15 @@ async function getInitialProducts() {
 export default async function PrebuiltPage() {
     const products = await getInitialProducts();
 
-    return <PrebuiltPageClient initialProducts={products} />;
+    return (
+        <>
+            <CollectionPageSchema
+                name="3D Printed Products"
+                description="Shop unique 3D printed products — custom keychains, lamps, decor, figurines, and more"
+                url="https://www.scribbl3d.com/prebuilt-products"
+                numberOfItems={products.length}
+            />
+            <PrebuiltPageClient initialProducts={products} />
+        </>
+    );
 }

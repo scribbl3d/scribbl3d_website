@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import ResinsPageClient from './_components/ResinsPageClient';
+import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
 
 export { type ResinFiltersState } from './_components/ResinsPageClient';
 
@@ -74,5 +75,15 @@ async function getInitialResins() {
 export default async function ResinsPage() {
     const { resins, total } = await getInitialResins();
 
-    return <ResinsPageClient initialResins={resins} initialTotal={total} />;
+    return (
+        <>
+            <CollectionPageSchema
+                name="3D Printer Resins"
+                description="Shop LCD/MSLA photopolymer resins from Elegoo, Anycubic, Phrozen. 4K, 8K, 10K resolution"
+                url="https://www.scribbl3d.com/resins"
+                numberOfItems={total}
+            />
+            <ResinsPageClient initialResins={resins} initialTotal={total} />
+        </>
+    );
 }

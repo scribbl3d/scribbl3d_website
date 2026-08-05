@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import FilamentPageClient from './_components/FilamentPageClient';
 import FAQSchema from '@/components/seo/FAQSchema';
+import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
 
 export const metadata: Metadata = {
     title: {
@@ -134,6 +135,12 @@ export default async function FilamentPage() {
 
     return (
         <>
+            <CollectionPageSchema
+                name="3D Printer Filaments"
+                description="Shop premium 3D printer filaments - PLA, PETG, ABS, TPU, Nylon from top brands"
+                url="https://www.scribbl3d.com/filament"
+                numberOfItems={total}
+            />
             <FAQSchema faqs={faqs} />
             <FilamentPageClient initialFilaments={filaments} initialTotal={total} />
         </>

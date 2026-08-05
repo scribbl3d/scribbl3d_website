@@ -903,12 +903,16 @@ export default function BlogList() {
                                 gap: "clamp(14px, 2vw, 24px)",
                             }}
                         >
-                            {visibleRest.map((post) => (
-                                <Link
-                                    key={post.id}
-                                    href={`/blog/${post.slug || post.id}`}
-                                    className="block group"
-                                >
+                            {visibleRest.map((post) => {
+                                // Don't render if no slug (prevents internal redirects)
+                                if (!post.slug) return null;
+                                
+                                return (
+                                    <Link
+                                        key={post.id}
+                                        href={`/blog/${post.slug}`}
+                                        className="block group"
+                                    >
                                     <article
                                         style={{
                                             background: "#fff",
@@ -1035,7 +1039,8 @@ export default function BlogList() {
                                         </div>
                                     </article>
                                 </Link>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 
