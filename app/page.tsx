@@ -126,6 +126,7 @@ async function getLandingData() {
             take: 3,
             select: {
                 id: true,
+                slug: true,
                 title: true,
                 description: true,
                 keywords: true,
