@@ -125,14 +125,7 @@ export default function LocalBusinessSchema() {
             "https://in.linkedin.com/company/scribbl3dprinting",
             "https://www.instagram.com/scribbl3d_/",
             "https://twitter.com/Scribbl3d_"
-        ],
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "reviewCount": "150",
-            "bestRating": "5",
-            "worstRating": "1"
-        }
+        ]
     };
 
     return (
