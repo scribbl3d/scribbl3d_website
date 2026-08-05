@@ -791,9 +791,9 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                             }}
                             className="sm:grid sm:grid-cols-2"
                         >
-                            {prevBlog ? (
+                            {prevBlog && prevBlog.slug ? (
                                 <Link
-                                    href={`/blog/${prevBlog.slug || prevBlog.id}`}
+                                    href={`/blog/${prevBlog.slug}`}
                                     style={{ textDecoration: "none" }}
                                 >
                                     <div
@@ -853,9 +853,9 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                 <div className="hidden sm:block" />
                             )}
 
-                            {nextBlog ? (
+                            {nextBlog && nextBlog.slug ? (
                                 <Link
-                                    href={`/blog/${nextBlog.slug || nextBlog.id}`}
+                                    href={`/blog/${nextBlog.slug}`}
                                     style={{ textDecoration: "none" }}
                                 >
                                     <div
@@ -941,7 +941,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             gap: 12,
                                         }}
                                     >
-                                        {relatedPosts.map((related) => {
+                                        {relatedPosts.filter(r => r.slug).map((related) => {
                                             const relSrc =
                                                 related.thumbnailImage ||
                                                 related.heroImage ||
@@ -949,7 +949,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             return (
                                                 <Link
                                                     key={related.id}
-                                                    href={`/blog/${related.slug || related.id}`}
+                                                    href={`/blog/${related.slug}`}
                                                     style={{
                                                         textDecoration: "none",
                                                     }}
@@ -1061,10 +1061,10 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             gap: 2,
                                         }}
                                     >
-                                        {publishedBlogs.slice(0, 5).map((b) => (
+                                        {publishedBlogs.filter(b => b.slug).slice(0, 5).map((b) => (
                                             <Link
                                                 key={b.id}
-                                                href={`/blog/${b.slug || b.id}`}
+                                                href={`/blog/${b.slug}`}
                                                 style={{
                                                     display: "flex",
                                                     alignItems: "center",
@@ -1266,10 +1266,10 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             gap: 4,
                                         }}
                                     >
-                                        {publishedBlogs.slice(0, 6).map((b) => (
+                                        {publishedBlogs.filter(b => b.slug).slice(0, 6).map((b) => (
                                             <Link
                                                 key={b.id}
-                                                href={`/blog/${b.slug || b.id}`}
+                                                href={`/blog/${b.slug}`}
                                                 style={{
                                                     display: "flex",
                                                     alignItems: "center",
@@ -1365,7 +1365,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             gap: 16,
                                         }}
                                     >
-                                        {relatedPosts.map((related) => {
+                                        {relatedPosts.filter(r => r.slug).map((related) => {
                                             const relSrc =
                                                 related.thumbnailImage ||
                                                 related.heroImage ||
@@ -1373,7 +1373,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                             return (
                                                 <Link
                                                     key={related.id}
-                                                    href={`/blog/${related.slug || related.id}`}
+                                                    href={`/blog/${related.slug}`}
                                                     style={{
                                                         textDecoration: "none",
                                                     }}

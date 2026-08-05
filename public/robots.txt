@@ -46,6 +46,29 @@ Disallow: /forgot-password
 Disallow: /reset-password
 Disallow: /personalise
 
+# Disallow search pages and dynamic URLs
+Disallow: /search
+Disallow: /search?
+Disallow: /*?q=
+Disallow: /*?search=
+
+# Disallow invalid/test URLs
+Disallow: /23
+Disallow: /%24
+Disallow: /ddsd
+
+# Disallow static files and assets
+Disallow: /_next/static/media/
+Disallow: /_next/static/chunks/
+Disallow: /*.woff$
+Disallow: /*.woff2$
+Disallow: /*.ttf$
+Disallow: /*.eot$
+
+# Allow manifest and favicon (needed for PWA)
+Allow: /manifest.json
+Allow: /favicon.ico
+
 # Allow public product pages
 Allow: /printers/
 Allow: /resins/

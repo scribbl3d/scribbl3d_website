@@ -121,8 +121,75 @@ const nextConfig = {
 
     async redirects() {
         return [
+            // Home redirect
             {
                 source: '/home',
+                destination: '/',
+                permanent: true,
+            },
+            // Fix internal blog redirects
+            {
+                source: '/blog/monsgeeks-m1w-keychron-q5-pro',
+                destination: '/blog/monsgeeks-m1w-keychron-q5-pro/',
+                permanent: true,
+            },
+            {
+                source: '/blog/redragon-k617-fizz-60-khytryn-q3-qk',
+                destination: '/blog/redragon-k617-fizz-60-khytryn-q3-qk/',
+                permanent: true,
+            },
+            // Moved categories (household-utilities and wall-decor)
+            {
+                source: '/household-utilities',
+                destination: '/prebuilt-products/category/household-utilities',
+                permanent: true,
+            },
+            {
+                source: '/wall-decor',
+                destination: '/prebuilt-products/category/wall-decor',
+                permanent: true,
+            },
+            // Old removed pages - redirect to relevant pages
+            {
+                source: '/filaments',
+                destination: '/filament',
+                permanent: true,
+            },
+            {
+                source: '/best-sellers',
+                destination: '/prebuilt-products',
+                permanent: true,
+            },
+            {
+                source: '/contact',
+                destination: '/',
+                permanent: false, // Temporary until contact page is created
+            },
+            // Old resin test products - redirect to main resins page
+            {
+                source: '/resins/abs-like-resin',
+                destination: '/resins',
+                permanent: true,
+            },
+            {
+                source: '/resins/resin-test',
+                destination: '/resins',
+                permanent: true,
+            },
+            {
+                source: '/resins/elastic-resin',
+                destination: '/resins',
+                permanent: true,
+            },
+            // Old filament nylon - redirect to filaments
+            {
+                source: '/filaments/nylon',
+                destination: '/filament',
+                permanent: true,
+            },
+            // Invalid test URL
+            {
+                source: '/ddsd',
                 destination: '/',
                 permanent: true,
             },

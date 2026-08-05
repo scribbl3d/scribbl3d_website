@@ -103,10 +103,16 @@ export default function LearningHub({ blogs }: LearningHubProps) {
 
                 {/* Desktop: 3-col grid with animations */}
                 <div className="hidden md:grid md:grid-cols-3 gap-6">
-                    {blogs.map((blog, index) => {
+                    {blogs.filter(blog => blog.slug).map((blog, idx) => {
                         const category = getBlogCategory(blog.keywords);
-                        const variant = cardVariants[index] || cardVariants[1];
-
+                        const variant = {
+                            hidden: { opacity: 0, y: 30 },
+                            visible: {
+                                opacity: 1,
+                                y: 0,
+                                transition: { delay: idx * 0.1, duration: 0.6 },
+                            },
+                        };
                         return (
                             <motion.div
                                 key={blog.id}
@@ -116,7 +122,7 @@ export default function LearningHub({ blogs }: LearningHubProps) {
                                 variants={variant}
                             >
                                 <Link
-                                    href={`/blog/${blog.slug || blog.id}`}
+                                    href={`/blog/${blog.slug}`}
                                     className="group block"
                                 >
                                     <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-gray-200">
@@ -153,12 +159,12 @@ export default function LearningHub({ blogs }: LearningHubProps) {
 
                 {/* Mobile: compact vertical stack — thumbnail left, text right */}
                 <div className="md:hidden flex flex-col gap-3">
-                    {blogs.map((blog) => {
+                    {blogs.filter(blog => blog.slug).map((blog) => {
                         const category = getBlogCategory(blog.keywords);
                         return (
                             <Link
                                 key={blog.id}
-                                href={`/blog/${blog.slug || blog.id}`}
+                                href={`/blog/${blog.slug}`}
                                 className="flex gap-3 bg-white rounded-xl overflow-hidden border border-gray-100 active:scale-[0.99] transition-transform"
                             >
                                 {/* Thumbnail */}

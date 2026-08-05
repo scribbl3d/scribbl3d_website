@@ -73,9 +73,12 @@ function PostCardCompact({ post }: { post: BlogPost }) {
         post.publishedAt || post.createdAt,
     ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
+    // Don't render if no slug (prevents internal redirects)
+    if (!post.slug) return null;
+
     return (
         <Link
-            href={`/blog/${post.slug || post.id}`}
+            href={`/blog/${post.slug}`}
             className="block group active:scale-[0.99]"
         >
             <article
@@ -521,11 +524,12 @@ export default function BlogList() {
                                 </div>
                                 <div className="space-y-5">
                                     {publishedBlogs
+                                        .filter(post => post.slug)
                                         .slice(0, 4)
                                         .map((post, idx) => (
                                             <Link
                                                 key={post.id}
-                                                href={`/blog/${post.slug || post.id}`}
+                                                href={`/blog/${post.slug}`}
                                                 className="flex gap-3 group"
                                             >
                                                 <span
@@ -592,10 +596,10 @@ export default function BlogList() {
                                 </p>
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-                                {publishedBlogs.slice(0, 3).map((post, idx) => (
+                                {publishedBlogs.filter(post => post.slug).slice(0, 3).map((post, idx) => (
                                     <Link
                                         key={post.id}
-                                        href={`/blog/${post.slug || post.id}`}
+                                        href={`/blog/${post.slug}`}
                                         className="flex-shrink-0 group"
                                         style={{
                                             width: 185,
@@ -653,9 +657,9 @@ export default function BlogList() {
                     )}
 
                     {/* ── FEATURED POST ── */}
-                    {featured && (
+                    {featured && featured.slug && (
                         <Link
-                            href={`/blog/${featured.slug || featured.id}`}
+                            href={`/blog/${featured.slug}`}
                             className="block mb-7 sm:mb-10"
                         >
                             <div

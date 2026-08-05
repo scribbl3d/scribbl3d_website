@@ -82,38 +82,52 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'monthly' as const,
         priority: 0.7,
       },
+      {
+        url: `${baseUrl}/personalised`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.7,
+      },
     ];
 
-    const printerPages = printers.map((printer) => ({
-      url: `${baseUrl}/printers/${printer.slug}`,
-      lastModified: printer.updatedAt,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    }));
+    const printerPages = printers
+      .filter((printer) => printer.slug && printer.slug.trim() !== '')
+      .map((printer) => ({
+        url: `${baseUrl}/printers/${printer.slug}`,
+        lastModified: printer.updatedAt,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }));
 
-    const resinPages = resins.map((resin) => ({
-      url: `${baseUrl}/resins/${resin.slug}`,
-      lastModified: resin.updatedAt,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    }));
+    const resinPages = resins
+      .filter((resin) => resin.slug && resin.slug.trim() !== '')
+      .map((resin) => ({
+        url: `${baseUrl}/resins/${resin.slug}`,
+        lastModified: resin.updatedAt,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }));
 
-    const filamentPages = filaments.map((filament) => ({
-      url: `${baseUrl}/filament/${filament.slug || filament.id}`,
-      lastModified: filament.updatedAt,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    }));
+    const filamentPages = filaments
+      .filter((filament) => filament.slug && filament.slug.trim() !== '')
+      .map((filament) => ({
+        url: `${baseUrl}/filament/${filament.slug}`,
+        lastModified: filament.updatedAt,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }));
 
-    const prebuiltPages = prebuiltProducts.map((product) => ({
-      url: `${baseUrl}/prebuilt-products/${product.slug}`,
-      lastModified: product.updatedAt,
-      changeFrequency: 'weekly' as const,
-      priority: 0.8,
-    }));
+    const prebuiltPages = prebuiltProducts
+      .filter((product) => product.slug && product.slug.trim() !== '')
+      .map((product) => ({
+        url: `${baseUrl}/prebuilt-products/${product.slug}`,
+        lastModified: product.updatedAt,
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }));
 
     const blogPages = blogs
-      .filter((blog) => blog.slug)
+      .filter((blog) => blog.slug && blog.slug.trim() !== '')
       .map((blog) => ({
         url: `${baseUrl}/blog/${blog.slug}`,
         lastModified: blog.updatedAt,
@@ -122,11 +136,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
 
     const categoryPages = categories
-      .filter((cat) => cat.category)
+      .filter((cat) => cat.category && cat.category.trim() !== '')
       .map((cat) => {
         const slug = cat.category.toLowerCase().replace(/\s+/g, '-');
         return {
-          url: `${baseUrl}/${slug}`,
+          url: `${baseUrl}/prebuilt-products/category/${slug}`,
           lastModified: new Date(),
           changeFrequency: 'weekly' as const,
           priority: 0.75,
