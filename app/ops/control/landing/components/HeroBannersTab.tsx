@@ -508,6 +508,12 @@ export default function HeroBannersTab() {
                                         if (f) handleFileSelect(f);
                                     }}
                                 />
+                                {/* Recommended size */}
+                                <div className="mt-2 text-xs bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                                    <p className="font-semibold text-blue-700 mb-0.5">📐 Recommended Size:</p>
+                                    <p className="text-blue-600">2880 × 1200px (Desktop)</p>
+                                    <p className="text-gray-600 mt-0.5">Aspect ratio: 2.4:1  works best</p>
+                                </div>
                             </div>
                             {/* Headlines */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
