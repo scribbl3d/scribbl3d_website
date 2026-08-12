@@ -219,7 +219,7 @@ model Blog {
 
 model HeroBanner {
   id                 String   @id @default(cuid())
-  headline           String
+  headline           String?
   headlineAccent     String?
   subtext            String?
   mediaUrl           String
@@ -235,6 +235,7 @@ model HeroBanner {
   buttonGradientFrom String?  @default("#4f46e5")
   buttonGradientTo   String?  @default("#7c3aed")
   textColor          String?  @default("#ffffff")
+  showGradient       Boolean  @default(true)
 
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -830,14 +831,15 @@ model PrinterApplication {
 }
 
 model PageHero {
-  id        String   @id @default(cuid())
-  page      String   @unique   // "resins", "printers", "filaments", "prebuilt" etc.
-  mediaUrl  String
-  mediaType String   @default("video") // "video" or "image"
-  headline  String?
-  subtext   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  page         String   @unique   // "resins", "printers", "filaments", "prebuilt" etc.
+  mediaUrl     String
+  mediaType    String   @default("video") // "video" or "image"
+  headline     String?
+  subtext      String?
+  showGradient Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 model PrinterDownload {
   id          String  @id @default(cuid())

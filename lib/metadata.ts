@@ -32,6 +32,9 @@ export const defaultMetadata: Metadata = {
   authors: [{ name: 'Scribbl3D' }],
   creator: 'Scribbl3D',
   publisher: 'Scribbl3D',
+  verification: {
+    google: 'B_hBz-Ge524xI6LguFtfJ_yLXddgdifqWGfasoiqBVs',
+  },
   formatDetection: {
     email: false,
     address: false,

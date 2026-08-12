@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
         const banner = await prisma.heroBanner.create({
             data: {
-                headline: formData.get("headline") as string,
+                headline: (formData.get("headline") as string)?.trim() || null,
                 headlineAccent:
                     (formData.get("headlineAccent") as string) || null,
                 subtext: (formData.get("subtext") as string) || null,
@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
                 buttonGradientTo:
                     (formData.get("buttonGradientTo") as string) || "#7c3aed",
                 textColor: (formData.get("textColor") as string) || "#ffffff",
+                showGradient: formData.get("showGradient") === "true",
             },
         });
 
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
         console.error("Error creating banner:", error);
         return NextResponse.json(
-            { error: "Failed to create banner" },
+            { error: "Failed to create banner", details: error instanceof Error ? error.message : String(error) },
             { status: 500 },
         );
     }

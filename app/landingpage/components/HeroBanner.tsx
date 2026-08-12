@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface HeroBannerSlide {
     id: string;
-    headline: string;
+    headline?: string | null;
     headlineAccent?: string | null;
     subtext?: string | null;
     mediaUrl: string;
@@ -19,6 +19,7 @@ interface HeroBannerSlide {
     buttonGradientFrom?: string | null;
     buttonGradientTo?: string | null;
     textColor?: string | null;
+    showGradient?: boolean;
 }
 
 interface HeroBannerProps {
@@ -159,7 +160,7 @@ export default function HeroBanner({
 
     return (
         <section
-            className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[450px] max-h-[900px] overflow-hidden bg-[#0a0a0f]"
+            className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[450px] max-h-[900px] mt-[80px] overflow-hidden bg-[#0a0a0f]"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
         >
@@ -184,7 +185,7 @@ export default function HeroBanner({
                     ) : (
                         <Image
                             src={s.mediaUrl}
-                            alt={s.altText || s.headline}
+                            alt={s.altText || s.headline || 'Hero banner'}
                             fill
                             priority={i === 0}
                             quality={85}
@@ -192,7 +193,9 @@ export default function HeroBanner({
                             className="object-cover"
                         />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/20" />
+                    {s.showGradient !== false && (
+                        <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/20" />
+                    )}
                 </div>
             ))}
 
@@ -200,13 +203,15 @@ export default function HeroBanner({
             <AnimatePresence mode="wait">
                 <motion.div
                     key={slide.id}
-                    className="relative z-10 h-full flex flex-col justify-end pb-16 sm:pb-0 sm:justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto"
+                    className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-10 lg:px-16 pt-[60px] max-w-[1400px] mx-auto"
                 >
-                    <SplitHeadline
-                        text={slide.headline}
-                        animate={shouldAnimate}
-                        color={textColor}
-                    />
+                    {slide.headline && (
+                        <SplitHeadline
+                            text={slide.headline}
+                            animate={shouldAnimate}
+                            color={textColor}
+                        />
+                    )}
 
                     {slide.headlineAccent && (
                         <motion.h2

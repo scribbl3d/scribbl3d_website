@@ -145,7 +145,14 @@ export function GoogleReviewsBadge({
                 console.log("🚀 [Google Reviews Badge] Starting badge with config:", config);
                 
                 try {
+                    // Check if badge is already initialized
+                    if ((window as any).__googleBadgeInitialized) {
+                        console.log("⚠️ [Google Reviews Badge] Badge already initialized, skipping");
+                        return;
+                    }
+                    
                     (window as any).merchantwidget.start(config);
+                    (window as any).__googleBadgeInitialized = true;
                     console.log("✅ [Google Reviews Badge] Badge initialized successfully!");
                     console.log("💡 Note: Badge will only show if you have reviews. Otherwise shows 'No rating available'");
                 } catch (error) {

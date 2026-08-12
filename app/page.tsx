@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import LandingContent from "./landingpage/components/LandingContent";
 
+export const revalidate = 0; // Disable caching for this page
+
 async function getLandingData() {
     const [
         heroBanners,

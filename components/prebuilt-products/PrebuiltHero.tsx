@@ -33,6 +33,7 @@ type HeroData = {
     mediaType: string;
     headline: string | null;
     subtext: string | null;
+    showGradient?: boolean;
 };
 
 const FALLBACK: HeroData = {
@@ -41,6 +42,7 @@ const FALLBACK: HeroData = {
     mediaType: "video",
     headline: "Discover Cutting-Edge Prebuilt Products",
     subtext: "Explore our extensive selection of prebuilt 3D products.",
+    showGradient: true,
 };
 
 interface PrebuiltHeroProps {
@@ -61,6 +63,7 @@ export default function PrebuiltHero({ animate = true }: PrebuiltHeroProps) {
                         mediaType: data.mediaType || "video",
                         headline: data.headline,
                         subtext: data.subtext,
+                        showGradient: data.showGradient ?? true,
                     });
                 }
             } catch {
@@ -92,7 +95,9 @@ export default function PrebuiltHero({ animate = true }: PrebuiltHeroProps) {
             )}
 
             {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+            {hero.showGradient !== false && (
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+            )}
 
             {/* Content — vertically centered, left-aligned */}
             {hasText && (

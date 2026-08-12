@@ -3,7 +3,6 @@
 import {
     Eye,
     EyeOff,
-    GripVertical,
     Image as ImageIcon,
     Loader2,
     Pencil,
@@ -18,7 +17,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface HeroBanner {
     id: string;
-    headline: string;
+    headline: string | null;
     headlineAccent: string | null;
     subtext: string | null;
     mediaUrl: string;
@@ -32,6 +31,7 @@ interface HeroBanner {
     buttonGradientFrom: string | null;
     buttonGradientTo: string | null;
     textColor: string | null;
+    showGradient: boolean;
 }
 
 interface FormData {
@@ -48,6 +48,7 @@ interface FormData {
     buttonGradientFrom: string;
     buttonGradientTo: string;
     textColor: string;
+    showGradient: boolean;
 }
 
 const EMPTY_FORM: FormData = {
@@ -64,6 +65,7 @@ const EMPTY_FORM: FormData = {
     buttonGradientFrom: "#4f46e5",
     buttonGradientTo: "#7c3aed",
     textColor: "#ffffff",
+    showGradient: true,
 };
 
 export default function HeroBannersTab() {
@@ -132,10 +134,6 @@ export default function HeroBannersTab() {
     };
 
     const handleSave = async () => {
-        if (!form.headline.trim()) {
-            alert("Headline is required.");
-            return;
-        }
         if (!editId && !selectedFile) {
             alert("Please upload an image or video.");
             return;
@@ -156,6 +154,7 @@ export default function HeroBannersTab() {
             body.append("buttonGradientFrom", form.buttonGradientFrom);
             body.append("buttonGradientTo", form.buttonGradientTo);
             body.append("textColor", form.textColor);
+            body.append("showGradient", String(form.showGradient));
             if (selectedFile) body.append("file", selectedFile);
             const url = editId
                 ? `/api/admin/landingPage/hero-banners/${editId}`
@@ -164,12 +163,16 @@ export default function HeroBannersTab() {
                 method: editId ? "PUT" : "POST",
                 body,
             });
-            if (!res.ok)
-                throw new Error((await res.json()).error || "Save failed");
+            if (!res.ok) {
+                const errorData = await res.json();
+                console.error("Save failed:", errorData);
+                throw new Error(errorData.error || errorData.details || "Save failed");
+            }
+            await fetchBanners();
             closeModal();
-            fetchBanners();
-        } catch (err: any) {
-            alert(err.message || "Failed to save.");
+        } catch (error) {
+            console.error("Error saving banner:", error);
+            alert(`Failed to save banner: ${error instanceof Error ? error.message : String(error)}`);
         } finally {
             setSaving(false);
         }
@@ -186,7 +189,7 @@ export default function HeroBannersTab() {
 
     const toggleActive = async (banner: HeroBanner) => {
         const body = new FormData();
-        body.append("headline", banner.headline);
+        body.append("headline", banner.headline || "");
         body.append("headlineAccent", banner.headlineAccent || "");
         body.append("subtext", banner.subtext || "");
         body.append("mediaType", banner.mediaType);
@@ -202,6 +205,7 @@ export default function HeroBannersTab() {
         );
         body.append("buttonGradientTo", banner.buttonGradientTo || "#7c3aed");
         body.append("textColor", banner.textColor || "#ffffff");
+        body.append("showGradient", String(banner.showGradient));
         await fetch(`/api/admin/landingPage/hero-banners/${banner.id}`, {
             method: "PUT",
             body,
@@ -212,7 +216,7 @@ export default function HeroBannersTab() {
     const openEdit = (banner: HeroBanner) => {
         setEditId(banner.id);
         setForm({
-            headline: banner.headline,
+            headline: banner.headline || "",
             headlineAccent: banner.headlineAccent || "",
             subtext: banner.subtext || "",
             mediaType: banner.mediaType,
@@ -225,6 +229,7 @@ export default function HeroBannersTab() {
             buttonGradientFrom: banner.buttonGradientFrom || "#4f46e5",
             buttonGradientTo: banner.buttonGradientTo || "#7c3aed",
             textColor: banner.textColor || "#ffffff",
+            showGradient: banner.showGradient ?? true,
         });
         setExistingMediaUrl(banner.mediaUrl);
         setSelectedFile(null);
@@ -280,7 +285,6 @@ export default function HeroBannersTab() {
                             key={banner.id}
                             className={`flex items-center gap-4 p-4 bg-white rounded-xl border transition-all ${banner.isActive ? "border-gray-100" : "border-gray-200 opacity-60"}`}
                         >
-                            <GripVertical className="w-5 h-5 text-gray-300 flex-shrink-0 cursor-grab" />
                             <div className="w-20 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
                                 {banner.mediaType === "video" ? (
                                     <>
@@ -296,7 +300,7 @@ export default function HeroBannersTab() {
                                 ) : (
                                     <img
                                         src={banner.mediaUrl}
-                                        alt={banner.altText || banner.headline}
+                                        alt={banner.altText || banner.headline || 'Hero banner'}
                                         className="w-full h-full object-cover"
                                     />
                                 )}
@@ -309,7 +313,7 @@ export default function HeroBannersTab() {
                                         {banner.mediaType}
                                     </span>
                                     <h3 className="text-sm font-semibold text-gray-900 truncate">
-                                        {banner.headline.replace(/\n/g, " ")}
+                                        {banner.headline ? banner.headline.replace(/\n/g, " ") : '(No headline)'}
                                     </h3>
                                 </div>
                                 {banner.headlineAccent && (
@@ -509,7 +513,7 @@ export default function HeroBannersTab() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Headline *
+                                        Headline <span className="text-gray-400 font-normal">(white text, optional)</span>
                                     </label>
                                     <textarea
                                         value={form.headline}
@@ -524,14 +528,14 @@ export default function HeroBannersTab() {
                                         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f46e5] focus:border-transparent outline-none resize-none"
                                     />
                                     <p className="text-xs text-gray-400 mt-1">
-                                        Use line breaks for multi-line
+                                        Use line breaks for multi-line. Leave blank for image-only banner.
                                     </p>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                         Accent Headline{" "}
-                                        <span className="text-gray-400">
-                                            (blue text)
+                                        <span className="text-gray-400 font-normal">
+                                            (blue text, optional)
                                         </span>
                                     </label>
                                     <textarea
@@ -551,7 +555,7 @@ export default function HeroBannersTab() {
                             {/* Subtext */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                    Subtext
+                                    Subtext <span className="text-gray-400 font-normal">(optional)</span>
                                 </label>
                                 <textarea
                                     value={form.subtext}
@@ -570,7 +574,7 @@ export default function HeroBannersTab() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Button Text
+                                        Button Text <span className="text-gray-400 font-normal">(optional)</span>
                                     </label>
                                     <input
                                         type="text"
@@ -587,7 +591,7 @@ export default function HeroBannersTab() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                                        Button Link
+                                        Button Link <span className="text-gray-400 font-normal">(optional)</span>
                                     </label>
                                     <input
                                         type="text"
@@ -603,11 +607,12 @@ export default function HeroBannersTab() {
                                     />
                                 </div>
                             </div>
-                            {/* Colors */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Colors
-                                </label>
+                            {/* Colors - only show if button text is added */}
+                            {form.buttonText && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Colors
+                                    </label>
                                 <div className="grid grid-cols-3 gap-3">
                                     <div>
                                         <label className="block text-[11px] text-gray-500 mb-1">
@@ -716,6 +721,7 @@ export default function HeroBannersTab() {
                                     </span>
                                 </div>
                             </div>
+                            )}
                             {/* Settings */}
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
@@ -781,6 +787,27 @@ export default function HeroBannersTab() {
                                     </label>
                                 </div>
                             </div>
+                            {/* Gradient Overlay Toggle */}
+                            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <input
+                                    type="checkbox"
+                                    id="showGradient"
+                                    checked={form.showGradient}
+                                    onChange={(e) =>
+                                        setForm((p) => ({
+                                            ...p,
+                                            showGradient: e.target.checked,
+                                        }))
+                                    }
+                                    className="w-4 h-4 rounded border-gray-300 text-[#4f46e5] focus:ring-[#4f46e5]"
+                                />
+                                <label htmlFor="showGradient" className="flex-1 cursor-pointer">
+                                    <span className="text-sm font-medium text-gray-700">Show Gradient Overlay</span>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        Adds a dark gradient over the image for better text readability
+                                    </p>
+                                </label>
+                            </div>
                         </div>
                         <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100">
                             <button
@@ -793,7 +820,6 @@ export default function HeroBannersTab() {
                                 onClick={handleSave}
                                 disabled={
                                     saving ||
-                                    !form.headline.trim() ||
                                     (!editId && !selectedFile)
                                 }
                                 className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-[#4f46e5] rounded-lg hover:bg-[#4338ca] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -821,7 +847,7 @@ export default function HeroBannersTab() {
                         </h3>
                         <p className="mt-2 text-sm text-gray-500">
                             This will permanently remove &quot;
-                            {deleteTarget.headline.replace(/\n/g, " ")}&quot;
+                            {deleteTarget.headline ? deleteTarget.headline.replace(/\n/g, " ") : '(No headline)'}&quot;
                             from the carousel.
                         </p>
                         <div className="flex items-center justify-end gap-3 mt-6">

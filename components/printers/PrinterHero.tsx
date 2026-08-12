@@ -33,6 +33,7 @@ type HeroData = {
     mediaType: string;
     headline: string | null;
     subtext: string | null;
+    showGradient?: boolean;
     isFromAdmin: boolean;
 };
 
@@ -42,6 +43,7 @@ const FALLBACK: HeroData = {
     mediaType: "video",
     headline: "Discover Cutting-Edge 3D Printers",
     subtext: "Explore our extensive selection of 3D printers.",
+    showGradient: true,
     isFromAdmin: false,
 };
 
@@ -63,6 +65,7 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
                         mediaType: data.mediaType || "video",
                         headline: data.headline,
                         subtext: data.subtext,
+                        showGradient: data.showGradient ?? true,
                         isFromAdmin: true,
                     });
                 }
@@ -150,7 +153,9 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
                 />
             )}
 
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+            {hero.showGradient !== false && (
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent" />
+            )}
 
             {hasText && (
                 <div className="absolute inset-0 z-10 flex flex-col pt-8 sm:pt-12 lg:pt-16 px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto">

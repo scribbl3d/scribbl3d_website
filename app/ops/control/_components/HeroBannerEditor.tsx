@@ -10,6 +10,7 @@ type PageHero = {
     mediaType: string;
     headline: string | null;
     subtext: string | null;
+    showGradient?: boolean;
 };
 
 interface HeroBannerEditorProps {
@@ -24,6 +25,7 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
     const [mediaType, setMediaType] = useState<"video" | "image">("video");
     const [headline, setHeadline] = useState("");
     const [subtext, setSubtext] = useState("");
+    const [showGradient, setShowGradient] = useState(true);
     const [previewUrl, setPreviewUrl] = useState("");
     const [file, setFile] = useState<File | null>(null);
 
@@ -40,6 +42,7 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
                     setMediaType(data.mediaType as "video" | "image");
                     setHeadline(data.headline || "");
                     setSubtext(data.subtext || "");
+                    setShowGradient(data.showGradient ?? true);
                     setPreviewUrl(data.mediaUrl);
                 }
             } catch (err) {
@@ -70,6 +73,7 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
             formData.append("mediaType", mediaType);
             formData.append("headline", headline);
             formData.append("subtext", subtext);
+            formData.append("showGradient", String(showGradient));
 
             if (file) {
                 formData.append("mediaFile", file);
@@ -238,6 +242,20 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
                             placeholder="e.g. Explore our extensive selection of resins."
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
+                    </div>
+
+                    {/* Show Gradient Toggle */}
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="checkbox"
+                            id="showGradient"
+                            checked={showGradient}
+                            onChange={(e) => setShowGradient(e.target.checked)}
+                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <label htmlFor="showGradient" className="text-sm font-medium text-gray-700">
+                            Show Gradient Overlay
+                        </label>
                     </div>
 
                     <div className="text-xs text-gray-400">

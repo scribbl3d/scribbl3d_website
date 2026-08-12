@@ -99,7 +99,7 @@ export async function PUT(
         }
 
         const updateData: any = {
-            headline: formData.get("headline") as string,
+            headline: (formData.get("headline") as string) || null,
             headlineAccent: (formData.get("headlineAccent") as string) || null,
             subtext: (formData.get("subtext") as string) || null,
             mediaType,
@@ -114,6 +114,7 @@ export async function PUT(
             buttonGradientTo:
                 (formData.get("buttonGradientTo") as string) || "#7c3aed",
             textColor: (formData.get("textColor") as string) || "#ffffff",
+            showGradient: formData.get("showGradient") === "true",
         };
         if (mediaUrl) updateData.mediaUrl = mediaUrl;
 
@@ -123,8 +124,9 @@ export async function PUT(
         });
         return NextResponse.json(banner);
     } catch (error) {
+        console.error("Error updating banner:", error);
         return NextResponse.json(
-            { error: "Failed to update banner" },
+            { error: "Failed to update banner", details: error instanceof Error ? error.message : String(error) },
             { status: 500 },
         );
     }

@@ -50,6 +50,9 @@ export async function PUT(
         const headline = (formData.get("headline") as string) || null;
         const subtext = (formData.get("subtext") as string) || null;
         const mediaType = (formData.get("mediaType") as string) || "video";
+        // Handle showGradient: "true" = true, anything else (including null/undefined) = false
+        const showGradientValue = formData.get("showGradient");
+        const showGradient = showGradientValue === "true";
         let mediaUrl = (formData.get("mediaUrl") as string) || "";
 
         // Handle file upload
@@ -96,13 +99,14 @@ export async function PUT(
 
         const hero = await prisma.pageHero.upsert({
             where: { page },
-            update: { mediaUrl, mediaType, headline, subtext },
+            update: { mediaUrl, mediaType, headline, subtext, showGradient },
             create: {
                 page,
                 mediaUrl,
                 mediaType,
                 headline,
                 subtext,
+                showGradient,
             },
         });
 
