@@ -31,10 +31,11 @@ export async function GET() {
                     resinId: item.resinId,
                     resinWeightId: item.resinWeightId,
                     resinColourId: item.resinColourId,
-                    productId: item.productId,
                     printerId: item.printerId,
                     prebuiltProductId: item.prebuiltProductId,
                     prebuiltVariantId: item.prebuiltVariantId,
+                    filamentId: item.filamentId,
+                    filamentVariantId: item.filamentVariantId,
                 },
             };
 

@@ -3713,13 +3713,14 @@ async function main() {
         },
     ];
 
-    for (const product of products) {
-        await prisma.product.create({
-            data: product,
-        });
-    }
+    // Old product model removed - use new Filament model instead
+    // for (const product of products) {
+    //     await prisma.product.create({
+    //         data: product,
+    //     });
+    // }
 
-    console.log("Seed data inserted successfully");
+    console.log("Seed data inserted successfully (old products skipped)");
 
     const availableColors = [
         {

@@ -20,17 +20,18 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         const {
-            productId,
             prebuiltProductId,
             prebuiltVariantId,
             printerId,
             resinId,
             resinColourId,
             resinWeightId,
+            filamentId,
+            filamentVariantId,
             quantity = 1,
         } = body;
 
-        if (!productId && !prebuiltProductId && !printerId && !resinId) {
+        if (!prebuiltProductId && !printerId && !resinId && !filamentId) {
             return NextResponse.json(
                 { error: "Invalid cart item" },
                 { status: 400 },
@@ -89,7 +90,6 @@ export async function POST(req: Request) {
         }
 
         const whereClause: any = { cartId: cart.id };
-        if (productId) whereClause.productId = productId;
         if (prebuiltVariantId)
             whereClause.prebuiltVariantId = prebuiltVariantId;
         if (printerId) whereClause.printerId = printerId;
@@ -97,6 +97,10 @@ export async function POST(req: Request) {
             whereClause.resinId = resinId;
             whereClause.resinColourId = resinColourId;
             whereClause.resinWeightId = resinWeightId;
+        }
+        if (filamentId) {
+            whereClause.filamentId = filamentId;
+            whereClause.filamentVariantId = filamentVariantId;
         }
 
         const existingItem = await prisma.cartItem.findFirst({
@@ -113,13 +117,14 @@ export async function POST(req: Request) {
                 data: {
                     cartId: cart.id,
                     quantity,
-                    productId,
                     prebuiltProductId,
                     prebuiltVariantId,
                     printerId,
                     resinId,
                     resinColourId,
                     resinWeightId,
+                    filamentId,
+                    filamentVariantId,
                 },
             });
         }
@@ -401,35 +406,6 @@ export async function GET() {
                                 : null,
                             color: (filament as any).colorName ?? null,
                             colorHex: (filament as any).hexCode ?? null,
-                        };
-                    }
-
-                    /* ---------- PRODUCT ---------- */
-                    if (item.productId) {
-                        const product = await prisma.product.findUnique({
-                            where: { id: item.productId },
-                        });
-
-                        if (!product) {
-                            return {
-                                id: item.id,
-                                itemType: "unknown" as const,
-                                name: "Product no longer available",
-                                price: 0,
-                                quantity: item.quantity,
-                                images: [],
-                                _orphaned: true,
-                            };
-                        }
-
-                        return {
-                            id: item.id,
-                            sourceId: product.id,
-                            itemType: "product" as const,
-                            name: product.name,
-                            price: safeNum(product.price),
-                            quantity: item.quantity,
-                            images: (product as any).images ?? [],
                         };
                     }
 

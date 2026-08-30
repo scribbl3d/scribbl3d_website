@@ -20,7 +20,6 @@ export async function GET() {
             items: {
                 orderBy: { createdAt: "desc" },
                 include: {
-                    product: true,
                     prebuiltProduct: {
                         include: {
                             images: {
@@ -182,23 +181,6 @@ export async function GET() {
                 };
             }
 
-            /* ================= PRODUCT (OLD) ================= */
-            if (item.product) {
-                return {
-                    id: item.id,
-                    itemType: "product",
-                    title: item.product.name,
-                    image: item.product.images?.[0] ?? null,
-                    badge: item.product.category ?? null,
-                    price: item.product.price,
-                    originalPrice: item.product.originalPrice ?? null,
-                    requiresOptions: false,
-                    slug: null,
-                    inStock: true,
-                    cartPayload: { productId: item.product.id },
-                };
-            }
-
             return null;
         })
         .filter(Boolean);
@@ -216,9 +198,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { productId, prebuiltProductId, printerId, resinId, filamentId } = body;
+    const { prebuiltProductId, printerId, resinId, filamentId } = body;
 
-    const types = { productId, prebuiltProductId, printerId, resinId, filamentId };
+    const types = { prebuiltProductId, printerId, resinId, filamentId };
     const activeType = Object.entries(types).filter(
         ([_, v]) => typeof v === "string",
     );
@@ -250,7 +232,6 @@ export async function POST(req: Request) {
     await prisma.wishlistItem.create({
         data: {
             wishlistId: wishlist.id,
-            productId: productId ?? null,
             prebuiltProductId: prebuiltProductId ?? null,
             printerId: printerId ?? null,
             resinId: resinId ?? null,

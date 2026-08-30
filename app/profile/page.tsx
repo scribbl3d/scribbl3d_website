@@ -121,14 +121,6 @@ export default async function ProfilePage({ searchParams }: PageProps) {
         include: {
             items: {
                 include: {
-                    product: {
-                        select: {
-                            id: true,
-                            name: true,
-                            price: true,
-                            images: true,
-                        },
-                    },
                     prebuiltProduct: {
                         select: {
                             id: true,
@@ -167,12 +159,6 @@ export default async function ProfilePage({ searchParams }: PageProps) {
 
     /* ---------- TRANSFORM WISHLIST ---------- */
     const transformedWishlist = (wishlist?.items || []).map((item) => {
-        if (item.product) {
-            return {
-                product: item.product,
-                prebuiltProduct: null,
-            };
-        }
         if (item.prebuiltProduct) {
             const lowestPrice = item.prebuiltProduct.variants?.[0]?.price || 0;
             const images = item.prebuiltProduct.images.map((img) => img.url);

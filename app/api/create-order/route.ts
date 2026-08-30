@@ -118,9 +118,6 @@ export async function POST(req: Request) {
                 include: {
                     items: {
                         include: {
-                            /* ── Product ── */
-                            product: true,
-
                             /* ── Filament ── */
                             filament: true,
                             filamentVariant: true,
@@ -219,19 +216,7 @@ export async function POST(req: Request) {
                     };
                 }
 
-                /* ── Product ── */
-                if (item.product) {
-                    return {
-                        itemType: "product",
-                        name: item.product.name,
-                        quantity: item.quantity,
-                        price: item.product.price,
-                        size: null,
-                        color: null,
-                        image: item.product.images?.[0] ?? null,
-                    };
-                }
-
+                /* ── Fallback ── */
                 throw new Error(`Invalid cart item ${item.id}`);
             });
         }

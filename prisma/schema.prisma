@@ -53,31 +53,7 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Product {
-  id             String         @id @default(cuid())
-  name           String
-  price          Int
-  originalPrice  Int
-  discount       Int
-  images         String[]
-  color          String
-  category       String
-  tileType       String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  length         Float?
-  breadth        Float?
-  height         Float?
-  weight         Float?
-  description    String?
-  features       String[]       @default([])
-  productDetails String[]       @default([])
-  productdesc    String?
-  sizeData       Json?
-  cartItems      CartItem[]
-  reviews        Review[]
-  wishlistItems  WishlistItem[]
-}
+// Old Product model removed - replaced by new Filament model
 
 model AvailableColors {
   id              String @id @default(cuid())
@@ -98,7 +74,6 @@ model WishlistItem {
   wishlistId         String
 
   // item types
-  productId          String?
   prebuiltProductId  String?
   printerId          String?
   resinId            String?
@@ -109,7 +84,6 @@ model WishlistItem {
   createdAt          DateTime @default(now())
 
   wishlist           Wishlist @relation(fields: [wishlistId], references: [id])
-  product            Product?         @relation(fields: [productId], references: [id])
   prebuiltProduct    PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
   printer            Printer?         @relation(fields: [printerId], references: [id])
   resin              Resin?           @relation(fields: [resinId], references: [id])
@@ -137,11 +111,8 @@ model Cart {
 model CartItem {
   id                String            @id @default(cuid())
   cartId            String
-  productId         String?
   prebuiltProductId String?
   prebuiltVariantId String?
-  productSizeId     String?
-  productColorId    String?
   quantity          Int
   printerId         String?
   resinId           String?
@@ -154,7 +125,6 @@ model CartItem {
   customization String?
 
   cart            Cart              @relation(fields: [cartId], references: [id])
-  product         Product?          @relation(fields: [productId], references: [id], onDelete: SetNull)
   prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id], onDelete: SetNull)
   prebuiltVariant PrebuiltVariants? @relation(fields: [prebuiltVariantId], references: [id], onDelete: SetNull)
   printer         Printer?          @relation(fields: [printerId], references: [id], onDelete: SetNull)
@@ -164,7 +134,7 @@ model CartItem {
   filament        Filament?         @relation(fields: [filamentId], references: [id], onDelete: SetNull)
   filamentVariant FilamentVariant?  @relation(fields: [filamentVariantId], references: [id], onDelete: SetNull)
 
-  @@unique([cartId, productId, prebuiltVariantId, productSizeId, productColorId, printerId, resinId, resinColourId, resinWeightId, filamentId, filamentVariantId])
+  @@unique([cartId, prebuiltVariantId, printerId, resinId, resinColourId, resinWeightId, filamentId, filamentVariantId])
 }
 
 
@@ -455,7 +425,6 @@ model Review {
   title             String
   content           String
   userId            String
-  productId         String?
   prebuiltProductId String?
   filamentId        String?
  
@@ -463,12 +432,10 @@ model Review {
   updatedAt         DateTime         @updatedAt
 
   prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id])
-  product           Product?         @relation(fields: [productId], references: [id])
   filament          Filament?        @relation(fields: [filamentId], references: [id])
   user              User             @relation(fields: [userId], references: [id])
 
   @@index([userId])
-  @@index([productId])
   @@index([prebuiltProductId])
   @@index([filamentId])
 }

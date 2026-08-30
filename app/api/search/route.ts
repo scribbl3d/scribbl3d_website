@@ -16,26 +16,7 @@ export async function GET(request: Request) {
 
     await prisma.$connect();
 
-    const [products, prebuiltProducts, resins, printers, filaments] = await Promise.all([
-      prisma.product.findMany({
-        where: {
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { color: { contains: query, mode: "insensitive" } },
-            { category: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
-          ],
-        },
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          images: true,
-          category: true,
-          color: true,
-        },
-        take: 5,
-      }),
+    const [prebuiltProducts, resins, printers, filaments] = await Promise.all([
       prisma.prebuiltProducts.findMany({
         where: {
           OR: [
@@ -132,15 +113,6 @@ export async function GET(request: Request) {
     ]);
 
     const results = [
-      ...products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        image: p.images[0] || null,
-        subtitle: [p.category, p.color].filter(Boolean).join(" · "),
-        href: `/products/${p.id}`,
-        type: "product" as const,
-      })),
       ...prebuiltProducts.map((p) => ({
         id: p.id,
         name: p.name,

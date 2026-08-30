@@ -19,21 +19,7 @@ export async function GET(req: Request) {
         images: string[];
     } | null = null;
 
-    if (type === "product") {
-        const product = await prisma.product.findUnique({
-            where: { id: productId },
-        });
-        if (!product)
-            return Response.json({ error: "Not found" }, { status: 404 });
-
-        item = {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            quantity: 1,
-            images: product.images ?? [],
-        };
-    } else if (type === "prebuiltproduct") {
+    if (type === "prebuiltproduct") {
         const prebuilt = await prisma.prebuiltProducts.findUnique({
             where: { id: productId },
         });

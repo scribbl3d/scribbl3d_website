@@ -26,39 +26,6 @@ type RecommendationResult = {
    FETCHERS
 ================================================================ */
 
-async function fetchProducts(
-    limit: number,
-    excludeIds: string[],
-    category?: string,
-): Promise<RecommendationResult[]> {
-    const products = await prisma.product.findMany({
-        where: {
-            id: { notIn: excludeIds },
-            ...(category ? { category } : {}),
-        },
-        select: {
-            id: true,
-            name: true,
-            price: true,
-            originalPrice: true,
-            category: true,
-            images: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-    });
-
-    return products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        images: p.images ?? [],
-        price: p.price,
-        mrp: p.originalPrice ?? undefined,
-        itemType: "product",
-        category: p.category ?? undefined,
-    }));
-}
-
 async function fetchPrinters(
     limit: number,
     excludeIds: string[],
@@ -289,16 +256,15 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const limit = Math.min(Number(searchParams.get("limit") ?? 6), 12);
-        const perType = Math.max(1, Math.ceil(limit / 4));
+        const perType = Math.max(1, Math.ceil(limit / 3));
 
-        const [products, printers, prebuilts, resins] = await Promise.all([
-            fetchProducts(perType, []),
+        const [printers, prebuilts, resins] = await Promise.all([
             fetchPrinters(perType, []),
             fetchPrebuilts(perType, []),
             fetchResins(perType, []),
         ]);
 
-        const results = [...products, ...printers, ...prebuilts, ...resins];
+        const results = [...printers, ...prebuilts, ...resins];
         const shuffled = results.sort(() => Math.random() - 0.5);
 
         return NextResponse.json(shuffled.slice(0, limit));
@@ -342,13 +308,6 @@ export async function POST(req: Request) {
             let results: RecommendationResult[] = [];
 
             switch (group.itemType.toLowerCase()) {
-                case "product":
-                    results = await fetchProducts(
-                        group.limit,
-                        combinedExcludes,
-                        group.category,
-                    );
-                    break;
                 case "printer":
                     results = await fetchPrinters(
                         group.limit,
