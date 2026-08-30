@@ -1,6 +1,7 @@
 "use client";
 
 import Color from "@tiptap/extension-color";
+import Heading from "@tiptap/extension-heading";
 import Link from "@tiptap/extension-link";
 import TextAlign from "@tiptap/extension-text-align";
 import TextStyle from "@tiptap/extension-text-style";
@@ -12,8 +13,8 @@ import {
     AlignLeft,
     AlignRight,
     Bold,
-    Heading1,
     Heading2,
+    Heading3,
     Italic,
     Link as LinkIcon,
     List,
@@ -75,20 +76,22 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 style={{ width: "1px", background: "#E8E3D9", margin: "0 4px" }}
             />
 
-            {/* Headings */}
-            <ToolbarButton
-                onClick={() =>
-                    editor.chain().focus().toggleHeading({ level: 1 }).run()
-                }
-                active={editor.isActive("heading", { level: 1 })}
-                icon={<Heading1 size={16} />}
-            />
+            {/* Headings - H2 and H3 for TOC compatibility */}
             <ToolbarButton
                 onClick={() =>
                     editor.chain().focus().toggleHeading({ level: 2 }).run()
                 }
                 active={editor.isActive("heading", { level: 2 })}
                 icon={<Heading2 size={16} />}
+                title="Heading 2 (Main Section)"
+            />
+            <ToolbarButton
+                onClick={() =>
+                    editor.chain().focus().toggleHeading({ level: 3 }).run()
+                }
+                active={editor.isActive("heading", { level: 3 })}
+                icon={<Heading3 size={16} />}
+                title="Heading 3 (Subsection)"
             />
             <div
                 style={{ width: "1px", background: "#E8E3D9", margin: "0 4px" }}
@@ -196,11 +199,12 @@ const MenuBar = ({ editor }: { editor: any }) => {
 };
 
 // Helper component for toolbar buttons
-const ToolbarButton = ({ onClick, active, disabled, icon }: any) => (
+const ToolbarButton = ({ onClick, active, disabled, icon, title }: any) => (
     <button
         type="button"
         onClick={onClick}
         disabled={disabled}
+        title={title}
         style={{
             padding: "6px",
             borderRadius: "6px",
@@ -224,7 +228,32 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
     const editor = useEditor({
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                heading: false, // Disable default heading to use custom one
+            }),
+            Heading.extend({
+                levels: [2, 3],
+                renderHTML({ node, HTMLAttributes }) {
+                    const level = this.options.levels.includes(node.attrs.level)
+                        ? node.attrs.level
+                        : this.options.levels[0];
+                    const text = node.textContent || "";
+                    const id = text
+                        .toLowerCase()
+                        .trim()
+                        .replace(/[^\w\s-]/g, "")
+                        .replace(/[\s_]+/g, "-")
+                        .replace(/^-+|-+$/g, "")
+                        .slice(0, 100);
+                    return [
+                        `h${level}`,
+                        { ...HTMLAttributes, id },
+                        0,
+                    ];
+                },
+            }).configure({
+                levels: [2, 3],
+            }),
             TextStyle,
             Color,
             Underline,

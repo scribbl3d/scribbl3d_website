@@ -57,14 +57,9 @@ export default function AdminPage() {
                         Landing Page
                     </Button>
                 </Link>
-                <Link href="/ops/control/products" className="block">
-                    <Button variant="outline" className="w-full h-24 text-lg">
-                        Filaments (Old)
-                    </Button>
-                </Link>
                 <Link href="/ops/control/filaments-new" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
-                        Filament New
+                        Filaments
                     </Button>
                 </Link>
                 <Link href="/ops/control/prebuilt-products" className="block">
