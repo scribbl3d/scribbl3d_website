@@ -81,7 +81,7 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
     // Admin upload = natural-height image/video layout
     if (!hero.isFromAdmin) {
         return (
-            <section className="relative w-full h-[70vh] sm:h-[85vh] lg:h-[100vh] min-h-[450px] max-h-[900px] overflow-hidden bg-[#0a0a0f]">
+            <section className="relative w-full h-[50vh] sm:h-[55vh] lg:h-[60vh] min-h-[400px] max-h-[600px] overflow-hidden bg-[#0a0a0f]">
                 <video
                     src={hero.mediaUrl}
                     autoPlay
@@ -92,7 +92,7 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-black via-black/50 to-transparent sm:from-black sm:via-black/40 sm:to-[#4f46e5]/10" />
 
-                <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-10 lg:px-16 pt-[80px] max-w-[1400px] mx-auto">
+                <div className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto">
                     <motion.h1
                         variants={staggerContainer}
                         initial="hidden"
@@ -158,7 +158,7 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
             )}
 
             {hasText && (
-                <div className="absolute inset-0 z-10 flex flex-col pt-8 sm:pt-12 lg:pt-16 px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto">
+                <div className="absolute inset-0 z-10 flex flex-col justify-center pb-[15%] px-5 sm:px-10 lg:px-16 max-w-[1400px] mx-auto">
                     {hero.headline && (
                         <motion.h1
                             variants={staggerContainer}
