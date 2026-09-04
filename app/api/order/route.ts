@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
         const makePhonePeRequest = async () => {
             try {
-                // Prepare data for PhonePe API with payment mode configuration
+                // Prepare data for PhonePe V1 PAY_PAGE API
                 const data: {
                     merchantId: string | undefined;
                     merchantTransactionId: string;
@@ -33,18 +33,6 @@ export async function POST(req: Request) {
                     mobileNumber: string;
                     paymentInstrument: {
                         type: string;
-                        paymentModeConfig?: {
-                            version: string;
-                            enabledPaymentModes: Array<{
-                                type: string;
-                                flows?: string[];
-                                apps?: string[];
-                                types?: string[];
-                                networks?: string[];
-                                geoScopes?: string[];
-                                banks?: string[];
-                            }>;
-                        };
                     };
                     orderId?: string;
                 } = {
@@ -57,42 +45,7 @@ export async function POST(req: Request) {
                     callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/phonepe-callback`,
                     mobileNumber: reqBody.mobile,
                     paymentInstrument: {
-                        type: "PG_CHECKOUT",
-                        paymentModeConfig: {
-                            version: "V2",
-                            enabledPaymentModes: [
-                                // UPI Payments
-                                {
-                                    type: "UPI",
-                                    flows: ["INTENT", "COLLECT"],
-                                    apps: ["phonepe", "gpay", "paytm"],
-                                },
-                                // Credit Cards (includes EMI by default)
-                                {
-                                    type: "CARD",
-                                    types: ["CREDIT_CARD"],
-                                    networks: ["VISA", "MASTER_CARD", "RUPAY"],
-                                    geoScopes: ["DOMESTIC"],
-                                },
-                                // Debit Cards
-                                {
-                                    type: "CARD",
-                                    types: ["DEBIT_CARD"],
-                                    networks: ["VISA", "MASTER_CARD", "RUPAY"],
-                                    geoScopes: ["DOMESTIC"],
-                                },
-                                // EMI (Credit Card EMI only)
-                                {
-                                    type: "EMI",
-                                    types: ["CREDIT_CARD"],
-                                },
-                                // Net Banking
-                                {
-                                    type: "NET_BANKING",
-                                    banks: ["HDFC", "ICIC", "SBIN", "AXIS", "KOTAK"],
-                                },
-                            ],
-                        },
+                        type: "PAY_PAGE",
                     },
                 };
 
