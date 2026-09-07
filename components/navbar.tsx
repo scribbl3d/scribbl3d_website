@@ -3,12 +3,12 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { useCart } from "@/providers/CartProvider";
-import { Heart, ShoppingCart, User } from "lucide-react";
+import { Heart, Search, ShoppingCart, User } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ExpandableSearch } from "./expandable-search";
 import { NavbarClient } from "./navbar-client";
 
@@ -22,18 +22,36 @@ const navItems = [
     { name: "Blogs", href: "/blog" },
 ];
 
+const SEARCH_ANIM_MS = 250; // matches CSS animation duration
+
 export default function Navbar() {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSearchNavigating, setIsSearchNavigating] = useState(false);
+    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+    const [isSearchClosing, setIsSearchClosing] = useState(false);
     const { data: session } = useSession();
     const router = useRouter();
     const pathname = usePathname();
     const { cart } = useCart();
     const profileRef = useRef<HTMLDivElement>(null);
 
+    const closeSearch = useCallback(() => {
+        if (!isSearchExpanded || isSearchClosing) return;
+        setIsSearchClosing(true);
+        setTimeout(() => {
+            setIsSearchExpanded(false);
+            setIsSearchClosing(false);
+        }, SEARCH_ANIM_MS);
+    }, [isSearchExpanded, isSearchClosing]);
+
     useEffect(() => {
-        // Reset loading state when pathname changes
+        // Reset loading states when pathname changes
         setIsLoading(false);
+        setIsSearchNavigating(false);
+        // Close search on navigation (instant, no animation needed)
+        setIsSearchExpanded(false);
+        setIsSearchClosing(false);
     }, [pathname]);
 
     const handleNavigation = (href: string) => {
@@ -96,9 +114,10 @@ export default function Navbar() {
     }, []);
 
     return (
+        <>
         <nav className="fixed top-0 left-0 right-0 z-50 w-full h-[80px] bg-gradient-to-r from-black to-[#3D5EFF]">
             <div className="w-full h-full px-2 sm:px-3 lg:px-4">
-                <div className="max-w-screen mx-auto relative flex items-center justify-between h-full">
+                <div className="max-w-screen mx-auto flex items-center justify-between h-full">
                     {/* Logo */}
                     <div className="flex-shrink-0 w-[170px] sm:w-[170px]">
                         <Link
@@ -113,39 +132,68 @@ export default function Navbar() {
                                 height={85}
                                 className="w-auto h-[125px] sm:h-[145px]"
                                 priority
-                                unoptimized={true} // Key prop
+                                unoptimized={true}
                             />
                         </Link>
                     </div>
 
-                    {/* Desktop Navigation - Centered */}
-                    <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center">
-                        {navItems.map((item) => (
-                            <button
-                                key={item.name}
-                                onClick={() => handleNavigation(item.href)}
-                                className={`relative rounded-md px-4 py-2 text-[18px] font-medium transition-colors duration-200 font-manrope hover:text-[#E0D7A8] active:scale-95 ${
-                                    pathname === item.href
-                                        ? "text-[#E0D7A8] font-bold"
-                                        : "text-white"
-                                }`}
-                            >
-                                {item.name}
-                                {pathname === item.href && (
-                                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-[#E0D7A8] rounded-full mt-1" />
-                                )}
-                            </button>
-                        ))}
-                    </div>
+                    {/* Center area: Search bar (expanded) OR Nav items */}
+                    {isSearchExpanded ? (
+                        <div
+                            className={`flex-1 mx-3 lg:mx-6 max-w-2xl ${
+                                isSearchClosing
+                                    ? "animate-[searchCollapse_0.25s_ease-in_forwards]"
+                                    : "animate-[searchExpand_0.3s_ease-out_forwards]"
+                            }`}
+                        >
+                            <ExpandableSearch
+                                onClose={closeSearch}
+                                isClosing={isSearchClosing}
+                                onNavigate={(href) => {
+                                    setIsSearchNavigating(true);
+                                    setIsSearchExpanded(false);
+                                    setIsSearchClosing(false);
+                                    router.push(href);
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <div className="hidden lg:flex items-center justify-center flex-1 animate-[navFadeIn_0.3s_ease-out]">
+                            {navItems.map((item) => (
+                                <button
+                                    key={item.name}
+                                    onClick={() => handleNavigation(item.href)}
+                                    className={`relative rounded-md px-4 py-2 text-[18px] font-medium transition-colors duration-200 font-manrope hover:text-[#E0D7A8] active:scale-95 ${
+                                        pathname === item.href
+                                            ? "text-[#E0D7A8] font-bold"
+                                            : "text-white"
+                                    }`}
+                                >
+                                    {item.name}
+                                    {pathname === item.href && (
+                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-[#E0D7A8] rounded-full mt-1" />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Right side icons and mobile menu */}
-                    <div className="flex items-center space-x-2">
-                        <div className="flex items-center h-10">
-                            <ExpandableSearch />
-                        </div>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                        {/* Search icon (desktop only, when search is collapsed) */}
+                        {!isSearchExpanded && (
+                            <button
+                                onClick={() => setIsSearchExpanded(true)}
+                                className="hidden lg:flex items-center justify-center h-10 w-10 hover:bg-white/10 rounded-full active:scale-95 transition-all"
+                                aria-label="Open search"
+                            >
+                                <Search className="h-5 w-5 text-white" />
+                            </button>
+                        )}
+                        {/* Cart icon (desktop only - mobile has it in drawer) */}
                         <button
                             onClick={() => handleNavigation("/cart")}
-                            className="relative flex items-center justify-center h-10 w-10 hover:bg-white/10 rounded-full active:scale-95 transition-all"
+                            className="hidden lg:flex relative items-center justify-center h-10 w-10 hover:bg-white/10 rounded-full active:scale-95 transition-all"
                         >
                             <ShoppingCart
                                 className="h-6 w-6 text-white"
@@ -168,7 +216,8 @@ export default function Navbar() {
                         >
                             <Heart className="h-6 w-6 text-white" />
                         </button>
-                        <div className="relative" ref={profileRef}>
+                        {/* Profile dropdown (desktop only) */}
+                        <div className="relative hidden lg:block" ref={profileRef}>
                             <button
                                 className="flex items-center justify-center h-10 w-10 hover:bg-white/10 rounded-full active:scale-95 transition-all"
                                 aria-label="Profile menu"
@@ -220,32 +269,46 @@ export default function Navbar() {
                                 </div>
                             )}
                         </div>
-                        {/* Mobile Menu - Only visible on smaller screens */}
-                        <div className="lg:hidden">
+                        {/* Mobile: Hamburger menu (includes search icon) */}
+                        <div className="flex lg:hidden items-center space-x-1">
                             <NavbarClient
-                                navItems={[
-                                    ...navItems,
-                                    {
-                                        name: "Wishlist",
-                                        href: "/profile?tab=wishlist",
-                                    },
-                                ]}
+                                navItems={navItems}
+                                onSearchNavigate={(href) => {
+                                    setIsSearchNavigating(true);
+                                    router.push(href);
+                                }}
                             />
                         </div>
                     </div>
                 </div>
             </div>
-            {/* Enhanced loading indicators */}
+            {/* Loading indicators for regular nav links */}
             {isLoading && (
                 <>
                     <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/20 overflow-hidden">
-                        <div className="h-full w-1/2 bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] animate-[loading_1.5s_cubic-bezier(0.4,0,0.2,1)_infinite" />
+                        <div className="h-full w-1/2 bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] animate-[loading_1.5s_cubic-bezier(0.4,0,0.2,1)_infinite]" />
                     </div>
                     <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-center">
                         <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-[custom-spin_0.8s_linear_infinite]" />
                     </div>
                 </>
             )}
+            {/* Loading bar for search navigation */}
+            {isSearchNavigating && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/20 overflow-hidden">
+                    <div className="h-full w-1/2 bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] animate-[loading_1.5s_cubic-bezier(0.4,0,0.2,1)_infinite]" />
+                </div>
+            )}
         </nav>
+        {/* Full-page loading overlay (search navigation only) */}
+        {isSearchNavigating && (
+            <div className="fixed inset-0 z-40 bg-white/60 backdrop-blur-[2px] flex items-center justify-center pt-[80px] animate-[fadeIn_0.15s_ease-out]">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-[3px] border-gray-200 border-t-[#2563EB] rounded-full animate-[custom-spin_0.8s_linear_infinite]" />
+                    <p className="text-sm font-medium text-gray-500">Loading...</p>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
