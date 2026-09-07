@@ -160,11 +160,6 @@ const nextConfig = {
                 destination: '/prebuilt-products',
                 permanent: true,
             },
-            {
-                source: '/contact',
-                destination: '/',
-                permanent: false, // Temporary until contact page is created
-            },
             // Old resin test products - redirect to main resins page
             {
                 source: '/resins/abs-like-resin',

@@ -130,6 +130,7 @@ export async function sendAdminNotification({
         "prototyping-request": "New Prototyping Request",
         "small-batch-manufacturing": "New Small Batch Manufacturing Request",
         "stock-notification": "New Out-of-Stock Notification",
+        "contact-form": "New Contact Form Submission",
     };
 
     try {

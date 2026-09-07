@@ -55,6 +55,7 @@ export function NavbarClient({ navItems, onSearchNavigate }: Readonly<NavbarClie
   const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const cacheRef = useRef<Map<string, SearchResult[]>>(new Map());
   const pathname = usePathname();
   const router = useRouter();
   const debouncedQuery = useDebounce(searchQuery, 300);
@@ -83,11 +84,19 @@ export function NavbarClient({ navItems, onSearchNavigate }: Readonly<NavbarClie
     };
   }, [isOpen, focusSearch]);
 
-  // Search effect
+  // Search effect (with cache)
   useEffect(() => {
-    const trimmed = debouncedQuery.trim();
+    const trimmed = debouncedQuery.trim().toLowerCase();
     if (trimmed.length < 2) {
       setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Cache hit — skip API call
+    const cached = cacheRef.current.get(trimmed);
+    if (cached) {
+      setSearchResults(cached);
       setIsSearching(false);
       return;
     }
@@ -101,7 +110,9 @@ export function NavbarClient({ navItems, onSearchNavigate }: Readonly<NavbarClie
       .then((res) => res.json())
       .then((data) => {
         if (!controller.signal.aborted) {
-          setSearchResults(data.results || []);
+          const results = data.results || [];
+          cacheRef.current.set(trimmed, results);
+          setSearchResults(results);
           setIsSearching(false);
         }
       })

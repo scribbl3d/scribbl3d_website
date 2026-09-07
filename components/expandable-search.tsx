@@ -47,6 +47,7 @@ export function ExpandableSearch({ onClose, onNavigate, isClosing = false }: Rea
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const cacheRef = useRef<Map<string, SearchResult[]>>(new Map());
 
   const debouncedQuery = useDebounce(searchQuery, 350);
 
@@ -82,11 +83,19 @@ export function ExpandableSearch({ onClose, onNavigate, isClosing = false }: Rea
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Fetch results
+  // Fetch results (with cache)
   useEffect(() => {
-    const trimmed = debouncedQuery.trim();
+    const trimmed = debouncedQuery.trim().toLowerCase();
     if (!trimmed || trimmed.length < 2) {
       setSearchResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    // Cache hit — skip API call
+    const cached = cacheRef.current.get(trimmed);
+    if (cached) {
+      setSearchResults(cached);
       setIsLoading(false);
       return;
     }
@@ -103,7 +112,9 @@ export function ExpandableSearch({ onClose, onNavigate, isClosing = false }: Rea
       .then((res) => res.json())
       .then((data) => {
         if (controller.signal.aborted) return;
-        setSearchResults(data.results || []);
+        const results = data.results || [];
+        cacheRef.current.set(trimmed, results);
+        setSearchResults(results);
       })
       .catch((err) => {
         if (err.name === "AbortError") return;

@@ -7,7 +7,7 @@ export default function Footer() {
         <footer className="bg-[#0a0a0a] border-t border-white/5">
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
                 {/* Main Footer Content */}
-                <div className="py-8 sm:py-12 lg:py-16">
+                <div className="py-8 sm:py-10 lg:py-12">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-10">
                         {/* Company Info - 3 columns */}
                         <div className="sm:col-span-2 lg:col-span-3 space-y-4 sm:space-y-5">
@@ -77,7 +77,7 @@ export default function Footer() {
                                     {[
                                         { name: "Home", href: "/" },
                                         { name: "About Us", href: "/about" },
-                                        { name: "Contact", href: "/contact" },
+                                        { name: "Contact Us", href: "/contact" },
                                         { name: "Blog", href: "/blog" },
                                     ].map((link) => (
                                         <li key={link.name}>
@@ -177,7 +177,7 @@ export default function Footer() {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className="border-t border-white/5 py-6 pb-20 sm:py-8">
+                <div className="border-t border-white/5 py-5 sm:py-6">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
                         {/* Policy Links */}
                         <div className="flex flex-wrap justify-center md:justify-start items-center gap-x-4 sm:gap-x-6 gap-y-2">
