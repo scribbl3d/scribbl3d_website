@@ -183,7 +183,8 @@ export function NavbarClient({ navItems, onSearchNavigate }: Readonly<NavbarClie
       {isOpen && createPortal(
         <div
           ref={menuRef}
-          className="fixed top-0 left-0 right-0 bottom-0 w-screen h-screen bg-gradient-to-r from-black to-[#3D5EFF] z-[60] flex flex-col animate-[fadeIn_0.2s_ease-out]"
+          style={{ height: '100dvh' }}
+          className="fixed top-0 left-0 right-0 bottom-0 w-screen bg-gradient-to-r from-black to-[#3D5EFF] z-[60] flex flex-col animate-[fadeIn_0.2s_ease-out]"
         >
           {/* Header: Logo + Close */}
           <div className="flex items-center justify-between px-4 h-[80px] flex-shrink-0">
@@ -346,7 +347,7 @@ export function NavbarClient({ navItems, onSearchNavigate }: Readonly<NavbarClie
           )}
 
           {/* Bottom actions */}
-          <div className="flex-shrink-0 px-4 pb-6 pt-3 space-y-2 border-t border-white/10">
+          <div className="flex-shrink-0 px-4 pt-3 space-y-2 border-t border-white/10" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
             <Link
               href="/cart"
               onClick={() => setIsOpen(false)}
