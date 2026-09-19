@@ -200,7 +200,7 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
                     <div className="flex gap-8">
                         {/* Sidebar (Desktop) */}
                         <div className="hidden lg:block lg:w-1/4 xl:w-1/5">
-                            <div className="sticky top-24">
+                            <div className="sticky top-[calc(var(--site-header-height)+1rem)]">
                                 <FilamentFilters filters={filters} setFilters={setFilters} />
                             </div>
                         </div>

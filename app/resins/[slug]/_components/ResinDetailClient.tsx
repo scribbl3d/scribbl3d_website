@@ -12,8 +12,53 @@ import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { NotifyMeModal } from "@/components/shared/NotifyMeModal";
 
+function ArrowRight({ size = 22 }: Readonly<{ size?: number }>) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path d="M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M13 6L19 12L13 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function ArrowLefti({ size = 22 }: Readonly<{ size?: number }>) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M11 6L5 12L11 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+type StockStatus = Readonly<{ inStock?: boolean }>;
+type ColourSelection = StockStatus & Readonly<{ id: string; name: string }>;
+type WeightSelection = StockStatus & Readonly<{ id: string; weightInGrams: number }>;
+
+function getResinAvailability(resin: StockStatus | undefined, colour?: ColourSelection, weight?: WeightSelection) {
+    const isProductOOS = resin?.inStock === false;
+    const isColourOOS = !isProductOOS && colour?.inStock === false;
+    const isWeightOOS = !isProductOOS && !isColourOOS && weight?.inStock === false;
+    const stock = { isProductOOS, isColourOOS, isWeightOOS, isAnyOOS: isProductOOS || isColourOOS || isWeightOOS };
+
+    if (isProductOOS) return { ...stock, notifyVariantId: undefined, notifyVariantLabel: undefined };
+    if (isColourOOS) return { ...stock, notifyVariantId: colour?.id, notifyVariantLabel: colour?.name };
+    return { ...stock, notifyVariantId: weight?.id, notifyVariantLabel: weight ? `${weight.weightInGrams}g` : undefined };
+}
+
+function formatHeatDeflection(temperature?: string, pressure?: string) {
+    const temperatureText = temperature ? `${temperature}°C` : "";
+    const pressureText = pressure ? `${pressure} MPa` : "";
+    return [temperatureText, pressureText].filter(Boolean).join(" @ ") || undefined;
+}
+
+function getWeightButtonClass(disabled: boolean, selected: boolean) {
+    if (disabled) return "border-gray-200 text-gray-300 cursor-not-allowed line-through";
+    if (selected) return "border-blue-600 text-blue-600";
+    return "border-gray-300 hover:border-gray-500";
+}
+
 /* ── Main PDP ── */
-export default function ResinDetailClient({ resin }: { resin: any }) {
+export default function ResinDetailClient({ resin }: Readonly<{ resin: any }>) {
     const { addToCart } = useCart();
     const [activeTab, setActiveTab] = useState("description");
     const { data: session } = useSession();
@@ -24,42 +69,6 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
     const [quantity, setQuantity] = useState(1);
     const [isCartLoading, setIsCartLoading] = useState(false);
     const [showNotifyModal, setShowNotifyModal] = useState(false);
-
-    const ArrowRight = ({ size = 22 }: { size?: number }) => (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-            <path
-                d="M5 12H19"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-            />
-            <path
-                d="M13 6L19 12L13 18"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-
-    const ArrowLefti = ({ size = 22 }: { size?: number }) => (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-            <path
-                d="M19 12H5"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-            />
-            <path
-                d="M11 6L5 12L11 18"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
 
     const [current, setCurrent] = useState(0);
     const [isHovering, setIsHovering] = useState(false);
@@ -88,24 +97,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
     };
 
     /* ── OOS detection (three levels) ── */
-    const isProductOOS = resin?.inStock === false;
-    const isColourOOS = !isProductOOS && colour?.inStock === false;
-    const isWeightOOS =
-        !isProductOOS && !isColourOOS && weight?.inStock === false;
-    const isAnyOOS = isProductOOS || isColourOOS || isWeightOOS;
-
-    const notifyVariantId = isProductOOS
-        ? undefined
-        : isColourOOS
-          ? colour?.id
-          : weight?.id;
-    const notifyVariantLabel = isProductOOS
-        ? undefined
-        : isColourOOS
-          ? colour?.name
-          : weight
-            ? `${weight.weightInGrams}g`
-            : undefined;
+    const { isProductOOS, isColourOOS, isWeightOOS, isAnyOOS, notifyVariantId, notifyVariantLabel } = getResinAvailability(resin, colour, weight);
 
     const groupedSpecs = resin?.specifications.reduce((acc, spec) => {
         if (!acc[spec.category]) acc[spec.category] = [];
@@ -114,7 +106,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
     }, {});
 
     const maxResolution = resin?.resolution
-        ?.map((r: string) => parseInt(r))
+        ?.map((r: string) => Number.parseInt(r))
         ?.sort((a, b) => b - a)[0];
 
     const temperature = resin?.attributes?.find(
@@ -261,7 +253,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
     return (
         <div className="min-h-screen bg-gray-50 pt-20">
             {/* Header — sticky on mobile, static on desktop */}
-            <div className="bg-white border-b border-gray-200 sticky top-16 z-40 sm:static">
+            <div className="bg-white border-b border-gray-200 sticky top-[var(--site-header-height)] z-40 sm:static">
                 <div className="container mx-auto px-4 py-3.5 sm:py-5">
                     <Link
                         href="/resins"
@@ -276,7 +268,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
             <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
                     {/* Left Column - Images */}
-                    <div className="lg:self-start lg:sticky lg:top-28">
+                    <div className="lg:self-start lg:sticky lg:top-[calc(var(--site-header-height)+2rem)]">
                         <div
                             className="bg-white rounded-lg border border-gray-200 p-2 sm:p-4 mb-2 sm:mb-4"
                             onMouseEnter={() => setIsHovering(true)}
@@ -518,13 +510,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
                                                             ? `${w.weightInGrams / 1000}kg — Out of Stock`
                                                             : undefined
                                                     }
-                                                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm transition-all relative ${
-                                                        thisWeightDisabled
-                                                            ? "border-gray-200 text-gray-300 cursor-not-allowed line-through"
-                                                            : isSelected
-                                                              ? "border-blue-600 text-blue-600"
-                                                              : "border-gray-300 hover:border-gray-500"
-                                                    }`}
+                                                    className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm transition-all relative ${getWeightButtonClass(thisWeightDisabled, isSelected)}`}
                                                 >
                                                     {w.weightInGrams / 1000} kg
                                                     {w.inStock === false &&
@@ -738,10 +724,7 @@ export default function ResinDetailClient({ resin }: { resin: any }) {
                                         },
                                         {
                                             label: "Heat Deflection Temp",
-                                            value:
-                                                temperature || pressure
-                                                    ? `${temperature ? `${temperature}°C` : ""}${temperature && pressure ? " @ " : ""}${pressure ? `${pressure} MPa` : ""}`
-                                                    : undefined,
+                                            value: formatHeatDeflection(temperature, pressure),
                                         },
                                         ...(resin.attributes
                                             ?.filter(

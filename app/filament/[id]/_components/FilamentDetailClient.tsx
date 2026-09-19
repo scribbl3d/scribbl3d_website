@@ -198,7 +198,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
         <div className="min-h-screen bg-gray-50 pt-20">
 
             {/* Back bar */}
-            <div className="bg-white border-b border-gray-200 sticky top-16 z-40 sm:static">
+            <div className="bg-white border-b border-gray-200 sticky top-[var(--site-header-height)] z-40 sm:static">
                 <div className="container mx-auto px-4 py-3.5 sm:py-5">
                     <Link href="/filament" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-2" />
@@ -211,7 +211,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
 
                     {/* ── LEFT: image carousel ── */}
-                    <div className="lg:self-start lg:sticky lg:top-28">
+                    <div className="lg:self-start lg:sticky lg:top-[calc(var(--site-header-height)+2rem)]">
                         <div
                             className="bg-white rounded-xl border border-gray-200 p-2 sm:p-4 mb-3"
                             onMouseEnter={() => setIsHovering(true)}

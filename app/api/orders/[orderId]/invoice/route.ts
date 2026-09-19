@@ -1,4 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { verifyAdminSession } from "@/lib/admin-session";
 import { db } from "@/lib/db";
 import { generateInvoicePdfBuffer } from "@/lib/invoice/generateInvoicePdf";
 import { getServerSession } from "next-auth/next";
@@ -13,9 +14,9 @@ export async function GET(
     const { orderId } = await context.params;
 
     const session = await getServerSession(authOptions);
-    const adminToken = req.cookies.get("admin_token")?.value;
+    const admin = await verifyAdminSession(req.cookies.get("admin_token")?.value);
 
-    if (!session?.user && !adminToken) {
+    if (!session?.user && !admin) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

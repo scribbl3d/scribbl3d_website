@@ -182,7 +182,7 @@ export default function PrinterDetailClient({ printer }: { printer: any }) {
         <div className="min-h-screen bg-gray-50 pt-20">
             {/* Header */}
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-16 z-40 sm:static">
+            <div className="bg-white border-b border-gray-200 sticky top-[var(--site-header-height)] z-40 sm:static">
                 <div className="container mx-auto px-4 py-3.5 sm:py-5">
                     <Link
                         href="/printers"
@@ -197,7 +197,7 @@ export default function PrinterDetailClient({ printer }: { printer: any }) {
             <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
                     {/* Left Column - Images */}
-                    <div className="lg:self-start lg:sticky lg:top-28">
+                    <div className="lg:self-start lg:sticky lg:top-[calc(var(--site-header-height)+2rem)]">
                         <div
                             className="bg-white rounded-lg border border-gray-200 p-2 sm:p-4 mb-2 sm:mb-4"
                             onMouseEnter={() => carousel.setIsHovering(true)}

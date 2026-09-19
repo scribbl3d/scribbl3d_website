@@ -9,6 +9,7 @@ import { SessionProvider } from "next-auth/react";
 import React from "react";
 import Footer from "../components/footer";
 import Navbar from "../components/navbar";
+import AnnouncementBanner from "./landingpage/AnnouncementBanner";
 
 export function Providers({
     children,
@@ -21,8 +22,9 @@ export function Providers({
         <SessionProvider session={session}>
             <CartProvider>
                 <CheckoutProvider>
+                    <AnnouncementBanner />
                     <Navbar />
-                    {children}
+                    <div style={{ paddingTop: "var(--announcement-height, 0px)" }}>{children}</div>
                     <Footer />
                     <Toaster />
                     <Analytics />

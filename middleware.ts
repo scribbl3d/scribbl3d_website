@@ -1,4 +1,5 @@
 import { getToken } from "next-auth/jwt";
+import { verifyAdminSession } from "@/lib/admin-session";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -93,7 +94,7 @@ export async function middleware(request: NextRequest) {
             return response;
         }
 
-        if (!adminToken) {
+        if (!(await verifyAdminSession(adminToken))) {
             return NextResponse.redirect(
                 new URL("/ops/control/login", request.url),
             );

@@ -220,8 +220,10 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
 
             {/* ── MOBILE STICKY HEADER (appears after scroll) ── */}
             <div
-                className="fixed top-0 left-0 right-0 z-50 lg:hidden"
+                className="fixed left-0 right-0 z-40 lg:hidden"
                 style={{
+                    top: "var(--site-header-height, 80px)",
+                    visibility: scrollProgress > 3 ? "visible" : "hidden",
                     background: "rgba(250,250,247,0.96)",
                     backdropFilter: "blur(12px)",
                     borderBottom: "1px solid #E8E3D9",
@@ -1143,7 +1145,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
 
                     {/* ── SIDEBAR (desktop only) ── */}
                     <aside className="hidden lg:block lg:w-[35%]">
-                        <div className="sticky top-24 space-y-8">
+                        <div className="sticky top-[calc(var(--site-header-height)+1rem)] space-y-8">
                             {toc.length > 0 && (
                                 <div
                                     style={{
@@ -1473,7 +1475,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                     margin-top: 2.5em;
                     margin-bottom: 0.75em;
                     line-height: 1.2;
-                    scroll-margin-top: 80px;
+                    scroll-margin-top: calc(var(--site-header-height, 80px) + 64px);
                 }
                 .blog-content h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); }
                 .blog-content h2 { font-size: clamp(1.25rem, 3vw, 1.75rem); }

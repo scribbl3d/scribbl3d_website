@@ -705,7 +705,7 @@ export default function PrebuiltProductGrid({ products = [] }: Props) {
                 return (
                     <section key={category} className="space-y-8">
                         <div
-                            className="lg:hidden sticky top-0 bg-white -mx-4 px-4 py-4"
+                            className="lg:hidden sticky top-[var(--site-header-height)] bg-white -mx-4 px-4 py-4"
                             style={{ zIndex: navOpen ? 1 : 50 }}
                         >
                             <Header />

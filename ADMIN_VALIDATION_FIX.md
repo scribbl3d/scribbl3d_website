@@ -8,12 +8,12 @@ Added **server-side validation** in the admin API to prevent temperature values 
 
 ## 🔧 What Was Fixed
 
-### Files Modified:
+### Files Modified
 
 1. **`app/api/admin/printers/route.ts`** (Create Printer API)
 2. **`app/api/admin/printers/[id]/route.ts`** (Update Printer API)
 
-### Validation Added:
+### Validation Added
 
 Both APIs now include a validation function that **rejects temperature values** before saving them as material attributes:
 
@@ -29,9 +29,10 @@ const isTemperatureValue = (value: string): boolean => {
 };
 ```
 
-### What Gets Filtered:
+### What Gets Filtered
 
 The validation **automatically rejects** and **logs a warning** for values like:
+
 - ❌ 300 °C
 - ❌ 100 °C
 - ❌ 350 °C
@@ -40,9 +41,10 @@ The validation **automatically rejects** and **logs a warning** for values like:
 - ❌ 120 °F
 - ❌ Any value containing temperature units
 
-### What Gets Accepted:
+### What Gets Accepted
 
 Only actual material names pass validation:
+
 - ✅ PLA
 - ✅ ABS
 - ✅ PETG
@@ -56,7 +58,7 @@ Only actual material names pass validation:
 
 ## 🛡️ How It Works
 
-### When Creating/Editing a Printer:
+### When Creating/Editing a Printer
 
 1. Admin fills "Supported Materials" field in the form
 2. Form submits specifications to API
@@ -65,9 +67,9 @@ Only actual material names pass validation:
 5. Only valid material names are saved as `PrinterAttribute` records
 6. Invalid values are **rejected with console warning**
 
-### Console Warning Example:
+### Console Warning Example
 
-```
+```text
 ⚠️  Rejected temperature value "300 °C" from materials. Please use separate temperature specifications.
 ```
 
@@ -75,16 +77,16 @@ Only actual material names pass validation:
 
 ## 🎯 Prevention Strategy
 
-### Three Layers of Protection:
+### Three Layers of Protection
 
 1. **Frontend Form** ✅
    - Uses predefined `MATERIAL_OPTIONS` checkboxes
    - Limits selection to valid materials only
-   
+
 2. **API Validation** ✅ **NEW!**
    - Server-side validation filters temperature values
    - Prevents bad data from being saved
-   
+
 3. **API Response Filter** ✅ (Already existed)
    - Safety net in `app/api/printers/route.ts`
    - Filters temperature values from API responses
@@ -94,7 +96,7 @@ Only actual material names pass validation:
 ## 📊 Impact
 
 | Scenario | Before Fix | After Fix |
-|----------|-----------|-----------|
+| ---------- | ----------- | ----------- |
 | **Admin enters "300 °C"** | ❌ Saved as material | ✅ Rejected, warning logged |
 | **Admin enters "PLA"** | ✅ Saved correctly | ✅ Saved correctly |
 | **API returns materials** | ⚠️ May include temps | ✅ Always clean |
@@ -104,7 +106,7 @@ Only actual material names pass validation:
 
 ## ✅ Testing
 
-### Test Cases Covered:
+### Test Cases Covered
 
 1. **Create new printer with temperature in materials**
    - Expected: Temperature value rejected
@@ -127,7 +129,7 @@ Only actual material names pass validation:
 ## 🚀 Deployment Status
 
 | Component | Status | File |
-|-----------|--------|------|
+| ----------- | -------- | ------ |
 | **Create API Validation** | ✅ Deployed | `app/api/admin/printers/route.ts` |
 | **Update API Validation** | ✅ Deployed | `app/api/admin/printers/[id]/route.ts` |
 | **TypeScript Compilation** | ✅ Passing | 0 errors |
@@ -138,15 +140,18 @@ Only actual material names pass validation:
 
 ## 📝 Summary
 
-### Problem:
+### Problem
+
 Temperature values (300 °C, etc.) were appearing in Material filter because they were being saved with `attributeKey: "material"` instead of `attributeKey: "maxTemperature"`.
 
-### Solution:
+### Solution
+
 1. ✅ Fixed existing data (migration ran successfully - 30 records)
 2. ✅ Added API response filter (immediate fix)
 3. ✅ **Added admin API validation (prevents future occurrences)**
 
-### Result:
+### Result
+
 **Issue completely resolved** with three layers of protection. The problem cannot happen again when adding new printers through the admin panel.
 
 ---

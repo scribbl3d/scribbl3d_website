@@ -18,58 +18,11 @@ import {
 } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PdpImage } from "@/components/shared/PdpImage";
 import { getPdpImageUrl, getThumbnailUrl } from "@/lib/cloudinary-url";
-
-function Shimmer({ className = "" }: { className?: string }) {
-    return (
-        <div
-            className={`relative overflow-hidden rounded-lg ${className}`}
-            style={{
-                background:
-                    "linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%)",
-                backgroundSize: "200% 100%",
-                animation: "shimmer 1.5s infinite",
-            }}
-        />
-    );
-}
-
-function PDPSkeleton() {
-    return (
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-10 lg:py-14">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
-                <div className="flex flex-col gap-4">
-                    <Shimmer className="w-full aspect-square rounded-2xl" />
-                    <div className="flex gap-2.5 justify-center">
-                        {[...Array(4)].map((_, i) => (
-                            <Shimmer
-                                key={i}
-                                className="w-[72px] h-[72px] rounded-xl"
-                            />
-                        ))}
-                    </div>
-                </div>
-                <div className="flex flex-col gap-5">
-                    <Shimmer className="h-4 w-24" />
-                    <Shimmer className="h-10 w-3/4" />
-                    <Shimmer className="h-4 w-full" />
-                    <Shimmer className="h-4 w-2/3" />
-                    <div className="pt-4 flex flex-col gap-3">
-                        <Shimmer className="h-4 w-16" />
-                        <Shimmer className="h-6 w-48" />
-                        <Shimmer className="h-12 w-40" />
-                        <Shimmer className="h-4 w-32" />
-                    </div>
-                    <Shimmer className="h-44 w-full rounded-2xl" />
-                    <Shimmer className="h-14 w-full rounded-2xl" />
-                </div>
-            </div>
-        </div>
-    );
-}
 
 function ShieldCheckIcon() {
     return (
@@ -145,9 +98,8 @@ function buildWishlistItem(product: any): WishlistGridItem {
 }
 
 /* ── Similar Product Card ── */
-function SimilarProductCard({ product }: { product: any }) {
+function SimilarProductCard({ product }: Readonly<{ product: any }>) {
     const { data: session } = useSession();
-    const router = useRouter();
     const mainImage =
         product.images?.find((img: any) => img.isMain)?.url ||
         product.images?.[0]?.url;
@@ -223,23 +175,24 @@ function SimilarProductCard({ product }: { product: any }) {
                 ]),
         ).values() as IterableIterator<{ name: string; hex: string }>,
     );
-    const sizeString =
-        sizes.length > 0
-            ? sizes.slice(0, 2).join(", ") + (sizes.length > 2 ? " & more" : "")
-            : "One size";
+    const sizeSuffix = sizes.length > 2 ? " & more" : "";
+    const sizeString = sizes.length > 0
+        ? sizes.slice(0, 2).join(", ") + sizeSuffix
+        : "One size";
 
     const isOutOfStock = product.inStock === false;
 
     return (
         <>
             <div className="bg-white rounded-lg sm:rounded-[10px] border border-gray-200 overflow-hidden hover:shadow-lg transition flex flex-col h-full">
-                <div
-                    onClick={() =>
-                        product.slug &&
-                        router.push(`/prebuilt-products/${product.slug}`)
-                    }
-                    className="flex flex-col h-full cursor-pointer"
-                >
+                <div className="relative isolate flex flex-col h-full">
+                    {product.slug && (
+                        <Link
+                            href={`/prebuilt-products/${product.slug}`}
+                            aria-label={`View ${product.name}`}
+                            className="absolute inset-0 z-20 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"
+                        />
+                    )}
                     {/* IMAGE — square on all sizes */}
                     <div className="relative aspect-square w-full bg-white overflow-hidden">
                         {mainImage ? (
@@ -280,7 +233,9 @@ function SimilarProductCard({ product }: { product: any }) {
                                 handleToggleWishlist(e);
                             }}
                             disabled={isWishlistLoading}
-                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
+                            aria-label={`${isFavorite ? "Remove from" : "Add to"} wishlist: ${product.name}`}
+                            aria-pressed={isFavorite}
+                            className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 z-30 w-6 h-6 sm:w-10 sm:h-10 bg-white rounded-full shadow flex items-center justify-center"
                         >
                             {isWishlistLoading ? (
                                 <div className="w-3 h-3 sm:w-5 sm:h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
@@ -306,9 +261,9 @@ function SimilarProductCard({ product }: { product: any }) {
                         {/* Colour swatches */}
                         {uniqueColors.length > 0 && (
                             <div className="flex items-center gap-1 sm:gap-1.5 mt-1.5 sm:mt-2 flex-wrap">
-                                {uniqueColors.map((c, i) => (
+                                {uniqueColors.map((c) => (
                                     <span
-                                        key={i}
+                                        key={c.hex}
                                         title={c.name}
                                         className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-gray-300 flex-shrink-0"
                                         style={{ backgroundColor: c.hex }}
@@ -403,14 +358,16 @@ function SimilarProductCard({ product }: { product: any }) {
 function SimilarProductsCarousel({
     products,
     category,
-}: {
+}: Readonly<{
     products: any[];
     category: string;
-}) {
+}>) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const isHoveringRef = useRef(false);
-    const doubled = [...products, ...products];
+    const doubled = ["original", "repeat"].flatMap((copy) =>
+        products.map((product) => ({ product, key: `${copy}-${product.id}` })),
+    );
 
     const startAutoScroll = useCallback(() => {
         if (autoScrollRef.current) clearInterval(autoScrollRef.current);
@@ -489,12 +446,12 @@ function SimilarProductsCarousel({
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                     <style>{`div::-webkit-scrollbar{display:none}`}</style>
-                    {doubled.map((p: any, index: number) => (
+                    {doubled.map(({ product: similarProduct, key }) => (
                         <div
-                            key={`${p.id}-${index}`}
+                            key={key}
                             className="snap-start flex-shrink-0 w-[45%] sm:w-[48%] lg:w-[32%] xl:w-[24%]"
                         >
-                            <SimilarProductCard product={p} />
+                            <SimilarProductCard product={similarProduct} />
                         </div>
                     ))}
                 </div>
@@ -504,7 +461,7 @@ function SimilarProductsCarousel({
 }
 
 /* ── Main PDP ── */
-export default function PrebuiltProductDetailClient({ product }: { product: any }) {
+export default function PrebuiltProductDetailClient({ product }: Readonly<{ product: any }>) {
     const router = useRouter();
     const { data: session } = useSession();
     const { addToCart } = useCart();
@@ -856,7 +813,7 @@ export default function PrebuiltProductDetailClient({ product }: { product: any 
             <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
             {/* Header — sticky on mobile, static on desktop */}
-            <div className="bg-white border-b border-gray-200 sticky top-16 z-40 sm:static">
+            <div className="bg-white border-b border-gray-200 sticky top-[var(--site-header-height)] z-40 sm:static">
                 <div className="container mx-auto px-4 py-3.5 sm:py-5">
                     <button
                         onClick={() => router.push("/prebuilt-products")}
@@ -871,7 +828,7 @@ export default function PrebuiltProductDetailClient({ product }: { product: any 
             <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-12">
                     {/* LEFT — Images */}
-                    <div className="lg:self-start lg:sticky lg:top-28">
+                    <div className="lg:self-start lg:sticky lg:top-[calc(var(--site-header-height)+2rem)]">
                         <div
                             className="bg-white rounded-lg border border-gray-200 p-2 sm:p-4 mb-2 sm:mb-4"
                             onMouseEnter={() => setIsHovering(true)}

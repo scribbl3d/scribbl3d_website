@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 
 const staggerContainer = {
     hidden: {},
@@ -78,7 +77,7 @@ const sortMaterials = (materials: string[]): string[] => {
     });
 };
 
-export default function FilamentHero({ animate = true, activeMaterial, onMaterialSelect }: FilamentHeroProps) {
+export default function FilamentHero({ animate = true, activeMaterial, onMaterialSelect }: Readonly<FilamentHeroProps>) {
     const [hero, setHero] = useState<HeroData>(FALLBACK);
     const [materials, setMaterials] = useState<string[]>(FALLBACK_MATERIALS);
 
@@ -122,6 +121,12 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
     }, []);
 
     const hasText = hero.headline || hero.subtext;
+    const wordOccurrences = new Map<string, number>();
+    const headlineWords = hero.headline?.split(" ").map((word) => {
+        const occurrence = (wordOccurrences.get(word) ?? 0) + 1;
+        wordOccurrences.set(word, occurrence);
+        return { word, key: `${word}-${occurrence}` };
+    });
 
     return (
         <>
@@ -162,9 +167,9 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
                                     : {})}
                                 className="font-manrope text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 tracking-tighter"
                             >
-                                {hero.headline.split(" ").map((word, i) => (
+                                {headlineWords?.map(({ word, key }) => (
                                     <motion.span
-                                        key={i}
+                                        key={key}
                                         variants={wordVariant}
                                         className="inline-block mr-[0.25em]"
                                     >
@@ -194,7 +199,7 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
             </div>
 
             {/* Horizontal Material Scroller */}
-            <div className="w-full border-b border-gray-900 bg-black sticky top-[72px] z-40 overflow-hidden">
+            <div className="w-full border-b border-gray-900 bg-black sticky top-[var(--site-header-height)] z-40 overflow-hidden">
                 <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
                     <nav className="flex justify-center space-x-4 sm:space-x-6 lg:space-x-10 overflow-x-auto scrollbar-hide py-4">
                         {materials.map((material) => (

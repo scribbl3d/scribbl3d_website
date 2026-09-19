@@ -1602,7 +1602,7 @@ export default function ShoppingCart() {
 
                     {/* Desktop Order Summary */}
                     <div className="lg:col-span-4 hidden lg:block">
-                        <Card className="sticky top-4 rounded-2xl border border-gray-100 shadow-none">
+                        <Card className="sticky top-[calc(var(--site-header-height)+1rem)] rounded-2xl border border-gray-100 shadow-none">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-lg font-bold">
                                     Order Summary

@@ -1,204 +1,289 @@
-import PolicyLayout from "@/components/PolicyLayout";
+import type { Metadata } from "next";
+import Link from "next/link";
+import PolicyLayout, { type PolicySection } from "@/components/PolicyLayout";
+
+const description = "How SCRIBBL3D collects, uses, shares and protects personal information, and how to contact us about your privacy rights.";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description,
+  alternates: { canonical: "/privacy-policy" },
+  openGraph: {
+    title: "Privacy Policy | Scribbl3D",
+    description,
+    url: "/privacy-policy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Privacy Policy | Scribbl3D",
+    description,
+  },
+};
+
+function PrivacyContactDetails({ grievance = false }: { grievance?: boolean }) {
+  const details = [
+    ...(grievance ? [
+      { label: "Name", value: "Mr. Sparsh Jain" },
+      { label: "Designation", value: "Founder" },
+    ] : []),
+    { label: "Company", value: "SCRIBBL3D" },
+    { label: "Address", value: "Plot No. 685, Saini Mohalla, Nangloi, New Delhi – 110041" },
+    { label: "Email", value: <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> },
+    { label: "Phone", value: <a href="tel:+919599523434">+91 9599523434</a> },
+    ...(grievance
+      ? [{ label: "Availability", value: "Monday–Saturday, 9:00 AM–6:00 PM" }]
+      : [{ label: "Website", value: <a href="https://www.scribbl3d.com/">www.scribbl3d.com</a> }]),
+  ];
+
+  return (
+    <dl className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5 text-sm sm:p-6">
+      {details.map(({ label, value }) => (
+        <div key={label} className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
+          <dt className="font-medium text-slate-900">{label}</dt>
+          <dd className="min-w-0">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+const sections: PolicySection[] = [
+  {
+    id: "information-we-collect",
+    title: "Information We Collect",
+    content: <>
+      <p>We collect information that is necessary to provide and improve our Products and Services.</p>
+      <p>Depending on how you use the Website, this may include:</p>
+      <div className="space-y-4">
+        <h3 className="text-base font-semibold text-slate-900">Information you provide to us</h3>
+        <ul>
+          <li>Name</li>
+          <li>Email address</li>
+          <li>Phone number</li>
+          <li>Billing and shipping address</li>
+          <li>Account login information</li>
+          <li>Order and transaction details</li>
+          <li>Information provided when contacting customer support</li>
+          <li>Information provided for customised Products or Services</li>
+          <li>CAD files, STL files, images, drawings, specifications and other files submitted for custom manufacturing or prototyping</li>
+          <li>Any other information you voluntarily provide to us</li>
+        </ul>
+      </div>
+      <div className="space-y-4 pt-2">
+        <h3 className="text-base font-semibold text-slate-900">Payment information</h3>
+        <p>Payments may be processed through third-party payment providers. Where payment is processed by a third-party payment provider, SCRIBBL3D may receive transaction-related information necessary to confirm and manage the payment.</p>
+        <p><strong>We do not ask you to provide passwords, PINs, OTPs or other confidential payment credentials</strong> through email, phone or customer support.</p>
+      </div>
+      <div className="space-y-4 pt-2">
+        <h3 className="text-base font-semibold text-slate-900">Information collected automatically</h3>
+        <p>When you use our Website, certain technical information may be collected automatically, such as:</p>
+        <ul>
+          <li>IP address;</li>
+          <li>browser and device information;</li>
+          <li>operating system;</li>
+          <li>pages visited;</li>
+          <li>approximate usage information;</li>
+          <li>referring website; and</li>
+          <li>information collected through cookies and similar technologies.</li>
+        </ul>
+      </div>
+    </>,
+  },
+  {
+    id: "how-we-use-your-information",
+    title: "How We Use Your Information",
+    content: <>
+      <p>We may use your information to:</p>
+      <ul>
+        <li>create and manage your account;</li>
+        <li>process and fulfil orders;</li>
+        <li>provide Products and Services;</li>
+        <li>process payments;</li>
+        <li>arrange delivery;</li>
+        <li>provide customer support;</li>
+        <li>process returns, replacements and refunds;</li>
+        <li>provide warranty and after-sales support;</li>
+        <li>provide customised manufacturing and prototyping services;</li>
+        <li>process Customer Materials such as CAD and STL files;</li>
+        <li>communicate with you regarding your orders and account;</li>
+        <li>improve our Website, Products and Services;</li>
+        <li>detect and prevent fraud, abuse and security issues;</li>
+        <li>comply with applicable legal obligations;</li>
+        <li>send promotional or marketing communications where permitted; and</li>
+        <li>perform other purposes communicated to you at the time information is collected.</li>
+      </ul>
+      <p>Where applicable, you may <strong>opt out of promotional communications</strong>.</p>
+    </>,
+  },
+  {
+    id: "cookies-and-similar-technologies",
+    title: "Cookies and Similar Technologies",
+    content: <>
+      <p>We may use cookies and similar technologies to:</p>
+      <ul>
+        <li>keep you signed in;</li>
+        <li>maintain your shopping experience;</li>
+        <li>understand how the Website is used;</li>
+        <li>remember preferences;</li>
+        <li>improve Website performance; and</li>
+        <li>support analytics and marketing activities where applicable.</li>
+      </ul>
+      <p>You may be able to <strong>control cookies through your browser settings</strong>. Disabling certain cookies may affect some Website functionality.</p>
+    </>,
+  },
+  {
+    id: "how-we-share-your-information",
+    title: "How We Share Your Information",
+    content: <>
+      <p>We may share information with trusted third parties where reasonably necessary to operate our business and provide our Products and Services.</p>
+      <p>These may include:</p>
+      <ul>
+        <li>payment processors;</li>
+        <li>courier and logistics partners;</li>
+        <li>technology and hosting providers;</li>
+        <li>website analytics and infrastructure providers;</li>
+        <li>customer-support providers;</li>
+        <li>manufacturing or service partners where necessary to fulfil an order;</li>
+        <li>professional advisers; and</li>
+        <li>government, regulatory or law-enforcement authorities where required or permitted by law.</li>
+      </ul>
+      <p><strong>We do not sell your personal information</strong> to third parties for their independent commercial use.</p>
+      <p>Where third-party service providers process information on our behalf, we expect them to handle that information appropriately and in accordance with applicable requirements.</p>
+    </>,
+  },
+  {
+    id: "customer-submitted-files-and-custom-manufacturing",
+    title: "Customer-Submitted Files and Custom Manufacturing",
+    content: <>
+      <p>If you submit CAD files, STL files, images, designs, drawings or other materials for custom manufacturing or prototyping, we may access, store and process those materials to provide the requested Service.</p>
+      <p>We will use such materials primarily for purposes connected with your order or Service, including:</p>
+      <ul>
+        <li>file preparation;</li>
+        <li>manufacturing;</li>
+        <li>quality control;</li>
+        <li>customer support;</li>
+        <li>reprints or replacements; and</li>
+        <li>related technical processing.</li>
+      </ul>
+      <p>Intellectual-property ownership of Customer Materials is governed by our <Link href="/terms-conditions">Terms & Conditions</Link>.</p>
+      <p>Where required to fulfil your order, Customer Materials may be accessed by relevant employees, contractors, manufacturing partners or service providers.</p>
+    </>,
+  },
+  {
+    id: "data-security",
+    title: "Data Security",
+    content: <>
+      <p>We use reasonable technical and organisational measures designed to protect personal information against unauthorised access, loss, misuse, alteration or disclosure.</p>
+      <p>However, no method of transmitting or storing information over the internet can be guaranteed to be completely secure.</p>
+      <p>You are responsible for <strong>maintaining the confidentiality of your account credentials</strong> and should notify us if you believe your account has been compromised.</p>
+    </>,
+  },
+  {
+    id: "data-retention",
+    title: "Data Retention",
+    content: <>
+      <p>We retain personal information for <strong>as long as reasonably necessary</strong> to:</p>
+      <ul>
+        <li>provide our Products and Services;</li>
+        <li>maintain your account;</li>
+        <li>fulfil contractual and business obligations;</li>
+        <li>resolve disputes;</li>
+        <li>maintain transaction and accounting records;</li>
+        <li>prevent fraud and abuse; and</li>
+        <li>comply with applicable legal requirements.</li>
+      </ul>
+      <p>When information is no longer required, we may delete, anonymise or securely dispose of it in accordance with our practices and applicable law.</p>
+      <p>Certain information may need to be retained for longer periods where required by law or necessary to establish, exercise or defend legal claims.</p>
+    </>,
+  },
+  {
+    id: "your-rights-and-requests",
+    title: "Your Rights and Requests",
+    content: <>
+      <p>Subject to applicable law, you may request to:</p>
+      <ul>
+        <li>access personal information we hold about you;</li>
+        <li>correct or update inaccurate information;</li>
+        <li>request deletion of personal information where applicable;</li>
+        <li>withdraw consent where processing is based on consent; and</li>
+        <li>exercise other rights available to you under applicable law.</li>
+      </ul>
+      <p>To make a request, contact us using the details provided below.</p>
+      <p>We may need to <strong>verify your identity</strong> before processing certain requests.</p>
+      <p>Please note that some information may need to be retained where required by law or where there is a legitimate reason to do so.</p>
+    </>,
+  },
+  {
+    id: "marketing-communications",
+    title: "Marketing Communications",
+    content: <>
+      <p>We may send you information about Products, Services, offers and other updates where permitted by applicable law.</p>
+      <p>You may opt out of promotional communications by:</p>
+      <ul>
+        <li>using the <strong>unsubscribe option</strong> provided in the communication; or</li>
+        <li>contacting us at <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a>.</li>
+      </ul>
+      <p>Transactional and service-related communications, such as order confirmations, shipping updates and important account notifications, may continue where necessary.</p>
+    </>,
+  },
+  {
+    id: "third-party-websites",
+    title: "Third-Party Websites",
+    content: <>
+      <p>Our Website may contain links to third-party websites or services.</p>
+      <p>This Privacy Policy does not apply to third-party websites. Their collection and use of information is governed by their respective privacy policies.</p>
+      <p>We recommend reviewing the privacy policy of any third-party service before providing personal information.</p>
+    </>,
+  },
+  {
+    id: "childrens-information",
+    title: "Children’s Information",
+    content: <>
+      <p>Our Website is intended for use by individuals who are legally capable of entering into applicable transactions.</p>
+      <p>We do not knowingly collect personal information from children in circumstances where such collection is prohibited by applicable law.</p>
+      <p>If you believe that a child has provided personal information to us inappropriately, please contact us using the details below.</p>
+    </>,
+  },
+  {
+    id: "changes-to-this-privacy-policy",
+    title: "Changes to This Privacy Policy",
+    content: <>
+      <p>We may update this Privacy Policy from time to time to reflect changes in our business, technology, legal requirements or information practices.</p>
+      <p>The updated version will be published on the Website together with the revised “Last Updated” date.</p>
+      <p>Where required by applicable law, we will provide additional notice of material changes.</p>
+    </>,
+  },
+  {
+    id: "grievance-officer",
+    title: "Grievance Officer",
+    content: <>
+      <p>For privacy-related concerns, requests or grievances, you may contact:</p>
+      <PrivacyContactDetails grievance />
+    </>,
+  },
+  {
+    id: "contact-us",
+    title: "Contact Us",
+    content: <>
+      <p>For questions regarding this Privacy Policy or our handling of personal information:</p>
+      <PrivacyContactDetails />
+    </>,
+  },
+];
 
 export default function PrivacyPolicy() {
   return (
-    <PolicyLayout title="Privacy Policy" lastUpdated="January 9, 2025">
-      <section className="space-y-6">
-        <h2 className="text-2xl font-semibold">Introduction</h2>
-        <p>
-          This Privacy Policy describes how SCRIBBL3D and its affiliates
-          (collectively &quot;SCRIBBL3D, we, our, us&quot;) collect, use, share,
-          protect or otherwise process your information/ personal data through
-          our website www.scribbl3d.com (hereinafter referred to as Platform).
-          Please note that you may be able to browse certain sections of the
-          Platform without registering with us. We do not offer any
-          product/service under this Platform outside India and your personal
-          data will primarily be stored and processed in India. By visiting this
-          Platform, providing your information or availing any product/service
-          offered on the Platform, you expressly agree to be bound by the terms
-          and conditions of this Privacy Policy, the Terms of Use and the
-          applicable service/product terms and conditions, and agree to be
-          governed by the laws of India including but not limited to the laws
-          applicable to data protection and privacy. If you do not agree please
-          do not use or access our Platform.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Collection</h2>
-        <p>
-          We collect your personal data when you use our Platform, services or
-          otherwise interact with us during the course of our relationship and
-          related information provided from time to time. Some of the
-          information that we may collect includes but is not limited to
-          personal data / information provided to us during sign-up/registering
-          or using our Platform such as name, date of birth, address,
-          telephone/mobile number, email ID and/or any such information shared
-          as proof of identity or address. Some of the sensitive personal data
-          may be collected with your consent, such as your bank account or
-          credit or debit card or other payment instrument information or
-          biometric information such as your facial features or physiological
-          information (in order to enable use of certain features when opted
-          for, available on the Platform) etc all of the above being in
-          accordance with applicable law(s) You always have the option to not
-          provide information, by choosing not to use a particular service or
-          feature on the Platform. We may track your behaviour, preferences, and
-          other information that you choose to provide on our Platform.
-        </p>
-        <p>
-          This information is compiled and analysed on an aggregated basis. We
-          will also collect your information related to your transactions on
-          Platform and such third-party business partner platforms. When such a
-          third-party business partner collects your personal data directly from
-          you, you will be governed by their privacy policies. We shall not be
-          responsible for the third-party business partner&apos;s privacy
-          practices or the content of their privacy policies, and we request you
-          to read their privacy policies prior to disclosing any information. If
-          you receive an email, a call from a person/association claiming to be
-          SCRIBBL3D seeking any personal data like debit/credit card PIN,
-          net-banking or mobile banking password, we request you to never
-          provide such information. If you have already revealed such
-          information, report it immediately to an appropriate law enforcement
-          agency.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Usage</h2>
-        <p>
-          We use personal data to provide the services you request. To the
-          extent we use your personal data to market to you, we will provide you
-          the ability to opt-out of such uses. We use your personal data to
-          assist sellers and business partners in handling and fulfilling
-          orders; enhancing customer experience; to resolve disputes;
-          troubleshoot problems; inform you about online and offline offers,
-          products, services, and updates; customise your experience; detect and
-          protect us against error, fraud and other criminal activity; enforce
-          our terms and conditions; conduct marketing research, analysis and
-          surveys; and as otherwise described to you at the time of collection
-          of information. You understand that your access to these
-          products/services may be affected in the event permission is not
-          provided to us.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Sharing</h2>
-        <p>
-          We may share your personal data internally within our group entities,
-          our other corporate entities, and affiliates to provide you access to
-          the services and products offered by them. These entities and
-          affiliates may market to you as a result of such sharing unless you
-          explicitly opt-out. We may disclose personal data to third parties
-          such as sellers, business partners, third party service providers
-          including logistics partners, prepaid payment instrument issuers,
-          third-party reward programs and other payment opted by you. These
-          disclosure may be required for us to provide you access to our
-          services and products offered to you, to comply with our legal
-          obligations, to enforce our user agreement, to facilitate our
-          marketing and advertising activities, to prevent, detect, mitigate,
-          and investigate fraudulent or illegal activities related to our
-          services. We may disclose personal and sensitive personal data to
-          government agencies or other authorised law enforcement agencies if
-          required to do so by law or in the good faith belief that such
-          disclosure is reasonably necessary to respond to subpoenas, court
-          orders, or other legal process. We may disclose personal data to law
-          enforcement offices, third party rights owners, or others in the good
-          faith belief that such disclosure is reasonably necessary to: enforce
-          our Terms of Use or Privacy Policy; respond to claims that an
-          advertisement, posting or other content violates the rights of a third
-          party; or protect the rights, property or personal safety of our users
-          or the general public.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Security Precautions</h2>
-        <p>
-          To protect your personal data from unauthorised access or disclosure,
-          loss or misuse we adopt reasonable security practices and procedures.
-          Once your information is in our possession or whenever you access your
-          account information, we adhere to our security guidelines to protect
-          it against unauthorised access and offer the use of a secure server.
-          However, the transmission of information is not completely secure for
-          reasons beyond our control. By using the Platform, the users accept
-          the security implications of data transmission over the internet and
-          the World Wide Web which cannot always be guaranteed as completely
-          secure, and therefore, there would always remain certain inherent
-          risks regarding use of the Platform. Users are responsible for
-          ensuring the protection of login and password records for their
-          account.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Data Deletion and Retention</h2>
-        <p>
-          You have an option to delete your account by visiting your profile and
-          settings on our Platform , this action would result in you losing all
-          information related to your account. You may also write to us at the
-          contact information provided below to assist you with these requests.
-          We may in event of any pending grievance, claims, pending shipments or
-          any other services we may refuse or delay deletion of the account.
-          Once the account is deleted, you will lose access to the account. We
-          retain your personal data information for a period no longer than is
-          required for the purpose for which it was collected or as required
-          under any applicable law. However, we may retain data related to you
-          if we believe it may be necessary to prevent fraud or future abuse or
-          for other legitimate purposes. We may continue to retain your data in
-          anonymised form for analytical and research purposes.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Your Rights</h2>
-        <p>
-          You may access, rectify, and update your personal data directly
-          through the functionalities provided on the Platform.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Consent</h2>
-        <p>
-          By visiting our Platform or by providing your information, you consent
-          to the collection, use, storage, disclosure and otherwise processing
-          of your information on the Platform in accordance with this Privacy
-          Policy. If you disclose to us any personal data relating to other
-          people, you represent that you have the authority to do so and permit
-          us to use the information in accordance with this Privacy Policy. You,
-          while providing your personal data over the Platform or any partner
-          platforms or establishments, consent to us (including our other
-          corporate entities, affiliates, lending partners, technology partners,
-          marketing channels, business partners and other third parties) to
-          contact you through SMS, instant messaging apps, call and/or e-mail
-          for the purposes specified in this Privacy Policy. You have an option
-          to withdraw your consent that you have already provided by writing to
-          the Grievance Officer at the contact information provided below.
-          Please mention &quot;Withdrawal of consent for processing personal
-          data&quot; in your subject line of your communication. We may verify
-          such requests before acting on our request. However, please note that
-          your withdrawal of consent will not be retrospective and will be in
-          accordance with the Terms of Use, this Privacy Policy, and applicable
-          laws. In the event you withdraw consent given to us under this Privacy
-          Policy, we reserve the right to restrict or deny the provision of our
-          services for which we consider such information to be necessary.
-        </p>
-
-        <h2 className="text-2xl font-semibold">
-          Changes to this Privacy Policy
-        </h2>
-        <p>
-          Please check our Privacy Policy periodically for changes. We may
-          update this Privacy Policy to reflect changes to our information
-          practices. We may alert / notify you about the significant changes to
-          the Privacy Policy, in the manner as may be required under applicable
-          laws.
-        </p>
-
-        <h2 className="text-2xl font-semibold">Grievance Officer</h2>
-        <p>
-          Name: Mr. Sparsh Jain
-          <br />
-          Designation: Founder
-          <br />
-          Name and Address of the Company: SCRIBBL3D, Plot no. 685, Saini
-          Mohalla, Nangloi - 110041
-        </p>
-
-        <h2 className="text-2xl font-semibold">Contact us</h2>
-        <p>
-          Phone: +91 9599523434
-          <br />
-          Time: Monday - Saturday (9:00 - 18:00)
-        </p>
-      </section>
+    <PolicyLayout
+      title="Privacy Policy"
+      description={description}
+      effectiveDate="19 September 2026"
+      lastUpdated="19 September 2026"
+      dateTime="2026-09-19"
+      sections={sections}
+    >
+      <p>This Privacy Policy explains how SCRIBBL3D, operating under the brand name SCRIBBL3D (“SCRIBBL3D”, “we”, “us”, or “our”), collects, uses, stores and protects personal information when you use <a href="https://www.scribbl3d.com/">www.scribbl3d.com</a> (“Website”) or interact with our Products and Services.</p>
+      <p>By using the Website or providing your information to us, you acknowledge that you have read and understood this Privacy Policy.</p>
     </PolicyLayout>
   );
 }

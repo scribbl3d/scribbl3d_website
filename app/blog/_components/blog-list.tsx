@@ -452,7 +452,7 @@ export default function BlogList() {
             <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 px-4 sm:px-6 md:px-12 pt-8 sm:pt-12 pb-16 sm:pb-20">
                 {/* ── SIDEBAR (desktop only) ── */}
                 <aside className="hidden lg:block lg:w-[260px] flex-shrink-0">
-                    <div className="sticky top-28 space-y-6">
+                    <div className="sticky top-[calc(var(--site-header-height)+2rem)] space-y-6">
                         <div
                             style={{
                                 background: "#fff",

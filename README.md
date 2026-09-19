@@ -1,410 +1,186 @@
-# Scribbl3D  Platform
+# Scribbl3D
 
-A modern, full-stack e-commerce platform specializing in 3D printing products including printers, resins, filaments, and prebuilt products. Built with Next.js 15, TypeScript, Prisma, and PostgreSQL.
+Scribbl3D is an India-focused e-commerce and services platform for 3D printing. It combines a storefront for printers, filaments, resins, and prebuilt/customizable products with service-enquiry forms and an operations dashboard.
 
-## ✨ Features
+This repository contains a single Next.js application: storefront, admin UI, server-rendered pages, API routes, and server actions. For detailed architecture, development constraints, and agent instructions, see [AGENTS.md](AGENTS.md).
 
-###  Core
-- **Product Categories**: 3D Printers, Resins, Filaments, Prebuilt Products
-- **Advanced Filtering**: Filter by technology, brand, build volume, price, resolution
-- **Product Variants**: Support for colors, sizes, weights with different pricing
-- **Shopping Cart**: Persistent cart with customization options
-- **Wishlist**: Save products for later
-- **Reviews & Ratings**: Customer reviews with aggregate ratings
-- **Stock Management**: Real-time stock tracking and notifications
+## Features
 
-### User Management
-- **Authentication**: Email/password and Google OAuth via NextAuth.js
-- **OTP Verification**: Secure email verification system
-- **User Profiles**: Manage addresses, orders, and account details
-- **Order History**: Complete order tracking and management
+- Catalogue browsing, filters, product details, colour/size/weight variants, wishlist, reviews, and stock-notification requests.
+- Customer registration, email/password and Google sign-in, OTP flows, password reset, profiles, addresses, and order history.
+- Persistent customer carts, customization, buy-now checkout, discount eligibility, and PhonePe payments.
+- Order management, invoices, credit notes, refunds, and Delhivery shipment creation, labels, tracking synchronization, and pickups, including multi-package shipments.
+- Design, prototyping, small-batch manufacturing, and personalization enquiries with file uploads.
+- Managed homepage sections, hero media, testimonials, partners, announcements, about-page content, and TipTap blog editing.
+- Operations dashboard at `/ops/control`, with its own login at `/ops/control/login`.
+- Page metadata, structured data, sitemap, Google Merchant feed, and legal/policy pages.
 
-### Payment & Checkout
-- **Gateways**: PhonePe 
-- **Discount System**: Cart-wide and item-specific discounts
-- **First-time User Discounts**: Special promotional codes
-- **Invoice Generation**: Automated PDF invoices
-- **Credit Notes**: Handle refunds and adjustments
+These describe implemented areas, not a guarantee of complete test coverage or production readiness. Review the payment and authorization caveats before deployment.
 
-### Shipping & Logistics
-- **Delhivery Integration**: Automated shipment creation and tracking
-- **Multi-Package Support**: Handle MPS (Multiple Piece Shipment)
-- **Pickup Scheduling**: Automated pickup request system
-- **Real-time Tracking**: Order tracking with webhooks
+## Technology
 
-### Content Management
-- **Blog System**: Rich text editor with TipTap
-- **Hero Banners**: Dynamic homepage carousels
-- **Customer Testimonials**: Showcase customer feedback
-- **About Page**: Dynamic content management
-- **SEO Optimization**: Meta tags, structured data
+| Area | Stack |
+| --- | --- |
+| Runtime and framework | Node.js 20 (`.nvmrc`), Next.js 15 App Router, React 18, TypeScript 5 |
+| Database | PostgreSQL, Prisma 6 |
+| UI | Tailwind CSS 3, shadcn/Radix UI, existing styled-components and animation libraries |
+| Forms and content | React Hook Form, Zod, TipTap |
+| Customer authentication | NextAuth v4, credentials and Google OAuth, custom Prisma adapter, JWT sessions |
+| Checkout and logistics | PhonePe, Delhivery |
+| Media and email | Cloudinary; shared transactional email sender currently uses ZeptoMail |
+| Testing | Jest, jsdom, React Testing Library, jest-dom |
 
-### Admin Features
-- **Product Management**: CRUD operations for all product types
-- **Order Management**: Process orders, refunds, and shipments
-- **Discount Management**: Create and manage promotional codes
-- **Analytics**: Order feedback and customer insights
+Other provider/cache packages remain installed. Their presence in `package.json` does not mean they are active in every flow. Follow the imports of the feature being changed.
 
-## 🛠 Tech Stack
-
-### Frontend
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS, Styled Components
-- **UI Components**: Radix UI, shadcn/ui
-- **Animations**: Framer Motion, GSAP, Lottie
-- **Forms**: React Hook Form with Zod validation
-- **Rich Text**: TipTap editor
-
-### Backend
-- **Runtime**: Node.js
-- **API**: Next.js API Routes
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: NextAuth.js v4
-- **Caching**: Redis (ioredis), Node-Cache
-- **File Upload**: Cloudinary
-
-### Payment & Shipping
-- **Payment**: PhonePe, Razorpay
-- **Shipping**: Delhivery API
-- **Email**: AWS SES, SendGrid, Resend, ZeptoMail
-
-### Testing & Quality
-- **Testing**: Jest, React Testing Library
-- **Linting**: ESLint
-- **Type Safety**: TypeScript strict mode
-
-
-## 🚀 Getting Started
+## Local development
 
 ### Prerequisites
 
-- **Node.js**: v18+ or v20+ (recommended)
-- **PostgreSQL**: v14+ (local or hosted)
-- **npm** or **yarn** or **pnpm**
+- Node.js 20 and npm. Use the existing `package-lock.json`; do not introduce another package-manager lockfile.
+- An authorized development PostgreSQL database compatible with `prisma/schema.prisma`.
+- Development credentials for the integrations you need to exercise. Obtain these from the project maintainer, not from backups or production configuration.
 
-### Installation
+### Setup
 
-1. **Clone the repository**
+1. Open the repository root. If using nvm, run `nvm use` to select the version in `.nvmrc`.
+2. If `.env` does not already exist, copy `.env.example` to `.env` and configure it. Do not overwrite existing credentials. The template is incomplete; consult the environment table below and each integration's source.
+3. Install the locked dependencies:
+
    ```bash
-   git clone <repository-url>
-   cd my-scribbl3d-project
+   npm ci
    ```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
+   The `postinstall` hook runs `prisma generate`. Preserve existing npm configuration; if installation fails, report the actual error rather than bypassing dependency or security controls.
+4. Confirm that `DATABASE_URL` targets the intended development database and that its schema is ready. Ask the maintainer for the appropriate database provisioning/migration procedure; do not reset, push, seed, or restore a database blindly.
+5. Start the application:
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` with your credentials (see [Environment Variables](#environment-variables))
-
-4. **Set up the database**
-   ```bash
-   # Generate Prisma Client
-   npx prisma generate
-   
-   # Run migrations
-   npx prisma migrate deploy
-   
-   # Seed the database (optional)
-   npm run seed
-   ```
-
-5. **Start the development server**
    ```bash
    npm run dev
    ```
-   
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## 🔐 Environment Variables
+   Open [http://localhost:3000](http://localhost:3000). Database-backed pages require a working database connection.
 
-Create a `.env` file in the root directory and get details from founder.
+Prisma client generation is not a database migration. After an approved schema change, regenerate the client with `npx prisma generate`. Existing migrations and seed scripts may not fully represent the current schema; inspect them before use.
 
+### Environment variables
 
-> **Security Note**: Never commit `.env` to version control.
+Keep credentials in local/deployment secret configuration, never in documentation or source control. Only browser-safe values belong in `NEXT_PUBLIC_*` variables.
 
-## 🗄 Database Setup
+| Purpose | Variables and notes |
+| --- | --- |
+| Database | `DATABASE_URL` |
+| Customer auth | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| SEO base URL | `NEXT_PUBLIC_BASE_URL`, consumed by `lib/metadata.ts` |
+| Payment redirects/callbacks | `NEXT_PUBLIC_APP_URL`; distinct from the SEO base URL |
+| PhonePe | `PHONEPE_MERCHANT_ID`, `PHONEPE_SALT_KEY`, `PHONEPE_SALT_INDEX`, `PHONEPE_ENV`; see the environment mismatch warning in the [payment guide](docs/PHONEPE_INTEGRATION.md#configuration-and-environment-selection) |
+| Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
+| Delhivery shipment client | `DELHIVERY_TOKEN`; the template's `DELHIVERY_API_KEY` is not a substitute for this client's variable |
+| Shared transactional email | `ZEPTOMAIL_API_TOKEN` or `ZEPTOMAIL_API_KEY`, `ZEPTOMAIL_FROM_EMAIL`, optional `ZEPTOMAIL_FROM_NAME` |
+| Admin access | Separate from customer NextAuth; inspect `app/api/admin/login/route.ts`, `lib/auth.ts`, and `lib/session.ts` with the maintainer |
 
-### Schema Overview
+This is a map of the main consumers, not a complete deployment manifest. Additional upload, email, shipping, and maintenance handlers can have their own configuration. Do not assume setting an environment flag makes every integration use a sandbox.
 
-The database includes comprehensive models for:
-- **Users**: Authentication, profiles, addresses
-- **Products**: Products, Printers, Resins, Prebuilt items with variants
-- **Cart & Wishlist**: Shopping cart and saved items
-- **Orders**: Order management, shipments, invoices, credit notes
-- **Payments**: Payment tracking with multiple gateways
-- **Reviews**: Customer reviews and ratings
-- **CMS**: Blogs, hero banners, testimonials, partners
-- **Discounts**: Promotional codes and usage tracking
-- **Shipping**: Shipment tracking, pickup requests
+## Project structure
 
-### Migrations
+| Location | Responsibility |
+| --- | --- |
+| `app/layout.tsx`, `app/providers.tsx` | Root shell, session, fonts, shared navbar/footer, cart/checkout providers, toasts, analytics |
+| `app/page.tsx`, `app/landingpage/` | Database-backed homepage and presentation components |
+| `app/filament/`, `app/printers/`, `app/resins/`, `app/prebuilt-products/` | Catalogue pages; public filament path is singular |
+| `app/cart/`, `app/checkout/`, `providers/` | Cart, discounts, checkout state, shipping selection, payment initiation |
+| `app/profile/`, `app/payment/`, `app/order/` | Customer account, payment status, and order tracking |
+| `app/services/`, `app/personalise/` | Service and custom-product enquiries |
+| `app/blog/`, `app/about/`, `app/contact/` | Content and contact pages |
+| `app/(policies)/` | Privacy, terms, returns, refunds, and shipping; route-group name is not part of the URL |
+| `app/ops/control/` | Main operations dashboard; `app/admin/` is not the main dashboard |
+| `app/api/`, `app/actions/`, `app/actions.ts` | Backend route handlers and server actions |
+| `components/`, `hooks/`, `types/`, `utils/` | Shared UI, hooks, contracts, and utilities |
+| `lib/` | Prisma access, validation, pricing helpers, integrations, email, and invoices |
+| `prisma/` | Current schema, migrations, and seed sources |
+| `public/`, `app/fonts/`, `styles/` | Static assets, fonts, and supporting styles |
+| `__tests__/` and colocated `__tests__/` directories | Automated tests |
+| `scripts/`, `script/`, root maintenance scripts | Data/asset maintenance; inspect before executing |
 
-```bash
+The `@/` import alias resolves to the repository root. Server Components are the default; browser interaction and context consumers use Client Components.
 
+### Data and state
 
-# Apply migrations
-npx prisma db push
+- Catalogue families are separate Prisma models: `Filament`/`FilamentVariant`, `Printer`, `Resin`/`ResinColour`/`ResinWeight`, and `PrebuiltProducts`/`PrebuiltVariants`. There is no current generic Prisma `Product` model.
+- `CartProvider` manages customer cart and discount state. `CheckoutProvider` depends on it and manages checkout steps, addresses, pricing, and shipping selection.
+- Customer NextAuth configuration is in `app/api/auth/[...nextauth]/options.ts` and uses JWT sessions. A Prisma `Session` model does not imply that database-session mode is active.
+- Middleware implements redirects and a separate admin-cookie gate. It does not replace server-side authorization and ownership checks in sensitive APIs.
+- Orders store item/address snapshots as JSON. Preserve historical order data when changing catalogue or pricing structures.
+- Currency and shipping units need explicit tracing across consumers; do not assume every stored price is paise or every weight is kilograms. See [AGENTS.md](AGENTS.md) for known inconsistencies.
 
-# Reset database (development only)
-npx prisma migrate reset
-```
+### Payment and fulfilment
 
+The checkout component creates an order through `POST /api/create-order`, then initiates PhonePe through `POST /api/order`. The browser returns to `/payment/status`, which polls `GET /api/check-status/[transactionId]`; PhonePe also sends callbacks to `POST /api/phonepe-callback`.
 
-### Prisma Studio
+Callbacks and polling update order state through different paths. Fulfilment uses operations/internal routes and Delhivery helpers; do not assume a successful payment automatically creates a shipment. Read [PhonePe integration](docs/PHONEPE_INTEGRATION.md) before changing initiation, retries, callbacks, or status reconciliation.
 
-Explore and edit your database visually:
-```bash
-npx prisma studio
-```
+## Commands and verification
 
-## 💻 Development
+Run commands from the repository root.
 
-### Running the App
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Regenerate Prisma client and run `next build` |
+| `npm start` | Serve an existing production build |
+| `npm run lint` | Run the existing `next lint` script |
+| `npx tsc --noEmit --incremental false` | Type checking without rewriting the incremental cache |
+| `npm run test:ci -- --runInBand` | Run Jest once, non-interactively |
+| `npm test` | Jest watch mode |
+| `npm run test:coverage -- --runInBand` | Generate coverage |
+| `npx prisma generate` | Regenerate Prisma client without applying schema changes |
+| `npm run seed` | Run `prisma/seed.ts`; maintenance operation requiring review and an approved target database |
 
-```bash
-# Development mode with hot reload
-npm run dev
-
-# Production build
-npm run build
-
-# Start production server
-npm start
-```
-
-### Code Quality
-
-```bash
-# Run linter
-npm run lint
-
-# Run tests
-npm run test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run tests in CI mode
-npm run test:ci
-```
-
-### Database Operations
-
-```bash
-# Generate Prisma Client after schema changes
-npx prisma generate
-
-# View database in browser
-npx prisma studio
-
-# Create and apply migration
-npx prisma db push
-
-# Format schema file
-npx prisma format
-```
-
-## 🧪 Testing
-
-The project uses Jest and React Testing Library for testing.
-
-
-### Running Tests
+Run a focused regression test with:
 
 ```bash
-# Watch mode (development)
-npm run test
-
-# Single run
-npm run test:ci
-
-# With coverage report
-npm run test:coverage
+npm run test:ci -- --runInBand --runTestsByPath lib/__tests__/cart-utils.test.ts
 ```
 
-### Writing Tests
+Policy-page regression tests:
 
-```typescript
-// Example test
-import { calculateRatings } from '@/utils/calculate-ratings';
-
-describe('calculateRatings', () => {
-  it('should calculate average rating correctly', () => {
-    const reviews = [
-      { rating: 5 },
-      { rating: 4 },
-      { rating: 3 }
-    ];
-    expect(calculateRatings(reviews).average).toBe(4);
-  });
-});
+```bash
+npm run test:ci -- --runInBand --runTestsByPath __tests__/terms-conditions.test.tsx
 ```
 
-## 🔌 Key Integrations
+Testing is configured in `jest.config.js` and `jest.setup.js`. Existing tests cover selected utilities, UI components, hooks, cart/discount interactions, and policy pages. The cart integration test uses utility functions; it is not an end-to-end database/payment test. Mock external services and do not send live emails, create shipments, or initiate payments as a test shortcut.
 
-### Delhivery Shipping
-- **Location**: `lib/delhivery/`
-- **Features**: Shipment creation, label generation, tracking, pickup scheduling
-- **Docs**: Delhivery API documentation
+Builds can require environment variables, database access, and network access for Google fonts. `next.config.mjs` skips lint during builds, so a build is not a substitute for lint. The lint script uses legacy ESLint configuration; report tooling failures rather than disabling checks. Record current verification results instead of relying on historical test counts or production-readiness claims.
 
-### PhonePe Payment
-- **Location**: `app/api/phonepe-callback/`, `app/checkout/components/PhonePePayment.tsx`
-- **Features**: Payment initiation, callback handling, status verification
-- **Docs**: See `docs/PHONEPE_INTEGRATION.md`
+## UI, content, and SEO
 
-### Cloudinary
-- **Location**: `lib/cloudinary.ts`
-- **Features**: Image upload, optimization, transformation
-- **Usage**: Product images, user uploads, blog images
+- Reuse shared UI primitives, existing fonts/theme tokens, and the site shell. `app/providers.tsx` already renders the navbar and footer.
+- Keep homepage and blog content connected to the CMS. Preserve publication state, visibility, sort order, and slugs.
+- Keep policy wording tied to user-approved copy; do not invent legal or shipping terms. The detailed policy layout rules are in [AGENTS.md](AGENTS.md#policy-pages).
+- Preserve printer material validation: material attributes come from the `Supported Materials` specification, not temperature specifications.
+- For cart changes, test price updates after admin edits and handling of missing, deleted, or out-of-stock variants. A zero-price fallback must not make an unavailable item purchasable.
 
-### Email Services
-- **Location**: `lib/email/`
-- **Provider**:  ZeptoMail
-- **Templates**: Order confirmation, shipping updates, OTP verification
+### Metadata and social images
 
-## 🌐 API Routes
+Shared defaults and metadata helpers live in `lib/metadata.ts`; `app/layout.tsx` applies the defaults. Read nearby server pages before adding `metadata` or `generateMetadata`, and use Next.js 15 asynchronous route-parameter types for dynamic pages.
 
-### Public APIs
-- `GET /api/products` - Fetch products with filters
-- `GET /api/printers` - Fetch printers
-- `GET /api/resins` - Fetch resins
-- `POST /api/auth/[...nextauth]` - Authentication
+- Use page-specific titles, descriptions, and canonicals. Account for the shared title template to avoid repeating the brand name.
+- Derive public URLs consistently from the configured metadata base; do not copy hardcoded hosts or placeholder route names into new pages.
+- Keep Open Graph and Twitter titles, descriptions, URLs, and images aligned with the page. Use article metadata for published blog content and verified product data for catalogue metadata.
+- `public/og-image.png` is the shared default image referenced by metadata. Use 1200 × 630 social images where appropriate, legible centred content, descriptive alt text, and optimized file sizes. Do not assume the existing image is a placeholder or overwrite it without a design request.
+- Verify that referenced assets actually exist and are publicly accessible. Check the rendered metadata and social-sharing preview after changes; the presence of a metadata object alone does not prove correct output.
+- Coordinate route/product changes with `components/seo/`, `components/StructuredData.tsx`, `app/sitemap.ts`, `app/api/google-merchant-feed/route.ts`, and redirects/image-host configuration in `next.config.mjs`.
 
-### Protected APIs
-- `POST /api/cart` - Manage cart
-- `POST /api/order` - Create order
-- `GET /api/orders` - Fetch user orders
-- `POST /api/reviews` - Submit review
+## Operational safety and known limitations
 
-### Admin APIs
-- `POST /api/admin/products` - Create/update products
-- `GET /api/admin/orders` - Manage orders
-- `POST /api/admin/discounts` - Manage discounts
+- The current PhonePe callback does not enforce checksum rejection, and payment environment selection is inconsistent across handlers. These are implementation issues, not recommended integration patterns. See the [payment guide](docs/PHONEPE_INTEGRATION.md#known-limitations-and-required-review).
+- `withApiProtection` in `lib/api-helpers.ts` validates/rate-limits requests, but its `requireAuth` branch is a placeholder. Admin cookie presence and client-side gates are not API authorization.
+- Do not use production credentials/data to make local development or tests pass. Keep backups, dumps, tokens, customer information, and sensitive logs out of commits.
+- Review migrations, seed/cleanup/restore scripts, and their target database before running them. `prisma db push` synchronizes a schema; it does not create a versioned migration.
+- Do not hand-edit generated output such as `.next/`, `node_modules/`, `coverage/`, or Prisma client files.
 
-### Payment APIs
-- `POST /api/order/route.ts` - Initiate payment
-- `POST /api/phonepe-callback` - Payment webhook
-- `GET /api/check-status/[transactionId]` - Check payment status
+## Documentation
 
-### Shipping APIs
-- `POST /api/shipment/create` - Create shipment
-- `GET /api/shipment/track/[waybill]` - Track shipment
-- `POST /api/shipment/pickup` - Schedule pickup
+- [Repository and agent guide](AGENTS.md): detailed architecture, business-critical constraints, policy preferences, and working conventions.
+- [PhonePe integration](docs/PHONEPE_INTEGRATION.md): actual checkout/status/retry flow, configuration pitfalls, and verification checklist.
 
-
-### Environment Setup
-
-Ensure all production environment variables are set:
-- Database connection
-- NextAuth secret and URL
-- Payment gateway credentials
-- Cloudinary credentials
-- Email service credentials
-- Delhivery API key
-
-
-### Build Optimization
-
-The project includes:
-- Image optimization with Next.js Image
-- Code splitting and lazy loading
-- Compression and caching headers
-- Console removal in production
-- Package import optimization
-
-## 📜 Scripts Reference
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
-| `npm start` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run tests in watch mode |
-| `npm run test:ci` | Run tests once (CI) |
-| `npm run test:coverage` | Generate coverage report |
-| `npm run seed` | Seed database with sample data |
-
-
-## 🏗 Architecture Notes
-
-### App Router Structure
-The app uses Next.js 15 App Router with:
-- Server Components by default
-- Client Components marked with 'use client'
-- Server Actions for mutations
-- Route Groups for organization
-
-### State Management
-- **Server State**: React Server Components
-- **Client State**: React Context (Cart, Checkout)
-- **Form State**: React Hook Form
-- **Cache**: Redis + Node-Cache
-
-### Authentication Flow
-1. User submits credentials
-2. NextAuth validates with Prisma Adapter
-3. Session stored in database
-4. JWT token issued for API calls
-
-### Payment Flow
-1. User proceeds to checkout
-2. Order created with 'payment_pending' status
-3. Payment initiated with gateway (PhonePe)
-4. Webhook updates order status
-5. Shipment created on success
-6. Email confirmation sent
-
-### Shipping Flow
-1. Order confirmed
-2. Shipment created via Delhivery API
-3. Waybill generated
-4. Pickup scheduled
-5. Tracking updates via webhooks
-6. Customer notified of status changes
-
-## 🤝 Contributing
-
-### Code Style
-- Use TypeScript strict mode
-- Follow ESLint rules
-- Use Prettier for formatting
-- Write tests for new features
-
-### Git Workflow
-1. Create feature branch from `main`
-2. Make changes with descriptive commits
-3. Write/update tests
-4. Submit pull request
-
-### Performance Tips
-
-- Use Server Components when possible
-- Implement pagination for large lists
-- Lazy load heavy components
-- Optimize images with Next.js Image
-- Use React.memo for expensive renders
-- Implement proper caching strategies
-
-## 📞 Support
-
-For questions or issues:
-- Check existing documentation 
-- Review code comments
-- Contact the development team
-
-
-
----
-
-Built with ❤️ by the Scribbl3D team
+Keep documentation aligned with the current code. For environment access, database provisioning, or business/legal decisions, contact the project maintainer.

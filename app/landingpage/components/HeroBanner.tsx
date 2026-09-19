@@ -187,6 +187,7 @@ export default function HeroBanner({ slides, animate = true }: HeroBannerProps) 
       style={{
         marginTop: HEADER_H,
         height: boxH,
+        maxHeight: `max(${MIN_H}px, calc(100svh - var(--site-header-height, 80px)))`,
         minHeight: MIN_H,
         // pre-hydration / pre-measure fallback so there's no layout jump
         aspectRatio: boxH ? undefined : "16 / 9",

@@ -203,7 +203,7 @@ export default function FilterPanel({
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm p-6 sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <div className="bg-white rounded-xl shadow-sm p-6 sticky top-[calc(var(--site-header-height)+1rem)] max-h-[calc(100dvh-var(--site-header-height)-2rem)] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-900">Filters</h2>
                 {hasAnyFilters && (

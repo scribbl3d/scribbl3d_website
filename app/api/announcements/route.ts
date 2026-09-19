@@ -1,35 +1,39 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isAdminRequest } from "@/lib/admin-session";
+import { announcementOrder, announcementSchema, announcementSelect } from "@/lib/announcements";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
+  const admin = request.nextUrl.searchParams.get("admin") === "true";
+  if (admin && !(await isAdminRequest(request))) {
+    return NextResponse.json({ error: "Admin sign-in required" }, { status: 401 });
+  }
   try {
     const announcements = await prisma.announcement.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
+      where: admin ? {} : { isActive: true },
+      orderBy: [...announcementOrder],
+      select: announcementSelect,
     });
-    return NextResponse.json(announcements);
-  } catch (error) {
-    console.error("Failed to fetch announcements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch announcements" },
-      { status: 500 }
-    );
+    return NextResponse.json(announcements, { headers: { "Cache-Control": "private, no-store" } });
+  } catch {
+    return NextResponse.json({ error: "Unable to load announcements. Check that the announcement migration has been applied." }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (!(await isAdminRequest(request))) {
+    return NextResponse.json({ error: "Admin sign-in required" }, { status: 401 });
+  }
+  const parsed = announcementSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+  }
   try {
-    const { text } = await request.json();
-    const announcement = await prisma.announcement.create({
-      data: { text },
-    });
-    return NextResponse.json(announcement);
-  } catch (error) {
-    console.error("Failed to create announcement:", error);
-    return NextResponse.json(
-      { error: "Failed to create announcement" },
-      { status: 500 }
-    );
+    const announcement = await prisma.announcement.create({ data: parsed.data, select: announcementSelect });
+    return NextResponse.json(announcement, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Unable to create announcement" }, { status: 500 });
   }
 }

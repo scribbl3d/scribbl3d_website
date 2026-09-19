@@ -185,8 +185,9 @@ export default function Footer() {
                                 { name: "Privacy Policy", href: "/privacy-policy" },
                                 { name: "Terms & Conditions", href: "/terms-conditions" },
                                 { name: "Refund Policy", href: "/refund-policy" },
-                                { name: "Shipping Policy", href: "/return-policy" },
-                            ].map((policy, index) => (
+                                { name: "Returns Policy", href: "/return-policy" },
+                                { name: "Shipping Policy", href: "/shipping-policy" },
+                            ].map((policy, index, policies) => (
                                 <div key={policy.name} className="flex items-center">
                                     <Link
                                         href={policy.href}
@@ -194,7 +195,7 @@ export default function Footer() {
                                     >
                                         {policy.name}
                                     </Link>
-                                    {index < 3 && (
+                                    {index < policies.length - 1 && (
                                         <span className="text-gray-700 mx-3 hidden sm:inline">•</span>
                                     )}
                                 </div>

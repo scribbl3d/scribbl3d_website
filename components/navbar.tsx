@@ -115,7 +115,7 @@ export default function Navbar() {
 
     return (
         <>
-        <nav className="fixed top-0 left-0 right-0 z-50 w-full h-[80px] bg-gradient-to-r from-black to-[#3D5EFF]">
+        <nav style={{ top: "var(--announcement-height, 0px)" }} className="fixed top-0 left-0 right-0 z-50 w-full h-[80px] bg-gradient-to-r from-black to-[#3D5EFF]">
             <div className="w-full h-full px-2 sm:px-3 lg:px-4">
                 <div className="max-w-screen mx-auto flex items-center justify-between h-full">
                     {/* Logo */}
@@ -302,7 +302,7 @@ export default function Navbar() {
         </nav>
         {/* Full-page loading overlay (search navigation only) */}
         {isSearchNavigating && (
-            <div className="fixed inset-0 z-40 bg-white/60 backdrop-blur-[2px] flex items-center justify-center pt-[80px] animate-[fadeIn_0.15s_ease-out]">
+            <div className="fixed inset-0 z-40 bg-white/60 backdrop-blur-[2px] flex items-center justify-center pt-[var(--site-header-height)] animate-[fadeIn_0.15s_ease-out]">
                 <div className="flex flex-col items-center gap-3">
                     <div className="w-10 h-10 border-[3px] border-gray-200 border-t-[#2563EB] rounded-full animate-[custom-spin_0.8s_linear_infinite]" />
                     <p className="text-sm font-medium text-gray-500">Loading...</p>

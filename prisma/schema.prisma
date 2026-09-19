@@ -443,8 +443,15 @@ model Review {
 model Announcement {
   id        String   @id @default(cuid())
   text      String
+  icon      String   @default("truck")
+  linkLabel String?
+  linkUrl   String?
+  isActive  Boolean  @default(false)
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
 }
 
 model Order {
