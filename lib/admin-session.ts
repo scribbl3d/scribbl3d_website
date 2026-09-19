@@ -36,7 +36,14 @@ export async function verifyAdminSession(token?: string) {
 
 export function isSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  return !origin || origin === new URL(request.url).origin;
+  if (!origin) return true;
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
 }
 
 export async function isAdminRequest(request: NextRequest) {

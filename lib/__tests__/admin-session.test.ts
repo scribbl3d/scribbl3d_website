@@ -23,10 +23,12 @@ it('verifies signed admin sessions and rejects unsigned, tampered, expired, non-
       const invalid = await new SignJWT({ email: 'admin@example.test', role }).setProtectedHeader({ alg: 'HS256' }).setIssuer(issuer).setAudience(audience).setIssuedAt().setExpirationTime(expiry).sign(key);
       assert.equal(await verifyAdminSession(invalid), null);
     }
-    const request = (origin) => ({ url: 'https://www.scribbl3d.com/api/announcements', headers: { get: () => origin }, cookies: { get: () => ({ value: token }) } });
+    const request = (origin) => ({ url: 'https://www.scribbl3d.com/api/announcements', headers: { get: (name) => (name === 'origin' ? origin : name === 'host' ? 'www.scribbl3d.com' : null) }, cookies: { get: () => ({ value: token }) } });
     assert.equal(await isAdminRequest(request('https://www.scribbl3d.com')), true);
     assert.equal(await isAdminRequest(request('https://evil.example')), false);
     assert.equal(isSameOrigin(request(null)), true);
+    const proxied = { headers: { get: (name) => (name === 'origin' ? 'https://www.scribbl3d.com' : name === 'x-forwarded-host' ? 'www.scribbl3d.com' : name === 'host' ? '127.0.0.1:3000' : null) } };
+    assert.equal(isSameOrigin(proxied), true);
     delete process.env.JWT_SECRET;
     process.env.NEXTAUTH_SECRET = secret;
     assert.ok(await verifyAdminSession(await createAdminSession('admin@example.test')));
