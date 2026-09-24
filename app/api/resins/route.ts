@@ -72,7 +72,8 @@ export async function GET(req: Request) {
 
     const resins = await prisma.resin.findMany({
         where,
-        orderBy: sortBy === "new" ? { createdAt: "desc" } : undefined,
+        // id tiebreaker keeps pages stable when createdAt values are equal
+        orderBy: sortBy === "new" ? [{ createdAt: "desc" }, { id: "desc" }] : undefined,
         include: {
             attributes: true,
             weights: { orderBy: { sortOrder: "asc" } },

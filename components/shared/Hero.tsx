@@ -37,7 +37,7 @@ const Hero = ({
                         playsInline
                     />
                 ) : (
-                    <img
+                    <img fetchPriority="high"
                         src={url}
                         alt="hero"
                         className="absolute inset-0 h-full w-full object-cover"

@@ -3,6 +3,8 @@ import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import ServiceSchema from "@/components/seo/ServiceSchema";
+import FAQSchema from "@/components/seo/FAQSchema";
+import { faqs } from "@/app/services/_component/faq-data";
 
 export const metadata: Metadata = {
     title: "3D Printing Services India - Rapid Prototyping & Custom Manufacturing | Scribbl3D",
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
         locale: "en_IN",
         siteName: "Scribbl3D",
         images: [{
-            url: "https://www.scribbl3d.com/og-services.png",
+            url: "https://www.scribbl3d.com/og-image.png",
             width: 1200,
             height: 630,
             alt: "Scribbl3D 3D Printing Services"
@@ -37,7 +39,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "3D Printing Services India | Scribbl3D",
         description: "Professional 3D printing services - rapid prototyping, custom manufacturing, small batch production.",
-        images: ["https://www.scribbl3d.com/og-services.png"],
+        images: ["https://www.scribbl3d.com/og-image.png"],
     },
 };
 
@@ -85,6 +87,7 @@ const Services = () => {
         serviceType="3D Printing Service"
         url="https://www.scribbl3d.com/services"
       />
+      <FAQSchema faqs={faqs} />
       
       <div className="w-full min-h-screen mt-[72px] bg-[#141414]">
         <Suspense

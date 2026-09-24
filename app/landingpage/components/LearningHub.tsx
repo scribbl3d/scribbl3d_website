@@ -127,7 +127,7 @@ export default function LearningHub({ blogs }: LearningHubProps) {
                                 >
                                     <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-gray-200">
                                         {blog.thumbnailImage ? (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={blog.thumbnailImage}
                                                 alt={blog.title}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -170,7 +170,7 @@ export default function LearningHub({ blogs }: LearningHubProps) {
                                 {/* Thumbnail */}
                                 <div className="w-28 flex-shrink-0 bg-gray-200">
                                     {blog.thumbnailImage ? (
-                                        <img
+                                        <img loading="lazy" decoding="async"
                                             src={blog.thumbnailImage}
                                             alt={blog.title}
                                             className="w-full h-full object-cover"

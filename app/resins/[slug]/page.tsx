@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import ResinDetailClient from './_components/ResinDetailClient';
-import { generateStructuredData, truncateAtWord } from '@/lib/metadata';
+import { buildBreadcrumbJsonLd, buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 
@@ -35,8 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         return { title: 'Resin Not Found | Scribbl3D' };
     }
 
-    const firstWeight = resin.weights?.[0];
-    const priceDisplay = firstWeight ? `₹${firstWeight.price.toLocaleString('en-IN')}` : '';
+    // Lowest priced weight, matching the JSON-LD price range
+    const prices = (resin.weights || []).map((w) => w.price).filter((p) => p > 0);
+    const lowestPrice = prices.length > 0 ? Math.min(...prices) : null;
+    const priceDisplay = lowestPrice ? `₹${lowestPrice.toLocaleString('en-IN')}` : '';
     const title = `${resin.name} — Buy ${resin.technology} Resin in India | Scribbl3D`;
     const description = `Buy ${resin.name} ${resin.technology} resin in India${priceDisplay ? ` from ${priceDisplay}` : ''}. ${truncateAtWord(resin.shortDescription ?? 'Fast shipping, expert support, and best prices.', 100)}`;
     const url = `${baseUrl}/resins/${resin.slug}`;
@@ -61,8 +63,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         },
         twitter: { card: 'summary_large_image', title, description, images: [mainImage] },
         other: {
-            ...(firstWeight && {
-                'product:price:amount': firstWeight.price.toString(),
+            ...(lowestPrice && {
+                'product:price:amount': lowestPrice.toString(),
                 'product:price:currency': 'INR',
             }),
         },
@@ -79,26 +81,51 @@ export default async function ResinDetailPage({ params }: Props) {
 
     const serializedResin = JSON.parse(JSON.stringify(resin));
 
-    const firstWeight = resin.weights?.[0];
-    const jsonLd = generateStructuredData('product', {
+    const url = `${baseUrl}/resins/${resin.slug}`;
+    const jsonLd = buildProductJsonLd({
         name: resin.name,
-        description: resin.description || resin.shortDescription || '',
-        images: resin.colours?.flatMap((c) => c.images?.map((img) => img.url) || []) || [],
+        description: resin.description || resin.shortDescription,
+        url,
+        images: (() => {
+            const colourImages = resin.colours?.flatMap((c) => c.images?.map((img) => img.url) || []) || [];
+            return colourImages.length > 0 ? colourImages : resin.cardImageUrl ? [resin.cardImageUrl] : [];
+        })(),
         brand: resin.brand,
-        price: firstWeight?.price || 0,
-        category: 'resins',
-        slug: resin.slug,
-        inStock: resin.inStock,
+        sku: resin.id,
+        category: `3D Printer Resin > ${resin.technology}`,
+        offers: (resin.weights || []).map((w) => ({
+            price: w.price,
+            inStock: resin.inStock && w.inStock,
+            sku: w.id,
+            name: `${resin.name} ${w.weightInGrams}g`,
+            size: `${w.weightInGrams}g`,
+        })),
+        variesBy: ['size'],
+        returnPolicy: 'standard',
+        properties: [
+            { name: 'Technology', value: resin.technology },
+            { name: 'Colours', value: resin.colours?.map((c) => c.name).join(', ') },
+            ...resin.specifications.map((spec) => ({ name: spec.label, value: spec.value })),
+        ],
     });
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+        { name: 'Home', url: '/' },
+        { name: '3D Printer Resins', url: '/resins' },
+        { name: resin.name, url },
+    ]);
 
     return (
         <>
             {jsonLd && (
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
                 />
             )}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
+            />
             <ResinDetailClient resin={serializedResin} />
         </>
     );

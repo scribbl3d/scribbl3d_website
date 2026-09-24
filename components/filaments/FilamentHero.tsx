@@ -142,7 +142,7 @@ export default function FilamentHero({ animate = true, activeMaterial, onMateria
                         className="w-full h-full object-cover opacity-80"
                     />
                 ) : (
-                    <img
+                    <img fetchPriority="high"
                         src={hero.mediaUrl}
                         alt={hero.headline || "Hero"}
                         className="w-full h-full object-cover opacity-80"

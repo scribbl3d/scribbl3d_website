@@ -10,6 +10,7 @@ import SelectedFiltersBar from "@/components/printers/SelectedFiltersBar";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useListingPage } from "@/hooks/use-listing-page";
 
 // Responsive page limit: 10 on mobile (5 rows × 2 cols), 9 on desktop (3 rows × 3 cols)
 function usePageLimit() {
@@ -28,11 +29,13 @@ function usePageLimit() {
 interface Props {
     initialPrinters?: any[];
     initialTotal?: number;
+    initialPage?: number;
 }
 
 export default function PrintersPageClient({
     initialPrinters = [],
     initialTotal = 0,
+    initialPage = 1,
 }: Props) {
     const isInitialLoading = useAutoImageLoader();
     const searchParams = useSearchParams();
@@ -98,7 +101,8 @@ export default function PrintersPageClient({
     });
 
     const [sortBy, setSortBy] = useState<string>("new");
-    const [page, setPage] = useState<number>(1);
+    // Page from ?page=N; resets to 1 when filters or sort change
+    const [page, setPage] = useListingPage(initialPage, JSON.stringify({ selectedFilters, sortBy }));
     const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
@@ -143,10 +147,6 @@ export default function PrintersPageClient({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedFilters, sortBy, page, PAGE_LIMIT]);
 
-    useEffect(() => {
-        setPage(1);
-    }, [selectedFilters, sortBy]);
-
     const fetchPrinters = async () => {
         if (initialLoad) setLoading(true);
         try {
@@ -187,6 +187,9 @@ export default function PrintersPageClient({
             const data = await res.json();
             setPrinters(data.printers || []);
             setTotal(data.total || 0);
+            // A larger mobile page size can leave the current page past the end
+            const lastPage = Math.max(1, Math.ceil((data.total || 0) / PAGE_LIMIT));
+            if (page > lastPage) setPage(lastPage);
             if (data.filters) setFilters(data.filters);
         } catch (err) {
             console.error("Error fetching printers:", err);
@@ -198,7 +201,7 @@ export default function PrintersPageClient({
 
     const handlePageChange = useCallback((newPage: number) => {
         setPage(newPage);
-    }, []);
+    }, [setPage]);
 
     const handleFilterChange = (filterKey: string, value: any) => {
         setSelectedFilters((prev) => ({ ...prev, [filterKey]: value }));

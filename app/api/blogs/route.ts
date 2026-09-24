@@ -5,7 +5,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
+        // Public listing: drafts are managed through the admin endpoints only
         const blogs = await prisma.blog.findMany({
+            where: { published: true },
             orderBy: { createdAt: "desc" },
             select: {
                 id: true,

@@ -9,6 +9,7 @@ import ResinFilters from "@/components/resins/ResinFilters";
 import ResinGrid from "@/components/resins/ResinGrid";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useEffect, useState } from "react";
+import { useListingPage } from "@/hooks/use-listing-page";
 import ResinHero from "@/components/resins/ResinHero";
 
 /* ================= TYPES ================= */
@@ -28,6 +29,7 @@ export type ResinFiltersState = {
 interface Props {
     initialResins?: any[];
     initialTotal?: number;
+    initialPage?: number;
 }
 
 /* ================= PAGE ================= */
@@ -35,6 +37,7 @@ interface Props {
 export default function ResinsPageClient({
     initialResins = [],
     initialTotal = 0,
+    initialPage = 1,
 }: Props) {
     /* ================= DATA ================= */
     const isInitialLoading = useAutoImageLoader();
@@ -53,10 +56,6 @@ export default function ResinsPageClient({
         return () => window.removeEventListener("resize", update);
     }, []);
 
-    /* ================= PAGINATION ================= */
-
-    const [page, setPage] = useState(1);
-
     /* ================= SORT ================= */
 
     const [sortBy, setSortBy] = useState<"new" | "price_asc" | "price_desc">(
@@ -74,6 +73,11 @@ export default function ResinsPageClient({
         washable: null,
         price: null,
     });
+
+    /* ================= PAGINATION ================= */
+
+    // Page from ?page=N; resets to 1 when filters or sort change
+    const [page, setPage] = useListingPage(initialPage, JSON.stringify({ filters, sortBy }));
 
     /* ================= MOBILE MODALS ================= */
 
@@ -113,11 +117,6 @@ export default function ResinsPageClient({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters, sortBy, page, limit]);
 
-    /* Reset page when filters, sort, or limit change */
-    useEffect(() => {
-        setPage(1);
-    }, [filters, sortBy, limit]);
-
     const fetchResins = async () => {
         setLoading(true);
 
@@ -154,6 +153,9 @@ export default function ResinsPageClient({
 
             setResins(data.resins || []);
             setTotal(data.total || 0);
+            // A larger mobile page size can leave the current page past the end
+            const lastPage = Math.max(1, Math.ceil((data.total || 0) / limit));
+            if (page > lastPage) setPage(lastPage);
         } catch (err) {
             console.error("Error fetching resins:", err);
         } finally {

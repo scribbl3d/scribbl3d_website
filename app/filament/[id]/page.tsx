@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import FilamentDetailClient from './_components/FilamentDetailClient';
-import { generateStructuredData, truncateAtWord } from '@/lib/metadata';
+import { buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 
@@ -52,7 +52,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     
     // Enhanced description with more details
     const descriptionParts = [
-        `Buy ${filament.name} 3D printer filament online in India at best price ₹${price.toLocaleString('en-IN')}`,
+        price > 0
+            ? `Buy ${filament.name} 3D printer filament online in India at best price ₹${price.toLocaleString('en-IN')}`
+            : `Buy ${filament.name} 3D printer filament online in India`,
         discount > 0 ? `(${discount}% OFF)` : '',
         filament.material ? `${filament.material} material` : '',
         filament.finishType ? `with ${filament.finishType} finish` : '',
@@ -108,8 +110,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             images: [mainImage] 
         },
         other: {
-            'product:price:amount': price.toString(),
-            'product:price:currency': 'INR',
+            ...(price > 0 && {
+                'product:price:amount': price.toString(),
+                'product:price:currency': 'INR',
+            }),
             'product:availability': filament.inStock ? 'in stock' : 'out of stock',
             'product:condition': 'new',
             'product:brand': filament.brand || 'Scribbl3D',
@@ -129,68 +133,37 @@ export default async function FilamentDetailPage({ params }: Props) {
     // Serialize to plain object (removes Date instances for client boundary)
     const serializedFilament = JSON.parse(JSON.stringify(filament));
 
-    // Product JSON-LD structured data
-    const defaultVariant = filament.variants.find(v => v.isDefault) || filament.variants[0];
-    const price = defaultVariant?.price || 0;
-    const originalPrice = defaultVariant?.originalPrice || price;
-
-    // Enhanced Product schema with detailed attributes for AI engines
-    const productJsonLd = {
-        '@context': 'https://schema.org',
-        '@type': 'Product',
-        'name': filament.name,
-        'description': filament.longDescription || filament.shortDescription || '',
-        'image': filament.images || [],
-        'brand': {
-            '@type': 'Brand',
-            'name': filament.brand || 'Scribbl3D'
-        },
-        'offers': {
-            '@type': 'Offer',
-            'price': price,
-            'priceCurrency': 'INR',
-            'availability': filament.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-            'url': `${baseUrl}/filament/${filament.slug || filament.id}`,
-            'priceValidUntil': new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            'seller': {
-                '@type': 'Organization',
-                'name': 'Scribbl3D'
-            }
-        },
-        'sku': filament.id,
-        'mpn': filament.id,
-        'material': filament.material,
-        'color': filament.colorName,
-        'additionalProperty': [
-            {
-                '@type': 'PropertyValue',
-                'name': 'Material Type',
-                'value': filament.material || 'N/A'
-            },
-            {
-                '@type': 'PropertyValue',
-                'name': 'Finish Type',
-                'value': filament.finishType || 'N/A'
-            },
-            {
-                '@type': 'PropertyValue',
-                'name': 'Color',
-                'value': filament.colorName || 'N/A'
-            },
-            {
-                '@type': 'PropertyValue',
-                'name': 'Diameter',
-                'value': defaultVariant?.diameter || 'Multiple options'
-            },
-            {
-                '@type': 'PropertyValue',
-                'name': 'Spool Weight',
-                'value': defaultVariant?.spoolWeight || 'Multiple options'
-            }
+    // Product JSON-LD structured data (all variants, for AI engines and rich results)
+    const productUrl = `${baseUrl}/filament/${filament.slug || filament.id}`;
+    const productJsonLd = buildProductJsonLd({
+        name: filament.name,
+        description: filament.longDescription || filament.shortDescription,
+        url: productUrl,
+        images: filament.images || [],
+        brand: filament.brand,
+        sku: filament.id,
+        category: `3D Printer Filament > ${filament.material || 'Filament'}`,
+        color: filament.colorName,
+        material: filament.material,
+        offers: filament.variants.map((v) => ({
+            price: v.price,
+            inStock: filament.inStock && v.inStock,
+            sku: v.id,
+            name: `${filament.name.trim()} ${v.diameter} ${v.spoolWeight}`,
+            size: `${v.diameter} ${v.spoolWeight}`,
+            color: filament.colorName,
+        })),
+        variesBy: ['size'],
+        returnPolicy: 'standard',
+        properties: [
+            { name: 'Material Type', value: filament.material },
+            { name: 'Finish Type', value: filament.finishType },
+            { name: 'Color', value: filament.colorName },
+            { name: 'Diameter', value: Array.from(new Set(filament.variants.map((v) => v.diameter))).join(', ') },
+            { name: 'Spool Weight', value: Array.from(new Set(filament.variants.map((v) => v.spoolWeight))).join(', ') },
+            ...filament.specifications.map((spec) => ({ name: spec.key, value: spec.value })),
         ],
-        'category': `3D Printer Filament > ${filament.material || 'Filament'}`,
-        'url': `${baseUrl}/filament/${filament.slug || filament.id}`
-    };
+    });
 
     // BreadcrumbList JSON-LD for navigation
     const breadcrumbJsonLd = {
@@ -227,15 +200,17 @@ export default async function FilamentDetailPage({ params }: Props) {
     return (
         <>
             {/* Product JSON-LD for SEO */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
-            />
+            {productJsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: jsonLdString(productJsonLd) }}
+                />
+            )}
             
             {/* Breadcrumb JSON-LD for SEO */}
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+                dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
             />
 
             <FilamentDetailClient initialFilament={serializedFilament} />

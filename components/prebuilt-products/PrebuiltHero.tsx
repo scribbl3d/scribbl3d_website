@@ -87,7 +87,7 @@ export default function PrebuiltHero({ animate = true }: PrebuiltHeroProps) {
                     className="w-full h-auto block"
                 />
             ) : (
-                <img
+                <img fetchPriority="high"
                     src={hero.mediaUrl}
                     alt={hero.headline || "Hero"}
                     className="w-full h-auto block"

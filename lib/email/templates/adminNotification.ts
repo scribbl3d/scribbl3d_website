@@ -135,7 +135,7 @@ export function adminNotificationTemplate(data: AdminNotificationData): string {
 
         ${divider()}
 
-        ${button("View in Admin Dashboard", `${process.env.NEXT_PUBLIC_BASE_URL || "https://scribbl3d.com"}/ops/control`)}
+        ${button("View in Admin Dashboard", `${(process.env.NEXT_PUBLIC_BASE_URL || "https://scribbl3d.com").replace(/\/+$/, "")}/ops/control`)}
 
         ${paragraph('<span style="font-size:13px;color:#a1a1aa;">This is an automated notification from the Scribbl3D admin system.</span>')}
     `;

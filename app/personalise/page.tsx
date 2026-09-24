@@ -26,7 +26,7 @@ export const metadata: Metadata = {
         locale: "en_IN",
         siteName: "Scribbl3D",
         images: [{
-            url: "https://www.scribbl3d.com/og-personalise.png",
+            url: "https://www.scribbl3d.com/og-image.png",
             width: 1200,
             height: 630,
             alt: "Custom 3D Printing Service"
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "Custom 3D Printing - Upload Your Design | Scribbl3D",
         description: "Upload your STL/OBJ files for instant 3D printing quotes.",
-        images: ["https://www.scribbl3d.com/og-personalise.png"],
+        images: ["https://www.scribbl3d.com/og-image.png"],
     },
 };
 

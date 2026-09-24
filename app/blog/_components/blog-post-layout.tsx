@@ -32,6 +32,8 @@ interface BlogPost {
 
 interface BlogPostLayoutProps {
     slug: string;
+    // Server-rendered post so crawlers receive the article in the initial HTML
+    initialBlog?: BlogPost | null;
 }
 
 function parseToc(html: string) {
@@ -61,7 +63,7 @@ function HeroImage({ src, alt }: { src: string | null; alt: string }) {
         );
     }
     return (
-        <img
+        <img fetchPriority="high"
             src={src}
             alt={alt}
             className="absolute inset-0 w-full h-full object-cover"
@@ -70,8 +72,8 @@ function HeroImage({ src, alt }: { src: string | null; alt: string }) {
     );
 }
 
-export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
-    const [blog, setBlog] = useState<BlogPost | null>(null);
+export default function BlogPostLayout({ slug, initialBlog = null }: BlogPostLayoutProps) {
+    const [blog, setBlog] = useState<BlogPost | null>(initialBlog);
     const [allBlogs, setAllBlogs] = useState<BlogPost[]>([]);
     const [scrollProgress, setScrollProgress] = useState(0);
     const [activeSection, setActiveSection] = useState<string>("");
@@ -80,15 +82,17 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
     const contentRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        fetch(`/api/blogs/${slug}`)
-            .then((r) => (r.ok ? r.json() : Promise.reject()))
-            .then(setBlog)
-            .catch(console.error);
+        if (!initialBlog) {
+            fetch(`/api/blogs/${slug}`)
+                .then((r) => (r.ok ? r.json() : Promise.reject()))
+                .then(setBlog)
+                .catch(console.error);
+        }
         fetch("/api/blogs")
             .then((r) => (r.ok ? r.json() : Promise.reject()))
             .then(setAllBlogs)
             .catch(console.error);
-    }, [slug]);
+    }, [slug, initialBlog]);
 
     useEffect(() => {
         const onScroll = () => {
@@ -105,23 +109,75 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
     }, []);
 
     useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((e) => {
-                    if (e.isIntersecting) setActiveSection(e.target.id);
-                });
-            },
-            { rootMargin: "-100px 0px -60% 0px" },
-        );
-        const headers = document.querySelectorAll("h2, h3");
-        headers.forEach((h) => observer.observe(h));
-        return () => observer.disconnect();
+        if (!blog?.content) return;
+
+        // --site-header-height is a calc() expression, which parseFloat can't
+        // read; --announcement-height is always a plain "<n>px" string that JS
+        // sets directly, so derive the offset from that instead.
+        const getOffset = () => {
+            const raw = getComputedStyle(
+                document.documentElement,
+            ).getPropertyValue("--announcement-height");
+            const announcementHeight = parseFloat(raw) || 0;
+            return 80 + announcementHeight + 32;
+        };
+
+        const updateActive = () => {
+            const container = contentRef.current;
+            if (!container) return;
+            // Re-query on every call rather than caching once: caching risks
+            // holding stale/detached node references, whose getBoundingClientRect
+            // collapses to {top: 0}, which would make every heading look
+            // "already scrolled past" and lock activeSection on the last one.
+            const headers = Array.from(
+                container.querySelectorAll("h2, h3"),
+            ) as HTMLElement[];
+            const offset = getOffset();
+            let current = "";
+            for (const h of headers) {
+                if (h.offsetParent === null) continue;
+                if (h.getBoundingClientRect().top - offset <= 0) {
+                    current = h.id;
+                } else {
+                    break;
+                }
+            }
+            setActiveSection(current);
+        };
+
+        updateActive();
+        window.addEventListener("scroll", updateActive, { passive: true });
+        window.addEventListener("resize", updateActive);
+        return () => {
+            window.removeEventListener("scroll", updateActive);
+            window.removeEventListener("resize", updateActive);
+        };
     }, [blog?.content]);
 
     const toc = useMemo(
         () => (blog?.content ? parseToc(blog.content) : []),
         [blog?.content],
     );
+
+    // Rolls an active H3 up to its enclosing H2, so only H2 entries ever
+    // highlight — in the TOC (desktop + mobile) and in the article body.
+    const activeH2Id = useMemo(() => {
+        const idx = toc.findIndex((t) => t.id === activeSection);
+        if (idx === -1) return "";
+        for (let i = idx; i >= 0; i--) {
+            if (toc[i].level === 2) return toc[i].id;
+        }
+        return "";
+    }, [toc, activeSection]);
+
+    useEffect(() => {
+        const container = contentRef.current;
+        if (!container) return;
+        const headers = container.querySelectorAll("h2, h3");
+        headers.forEach((h) => {
+            h.classList.toggle("toc-active-heading", h.id === activeH2Id);
+        });
+    }, [activeH2Id, blog?.content]);
 
     const handleShare = () => {
         if (navigator.share) {
@@ -371,16 +427,16 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                         fontWeight: 700,
                                         paddingLeft: item.level === 3 ? 28 : 12,
                                         color:
-                                            activeSection === item.id
+                                            activeH2Id === item.id
                                                 ? "#4f46e5"
                                                 : "#333",
                                         background:
-                                            activeSection === item.id
+                                            activeH2Id === item.id
                                                 ? "#eef2ff"
                                                 : "transparent",
                                         textDecoration: "none",
                                         borderLeft:
-                                            activeSection === item.id
+                                            activeH2Id === item.id
                                                 ? "3px solid #4f46e5"
                                                 : "3px solid transparent",
                                     }}
@@ -389,7 +445,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                         size={12}
                                         style={{
                                             opacity:
-                                                activeSection === item.id
+                                                activeH2Id === item.id
                                                     ? 1
                                                     : 0.3,
                                             flexShrink: 0,
@@ -518,6 +574,8 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                     month: "long",
                                     day: "numeric",
                                     year: "numeric",
+                                    // Fixed zone so server and browser render the same date
+                                    timeZone: "Asia/Kolkata",
                                 })}
                             </div>
                             <div
@@ -970,7 +1028,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                         }}
                                                     >
                                                         {relSrc ? (
-                                                            <img
+                                                            <img loading="lazy" decoding="async"
                                                                 src={relSrc}
                                                                 alt={
                                                                     related.title
@@ -1202,19 +1260,19 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                             ? 24
                                                             : 10,
                                                     color:
-                                                        activeSection ===
+                                                        activeH2Id ===
                                                         item.id
                                                             ? "#4f46e5"
                                                             : "#555",
                                                     background:
-                                                        activeSection ===
+                                                        activeH2Id ===
                                                         item.id
                                                             ? "#eef2ff"
                                                             : "transparent",
                                                     textDecoration: "none",
                                                     transition: "all .2s",
                                                     borderLeft:
-                                                        activeSection ===
+                                                        activeH2Id ===
                                                         item.id
                                                             ? "3px solid #4f46e5"
                                                             : "3px solid transparent",
@@ -1224,7 +1282,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                     size={11}
                                                     style={{
                                                         opacity:
-                                                            activeSection ===
+                                                            activeH2Id ===
                                                             item.id
                                                                 ? 1
                                                                 : 0,
@@ -1394,7 +1452,7 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                                                         }}
                                                     >
                                                         {relSrc ? (
-                                                            <img
+                                                            <img loading="lazy" decoding="async"
                                                                 src={relSrc}
                                                                 alt={
                                                                     related.title
@@ -1476,10 +1534,14 @@ export default function BlogPostLayout({ slug }: BlogPostLayoutProps) {
                     margin-bottom: 0.75em;
                     line-height: 1.2;
                     scroll-margin-top: calc(var(--site-header-height, 80px) + 64px);
+                    transition: color .25s ease;
                 }
                 .blog-content h1 { font-size: clamp(1.5rem, 4vw, 2.2rem); }
                 .blog-content h2 { font-size: clamp(1.25rem, 3vw, 1.75rem); }
                 .blog-content h3 { font-size: clamp(1.1rem, 2.5vw, 1.35rem); }
+                .blog-content h2.toc-active-heading {
+                    color: #4f46e5;
+                }
                 .blog-content p {
                     margin-bottom: 1.6em !important;
                     color: inherit;

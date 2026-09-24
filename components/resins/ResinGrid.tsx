@@ -1,6 +1,7 @@
 "use client";
 
 import WishlistModal from "@/app/profile/_components/wishlist-modal";
+import CrawlablePagination from "@/components/shared/CrawlablePagination";
 import { WishlistGridItem } from "@/app/profile/_components/wishlist.types";
 import { useState } from "react";
 import ResinCard from "./ResinCard";
@@ -96,36 +97,7 @@ export default function ResinGrid({
                 </div>
 
                 {/* PAGINATION */}
-                {totalPages > 1 && (
-                    <div className="flex justify-center items-center gap-2">
-                        <button
-                            disabled={page === 1}
-                            onClick={() => onPageChange(page - 1)}
-                            className="px-3 py-1 border rounded disabled:opacity-40 text-sm"
-                        >
-                            Prev
-                        </button>
-                        {Array.from({ length: totalPages }).map((_, i) => {
-                            const p = i + 1;
-                            return (
-                                <button
-                                    key={p}
-                                    onClick={() => onPageChange(p)}
-                                    className={`px-3 py-1 border rounded text-sm ${p === page ? "bg-black text-white" : ""}`}
-                                >
-                                    {p}
-                                </button>
-                            );
-                        })}
-                        <button
-                            disabled={page === totalPages}
-                            onClick={() => onPageChange(page + 1)}
-                            className="px-3 py-1 border rounded disabled:opacity-40 text-sm"
-                        >
-                            Next
-                        </button>
-                    </div>
-                )}
+                <CrawlablePagination page={page} totalPages={totalPages} onPageChange={onPageChange} basePath="/resins" />
             </div>
 
             {activeItem && (

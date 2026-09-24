@@ -31,7 +31,7 @@ export const metadata: Metadata = {
         locale: 'en_IN',
         siteName: 'Scribbl3D',
         images: [{
-            url: 'https://www.scribbl3d.com/og-prebuilt.png',
+            url: 'https://www.scribbl3d.com/og-image.png',
             width: 1200,
             height: 630,
             alt: '3D Printed Products - Custom Keychains, Lamps, Decor'
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: 'Buy 3D Printed Products Online in India | Scribbl3D',
         description: 'Shop unique 3D printed products — custom keychains, lamps, decor, figurines. Personalise your order.',
-        images: ['https://www.scribbl3d.com/og-prebuilt.png'],
+        images: ['https://www.scribbl3d.com/og-image.png'],
     },
 };
 
@@ -70,6 +70,12 @@ export default async function PrebuiltPage() {
                 description="Shop unique 3D printed products — custom keychains, lamps, decor, figurines, and more"
                 url="https://www.scribbl3d.com/prebuilt-products"
                 numberOfItems={products.length}
+                items={products
+                    .filter((p: any) => p.slug)
+                    .map((p: any) => ({
+                        name: p.name,
+                        url: `https://www.scribbl3d.com/prebuilt-products/${p.slug}`,
+                    }))}
             />
             <PrebuiltPageClient initialProducts={products} />
         </>

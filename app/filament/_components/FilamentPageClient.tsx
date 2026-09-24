@@ -7,22 +7,23 @@ import FilamentFilters, { FilamentFiltersState } from "@/components/filaments/Fi
 import MobileFilamentFilters from "@/components/filaments/MobileFilamentFilters";
 import MobileFilamentFilterBar from "@/components/filaments/MobileFilamentFilterBar";
 import FilamentGrid from "@/components/filaments/FilamentGrid";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useListingPage } from "@/hooks/use-listing-page";
 import { useSearchParams } from "next/navigation";
 
 interface FilamentPageClientProps {
     initialFilaments: any[];
     initialTotal: number;
+    initialPage?: number;
 }
 
-export default function FilamentPageClient({ initialFilaments, initialTotal }: FilamentPageClientProps) {
+export default function FilamentPageClient({ initialFilaments, initialTotal, initialPage = 1 }: FilamentPageClientProps) {
     const searchParams = useSearchParams();
 
     const [filaments, setFilaments] = useState<any[]>(initialFilaments);
     const [loading, setLoading] = useState(false);
     const [total, setTotal] = useState(initialTotal);
     const [limit, setLimit] = useState(9);
-    const [page, setPage] = useState(1);
     const [sortBy, setSortBy] = useState<"new" | "price_asc" | "price_desc">("new");
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -37,6 +38,10 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
         diameters: [],
         spoolWeights: [],
     });
+
+    // Page from ?page=N; resets to 1 when filters or sort change
+    const [page, setPage] = useListingPage(initialPage, JSON.stringify({ filters, sortBy }));
+    const skipInitialScroll = useRef(true);
 
     // Update active material filter based on horizontal scroller
     const handleMaterialSelect = (material: string) => {
@@ -79,15 +84,13 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
     useEffect(() => {
         fetchFilaments();
         // Scroll to top when page changes (but not on initial load)
-        if (page > 1) {
+        if (skipInitialScroll.current) {
+            skipInitialScroll.current = false;
+        } else if (page > 1) {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters, sortBy, page, limit]);
-
-    useEffect(() => {
-        setPage(1);
-    }, [filters, sortBy, limit]);
 
     const fetchFilaments = async () => {
         setLoading(true);
@@ -151,6 +154,9 @@ export default function FilamentPageClient({ initialFilaments, initialTotal }: F
 
             setFilaments(data.filaments || []);
             setTotal(data.totalItems || 0);
+            // A larger mobile page size can leave the current page past the end
+            const lastPage = Math.max(1, Math.ceil((data.totalItems || 0) / limit));
+            if (page > lastPage) setPage(lastPage);
         } catch (error) {
             console.error("Error fetching filaments:", error);
         } finally {

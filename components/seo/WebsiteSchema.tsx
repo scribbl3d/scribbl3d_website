@@ -1,4 +1,4 @@
-import Script from 'next/script';
+import { jsonLdString } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 
@@ -9,22 +9,15 @@ export default function WebsiteSchema() {
     name: 'Scribbl3D',
     url: baseUrl,
     description: 'Buy premium 3D printers, high-quality filaments, resins, and custom 3D printing services in India',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${baseUrl}/search?q={search_term_string}`,
-      },
-      'query-input': 'required name=search_term_string',
-    },
+    inLanguage: 'en-IN',
+    publisher: { '@type': 'Organization', name: 'Scribbl3D', url: baseUrl },
   };
 
   return (
-    <Script
-      id="website-schema"
+    // Plain <script> so the JSON-LD is in the server HTML for non-JS crawlers
+    <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteData) }}
-      strategy="beforeInteractive"
+      dangerouslySetInnerHTML={{ __html: jsonLdString(websiteData) }}
     />
   );
 }

@@ -1,3 +1,5 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
 import { prisma } from '@/lib/prisma';
 
@@ -38,18 +40,49 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
     'wall-decor': 'Modern 3D printed wall décor pieces that add depth, texture, and character to your space',
 };
 
+export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
+    const { category } = await params;
+    const categoryName = CATEGORY_NAMES[category] || category;
+    const description = CATEGORY_DESCRIPTIONS[category] || `Shop ${categoryName} products`;
+    const url = `/prebuilt-products/category/${category}`;
+
+    return {
+        title: `${categoryName} - 3D Printed Products`,
+        description,
+        alternates: { canonical: url },
+        openGraph: {
+            title: `${categoryName} | Scribbl3D`,
+            description,
+            url,
+            type: 'website',
+        },
+        twitter: {
+            card: 'summary_large_image',
+            title: `${categoryName} | Scribbl3D`,
+            description,
+        },
+    };
+}
+
 export default async function CategoryLayout({ params, children }: Props) {
     const { category } = await params;
     
-    // Get product count for this category
-    const productCount = await prisma.prebuiltProducts.count({
+    // Same category match as /api/prebuilt-products, which renders this listing
+    const products = await prisma.prebuiltProducts.findMany({
         where: {
             category: {
-                equals: category,
+                equals: category.replace(/-/g, ' '),
                 mode: 'insensitive',
             },
         },
+        select: { name: true, slug: true },
+        orderBy: { createdAt: 'desc' },
     });
+
+    // Unknown, empty categories are real 404s rather than empty self-canonical pages
+    if (products.length === 0 && !CATEGORY_NAMES[category]) {
+        notFound();
+    }
 
     const categoryName = CATEGORY_NAMES[category] || category;
     const categoryDescription = CATEGORY_DESCRIPTIONS[category] || `Shop ${categoryName} products`;
@@ -60,7 +93,13 @@ export default async function CategoryLayout({ params, children }: Props) {
                 name={categoryName}
                 description={categoryDescription}
                 url={`https://www.scribbl3d.com/prebuilt-products/category/${category}`}
-                numberOfItems={productCount}
+                numberOfItems={products.length}
+                items={products
+                    .filter((p) => p.slug)
+                    .map((p) => ({
+                        name: p.name,
+                        url: `https://www.scribbl3d.com/prebuilt-products/${p.slug}`,
+                    }))}
             />
             {children}
         </>

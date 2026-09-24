@@ -146,7 +146,7 @@ export default function PrinterHero({ animate = true }: PrinterHeroProps) {
                     className="w-full h-auto block"
                 />
             ) : (
-                <img
+                <img fetchPriority="high"
                     src={hero.mediaUrl}
                     alt={hero.headline || "Hero"}
                     className="w-full h-auto block"

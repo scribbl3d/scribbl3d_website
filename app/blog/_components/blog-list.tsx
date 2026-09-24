@@ -71,7 +71,7 @@ function PostCardCompact({ post }: { post: BlogPost }) {
     const [failed, setFailed] = useState(false);
     const date = new Date(
         post.publishedAt || post.createdAt,
-    ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    ).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kolkata" });
 
     // Don't render if no slug (prevents internal redirects)
     if (!post.slug) return null;
@@ -176,8 +176,9 @@ function PostCardCompact({ post }: { post: BlogPost }) {
 const PAGE_SIZE = 6;
 const KEYWORD_PREVIEW = 5;
 
-export default function BlogList() {
-    const [blogs, setBlogs] = useState<BlogPost[]>([]);
+// initialBlogs is server-rendered so crawlers receive the post list in the HTML
+export default function BlogList({ initialBlogs }: { initialBlogs?: BlogPost[] }) {
+    const [blogs, setBlogs] = useState<BlogPost[]>(initialBlogs ?? []);
     const [visiblePosts, setVisiblePosts] = useState(PAGE_SIZE);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeKeyword, setActiveKeyword] = useState("All");
@@ -186,11 +187,12 @@ export default function BlogList() {
     const [searchFocused, setSearchFocused] = useState(false);
 
     useEffect(() => {
+        if (initialBlogs) return;
         fetch("/api/blogs")
             .then((r) => (r.ok ? r.json() : Promise.reject()))
             .then(setBlogs)
             .catch(console.error);
-    }, []);
+    }, [initialBlogs]);
 
     // Reset pagination when filter/search changes
     useEffect(() => {
@@ -233,11 +235,13 @@ export default function BlogList() {
             month: "short",
             day: "numeric",
             year: "numeric",
+            timeZone: "Asia/Kolkata",
         });
     const formatDateShort = (d: string) =>
         new Date(d).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
+            timeZone: "Asia/Kolkata",
         });
 
     return (

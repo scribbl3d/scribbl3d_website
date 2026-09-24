@@ -1,4 +1,5 @@
 import { FilamentProductTile } from "./FilamentProductTile";
+import CrawlablePagination from "@/components/shared/CrawlablePagination";
 
 interface FilamentGridProps {
     filaments: any[];
@@ -49,36 +50,7 @@ export default function FilamentGrid({ filaments, page, total, limit, onPageChan
                 ))}
             </div>
 
-            {totalPages > 1 && (
-                <div className="mt-8 flex justify-center items-center gap-2">
-                    <button
-                        disabled={page === 1}
-                        onClick={() => onPageChange(page - 1)}
-                        className="px-3 py-1 border rounded disabled:opacity-40 text-sm"
-                    >
-                        Prev
-                    </button>
-                    {Array.from({ length: totalPages }).map((_, i) => {
-                        const p = i + 1;
-                        return (
-                            <button
-                                key={p}
-                                onClick={() => onPageChange(p)}
-                                className={`px-3 py-1 border rounded text-sm ${p === page ? "bg-black text-white" : ""}`}
-                            >
-                                {p}
-                            </button>
-                        );
-                    })}
-                    <button
-                        disabled={page === totalPages}
-                        onClick={() => onPageChange(page + 1)}
-                        className="px-3 py-1 border rounded disabled:opacity-40 text-sm"
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
+            <CrawlablePagination page={page} totalPages={totalPages} onPageChange={onPageChange} basePath="/filament" className="mt-8 flex justify-center items-center gap-2" />
         </>
     );
 }

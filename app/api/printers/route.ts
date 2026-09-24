@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
                 break;
             case "new":
             default:
-                orderBy = { createdAt: "desc" };
+                // id tiebreaker keeps pages stable when createdAt values are equal
+                orderBy = [{ createdAt: "desc" }, { id: "desc" }];
                 break;
         }
 

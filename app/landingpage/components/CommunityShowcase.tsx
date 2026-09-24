@@ -23,7 +23,7 @@ function ImageCard({
     className?: string;
 }) {
     const content = (
-        <img
+        <img loading="lazy" decoding="async"
             src={img.imageUrl}
             alt={img.altText || "Community print"}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

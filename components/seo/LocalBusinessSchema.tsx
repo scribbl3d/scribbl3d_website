@@ -38,8 +38,8 @@ export default function LocalBusinessSchema() {
                     "Friday",
                     "Saturday"
                 ],
-                "opens": "10:00",
-                "closes": "19:00"
+                "opens": "09:00",
+                "closes": "18:00"
             }
         ],
         "priceRange": "₹₹",

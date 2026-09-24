@@ -195,7 +195,7 @@ function DesktopSmallCard({ product }: { product: BestSellerProduct }) {
             className="relative group overflow-hidden rounded-[24px] bg-[#f8f9fa] border border-black/5 p-4 lg:p-5 flex flex-col shadow-sm hover:shadow-lg transition-all duration-500 h-full"
         >
             <div className="relative flex-1 w-full mb-4 lg:mb-5 overflow-hidden rounded-2xl bg-white flex items-center justify-center border border-black/5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] min-h-0">
-                <img
+                <img loading="lazy" decoding="async"
                     src={product.image}
                     alt={product.name}
                     className="absolute inset-0 w-full h-full object-contain p-4 lg:p-6 transition-transform duration-500 group-hover:scale-105 mix-blend-multiply"
@@ -250,7 +250,7 @@ function SmallCard({ product }: { product: BestSellerProduct }) {
         >
             <div className="p-2 pb-0 flex-1 min-h-0">
                 <div className="relative w-full h-full rounded-lg overflow-hidden bg-white">
-                    <img
+                    <img loading="lazy" decoding="async"
                         src={product.image}
                         alt={product.name}
                         className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
@@ -357,7 +357,7 @@ function HeroCard({ product }: { product: BestSellerProduct }) {
             className="md:col-span-2 md:row-span-2 relative group overflow-hidden rounded-[28px] lg:rounded-[32px] bg-[#0a0a0f] shadow-sm hover:shadow-xl transition-all duration-500 block h-full w-full"
         >
             {/* Image */}
-            <img
+            <img loading="lazy" decoding="async"
                 src={product.image}
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
@@ -542,7 +542,7 @@ function MobileHeroCard({ product }: { product: BestSellerProduct }) {
             href={product.href}
             className="relative block rounded-2xl overflow-hidden bg-[#0a0a0f] h-[300px]"
         >
-            <img
+            <img loading="lazy" decoding="async"
                 src={product.image}
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover"

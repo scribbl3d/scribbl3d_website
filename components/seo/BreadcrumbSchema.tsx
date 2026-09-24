@@ -1,4 +1,4 @@
-import Script from 'next/script';
+import { jsonLdString } from '@/lib/metadata';
 
 interface BreadcrumbItem {
   name: string;
@@ -22,10 +22,10 @@ export default function BreadcrumbSchema({ items }: BreadcrumbSchemaProps) {
   };
 
   return (
-    <Script
-      id="breadcrumb-schema"
+    // Plain <script> so the JSON-LD is in the server HTML (next/script injects it after hydration)
+    <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbData) }}
     />
   );
 }

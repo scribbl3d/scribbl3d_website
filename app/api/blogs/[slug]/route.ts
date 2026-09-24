@@ -13,6 +13,7 @@ export async function GET(
         const blog = await prisma.blog.findFirst({
             where: {
                 OR: [{ slug: identifier }, { id: identifier }],
+                published: true,
             },
         });
 

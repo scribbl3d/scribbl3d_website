@@ -186,7 +186,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                     }`}
                                 >
                                     {item.image ? (
-                                        <img
+                                        <img loading="lazy" decoding="async"
                                             src={item.image}
                                             alt={item.name}
                                             className="w-full h-full object-contain mix-blend-multiply"
@@ -256,7 +256,7 @@ export default function NewArrivals({ items }: NewArrivalsProps) {
                                 {/* Image */}
                                 <div className="relative aspect-square bg-gray-100 overflow-hidden">
                                     {item.image ? (
-                                        <img
+                                        <img loading="lazy" decoding="async"
                                             src={item.image}
                                             alt={item.name}
                                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

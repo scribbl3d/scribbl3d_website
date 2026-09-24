@@ -85,7 +85,7 @@ export default function BrowseByEcosystem() {
                                 className={`relative group overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-sm ${spanClass} ${heightClass}`}
                             >
                                 {/* Image */}
-                                <img
+                                <img loading="lazy" decoding="async"
                                     src={cat.image}
                                     alt={cat.name}
                                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

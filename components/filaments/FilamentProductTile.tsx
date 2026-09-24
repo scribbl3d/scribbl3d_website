@@ -148,7 +148,7 @@ export function FilamentProductTile({
                 {/* IMAGE — square on all sizes */}
                 <div className="relative aspect-square w-full bg-white overflow-hidden group">
                     {images[currentImageIndex] && (
-                        <img
+                        <img decoding="async"
                             src={images[currentImageIndex]}
                             alt={name}
                             className="w-full h-full object-contain transition-opacity duration-300"

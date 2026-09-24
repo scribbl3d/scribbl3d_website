@@ -110,7 +110,8 @@ export async function GET(request: Request) {
         } else if (sortBy === "name") {
             orderByClause = { name: order };
         } else if (sortBy !== "price") {
-            orderByClause = { createdAt: order };
+            // id tiebreaker keeps pages stable when createdAt values are equal
+            orderByClause = [{ createdAt: order }, { id: order }];
         }
 
         // Get total count

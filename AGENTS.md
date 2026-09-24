@@ -102,7 +102,7 @@ There is no current Prisma `Product` model. Do not assume the old generic produc
 - Preserve both `cart` and `buynow` checkout modes. `CheckoutProvider` holds steps, addresses, selected shipping, and pricing passed from the cart. Do not let independent recalculations diverge between cart, checkout, stored orders, and payment initiation.
 - Discount logic spans `app/cart/utils/`, discount API handlers, and `lib/discount-utils.ts`. Preserve scope, eligible item types, expiry, minimum spend, caps, first-order eligibility, and per-user usage limits. The schema's discount `ItemType` enum and newer cart item types are not identical; do not silently rename their values.
 - Use existing safe-number/formatting helpers (`lib/cart-utils.ts`, `lib/safeNum.ts`, `lib/utils.ts`) as appropriate. Test null/invalid prices, quantity updates, variant removal, and asynchronous discount updates.
-- Currency requires special care: filament/resin schema comments specify rupees, the printer price comment says paise, and cart/order code currently passes printer prices through without conversion. Confirm actual units across the relevant flow before changing conversions. `/api/order` converts the submitted amount to PhonePe paise with `Math.round(amount * 100)`; do not apply that conversion twice.
+- All catalogue prices (printers, filaments, resins, prebuilt variants) are stored in whole rupees. Leave the existing printer `priceDisplay` formatting in the printer list page and `/api/printers` handlers unchanged unless the user asks. `/api/order` converts the submitted amount to PhonePe paise with `Math.round(amount * 100)`; do not apply that conversion twice.
 - Shipping weight/dimension units also vary. Trace `app/checkout/components/expressShipping.ts` and logistics mapping before changing grams/kilograms or millimetres/centimetres.
 
 ### Payments, orders, and fulfilment
@@ -134,7 +134,9 @@ There is no current Prisma `Product` model. Do not assume the old generic produc
 
 - Reuse existing fonts, Tailwind theme tokens, buttons, dialogs, toasts, and layout patterns. `components.json` configures shadcn's `new-york` style and root aliases.
 - CMS-managed content includes hero banners, best sellers, community images, testimonials, partners, about/page heroes, announcements, and blogs. Preserve visibility, sort order, draft/publication, and slug behavior when relevant.
-- SEO entry points: `lib/metadata.ts`, `components/seo/`, `components/StructuredData.tsx`, `app/sitemap.ts`, and `app/api/google-merchant-feed/route.ts`. Preserve canonicals, structured data, social images, and product availability/price consistency.
+- SEO entry points: `lib/metadata.ts`, `components/seo/`, `components/StructuredData.tsx`, `app/sitemap.ts`, `app/robots.ts`, and `app/api/google-merchant-feed/route.ts`. Preserve canonicals, structured data, social images, and product availability/price consistency.
+- Product detail pages build JSON-LD with `buildProductJsonLd`/`buildBreadcrumbJsonLd` and serialize it with `jsonLdString`. Render JSON-LD as a plain `<script>` in server output (not `next/script`) so non-JS crawlers see it. Never publish zero-price offers; review ratings stay out until the review system is complete.
+- AI-crawler content: `public/llms.txt` is hand-maintained and must contain only facts verified against live pages (policies, contact page); `app/llms-full.txt/route.ts` generates the catalogue index from the database. Named crawler groups in `app/robots.ts` do not inherit the `*` rules, so keep their disallow lists in sync.
 - `next.config.mjs` contains image-host allowlists, headers, optimizations, and legacy redirects (including `/filaments` → `/filament`). Check it before renaming public routes or adding image hosts; do not remove redirects casually.
 - Keep uploads within the existing Cloudinary/upload flow. Validate file types/size and retain image alt text and accessible form errors.
 

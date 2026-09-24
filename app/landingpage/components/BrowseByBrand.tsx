@@ -36,7 +36,7 @@ function BrandLogo({
             className="group flex-shrink-0 px-4 sm:px-5"
             title={brand.name}
         >
-            <img
+            <img loading="lazy" decoding="async"
                 src={brand.logo}
                 alt={brand.name}
                 className={

@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import PrebuiltProductDetailClient from './_components/PrebuiltProductDetailClient';
-import { generateStructuredData, truncateAtWord } from '@/lib/metadata';
+import { buildBreadcrumbJsonLd, buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 
@@ -29,8 +29,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         return { title: 'Product Not Found | Scribbl3D' };
     }
 
-    const firstVariant = product.variants?.find((v) => v.isActive) || product.variants?.[0];
-    const priceDisplay = firstVariant ? `₹${firstVariant.price.toLocaleString('en-IN')}` : '';
+    // Lowest priced active variant, matching the JSON-LD price range
+    const prices = (product.variants || []).filter((v) => v.isActive && v.price > 0).map((v) => v.price);
+    const lowestPrice = prices.length > 0 ? Math.min(...prices) : null;
+    const priceDisplay = lowestPrice ? `₹${lowestPrice.toLocaleString('en-IN')}` : '';
     const title = `${product.name} — Buy in India | Scribbl3D`;
     const description = `Buy ${product.name}${priceDisplay ? ` from ${priceDisplay}` : ''}. ${truncateAtWord(product.shortDescription ?? 'Fast shipping, expert support, and best prices.', 100)}`;
     const url = `${baseUrl}/prebuilt-products/${product.slug}`;
@@ -55,8 +57,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         },
         twitter: { card: 'summary_large_image', title, description, images: [mainImage] },
         other: {
-            ...(firstVariant && {
-                'product:price:amount': firstVariant.price.toString(),
+            ...(lowestPrice && {
+                'product:price:amount': lowestPrice.toString(),
                 'product:price:currency': 'INR',
             }),
         },
@@ -73,26 +75,52 @@ export default async function PrebuiltProductPage({ params }: Props) {
 
     const serializedProduct = JSON.parse(JSON.stringify(product));
 
-    const firstVariant = product.variants?.find((v) => v.isActive) || product.variants?.[0];
-    const jsonLd = generateStructuredData('product', {
+    const url = `${baseUrl}/prebuilt-products/${product.slug}`;
+    const activeVariants = (product.variants || []).filter((v) => v.isActive);
+    const jsonLd = buildProductJsonLd({
         name: product.name,
-        description: product.longDescription || product.shortDescription || '',
+        description: product.longDescription || product.shortDescription,
+        url,
         images: product.images?.map((img) => img.url) || [],
         brand: 'Scribbl3D',
-        price: firstVariant?.price || 0,
-        category: 'prebuilt-products',
-        slug: product.slug,
-        inStock: product.inStock,
+        sku: product.id,
+        category: product.category || undefined,
+        offers: activeVariants.map((v) => ({
+            price: v.price,
+            inStock: product.inStock && v.inStock,
+            sku: v.id,
+            name: [product.name, v.colorName, v.sizeName].filter(Boolean).join(' - '),
+            color: v.colorName,
+            size: v.sizeName,
+        })),
+        variesBy: [
+            ...(activeVariants.some((v) => v.colorName) ? ['color' as const] : []),
+            ...(activeVariants.some((v) => v.sizeName) ? ['size' as const] : []),
+        ],
+        // Customisable and personalised products follow the customised-product return rule
+        returnPolicy:
+            product.isCustomizable || product.category?.toLowerCase().startsWith('personalis')
+                ? 'customised'
+                : 'standard',
     });
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+        { name: 'Home', url: '/' },
+        { name: 'Prebuilt Products', url: '/prebuilt-products' },
+        { name: product.name, url },
+    ]);
 
     return (
         <>
             {jsonLd && (
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
                 />
             )}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
+            />
             <PrebuiltProductDetailClient product={serializedProduct} />
         </>
     );

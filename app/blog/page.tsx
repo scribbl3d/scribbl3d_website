@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import BlogList from "./_components/blog-list";
 import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
     title: {
         absolute: 'Blog - 3D Printing Guides, Tutorials & Industry Insights | Scribbl3D',
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
         locale: 'en_IN',
         siteName: 'Scribbl3D',
         images: [{
-            url: 'https://www.scribbl3d.com/og-blog.png',
+            url: 'https://www.scribbl3d.com/og-image.png',
             width: 1200,
             height: 630,
             alt: 'Scribbl3D Blog - 3D Printing Guides & Tutorials'
@@ -39,22 +41,43 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: 'Blog - 3D Printing Guides & Tutorials | Scribbl3D',
         description: 'Expert guides and tutorials on 3D printing, filaments, printers, and techniques.',
-        images: ['https://www.scribbl3d.com/og-blog.png'],
+        images: ['https://www.scribbl3d.com/og-image.png'],
     },
 };
 
 export default async function BlogPage() {
-    const totalBlogs = await prisma.blog.count();
+    // Same records as /api/blogs (minus the article body), rendered on the server
+    const publishedBlogs = await prisma.blog.findMany({
+        where: { published: true },
+        orderBy: { createdAt: 'desc' },
+        select: {
+            id: true,
+            slug: true,
+            title: true,
+            description: true,
+            keywords: true,
+            createdAt: true,
+            publishedAt: true,
+            thumbnailImage: true,
+            heroImage: true,
+            published: true,
+            featured: true,
+        },
+    });
     return (
         <>
             <CollectionPageSchema
                 name="Blog - 3D Printing Guides & Tutorials"
                 description="Explore expert guides, tutorials, and insights on 3D printing from Scribbl3D"
                 url="https://www.scribbl3d.com/blog"
-                numberOfItems={totalBlogs}
+                numberOfItems={publishedBlogs.length}
+                items={publishedBlogs.map((b) => ({
+                    name: b.title,
+                    url: `https://www.scribbl3d.com/blog/${b.slug || b.id}`,
+                }))}
             />
             <div className="container mx-auto px-4 py-8 pt-[100px]">
-                <BlogList />
+                <BlogList initialBlogs={JSON.parse(JSON.stringify(publishedBlogs))} />
             </div>
         </>
     );

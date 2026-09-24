@@ -1,8 +1,8 @@
 import BlogPostLayout from "../_components/blog-post-layout";
 import { prisma } from "@/lib/prisma";
-import { generateBlogMetadata, generateStructuredData } from "@/lib/metadata";
+import { generateBlogMetadata, generateStructuredData, jsonLdString } from "@/lib/metadata";
 import { Metadata } from "next";
-import { permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 type BlogPageProps = {
     params: Promise<{ slug: string }>;
@@ -17,6 +17,7 @@ export async function generateMetadata({
         const blog = await prisma.blog.findFirst({
             where: {
                 OR: [{ slug }, { id: slug }],
+                published: true,
             },
         });
 
@@ -46,12 +47,13 @@ export default async function BlogPostPage({ params }: BlogPageProps) {
     const identifier = (await params).slug;
 
     // If accessed via CUID (id), redirect to the canonical slug URL
+    // Drafts and unknown posts return a real 404 rather than an endless loading state
     const blog = await prisma.blog.findFirst({
-        where: { OR: [{ slug: identifier }, { id: identifier }] },
+        where: { OR: [{ slug: identifier }, { id: identifier }], published: true },
     });
 
     if (!blog) {
-        return <BlogPostLayout slug={identifier} />;
+        notFound();
     }
 
     if (blog.slug && blog.slug !== identifier) {
@@ -74,10 +76,10 @@ export default async function BlogPostPage({ params }: BlogPageProps) {
             {jsonLd && (
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    dangerouslySetInnerHTML={{ __html: jsonLdString(jsonLd) }}
                 />
             )}
-            <BlogPostLayout slug={identifier} />
+            <BlogPostLayout slug={identifier} initialBlog={JSON.parse(JSON.stringify(blog))} />
         </>
     );
 }

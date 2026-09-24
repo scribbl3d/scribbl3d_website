@@ -238,10 +238,9 @@ export function generateStructuredData(type: 'product' | 'blogPost', data: any) 
       headline: data.title,
       description: data.description,
       image: data.image,
-      author: {
-        '@type': 'Person',
-        name: data.author || 'Scribbl3D',
-      },
+      author: data.author && data.author !== siteName
+        ? { '@type': 'Person', name: data.author }
+        : { '@type': 'Organization', name: siteName, url: baseUrl },
       publisher: {
         '@type': 'Organization',
         name: 'Scribbl3D',
@@ -260,4 +259,180 @@ export function generateStructuredData(type: 'product' | 'blogPost', data: any) 
   }
 
   return null;
+}
+
+// Serialize JSON-LD for a <script> tag; escapes "<" so stored text cannot close the tag
+export function jsonLdString(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
+export interface ProductOfferInput {
+  price: number | null | undefined;
+  inStock: boolean;
+  sku?: string;
+  name?: string;
+  // Variant attributes, used when the product is published as a ProductGroup
+  color?: string | null;
+  size?: string | null;
+  image?: string | null;
+}
+
+// Return rules from the Returns Policy (/return-policy):
+// - printer: 3D printers and electronics are not returnable after delivery
+// - standard: unused items (sealed consumables included) within 10 days of delivery
+// - customised: customised/personalised/made-to-order items are not returnable
+//   unless defective, damaged, or incorrect (handled outside the standard window)
+export type ReturnPolicyKind = 'printer' | 'standard' | 'customised';
+
+export interface ProductJsonLdInput {
+  name: string;
+  description?: string | null;
+  url: string;
+  images?: string[];
+  brand?: string | null;
+  sku?: string;
+  category?: string;
+  color?: string | null;
+  material?: string | null;
+  offers: ProductOfferInput[];
+  returnPolicy: ReturnPolicyKind;
+  // Attributes that distinguish variants; with 2+ offers this emits a ProductGroup
+  variesBy?: ('color' | 'size')[];
+  properties?: { name: string; value: string | null | undefined }[];
+  rating?: { average: number | null | undefined; count: number };
+}
+
+function merchantReturnPolicy(kind: ReturnPolicyKind) {
+  const base = {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'IN',
+    merchantReturnLink: `${baseUrl}/return-policy`,
+  };
+  if (kind === 'standard') {
+    return {
+      ...base,
+      returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+      merchantReturnDays: 10,
+      itemCondition: 'https://schema.org/NewCondition',
+    };
+  }
+  return { ...base, returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted' };
+}
+
+// Shipping Policy (/shipping-policy) and checkout: standard shipping within India
+// is included in the price and delivered within 7 days. Split confirmed by the
+// business: dispatch within 0–2 days, courier transit 3–5 days (7 days max).
+const shippingDetails = {
+  '@type': 'OfferShippingDetails',
+  shippingRate: { '@type': 'MonetaryAmount', value: 0, currency: 'INR' },
+  shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'IN' },
+  deliveryTime: {
+    '@type': 'ShippingDeliveryTime',
+    handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 2, unitCode: 'DAY' },
+    transitTime: { '@type': 'QuantitativeValue', minValue: 3, maxValue: 5, unitCode: 'DAY' },
+  },
+};
+
+// Product JSON-LD shared by all catalogue families. Offers without a positive
+// price are dropped so a missing variant is never published as free; with no
+// valid offer nothing is emitted, since Google rejects Products without one.
+// Multiple priced variants are published as a ProductGroup with hasVariant.
+export function buildProductJsonLd(input: ProductJsonLdInput) {
+  const offers = input.offers.filter(
+    (o) => typeof o.price === 'number' && Number.isFinite(o.price) && o.price > 0,
+  ) as (ProductOfferInput & { price: number })[];
+  if (offers.length === 0) return null;
+
+  const seller = { '@type': 'Organization', name: siteName, url: baseUrl };
+  const priceValidUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const returnPolicy = merchantReturnPolicy(input.returnPolicy);
+  const offerFor = (o: ProductOfferInput & { price: number }) => ({
+    '@type': 'Offer',
+    url: input.url,
+    price: o.price,
+    priceCurrency: 'INR',
+    priceValidUntil,
+    availability: o.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    itemCondition: 'https://schema.org/NewCondition',
+    seller,
+    shippingDetails,
+    hasMerchantReturnPolicy: returnPolicy,
+  });
+
+  const images = input.images && input.images.length > 0 ? input.images : undefined;
+  const brand = { '@type': 'Brand', name: input.brand || siteName };
+  const properties = (input.properties || []).filter((p) => p.value && String(p.value).trim() !== '');
+  const shared = {
+    ...(input.description && { description: input.description }),
+    brand,
+    ...(input.category && { category: input.category }),
+    ...(input.material && { material: input.material }),
+    ...(properties.length > 0 && {
+      additionalProperty: properties.map((p) => ({ '@type': 'PropertyValue', name: p.name, value: p.value })),
+    }),
+  };
+  const rating = input.rating;
+  const aggregateRating = rating && rating.count > 0 && typeof rating.average === 'number'
+    ? {
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: Math.round(rating.average * 10) / 10,
+          reviewCount: rating.count,
+          bestRating: 5,
+          worstRating: 1,
+        },
+      }
+    : {};
+
+  const variesBy = input.variesBy || [];
+  if (offers.length > 1 && variesBy.length > 0) {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'ProductGroup',
+      name: input.name,
+      url: input.url,
+      ...(input.sku && { productGroupID: input.sku }),
+      ...(images && { image: images }),
+      ...shared,
+      variesBy: variesBy.map((v) => `https://schema.org/${v}`),
+      hasVariant: offers.map((o) => ({
+        '@type': 'Product',
+        name: o.name || input.name,
+        ...(o.sku && { sku: o.sku }),
+        ...((o.image || images) && { image: o.image || images?.[0] }),
+        ...(variesBy.includes('color') && (o.color || input.color) && { color: o.color || input.color }),
+        ...(variesBy.includes('size') && o.size && { size: o.size }),
+        offers: offerFor(o),
+      })),
+      ...aggregateRating,
+    };
+  }
+
+  // Single product: one Offer, or the lowest-priced one if variants lack attributes
+  const offer = offers.reduce((low, o) => (o.price < low.price ? o : low), offers[0]);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: input.name,
+    url: input.url,
+    ...(images && { image: images }),
+    ...(input.sku && { sku: input.sku }),
+    ...(input.color && { color: input.color }),
+    ...shared,
+    offers: offerFor(offer),
+    ...aggregateRating,
+  };
+}
+
+export function buildBreadcrumbJsonLd(items: { name: string; url: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url.startsWith('http') ? item.url : `${baseUrl}${item.url}`,
+    })),
+  };
 }

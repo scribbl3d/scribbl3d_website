@@ -1,4 +1,4 @@
-import Script from 'next/script';
+import { jsonLdString } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
 
@@ -22,18 +22,17 @@ export default function OrganizationSchema() {
       availableLanguage: ['English', 'Hindi'],
     },
     sameAs: [
-      'https://www.instagram.com/scribbl3d',
-      'https://www.facebook.com/scribbl3d',
-      'https://www.linkedin.com/company/scribbl3d',
+      'https://www.instagram.com/scribbl3d_/',
+      'https://in.linkedin.com/company/scribbl3dprinting',
+      'https://twitter.com/Scribbl3d_',
     ],
   };
 
   return (
-    <Script
-      id="organization-schema"
+    // Plain <script> so the JSON-LD is in the server HTML for non-JS crawlers
+    <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
-      strategy="beforeInteractive"
+      dangerouslySetInnerHTML={{ __html: jsonLdString(organizationData) }}
     />
   );
 }

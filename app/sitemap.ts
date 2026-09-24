@@ -5,26 +5,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
   
   try {
+    // Out-of-stock products stay listed: their pages remain live and show availability
     const [printers, resins, filaments, prebuiltProducts, blogs, categories] = await Promise.all([
       prisma.printer.findMany({ 
-        where: { inStock: true },
         select: { slug: true, updatedAt: true } 
       }),
       prisma.resin.findMany({ 
-        where: { inStock: true },
         select: { slug: true, updatedAt: true } 
       }),
       prisma.filament.findMany({ 
-        where: { inStock: true },
         select: { slug: true, id: true, updatedAt: true } 
       }),
       prisma.prebuiltProducts.findMany({ 
-        where: { inStock: true },
         select: { slug: true, updatedAt: true } 
       }),
       prisma.blog.findMany({ 
         where: { published: true },
-        select: { slug: true, updatedAt: true } 
+        select: { slug: true, id: true, updatedAt: true } 
       }),
       // Get unique categories
       prisma.prebuiltProducts.findMany({
@@ -83,11 +80,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.7,
       },
       {
-        url: `${baseUrl}/personalised`,
+        url: `${baseUrl}/personalise`,
         lastModified: new Date(),
         changeFrequency: 'monthly' as const,
         priority: 0.7,
       },
+      {
+        url: `${baseUrl}/contact`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.6,
+      },
+      ...[
+        'terms-conditions',
+        'privacy-policy',
+        'return-policy',
+        'refund-policy',
+        'shipping-policy',
+      ].map((policy) => ({
+        url: `${baseUrl}/${policy}`,
+        lastModified: new Date(),
+        changeFrequency: 'yearly' as const,
+        priority: 0.4,
+      })),
     ];
 
     const printerPages = printers
@@ -108,10 +123,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       }));
 
+    // The filament route also resolves by id, so keep products without a slug
     const filamentPages = filaments
-      .filter((filament) => filament.slug && filament.slug.trim() !== '')
       .map((filament) => ({
-        url: `${baseUrl}/filament/${filament.slug}`,
+        url: `${baseUrl}/filament/${filament.slug && filament.slug.trim() !== '' ? filament.slug : filament.id}`,
         lastModified: filament.updatedAt,
         changeFrequency: 'weekly' as const,
         priority: 0.8,
@@ -126,10 +141,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       }));
 
+    // Blog pages also resolve by id, so keep published posts without a slug
     const blogPages = blogs
-      .filter((blog) => blog.slug && blog.slug.trim() !== '')
       .map((blog) => ({
-        url: `${baseUrl}/blog/${blog.slug}`,
+        url: `${baseUrl}/blog/${blog.slug && blog.slug.trim() !== '' ? blog.slug : blog.id}`,
         lastModified: blog.updatedAt,
         changeFrequency: 'monthly' as const,
         priority: 0.7,

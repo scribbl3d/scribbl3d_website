@@ -106,7 +106,7 @@ export default function SimilarFilamentsCarousel({
                                     {/* IMAGE */}
                                     <div className="relative aspect-square w-full bg-white overflow-hidden">
                                         {filament.images?.[0] && (
-                                            <img
+                                            <img loading="lazy" decoding="async"
                                                 src={filament.images[0]}
                                                 alt={filament.name}
                                                 className="w-full h-full object-contain"
