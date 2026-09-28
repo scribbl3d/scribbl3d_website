@@ -8,9 +8,12 @@ import MobileResinFilters from "@/components/resins/Mobileresinfilters";
 import ResinFilters from "@/components/resins/ResinFilters";
 import ResinGrid from "@/components/resins/ResinGrid";
 import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useListingPage } from "@/hooks/use-listing-page";
 import ResinHero from "@/components/resins/ResinHero";
+
+const SORT_VALUES = ["new", "price_asc", "price_desc"] as const;
 
 /* ================= TYPES ================= */
 
@@ -41,6 +44,7 @@ export default function ResinsPageClient({
 }: Props) {
     /* ================= DATA ================= */
     const isInitialLoading = useAutoImageLoader();
+    const searchParams = useSearchParams();
     const [resins, setResins] = useState<any[]>(initialResins);
     const [loading, setLoading] = useState(false);
     const [total, setTotal] = useState(initialTotal);
@@ -59,25 +63,54 @@ export default function ResinsPageClient({
     /* ================= SORT ================= */
 
     const [sortBy, setSortBy] = useState<"new" | "price_asc" | "price_desc">(
-        "new",
+        () => {
+            const fromUrl = searchParams.get("sortBy");
+            return (SORT_VALUES as readonly string[]).includes(fromUrl || "")
+                ? (fromUrl as "new" | "price_asc" | "price_desc")
+                : "new";
+        },
     );
 
     /* ================= FILTER STATE ================= */
 
-    const [filters, setFilters] = useState<ResinFiltersState>({
-        materialTypes: [],
-        technologies: [],
-        resolutions: [],
-        colours: [],
-        brands: [],
-        washable: null,
-        price: null,
+    const [filters, setFilters] = useState<ResinFiltersState>(() => {
+        const minPrice = searchParams.get("minPrice");
+        const maxPrice = searchParams.get("maxPrice");
+        const washableFromUrl = searchParams.get("washable");
+        return {
+            materialTypes: searchParams.getAll("materialType"),
+            technologies: searchParams.getAll("technology"),
+            resolutions: searchParams.getAll("resolution"),
+            colours: searchParams.getAll("colour"),
+            brands: searchParams.getAll("brand"),
+            washable: washableFromUrl === null ? null : washableFromUrl === "true",
+            price: minPrice && maxPrice ? [Number(minPrice), Number(maxPrice)] : null,
+        };
     });
 
     /* ================= PAGINATION ================= */
 
+    // Mirror the active filters/sort into the URL so a filtered view can be shared/reloaded.
+    const filterUrlParams = useMemo(
+        () => ({
+            materialType: filters.materialTypes,
+            technology: filters.technologies,
+            resolution: filters.resolutions,
+            colour: filters.colours,
+            brand: filters.brands,
+            washable: filters.washable === null ? undefined : String(filters.washable),
+            minPrice: filters.price ? String(filters.price[0]) : undefined,
+            maxPrice: filters.price ? String(filters.price[1]) : undefined,
+            sortBy: sortBy !== "new" ? sortBy : undefined,
+        }),
+        [filters, sortBy],
+    );
     // Page from ?page=N; resets to 1 when filters or sort change
-    const [page, setPage] = useListingPage(initialPage, JSON.stringify({ filters, sortBy }));
+    const [page, setPage] = useListingPage(
+        initialPage,
+        JSON.stringify({ filters, sortBy }),
+        filterUrlParams,
+    );
 
     /* ================= MOBILE MODALS ================= */
 

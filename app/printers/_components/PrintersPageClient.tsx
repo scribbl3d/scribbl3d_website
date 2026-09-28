@@ -86,23 +86,49 @@ export default function PrintersPageClient({
         application: string[];
         experience: string[];
         connectivity: string[];
-    }>({
-        technology: [],
-        brand: [],
-        volumeCategory: [],
-        material: [],
-        recyclingRatio: [],
-        chamberType: [],
-        minPrice: null,
-        maxPrice: null,
-        application: [],
-        experience: [],
-        connectivity: [],
-    });
+    }>(() => ({
+        technology: searchParams.getAll("technology"),
+        brand: searchParams.getAll("brand"),
+        volumeCategory: searchParams.getAll("volumeCategory"),
+        material: searchParams.getAll("material"),
+        recyclingRatio: searchParams.getAll("recyclingRatio"),
+        chamberType: searchParams.getAll("chamberType"),
+        minPrice: searchParams.get("minPrice"),
+        maxPrice: searchParams.get("maxPrice"),
+        application: searchParams.getAll("application"),
+        experience: searchParams.getAll("experience"),
+        connectivity: searchParams.getAll("connectivity"),
+    }));
 
-    const [sortBy, setSortBy] = useState<string>("new");
+    const [sortBy, setSortBy] = useState<string>(() => searchParams.get("sortBy") || "new");
+
+    // Mirror the active filters/sort into the URL so a filtered view can be shared/reloaded.
+    const filterUrlParams = useMemo(
+        () => ({
+            technology:
+                selectedFilters.technology.length === 1 && selectedFilters.technology[0] === "__all__"
+                    ? undefined
+                    : selectedFilters.technology,
+            brand: selectedFilters.brand,
+            volumeCategory: selectedFilters.volumeCategory,
+            material: selectedFilters.material,
+            recyclingRatio: selectedFilters.recyclingRatio,
+            chamberType: selectedFilters.chamberType,
+            application: selectedFilters.application,
+            experience: selectedFilters.experience,
+            connectivity: selectedFilters.connectivity,
+            minPrice: selectedFilters.minPrice,
+            maxPrice: selectedFilters.maxPrice,
+            sortBy: sortBy !== "new" ? sortBy : undefined,
+        }),
+        [selectedFilters, sortBy],
+    );
     // Page from ?page=N; resets to 1 when filters or sort change
-    const [page, setPage] = useListingPage(initialPage, JSON.stringify({ selectedFilters, sortBy }));
+    const [page, setPage] = useListingPage(
+        initialPage,
+        JSON.stringify({ selectedFilters, sortBy }),
+        filterUrlParams,
+    );
     const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
@@ -130,6 +156,7 @@ export default function PrintersPageClient({
 
     useEffect(() => {
         if (brandApplied.current) return;
+        if (searchParams.get("technology")) return;
         const brandFromUrl = searchParams.get("brand");
         if (!brandFromUrl) return;
         if (!filters.technology || filters.technology.length === 0) return;

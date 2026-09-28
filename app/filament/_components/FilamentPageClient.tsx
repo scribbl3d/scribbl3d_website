@@ -7,9 +7,11 @@ import FilamentFilters, { FilamentFiltersState } from "@/components/filaments/Fi
 import MobileFilamentFilters from "@/components/filaments/MobileFilamentFilters";
 import MobileFilamentFilterBar from "@/components/filaments/MobileFilamentFilterBar";
 import FilamentGrid from "@/components/filaments/FilamentGrid";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useListingPage } from "@/hooks/use-listing-page";
 import { useSearchParams } from "next/navigation";
+
+const SORT_VALUES = ["new", "price_asc", "price_desc"] as const;
 
 interface FilamentPageClientProps {
     initialFilaments: any[];
@@ -24,23 +26,59 @@ export default function FilamentPageClient({ initialFilaments, initialTotal, ini
     const [loading, setLoading] = useState(false);
     const [total, setTotal] = useState(initialTotal);
     const [limit, setLimit] = useState(9);
-    const [sortBy, setSortBy] = useState<"new" | "price_asc" | "price_desc">("new");
+    const [sortBy, setSortBy] = useState<"new" | "price_asc" | "price_desc">(() => {
+        const fromUrl = searchParams.get("sortBy");
+        return (SORT_VALUES as readonly string[]).includes(fromUrl || "")
+            ? (fromUrl as "new" | "price_asc" | "price_desc")
+            : "new";
+    });
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const initialCategory = searchParams.get("category") || "";
 
-    const [filters, setFilters] = useState<FilamentFiltersState>({
-        materialTypes: initialCategory ? [initialCategory] : [],
-        finishTypes: [],
-        brands: [],
-        price: null,
-        printerCompatibility: [],
-        diameters: [],
-        spoolWeights: [],
+    const [filters, setFilters] = useState<FilamentFiltersState>(() => {
+        const splitParam = (key: string) => {
+            const value = searchParams.get(key);
+            return value ? value.split(",").filter(Boolean) : [];
+        };
+        const materialFromUrl = splitParam("material");
+        const minPrice = searchParams.get("minPrice");
+        const maxPrice = searchParams.get("maxPrice");
+        return {
+            materialTypes: materialFromUrl.length ? materialFromUrl : initialCategory ? [initialCategory] : [],
+            finishTypes: splitParam("finishType"),
+            brands: splitParam("brand"),
+            price: minPrice && maxPrice ? [Number(minPrice), Number(maxPrice)] : null,
+            printerCompatibility: splitParam("printerCompatibility"),
+            diameters: splitParam("diameter"),
+            spoolWeights: splitParam("spoolWeight"),
+        };
     });
 
+    // Mirror the active filters/sort into the URL so a filtered view can be shared/reloaded.
+    const filterUrlParams = useMemo(
+        () => ({
+            category: undefined, // superseded by `material`; drop the legacy shortcut param once state changes
+            material: filters.materialTypes.length ? filters.materialTypes.join(",") : undefined,
+            finishType: filters.finishTypes.length ? filters.finishTypes.join(",") : undefined,
+            brand: filters.brands.length ? filters.brands.join(",") : undefined,
+            diameter: filters.diameters.length ? filters.diameters.join(",") : undefined,
+            spoolWeight: filters.spoolWeights.length ? filters.spoolWeights.join(",") : undefined,
+            printerCompatibility: filters.printerCompatibility.length
+                ? filters.printerCompatibility.join(",")
+                : undefined,
+            minPrice: filters.price ? String(filters.price[0]) : undefined,
+            maxPrice: filters.price ? String(filters.price[1]) : undefined,
+            sortBy: sortBy !== "new" ? sortBy : undefined,
+        }),
+        [filters, sortBy],
+    );
     // Page from ?page=N; resets to 1 when filters or sort change
-    const [page, setPage] = useListingPage(initialPage, JSON.stringify({ filters, sortBy }));
+    const [page, setPage] = useListingPage(
+        initialPage,
+        JSON.stringify({ filters, sortBy }),
+        filterUrlParams,
+    );
     const skipInitialScroll = useRef(true);
 
     // Update active material filter based on horizontal scroller

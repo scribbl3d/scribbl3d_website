@@ -23,18 +23,18 @@ export default function PolicyLayout({
     return (
       <div className="min-h-screen bg-slate-50 pt-20 font-geistSans text-slate-900 selection:bg-blue-100 [&_a:focus-visible]:outline [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-4 [&_a:focus-visible]:outline-blue-700">
         <a href="#policy-content" className="sr-only z-[70] rounded-md bg-white p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to policy content</a>
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+        <main className="mx-auto max-w-6xl px-4 py-5 sm:px-8 sm:py-10">
           <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="rounded-t-2xl border-b border-blue-100 bg-gradient-to-br from-blue-50 via-slate-50 to-indigo-50 px-5 py-8 sm:p-10 lg:p-12">
-              <div className="grid items-center gap-7 lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-10">
+            <div className="rounded-t-2xl border-b border-blue-100 bg-gradient-to-br from-blue-50 via-slate-50 to-indigo-50 px-4 py-6 sm:p-10 lg:p-12">
+              <div className="grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_220px] lg:gap-10">
                 <div>
-                  <p className="mb-4 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">
+                  <p className="mb-3 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-blue-700 sm:mb-4">
                     <span aria-hidden="true" className="h-1 w-7 rounded-full bg-blue-600" />Legal & policies
                   </p>
-                  <h1 id="policy-title" className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-[42px]">{title}</h1>
-                  {description && <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">{description}</p>}
+                  <h1 id="policy-title" className="text-2xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-[42px]">{title}</h1>
+                  {description && <p className="mt-3 max-w-2xl text-base leading-6 text-slate-600 sm:mt-4 sm:leading-7">{description}</p>}
                 </div>
-                <dl className="grid gap-4 rounded-xl border border-white bg-white/80 p-5 text-sm sm:grid-cols-2 lg:grid-cols-1">
+                <dl className="grid gap-3 rounded-xl border border-white bg-white/80 p-4 text-sm sm:gap-4 sm:p-5 sm:grid-cols-2 lg:grid-cols-1">
                   {effectiveDate && (
                     <div>
                       <dt className="mb-1 text-xs text-slate-500">Effective date</dt>
@@ -49,19 +49,19 @@ export default function PolicyLayout({
               </div>
             </div>
 
-            <div className="px-5 py-7 sm:p-10 lg:px-12">
-              <article id="policy-content" aria-labelledby="policy-title" tabIndex={-1} className="scroll-mt-[calc(var(--site-header-height,80px)+2rem)] text-[15px] leading-7 text-slate-600 sm:text-base sm:leading-7 [&_a]:break-words [&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline [&_a]:decoration-blue-200 [&_a]:underline-offset-4 [&_a:hover]:text-blue-900 [&_a:hover]:decoration-blue-700 [&_li]:pl-1 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
-                <div className="space-y-4 border-b border-slate-200 pb-7">{children}</div>
+            <div className="px-4 py-5 sm:p-10 lg:px-12">
+              <article id="policy-content" aria-labelledby="policy-title" tabIndex={-1} className="scroll-mt-[calc(var(--site-header-height,80px)+2rem)] text-[15px] leading-6 text-slate-600 sm:text-base sm:leading-7 [&_a]:break-words [&_a]:font-medium [&_a]:text-blue-700 [&_a]:underline [&_a]:decoration-blue-200 [&_a]:underline-offset-4 [&_a:hover]:text-blue-900 [&_a:hover]:decoration-blue-700 [&_li]:pl-1 [&_ul]:list-disc [&_ul]:space-y-1.5 [&_ul]:pl-5 sm:[&_ul]:space-y-2">
+                <div className="space-y-3 border-b border-slate-200 pb-5 sm:space-y-4 sm:pb-7">{children}</div>
                 {sections.map((section, index) => (
-                  <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`} tabIndex={-1} className="scroll-mt-[calc(var(--site-header-height,80px)+2rem)] border-b border-slate-200 py-7 last:border-0">
-                    <h2 id={`${section.id}-title`} className="mb-4 flex items-baseline gap-3 text-xl font-semibold leading-snug tracking-tight text-slate-900">
-                      <span className="inline-flex min-w-9 shrink-0 justify-center rounded-lg bg-blue-50 px-2 py-1.5 text-base text-blue-700">{index + 1}.</span> {section.title}
+                  <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`} tabIndex={-1} className="scroll-mt-[calc(var(--site-header-height,80px)+2rem)] border-b border-slate-200 py-5 last:border-0 sm:py-7">
+                    <h2 id={`${section.id}-title`} className="mb-3 flex items-baseline gap-2 text-lg font-semibold leading-snug tracking-tight text-slate-900 sm:mb-4 sm:gap-3 sm:text-xl">
+                      <span className="inline-flex min-w-7 shrink-0 justify-center rounded-lg bg-blue-50 px-1.5 py-1 text-sm text-blue-700 sm:min-w-9 sm:px-2 sm:py-1.5 sm:text-base">{index + 1}.</span> {section.title}
                     </h2>
-                    <div className="space-y-4">{section.content}</div>
+                    <div className="space-y-3 sm:space-y-4">{section.content}</div>
                   </section>
                 ))}
               </article>
-              <p className="border-t border-slate-200 pt-5 text-xs text-slate-500">Last updated: {lastUpdated}</p>
+              <p className="border-t border-slate-200 pt-4 text-xs text-slate-500 sm:pt-5">Last updated: {lastUpdated}</p>
             </div>
           </div>
         </main>
