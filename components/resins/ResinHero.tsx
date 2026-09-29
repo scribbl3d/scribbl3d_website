@@ -136,7 +136,7 @@ export default function ResinHero({ animate = true }: ResinHeroProps) {
                                       viewport: { once: false, amount: 0.2 },
                                   }
                                 : {})}
-                            className="mt-3 sm:mt-5 text-base sm:text-lg md:text-xl lg:text-2xl font-light text-white/80 max-w-xl leading-relaxed"
+                            className="mt-2 sm:mt-4 text-lg sm:text-2xl md:text-3xl lg:text-4xl font-normal text-white/90 leading-snug"
                         >
                             {hero.subtext}
                         </motion.p>

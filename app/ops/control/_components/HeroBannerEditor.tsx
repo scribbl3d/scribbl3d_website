@@ -15,9 +15,13 @@ type PageHero = {
 
 interface HeroBannerEditorProps {
     page: string; // "resins", "printers", etc.
+    recommendedSize?: {
+        dimensions: string;
+        note?: string;
+    };
 }
 
-export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
+export default function HeroBannerEditor({ page, recommendedSize }: HeroBannerEditorProps) {
     const [hero, setHero] = useState<PageHero | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -197,6 +201,17 @@ export default function HeroBannerEditor({ page }: HeroBannerEditorProps) {
                         <Upload className="w-4 h-4" />
                         Upload Image or Video
                     </button>
+
+                    {/* Recommended size */}
+                    {recommendedSize && (
+                        <div className="mt-2 text-xs bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                            <p className="font-semibold text-blue-700 mb-0.5">📐 Recommended Size:</p>
+                            <p className="text-blue-600">{recommendedSize.dimensions}</p>
+                            {recommendedSize.note && (
+                                <p className="text-gray-600 mt-0.5">{recommendedSize.note}</p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Media type indicator */}
                     <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">

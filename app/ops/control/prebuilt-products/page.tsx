@@ -115,7 +115,13 @@ export default function PrebuiltProductsPage() {
             </div>
 
             <div className="max-w-screen-xl mx-auto px-3 sm:px-8 py-4 sm:py-8">
-                <HeroBannerEditor page="prebuilt-products" />
+                <HeroBannerEditor
+                    page="prebuilt-products"
+                    recommendedSize={{
+                        dimensions: "2880 × 1200px (Desktop)",
+                        note: "Aspect ratio: 2.4:1 works best",
+                    }}
+                />
                 
                 {/* 🔍 SEARCH + SORT CONTROL */}
                 <div className="bg-white border rounded-xl p-4 mb-6 shadow-sm">

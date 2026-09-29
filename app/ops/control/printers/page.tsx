@@ -104,7 +104,13 @@ export default function AdminPrintersPage() {
 
             {/* ===================== CONTENT ===================== */}
             <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-                <HeroBannerEditor page="printers" />
+                <HeroBannerEditor
+                    page="printers"
+                    recommendedSize={{
+                        dimensions: "2880 × 1200px (Desktop)",
+                        note: "Aspect ratio: 2.4:1 works best",
+                    }}
+                />
                 {/* TITLE + ADD */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
                     <h2 className="text-xl sm:text-2xl font-bold">Printers List</h2>
