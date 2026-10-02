@@ -7,8 +7,10 @@ import FilamentFilters, { FilamentFiltersState } from "@/components/filaments/Fi
 import MobileFilamentFilters from "@/components/filaments/MobileFilamentFilters";
 import MobileFilamentFilterBar from "@/components/filaments/MobileFilamentFilterBar";
 import FilamentGrid from "@/components/filaments/FilamentGrid";
+import Loader from "@/components/Loader";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useListingPage } from "@/hooks/use-listing-page";
+import { useAutoImageLoader } from "@/hooks/useAutoImageLoader";
 import { useSearchParams } from "next/navigation";
 
 const SORT_VALUES = ["new", "price_asc", "price_desc"] as const;
@@ -20,6 +22,7 @@ interface FilamentPageClientProps {
 }
 
 export default function FilamentPageClient({ initialFilaments, initialTotal, initialPage = 1 }: FilamentPageClientProps) {
+    const isInitialLoading = useAutoImageLoader();
     const searchParams = useSearchParams();
 
     const [filaments, setFilaments] = useState<any[]>(initialFilaments);
@@ -223,8 +226,17 @@ export default function FilamentPageClient({ initialFilaments, initialTotal, ini
 
     return (
         <>
+            {isInitialLoading && <Loader />}
+
+            <div
+                className="transition-opacity duration-700"
+                style={{
+                    opacity: isInitialLoading ? 0 : 1,
+                    visibility: isInitialLoading ? "hidden" : "visible",
+                }}
+            >
             <div className="min-h-screen overflow-x-hidden">
-                <FilamentHero 
+                <FilamentHero
                     animate={true} 
                     activeMaterial={activeMaterialHeader || undefined} 
                     onMaterialSelect={handleMaterialSelect} 
@@ -315,6 +327,7 @@ export default function FilamentPageClient({ initialFilaments, initialTotal, ini
                     sortBy={sortBy}
                     onSortChange={setSortBy}
                 />
+            </div>
             </div>
         </>
     );

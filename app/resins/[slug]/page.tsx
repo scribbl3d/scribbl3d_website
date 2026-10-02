@@ -35,12 +35,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         return { title: 'Resin Not Found | Scribbl3D' };
     }
 
+    // Ensure "Resin" appears in the title without duplicating it when the name already has it
+    const nameHasResin = /resin/i.test(resin.name);
+    const formattedResinName = nameHasResin ? resin.name : `${resin.name} Resin`;
+
     // Lowest priced weight, matching the JSON-LD price range
     const prices = (resin.weights || []).map((w) => w.price).filter((p) => p > 0);
     const lowestPrice = prices.length > 0 ? Math.min(...prices) : null;
     const priceDisplay = lowestPrice ? `₹${lowestPrice.toLocaleString('en-IN')}` : '';
-    const title = `${resin.name} — Buy ${resin.technology} Resin in India | Scribbl3D`;
-    const description = `Buy ${resin.name} ${resin.technology} resin in India${priceDisplay ? ` from ${priceDisplay}` : ''}. ${truncateAtWord(resin.shortDescription ?? 'Fast shipping, expert support, and best prices.', 100)}`;
+    const title = `Buy ${formattedResinName} — ${resin.technology} in India | Scribbl3D`;
+    const description = `Buy ${formattedResinName} online in India${priceDisplay ? ` from ${priceDisplay}` : ''}. ${truncateAtWord(resin.shortDescription ?? 'High-precision 405nm UV photopolymer resin. Fast Pan-India dispatch & GST invoice.', 100)}`;
     const url = `${baseUrl}/resins/${resin.slug}`;
     const rawImage = resin.colours?.[0]?.images?.[0]?.url || resin.cardImageUrl || '';
     const mainImage = rawImage
@@ -50,7 +54,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title,
         description,
-        keywords: [resin.name, resin.brand, resin.technology, '3D resin', 'buy resin India', 'Scribbl3D'],
+        keywords: [
+            resin.name,
+            `${resin.name} price India`,
+            `buy ${resin.name} India`,
+            resin.brand,
+            `${resin.brand} resin`,
+            resin.technology,
+            `${resin.technology} resin`,
+            'buy 405nm UV resin India',
+            'photopolymer 3D printer resin',
+            'Scribbl3D resins',
+        ],
         alternates: { canonical: url },
         openGraph: {
             title,

@@ -5,39 +5,34 @@ import { prisma } from '@/lib/prisma';
 import FilamentPageClient from './_components/FilamentPageClient';
 import FAQSchema from '@/components/seo/FAQSchema';
 import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
+import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema';
 import FaqSection from '@/components/shared/FaqSection';
 import { LISTING_PAGE_SIZE, paginatedListingMetadata, parseListingPage } from '@/lib/listing-page';
 
 const baseMetadata: Metadata = {
     title: {
-        absolute: 'Buy 3D Printer Filament Online in India — PLA, PETG, ABS, TPU, Nylon | Scribbl3D',
+        absolute: 'Buy 3D Printer Filaments Online in India | PLA, PETG & ABS | Scribbl3D',
     },
     description:
-        'Shop premium 3D printer filaments online in India. PLA, PLA+, PETG, ABS, TPU, Nylon & specialty filaments from top brands. ✓ Best Prices ✓ Fast Shipping ✓ Expert Support ✓ 100% Genuine Products',
+        'Buy 1.75mm 3D printer filaments online in India at Scribbl3D. High-speed PLA, PLA+, PETG, ABS & TPU spools. GST invoice & fast Pan-India dispatch. Shop now!',
     keywords: [
-        '3D printer filament',
-        'buy 3D filament online India',
-        'PLA filament India',
-        'PETG filament',
-        'ABS filament',
-        'TPU filament',
+        '3D printer filament India',
+        'buy 1.75mm PLA filament online',
+        'PETG filament India',
+        'ABS filament 3D printer',
+        'TPU flexible filament India',
+        'high speed PLA filament',
+        'Bambu Lab compatible filament India',
         'Nylon filament',
-        'PLA+ filament',
-        'specialty filament',
-        'silk filament',
-        'matte filament',
-        'wood filament',
         'carbon fiber filament',
-        '3D printing material',
-        'best 3D filament India',
-        'premium filament',
-        'Scribbl3D'
+        'specialty filament',
+        'Scribbl3D filaments'
     ],
     alternates: { canonical: 'https://www.scribbl3d.com/filament' },
     openGraph: {
-        title: 'Buy 3D Printer Filament Online in India | Best Prices & Quality',
+        title: 'Buy 1.75mm 3D Printer Filaments Online in India | Scribbl3D',
         description:
-            'Shop premium 3D printer filaments - PLA, PETG, ABS, TPU, Nylon from top brands. Best prices in India with fast shipping.',
+            'Explore premium 1.75mm 3D printing filaments in India at Scribbl3D. High-speed PLA, PLA+, PETG, ABS, TPU, and Carbon Fiber spools with fast Pan-India delivery.',
         url: 'https://www.scribbl3d.com/filament',
         type: 'website',
         locale: 'en_IN',
@@ -46,13 +41,13 @@ const baseMetadata: Metadata = {
             url: 'https://www.scribbl3d.com/og-image.png',
             width: 1200,
             height: 630,
-            alt: '3D Printer Filaments - PLA, PETG, ABS, TPU'
+            alt: 'Scribbl3D - Premium 1.75mm 3D Printer Filaments India'
         }],
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Buy 3D Printer Filament Online in India | Scribbl3D',
-        description: 'Shop premium 3D printer filaments - PLA, PETG, ABS, TPU, Nylon. Best prices in India.',
+        title: 'Buy 3D Printer Filaments Online in India | PLA, PETG & ABS | Scribbl3D',
+        description: 'Buy 1.75mm 3D printer filaments online in India at Scribbl3D. High-speed PLA, PETG, ABS & TPU spools with GST invoice & fast dispatch.',
         images: ['https://www.scribbl3d.com/og-image.png'],
     },
 };
@@ -153,6 +148,10 @@ export default async function FilamentPage({ searchParams }: Props) {
 
     return (
         <>
+            <BreadcrumbSchema items={[
+                { name: 'Home', url: 'https://www.scribbl3d.com' },
+                { name: 'Filaments', url: 'https://www.scribbl3d.com/filament' },
+            ]} />
             <CollectionPageSchema
                 name="3D Printer Filaments"
                 description="Shop premium 3D printer filaments - PLA, PETG, ABS, TPU, Nylon from top brands"

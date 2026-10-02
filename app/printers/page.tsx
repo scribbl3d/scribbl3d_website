@@ -4,31 +4,39 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import PrintersPageClient from './_components/PrintersPageClient';
 import CollectionPageSchema from '@/components/seo/CollectionPageSchema';
+import BreadcrumbSchema from '@/components/seo/BreadcrumbSchema';
 import { LISTING_PAGE_SIZE, paginatedListingMetadata, parseListingPage } from '@/lib/listing-page';
 
 const baseMetadata: Metadata = {
     title: {
-        absolute: 'Buy 3D Printers Online in India — Bambu Lab, Creality, Anycubic | Scribbl3D',
+        absolute: 'Buy FDM & Resin 3D Printers Online in India | Scribbl3D',
     },
     description:
-        'Shop FDM and resin 3D printers from Bambu Lab, Creality, Anycubic, Elegoo, and Phrozen. Best prices in India, fast shipping, expert support.',
+        'Buy FDM and resin 3D printers, premium filaments, and resins online in India from Bambu Lab, Creality, Anycubic, and Elegoo. Fast shipping, expert support, and genuine products.',
     keywords: [
         '3D printers India',
         'buy 3D printer online',
+        '3D printer online India',
+        'FDM 3D printer India',
+        'resin 3D printer India',
+        'desktop 3D printers India',
         'Bambu Lab India',
-        'Creality printer',
-        'Anycubic printer',
-        'FDM printer',
-        'resin printer',
-        'SLA printer',
-        'best 3D printer India',
+        'Creality India',
+        'Anycubic India',
+        'Elegoo India',
+        'Phrozen India',
+        'Jamghe India',
+        'professional 3D printers',
+        'industrial 3D printers',
+        'high-speed 3D printers',
+        '3D printer for beginners',
         'Scribbl3D'
     ],
     alternates: { canonical: 'https://www.scribbl3d.com/printers' },
     openGraph: {
-        title: 'Buy 3D Printers Online in India | Scribbl3D',
+        title: 'Buy FDM & Resin 3D Printers Online in India | Scribbl3D',
         description:
-            'Shop FDM and resin 3D printers from top brands. Best prices in India.',
+            'Buy FDM and resin 3D printers online in India from Bambu Lab, Creality, Anycubic, and Elegoo. Fast shipping, expert support, and genuine products.',
         url: 'https://www.scribbl3d.com/printers',
         type: 'website',
         locale: 'en_IN',
@@ -37,13 +45,13 @@ const baseMetadata: Metadata = {
             url: 'https://www.scribbl3d.com/og-image.png',
             width: 1200,
             height: 630,
-            alt: '3D Printers - FDM & Resin from Top Brands'
+            alt: 'Buy FDM & Resin 3D Printers Online in India | Scribbl3D'
         }],
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Buy 3D Printers Online in India | Scribbl3D',
-        description: 'Shop FDM and resin 3D printers from Bambu Lab, Creality, Anycubic, Elegoo, Phrozen. Best prices in India.',
+        title: 'Buy FDM & Resin 3D Printers Online in India | Scribbl3D',
+        description: 'Buy FDM and resin 3D printers online in India from Bambu Lab, Creality, Anycubic, and Elegoo. Fast shipping, expert support, and genuine products.',
         images: ['https://www.scribbl3d.com/og-image.png'],
     },
 };
@@ -102,6 +110,10 @@ export default async function PrintersPage({ searchParams }: Props) {
 
     return (
         <>
+            <BreadcrumbSchema items={[
+                { name: 'Home', url: 'https://www.scribbl3d.com' },
+                { name: '3D Printers', url: 'https://www.scribbl3d.com/printers' },
+            ]} />
             <CollectionPageSchema
                 name="3D Printers"
                 description="Shop FDM and resin 3D printers from Bambu Lab, Creality, Anycubic, Elegoo, Phrozen"

@@ -29,12 +29,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         return { title: 'Product Not Found | Scribbl3D' };
     }
 
+    // Ensure "3D Printed" and "Custom" appear in the title without duplicating wording already in the name
+    const has3D = /3d/i.test(product.name);
+    const formatted3DName = has3D ? product.name : `3D Printed ${product.name}`;
+    const customTag = product.isCustomizable && !/custom|personali[sz]ed/i.test(product.name) ? 'Custom ' : '';
+
     // Lowest priced active variant, matching the JSON-LD price range
     const prices = (product.variants || []).filter((v) => v.isActive && v.price > 0).map((v) => v.price);
     const lowestPrice = prices.length > 0 ? Math.min(...prices) : null;
     const priceDisplay = lowestPrice ? `₹${lowestPrice.toLocaleString('en-IN')}` : '';
-    const title = `${product.name} — Buy in India | Scribbl3D`;
-    const description = `Buy ${product.name}${priceDisplay ? ` from ${priceDisplay}` : ''}. ${truncateAtWord(product.shortDescription ?? 'Fast shipping, expert support, and best prices.', 100)}`;
+    const title = `Buy ${customTag}${formatted3DName} Online in India | Scribbl3D`;
+    const description = `Buy ${customTag.toLowerCase()}${formatted3DName.toLowerCase()}${priceDisplay ? ` from ${priceDisplay}` : ''}. ${truncateAtWord(product.shortDescription ?? 'Fast shipping, expert craftsmanship, and best prices.', 100)}`;
     const url = `${baseUrl}/prebuilt-products/${product.slug}`;
     const rawImage = product.images?.find((i) => i.isMain)?.url || product.images?.[0]?.url || '';
     const mainImage = rawImage
@@ -44,7 +49,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title,
         description,
-        keywords: [product.name, product.category || 'prebuilt', '3D printed', 'buy India', 'Scribbl3D'],
+        keywords: [
+            product.name,
+            `${product.name} price India`,
+            `buy ${product.name} online`,
+            product.category,
+            `${product.category} 3D print`,
+            'customized 3D printed gifts India',
+            'unique 3D printed desk decor',
+            'Scribbl3D products',
+        ],
         alternates: { canonical: url },
         openGraph: {
             title,

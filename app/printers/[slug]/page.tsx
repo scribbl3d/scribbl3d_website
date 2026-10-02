@@ -32,9 +32,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         return { title: 'Printer Not Found | Scribbl3D' };
     }
 
+    // Ensure "3D Printer" appears in the title without duplicating it when the name already has it
+    const nameHas3DPrinter = /3d printer/i.test(printer.name);
+    const formattedPrinterName = nameHas3DPrinter ? printer.name : `${printer.name} 3D Printer`;
+
     // Admin-managed SEO fields take precedence over generated copy
-    const title = printer.metaTitle?.trim() || `${printer.name} — Buy in India | Scribbl3D`;
-    const description = printer.metaDescription?.trim() || `Buy ${printer.name} 3D printer in India at ₹${printer.price.toLocaleString('en-IN')}. ${truncateAtWord(printer.shortDescription ?? 'Fast shipping, expert support, and best prices.', 100)}`;
+    const title = printer.metaTitle?.trim() || `Buy ${formattedPrinterName} Online in India | Scribbl3D`;
+    const description = printer.metaDescription?.trim() || `Buy ${formattedPrinterName} online in India at ₹${printer.price.toLocaleString('en-IN')}. ${truncateAtWord(printer.shortDescription ?? 'Official brand warranty, GST invoice & fast Pan-India dispatch. Best price guaranteed!', 100)}`;
     const url = `${baseUrl}/printers/${printer.slug}`;
     const mainImage = printer.images?.[0]?.url
         ? printer.images[0].url.replace('/upload/', '/upload/w_1200,h_630,c_pad,b_white/')
@@ -43,7 +47,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title,
         description,
-        keywords: [printer.name, printer.brand, printer.technology, '3D printer', 'buy 3D printer India', 'Scribbl3D'],
+        keywords: [
+            printer.name,
+            `${printer.name} price India`,
+            printer.brand,
+            `${printer.brand} 3D printer`,
+            printer.technology,
+            '3D printer',
+            'buy 3D printer India',
+            'Scribbl3D',
+        ],
         alternates: { canonical: url },
         openGraph: {
             title,
