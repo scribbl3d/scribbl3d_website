@@ -15,9 +15,10 @@ export async function GET(req: Request) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const pickup = await prisma.pickupRequest.findFirst({
+    const pickups = await prisma.pickupRequest.findMany({
         where: {
             pickupLocation,
+            status: "scheduled",
             pickupDate: {
                 gte: today,
             },
@@ -27,18 +28,28 @@ export async function GET(req: Request) {
         },
     });
 
-    if (!pickup) {
+    if (pickups.length === 0) {
         return NextResponse.json({
             ok: true,
             scheduled: false,
+            pickups: [],
         });
     }
+
+    const mapped = pickups.map((pickup) => ({
+        pickupId: pickup.pickupId,
+        pickupTime: pickup.pickupTime,
+        pickupDate: pickup.pickupDate,
+    }));
 
     return NextResponse.json({
         ok: true,
         scheduled: true,
-        pickupId: pickup.pickupId,
-        pickupTime: pickup.pickupTime,
-        pickupDate: pickup.pickupDate,
+        pickups: mapped,
+        // Back-compat flat fields mirroring the earliest upcoming pickup,
+        // for any consumer still expecting the pre-multi-pickup shape.
+        pickupId: mapped[0].pickupId,
+        pickupTime: mapped[0].pickupTime,
+        pickupDate: mapped[0].pickupDate,
     });
 }

@@ -1,20 +1,25 @@
 import { PickupInfo } from "@/app/ops/control/orders/types";
 
-export function getNextValidPickup(
+export function getAllValidPickups(
     pickups?: PickupInfo[] | null,
-): PickupInfo | null {
-    if (!Array.isArray(pickups) || pickups.length === 0) return null;
+): PickupInfo[] {
+    if (!Array.isArray(pickups) || pickups.length === 0) return [];
 
-    const now = new Date();
-
-    const futurePickups = pickups
-        .map((p) => ({
-            ...p,
-            dateTime: new Date(`${p.pickupDate}T${p.pickupTime}:00`),
-        }))
-        .filter((p) => !isNaN(p.dateTime.getTime()))
-        .filter((p) => p.dateTime > now)
-        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
-
-    return futurePickups.length ? futurePickups[0] : null;
+    // The API already restricts results to pickupDate >= today using the
+    // server's clock (and keeps a pickup visible for its whole scheduled
+    // day, regardless of slot time). Re-deriving "today" here from the
+    // browser's clock would risk disagreeing with the server near a day
+    // boundary, so this only drops unparsable entries and sorts the rest
+    // chronologically.
+    return pickups
+        .map((p) => {
+            // pickupDate may arrive as a plain "YYYY-MM-DD" string or as a
+            // full ISO datetime (e.g. from Prisma's serialized Date); keep
+            // only the date part so it combines cleanly with pickupTime.
+            const datePart = p.pickupDate.split("T")[0];
+            return { pickup: p, dateTime: new Date(`${datePart}T${p.pickupTime}:00`) };
+        })
+        .filter(({ dateTime }) => !isNaN(dateTime.getTime()))
+        .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime())
+        .map(({ pickup }) => pickup);
 }

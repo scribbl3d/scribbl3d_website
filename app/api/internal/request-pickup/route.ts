@@ -48,6 +48,20 @@ export async function POST(req: Request) {
 
         /* ---------------- PICKUP EXISTS (BUSINESS SUCCESS) ---------------- */
         if (data?.pr_exist) {
+            // Delhivery confirmed an existing pickup for this location/date
+            // and did not create or change anything — the admin's just-
+            // submitted pickup_time/expected_package_count are unconfirmed,
+            // possibly different from the real existing schedule, so they
+            // must not overwrite the real stored values. Only the confirmed
+            // pickupId/status are safe to persist against an existing row.
+            //
+            // The `create` branch below only runs if no local row exists at
+            // all (e.g. a prior write failed after Delhivery already had a
+            // pickup for this location/date) — there, there's nothing
+            // locally-stored to protect, and the admin's current submission
+            // is the only information available, so it's used as a
+            // best-effort record until it can be reconciled against
+            // Delhivery's real schedule.
             await prisma.pickupRequest.upsert({
                 where: {
                     pickupLocation_pickupDate: {
@@ -57,8 +71,6 @@ export async function POST(req: Request) {
                 },
                 update: {
                     pickupId: data.pickup_id,
-                    pickupTime: pickup_time,
-                    expectedPackageCount: Number(expected_package_count),
                     status: "scheduled",
                 },
                 create: {
@@ -78,7 +90,7 @@ export async function POST(req: Request) {
                 message:
                     data?.error?.message ||
                     data?.data?.message ||
-                    "Pickup already scheduled for this warehouse",
+                    "A pickup is already scheduled for this location on this date. The existing schedule was not changed — the time and package count you just submitted were not applied.",
             });
         }
 

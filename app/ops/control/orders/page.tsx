@@ -60,12 +60,12 @@ export default function OrdersPage() {
             const data = await res.json();
 
             if (data.ok && data.scheduled) {
-                setPickupInfo([
-                    {
-                        pickupDate: data.pickupDate,
-                        pickupTime: data.pickupTime,
-                    },
-                ]);
+                setPickupInfo(
+                    data.pickups.map((p: PickupInfo) => ({
+                        pickupDate: p.pickupDate,
+                        pickupTime: p.pickupTime,
+                    })),
+                );
             } else {
                 setPickupInfo(null);
             }

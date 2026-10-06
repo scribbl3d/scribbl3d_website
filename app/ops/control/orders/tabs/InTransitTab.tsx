@@ -19,12 +19,12 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-import { getNextValidPickup } from "@/lib/pickup/getNextValidPickup";
+import { getAllValidPickups } from "@/lib/pickup/getNextValidPickup";
 import { ActionButton } from "../components/ActionButton";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { TablePagination } from "../components/TablePagination";
 
-import { ChevronDown, Package } from "lucide-react";
+import { ChevronDown, Info, Package } from "lucide-react";
 import { formatOrderIdRaw } from "@/lib/format-order-id";
 import { Order, PickupInfo } from "../types";
 import { formatDate, formatRupees } from "../utils/formatters";
@@ -151,8 +151,8 @@ export function InTransitTab({
     }, [filteredOrders, page]);
 
     /* ---------- PICKUP LOGIC ---------- */
-    const nextPickup = useMemo(
-        () => getNextValidPickup(pickupInfo),
+    const upcomingPickups = useMemo(
+        () => getAllValidPickups(pickupInfo),
         [pickupInfo],
     );
 
@@ -170,26 +170,40 @@ export function InTransitTab({
     return (
         <div className="rounded-xl border bg-background p-6 shadow-sm">
             {/* ================= HEADER ================= */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-                <h3 className="text-2xl font-semibold">In Transit</h3>
+            <div className="flex flex-col gap-2 mb-6">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <h3 className="text-2xl font-semibold">In Transit</h3>
 
-                <div className="flex items-center gap-4">
-                    <Button variant="outline" onClick={onRequestPickup}>
-                        Request Pickup
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" onClick={onRequestPickup}>
+                            Request Pickup
+                        </Button>
 
-                    {nextPickup ? (
-                        <div className="text-sm text-muted-foreground">
-                            ⏰ Scheduled on{" "}
-                            <b>{formatPickupDate(nextPickup.pickupDate)}</b> at{" "}
-                            <b>{nextPickup.pickupTime}</b>
-                        </div>
-                    ) : (
-                        <div className="text-sm text-muted-foreground">
-                            No upcoming pickup scheduled
-                        </div>
-                    )}
+                        {upcomingPickups.length > 0 ? (
+                            <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                                {upcomingPickups.map((p, i) => (
+                                    <div
+                                        key={`${p.pickupDate}-${p.pickupTime}-${i}`}
+                                    >
+                                        ⏰ Scheduled on{" "}
+                                        <b>{formatPickupDate(p.pickupDate)}</b>{" "}
+                                        at <b>{p.pickupTime}</b>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-sm text-muted-foreground">
+                                No upcoming pickup scheduled
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                <p className="flex items-center gap-1 text-xs text-muted-foreground sm:justify-end sm:text-right">
+                    <Info className="h-3 w-3 shrink-0" />
+                    Only one pickup can be scheduled per day — choose the
+                    time carefully.
+                </p>
             </div>
 
             {/* ================= SEARCH ================= */}
