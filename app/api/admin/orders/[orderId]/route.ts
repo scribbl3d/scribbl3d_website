@@ -39,6 +39,14 @@ export async function PATCH(req: NextRequest, context: any) {
             },
         });
 
+        // Record the delivery time once (used by the review system)
+        if (status === "delivered") {
+            await prisma.order.updateMany({
+                where: { id: orderId, deliveredAt: null },
+                data: { deliveredAt: new Date() },
+            });
+        }
+
         if (notifyCustomer) {
             if (status === "shipped" && trackingInfo) {
                 await sendShippingEmail(updatedOrder, trackingInfo);

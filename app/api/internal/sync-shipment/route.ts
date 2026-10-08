@@ -5,6 +5,7 @@ import {
     mapOrderToShipmentEmailData,
 } from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
+import { extractDeliveredAt } from "@/lib/reviews/deliveredAt";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -203,6 +204,16 @@ export async function POST(req: NextRequest) {
             await prisma.order.update({
                 where: { id: shipment.order.id },
                 data: { status: newOrderStatus },
+            });
+        }
+
+        // Record the delivery time once (used by the review system)
+        if (newOrderStatus === "delivered") {
+            await prisma.order.updateMany({
+                where: { id: shipment.order.id, deliveredAt: null },
+                data: {
+                    deliveredAt: extractDeliveredAt(trackingJson) ?? new Date(),
+                },
             });
         }
 
