@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { AdminSessionWatcher } from "./_components/AdminSessionWatcher";
 
 export default function AdminLayout({
     children,
@@ -9,6 +10,7 @@ export default function AdminLayout({
 }) {
     return (
         <div className="min-h-screen bg-background">
+            <AdminSessionWatcher />
             <header className="border-b sticky top-0 bg-background z-10">
                 <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center">
                     <Link href="/ops/control" passHref>

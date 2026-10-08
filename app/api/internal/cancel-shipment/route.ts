@@ -1,6 +1,7 @@
 // app/api/internal/cancel-shipment/route.ts
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { db } from "@/lib/db";
+import { canCustomerCancelOrder, pickDisplayShipment } from "@/lib/orders/cancellation";
 import axios from "axios";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -52,6 +53,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(
                 { error: "Order not found" },
                 { status: 404 },
+            );
+        }
+
+        if (
+            !canCustomerCancelOrder(
+                order.status,
+                pickDisplayShipment(order.shipments)?.status,
+            )
+        ) {
+            return NextResponse.json(
+                { error: "This order can no longer be cancelled" },
+                { status: 409 },
             );
         }
 

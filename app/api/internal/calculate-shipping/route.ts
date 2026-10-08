@@ -1,8 +1,22 @@
 // /api/internal/calculate-shipping/route.ts
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { isAdminRequest } from "@/lib/admin-session";
 import axios from "axios";
-import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+    // Used by signed-in checkout and the ops shipment dialog
+    if (!(await isAdminRequest(req))) {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json(
+                { ok: false, error: "Unauthorized" },
+                { status: 401 },
+            );
+        }
+    }
+
     try {
         const body = await req.json();
 

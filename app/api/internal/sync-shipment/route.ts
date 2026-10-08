@@ -4,6 +4,8 @@ import {
     mapOrderToEmailData,
     mapOrderToShipmentEmailData,
 } from "@/lib/email/mapOrderToEmailData";
+import { isAdminRequest } from "@/lib/admin-session";
+import { isInternalRequest } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 import { extractDeliveredAt } from "@/lib/reviews/deliveredAt";
 import { NextRequest, NextResponse } from "next/server";
@@ -45,6 +47,11 @@ function isPreTransit(status: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+    // Server-to-server (triggerShipmentSync) or a signed-in admin
+    if (!isInternalRequest(req) && !(await isAdminRequest(req))) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     let orderId: string | null = null;
     let shipmentId: string | null = null;
 

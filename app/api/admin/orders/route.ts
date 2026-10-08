@@ -1,3 +1,4 @@
+import { internalRequestHeaders } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 import { shouldSyncShipment } from "@/lib/shipment/shouldSync";
 import { NextResponse } from "next/server";
@@ -9,7 +10,10 @@ import { NextResponse } from "next/server";
 function triggerShipmentSync(orderId: string) {
     fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/internal/sync-shipment`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            ...internalRequestHeaders(),
+        },
         body: JSON.stringify({ orderId }),
     }).catch(() => {});
 }

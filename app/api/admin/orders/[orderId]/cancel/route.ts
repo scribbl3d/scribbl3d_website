@@ -1,22 +1,31 @@
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { isAdminRequest } from "@/lib/admin-session";
 import { db } from "@/lib/db";
 import { sendOrderCancelled } from "@/lib/email/index";
 import { mapOrderToCancelEmailData } from "@/lib/email/mapOrderToEmailData";
+import { canCustomerCancelOrder, pickDisplayShipment } from "@/lib/orders/cancellation";
 import { initiatePhonePeRefund } from "@/lib/refund";
 import crypto from "crypto";
-import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request, context: any) {
+export async function POST(req: NextRequest, context: any) {
     const orderId = context.params.orderId;
 
-    // Check if cancelledBy was sent from frontend
-    let cancelledBy: "customer" | "admin" = "customer";
+    // Who is cancelling is decided server-side, never from the request body
+    const isAdmin = await isAdminRequest(req);
+    const session = isAdmin ? null : await getServerSession(authOptions);
+    if (!isAdmin && !session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const cancelledBy: "customer" | "admin" = isAdmin ? "admin" : "customer";
+
     let cancellationReason: string | undefined;
     try {
         const body = await req.json();
-        cancelledBy = body.cancelledBy || "customer";
-        cancellationReason = body.reason;
+        if (typeof body?.reason === "string") cancellationReason = body.reason;
     } catch {
-        // No body sent — default to customer
+        // No body sent
     }
 
     console.log("=================================================");
@@ -27,14 +36,35 @@ export async function POST(req: Request, context: any) {
     try {
         const order = await db.order.findUnique({
             where: { id: orderId },
-            include: { user: true },
+            include: { user: true, shipments: true },
         });
 
-        if (!order) {
+        if (!order || (!isAdmin && order.userId !== session?.user?.id)) {
             console.log("❌ [CANCEL] Order not found");
             return NextResponse.json(
                 { error: "Order not found" },
                 { status: 404 },
+            );
+        }
+
+        // Prevent a second refund for an order already cancelled/refunded
+        if (order.status === "cancelled" || order.refundId) {
+            return NextResponse.json(
+                { error: "Order is already cancelled" },
+                { status: 409 },
+            );
+        }
+
+        if (
+            !isAdmin &&
+            !canCustomerCancelOrder(
+                order.status,
+                pickDisplayShipment(order.shipments)?.status,
+            )
+        ) {
+            return NextResponse.json(
+                { error: "This order can no longer be cancelled" },
+                { status: 409 },
             );
         }
 

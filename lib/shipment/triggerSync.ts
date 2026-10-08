@@ -1,7 +1,12 @@
+import { internalRequestHeaders } from "@/lib/internal-auth";
+
 export function triggerShipmentSync(orderId: string) {
     fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/internal/sync-shipment`, {
         method: "POST",
-
+        headers: {
+            "Content-Type": "application/json",
+            ...internalRequestHeaders(),
+        },
         body: JSON.stringify({ orderId }),
     })
         .then((res) => {
