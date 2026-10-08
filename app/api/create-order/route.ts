@@ -165,6 +165,9 @@ export async function POST(req: Request) {
                 if (item.resin) {
                     return {
                         itemType: "resin",
+                        productId: item.resin.id,
+                        variantId: item.resinWeightId ?? null,
+                        colourId: item.resinColourId ?? null,
                         name: item.resin.name,
                         quantity: item.quantity,
                         price: item.resinWeight?.price ?? 0,
@@ -180,6 +183,7 @@ export async function POST(req: Request) {
                 if (item.printer) {
                     return {
                         itemType: "printer",
+                        productId: item.printer.id,
                         name: item.printer.name,
                         quantity: item.quantity,
                         price: item.printer.price,
@@ -191,6 +195,8 @@ export async function POST(req: Request) {
                 if (item.prebuiltProduct) {
                     return {
                         itemType: "prebuilt",
+                        productId: item.prebuiltProduct.id,
+                        variantId: item.prebuiltVariantId ?? null,
                         name: item.prebuiltProduct.name,
                         quantity: item.quantity,
                         price: item.prebuiltVariant?.price ?? 0,
@@ -205,6 +211,8 @@ export async function POST(req: Request) {
                 if (item.filament) {
                     return {
                         itemType: "filament",
+                        productId: item.filament.id,
+                        variantId: item.filamentVariantId ?? null,
                         name: item.filament.name,
                         quantity: item.quantity,
                         price: item.filamentVariant?.price ?? 0,

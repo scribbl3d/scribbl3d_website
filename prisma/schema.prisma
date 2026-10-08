@@ -26,6 +26,8 @@ model User {
   sessions         Session[]
   wishlist         Wishlist?
   orderFeedback    OrderFeedback[]   // ← ADD THIS
+  productReviews   ProductReview[]
+  discounts        Discount[]
 }
 model Account {
   id                String  @id @default(cuid())
@@ -454,6 +456,87 @@ model Announcement {
   @@index([isActive, sortOrder])
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
+enum ReviewItemType {
+  printer
+  filament
+  resin
+  prebuilt
+}
+
+// One per order: review link sharing history and coupon window
+model ReviewRequest {
+  id                   String    @id @default(cuid())
+  orderId              String    @unique
+  emailSentAt          DateTime? // link included in the delivered email
+  firstSharedAt        DateTime? // first admin copy/share
+  lastSharedAt         DateTime?
+  shareCount           Int       @default(0)
+  couponWindowStartsAt DateTime? // delivery date, or first share for pre-launch orders
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+// One per reviewed product line in an order
+model ProductReview {
+  id                String         @id @default(cuid())
+  orderId           String
+  orderItemIndex    Int // position in Order.items
+  userId            String
+  itemType          ReviewItemType
+  printerId         String?
+  filamentId        String?
+  resinId           String?
+  prebuiltProductId String?
+  variantLabel      String? // snapshot, e.g. "Gold · 1.75mm - 1kg"
+  rating            Int // 1-5
+  content           String?        @db.VarChar(2000)
+  tags              String[]
+  reviewerName      String // full name at submission
+  isIncentivised    Boolean        @default(false)
+  status            ReviewStatus   @default(PENDING)
+  moderatedAt       DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  order           Order             @relation(fields: [orderId], references: [id])
+  user            User              @relation(fields: [userId], references: [id])
+  printer         Printer?          @relation(fields: [printerId], references: [id], onDelete: SetNull)
+  filament        Filament?         @relation(fields: [filamentId], references: [id], onDelete: SetNull)
+  resin           Resin?            @relation(fields: [resinId], references: [id], onDelete: SetNull)
+  prebuiltProduct PrebuiltProducts? @relation(fields: [prebuiltProductId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, orderItemIndex])
+  @@index([userId])
+  @@index([printerId, status, createdAt])
+  @@index([filamentId, status, createdAt])
+  @@index([resinId, status, createdAt])
+  @@index([prebuiltProductId, status, createdAt])
+  @@index([status, rating])
+}
+
+// One review coupon per order
+model ReviewReward {
+  id             String    @id @default(cuid())
+  orderId        String    @unique
+  userId         String
+  discountId     String    @unique
+  issuedAt       DateTime  @default(now())
+  reminderSentAt DateTime? // set by the expiry-reminder cron job
+  cancelledAt    DateTime? // order refunded
+
+  discount Discount @relation(fields: [discountId], references: [id])
+
+  @@index([userId])
+}
+
 model Order {
   id                String    @id @default(cuid())
   userId            String
@@ -492,6 +575,9 @@ model Order {
   user              User      @relation(fields: [userId], references: [id])
   shipments         Shipment[]
   feedback          OrderFeedback?
+  deliveredAt       DateTime?         // set once on first transition to delivered
+  reviewRequest     ReviewRequest?
+  reviews           ProductReview[]
 
   invoice           Invoice?
 
@@ -574,9 +660,15 @@ model Discount {
  
   itemTypes     DiscountItemType[]
   usages        DiscountUsage[]               // tracks per-user redemptions
+
+  userId        String?                       // null = public code; set = only this customer
+  user          User?    @relation(fields: [userId], references: [id])
+  reviewReward  ReviewReward?
  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([userId])
 }
  
 // NEW MODEL — tracks every time a user redeems a discount
@@ -686,6 +778,7 @@ model HeroImage {
 
 model Printer {
   id    String @id @default(cuid())
+  productReviews ProductReview[]
   name  String
   slug  String @unique
   brand String
@@ -841,6 +934,7 @@ model SupportContent {
 
 model Resin {
   id    String @id @default(cuid())
+  productReviews ProductReview[]
   name  String
   slug  String @unique
   brand String
@@ -1003,6 +1097,7 @@ model PrebuiltProducts {
   variants      PrebuiltVariants[]
   cartItems     CartItem[]
   reviews       Review[]
+  productReviews ProductReview[]
   wishlistItems WishlistItem[]
 
 }
@@ -1125,6 +1220,7 @@ model Filament {
   cartItems        CartItem[]
   wishlistItems    WishlistItem[]
   reviews          Review[]
+  productReviews   ProductReview[]
   
   @@index([category, material])
   @@index([slug])
