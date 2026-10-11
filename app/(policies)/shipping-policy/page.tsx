@@ -79,7 +79,7 @@ const sections: PolicySection[] = [
     content: <>
       <p>Customers should <strong>inspect the package upon delivery</strong>.</p>
       <p>If the package appears visibly damaged or tampered with, please notify us as soon as possible and, where possible, record the condition of the package before opening it.</p>
-      <p>For products damaged during transit, please contact <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> <strong>within 48 hours of delivery</strong> with:</p>
+      <p>For products damaged during transit, please contact <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> <strong>within 48 hours of delivery</strong> with:</p>
       <ul>
         <li><strong>Order number</strong>;</li>
         <li>photographs/videos of the package and Product; and</li>
@@ -112,7 +112,7 @@ const sections: PolicySection[] = [
       <dl className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5 text-sm sm:p-6">
         <div className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
           <dt className="font-medium text-slate-900">Email</dt>
-          <dd className="min-w-0"><a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a></dd>
+          <dd className="min-w-0"><a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a></dd>
         </div>
         <div className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
           <dt className="font-medium text-slate-900">Phone</dt>

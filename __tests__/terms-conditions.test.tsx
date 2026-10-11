@@ -61,8 +61,8 @@ describe('Terms & Conditions', () => {
     article.getAllByRole('link', { name: 'Refund Policy' }).forEach((link) => {
       expect(link).toHaveAttribute('href', '/refund-policy');
     });
-    article.getAllByRole('link', { name: 'supplychain@scribbl3d.com' }).forEach((link) => {
-      expect(link).toHaveAttribute('href', 'mailto:supplychain@scribbl3d.com');
+    article.getAllByRole('link', { name: 'scribbl3dofficial@gmail.com' }).forEach((link) => {
+      expect(link).toHaveAttribute('href', 'mailto:scribbl3dofficial@gmail.com');
     });
     expect(article.getAllByRole('link', { name: '+91 9599523434' })).toHaveLength(2);
     expect(metadata.alternates).toEqual({ canonical: '/terms-conditions' });
@@ -133,9 +133,9 @@ describe('Returns Policy', () => {
     expect(refundLinks).toHaveLength(2);
     refundLinks.forEach((link) => expect(link).toHaveAttribute('href', '/refund-policy'));
     expect(screen.getByRole('link', { name: 'Shipping Policy' })).toHaveAttribute('href', '/shipping-policy');
-    const emailLinks = screen.getAllByRole('link', { name: 'supplychain@scribbl3d.com' });
+    const emailLinks = screen.getAllByRole('link', { name: 'scribbl3dofficial@gmail.com' });
     expect(emailLinks).toHaveLength(2);
-    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:supplychain@scribbl3d.com'));
+    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:scribbl3dofficial@gmail.com'));
     expect(screen.queryByText(/Orders are delivered within 5 days/)).not.toBeInTheDocument();
     expect(returnsMetadata.alternates).toEqual({ canonical: '/return-policy' });
     expect(returnsMetadata.title).toBe('Returns Policy');
@@ -186,9 +186,9 @@ describe('Refund & Cancellation Policy', () => {
 
   it('replaces placeholders with working support, returns, and customer orders links', () => {
     const { container } = render(<RefundPolicy />);
-    const emailLinks = screen.getAllByRole('link', { name: 'supplychain@scribbl3d.com' });
+    const emailLinks = screen.getAllByRole('link', { name: 'scribbl3dofficial@gmail.com' });
     expect(emailLinks).toHaveLength(3);
-    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:supplychain@scribbl3d.com'));
+    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:scribbl3dofficial@gmail.com'));
     expect(screen.getByRole('link', { name: '+91 9599523434' })).toHaveAttribute('href', 'tel:+919599523434');
     expect(screen.getByRole('link', { name: 'orders section' })).toHaveAttribute('href', '/profile?tab=orders');
     expect(screen.getByRole('link', { name: 'Returns Policy' })).toHaveAttribute('href', '/return-policy');
@@ -259,9 +259,9 @@ describe('Privacy Policy', () => {
     expect(screen.getByText('Founder')).toBeInTheDocument();
     expect(screen.getByText('Monday–Saturday, 9:00 AM–6:00 PM')).toBeInTheDocument();
     expect(screen.getAllByText('Plot No. 685, Saini Mohalla, Nangloi, New Delhi – 110041')).toHaveLength(2);
-    const emailLinks = screen.getAllByRole('link', { name: 'supplychain@scribbl3d.com' });
+    const emailLinks = screen.getAllByRole('link', { name: 'scribbl3dofficial@gmail.com' });
     expect(emailLinks).toHaveLength(3);
-    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:supplychain@scribbl3d.com'));
+    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:scribbl3dofficial@gmail.com'));
     const phoneLinks = screen.getAllByRole('link', { name: '+91 9599523434' });
     expect(phoneLinks).toHaveLength(2);
     phoneLinks.forEach((link) => expect(link).toHaveAttribute('href', 'tel:+919599523434'));
@@ -312,7 +312,7 @@ describe('Shipping Policy', () => {
     const article = screen.getByRole('article');
     expect(article).toHaveTextContent('Customers are responsible for ensuring that their delivery address and contact information are accurate.');
     expect(article).toHaveTextContent('A refund will not automatically be issued for an undelivered or refused shipment unless there is a valid reason for the refund and the claim is supported by the applicable courier or logistics policy.');
-    expect(article).toHaveTextContent('For products damaged during transit, please contact supplychain@scribbl3d.com within 48 hours of delivery with:');
+    expect(article).toHaveTextContent('For products damaged during transit, please contact scribbl3dofficial@gmail.com within 48 hours of delivery with:');
     expect(screen.getByText('Order number', { selector: 'strong' })).toBeInTheDocument();
     expect(screen.getByText('photographs/videos of the package and Product; and')).toBeInTheDocument();
     expect(article).toHaveTextContent('Where a delay occurs, we will make reasonable efforts to assist the Customer and coordinate with the relevant logistics partner.');
@@ -322,9 +322,9 @@ describe('Shipping Policy', () => {
 
   it('fills placeholders and links to returns, refunds, and shipping support', () => {
     const { container } = render(<ShippingPolicy />);
-    const emailLinks = screen.getAllByRole('link', { name: 'supplychain@scribbl3d.com' });
+    const emailLinks = screen.getAllByRole('link', { name: 'scribbl3dofficial@gmail.com' });
     expect(emailLinks).toHaveLength(2);
-    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:supplychain@scribbl3d.com'));
+    emailLinks.forEach((link) => expect(link).toHaveAttribute('href', 'mailto:scribbl3dofficial@gmail.com'));
     expect(screen.getByRole('link', { name: '+91 9599523434' })).toHaveAttribute('href', 'tel:+919599523434');
     expect(screen.getByRole('link', { name: 'Returns Policy' })).toHaveAttribute('href', '/return-policy');
     expect(screen.getByRole('link', { name: 'Refund Policy' })).toHaveAttribute('href', '/refund-policy');

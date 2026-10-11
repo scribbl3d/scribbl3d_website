@@ -54,7 +54,7 @@ const sections: PolicySection[] = [
     id: "defective-damaged-or-incorrect-products",
     title: "Defective, Damaged or Incorrect Products",
     content: <>
-      <p>If a Product is received damaged, defective or different from the Product ordered, please contact us at <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> as soon as possible.</p>
+      <p>If a Product is received damaged, defective or different from the Product ordered, please contact us at <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> as soon as possible.</p>
       <p>Where the issue is verified, SCRIBBL3D will provide a replacement subject to availability.</p>
       <p>If a replacement cannot reasonably be provided, the matter will be handled in accordance with our <Link href="/refund-policy">Refund Policy</Link>.</p>
     </>,
@@ -93,7 +93,7 @@ const sections: PolicySection[] = [
     id: "return-process",
     title: "Return Process",
     content: <>
-      <p>To request a return or exchange, contact us at <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> with:</p>
+      <p>To request a return or exchange, contact us at <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> with:</p>
       <ul>
         <li><strong>Order number</strong>;</li>
         <li>Product details;</li>

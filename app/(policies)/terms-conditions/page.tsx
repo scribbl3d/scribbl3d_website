@@ -27,7 +27,7 @@ function BusinessDetails({ contact = false }: Readonly<{ contact?: boolean }>) {
     ...(contact ? [{ label: "Brand", value: "SCRIBBL3D" }] : []),
     { label: "Registered office", value: "Plot 685, Behind MCD Primary School, Saini Mohalla, Nangloi, New Delhi 110041" },
     ...(!contact ? [{ label: "GSTIN", value: "07BVCPJ4441C1Z1" }] : []),
-    { label: "Email", value: <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> },
+    { label: "Email", value: <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> },
     { label: "Phone", value: <a href="tel:+919599523434">+91 9599523434</a> },
     ...(contact ? [{ label: "Website", value: <a href="https://www.scribbl3d.com/">www.scribbl3d.com</a> }] : []),
   ];
@@ -231,7 +231,7 @@ const sections: PolicySection[] = [
     title: "Governing Law and Dispute Resolution",
     content: <>
       <p>These Terms are governed by the <strong>laws of India</strong>.</p>
-      <p>Any concerns or disputes should first be communicated to SCRIBBL3D at <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> so that we may attempt to resolve the matter.</p>
+      <p>Any concerns or disputes should first be communicated to SCRIBBL3D at <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> so that we may attempt to resolve the matter.</p>
       <p>Subject to applicable law, disputes that cannot be resolved through this process shall be subject to the jurisdiction of the courts in New Delhi, Delhi, India.</p>
       <p>Nothing in this section limits any statutory rights or remedies available to consumers under applicable law.</p>
     </>,

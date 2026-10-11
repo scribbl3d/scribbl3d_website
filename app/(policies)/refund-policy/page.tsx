@@ -29,7 +29,7 @@ const sections: PolicySection[] = [
       <p>Customers may request cancellation of an order provided the order <strong>has not already been dispatched</strong>.</p>
       <p>Once an order has been dispatched or entered the delivery process, cancellation may no longer be available.</p>
       <p>For customised, personalised or made-to-order Products, <strong>cancellation may not be available once production has commenced</strong>.</p>
-      <p>To request a cancellation, contact us at <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> with your <strong>Order ID</strong> and cancellation request, or navigate to your <Link href="/profile?tab=orders" prefetch={false}>orders section</Link> to cancel an eligible order.</p>
+      <p>To request a cancellation, contact us at <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> with your <strong>Order ID</strong> and cancellation request, or navigate to your <Link href="/profile?tab=orders" prefetch={false}>orders section</Link> to cancel an eligible order.</p>
     </>,
   },
   {
@@ -45,7 +45,7 @@ const sections: PolicySection[] = [
     id: "damaged-defective-or-incorrect-products",
     title: "Damaged, Defective or Incorrect Products",
     content: <>
-      <p>If you receive a Product that is damaged, defective, incorrectly supplied or materially different from the Product ordered, please contact <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> <strong>within 48 hours of delivery</strong>.</p>
+      <p>If you receive a Product that is damaged, defective, incorrectly supplied or materially different from the Product ordered, please contact <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> <strong>within 48 hours of delivery</strong>.</p>
       <p>Please provide:</p>
       <ul>
         <li><strong>Order ID</strong>;</li>
@@ -94,7 +94,7 @@ const sections: PolicySection[] = [
       <dl className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5 text-sm sm:p-6">
         <div className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
           <dt className="font-medium text-slate-900">Email</dt>
-          <dd className="min-w-0"><a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a></dd>
+          <dd className="min-w-0"><a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a></dd>
         </div>
         <div className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
           <dt className="font-medium text-slate-900">Phone</dt>

@@ -29,7 +29,7 @@ function PrivacyContactDetails({ grievance = false }: { grievance?: boolean }) {
     ] : []),
     { label: "Company", value: "SCRIBBL3D" },
     { label: "Address", value: "Plot No. 685, Saini Mohalla, Nangloi, New Delhi – 110041" },
-    { label: "Email", value: <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a> },
+    { label: "Email", value: <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a> },
     { label: "Phone", value: <a href="tel:+919599523434">+91 9599523434</a> },
     ...(grievance
       ? [{ label: "Availability", value: "Monday–Saturday, 9:00 AM–6:00 PM" }]
@@ -222,7 +222,7 @@ const sections: PolicySection[] = [
       <p>You may opt out of promotional communications by:</p>
       <ul>
         <li>using the <strong>unsubscribe option</strong> provided in the communication; or</li>
-        <li>contacting us at <a href="mailto:supplychain@scribbl3d.com">supplychain@scribbl3d.com</a>.</li>
+        <li>contacting us at <a href="mailto:scribbl3dofficial@gmail.com">scribbl3dofficial@gmail.com</a>.</li>
       </ul>
       <p>Transactional and service-related communications, such as order confirmations, shipping updates and important account notifications, may continue where necessary.</p>
     </>,
