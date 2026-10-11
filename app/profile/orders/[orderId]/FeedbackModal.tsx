@@ -4,47 +4,9 @@ import { MessageSquarePlus, Package, Star, X } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { StarRating } from "@/components/ui/star-rating";
+import { GLOBAL_TAGS, ITEM_TYPE_TAGS } from "@/lib/reviews/tags";
 
 /* ────────────────────── Tag Config ────────────────────── */
-
-const GLOBAL_TAGS = [
-    "Fast delivery",
-    "Secure packaging",
-    "Great value",
-    "Responsive support",
-] as const;
-
-const ITEM_TYPE_TAGS: Record<string, readonly string[]> = {
-    filament: [
-        "Smooth extrusion",
-        "Strong adhesion",
-        "Vibrant color",
-        "Stringing issues",
-    ],
-
-    resin: ["High detail", "Fast curing", "Low odor", "Brittle prints"],
-
-    printer: [
-        "Excellent print quality",
-        "Reliable performance",
-        "Easy setup",
-        "Noisy operation",
-    ],
-
-    product: [
-        "Excellent detailing",
-        "Accurate sizing",
-        "Premium finish",
-        "Minor imperfections",
-    ],
-
-    prebuilt: [
-        "Excellent detailing",
-        "Accurate sizing",
-        "Premium finish",
-        "Minor imperfections",
-    ],
-};
 
 function getTagsForItems(items: OrderItem[]): string[] {
     const itemTypeTagsSet = new Set<string>();

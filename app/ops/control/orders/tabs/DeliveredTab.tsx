@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 
 import { ActionButton } from "../components/ActionButton";
+import { AdminReviewInfo, ReviewActions, ReviewStatusBadge } from "../components/ReviewActions";
 import { OrdersSearchBar } from "../components/OrdersSearchBar";
 import { TablePagination } from "../components/TablePagination";
 
@@ -85,6 +86,24 @@ export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
         return filteredOrders.slice(start, start + PAGE_SIZE);
     }, [filteredOrders, page]);
 
+    /* ---------- REVIEW STATUS (visible rows only) ---------- */
+    const [reviewInfo, setReviewInfo] = useState<Record<string, AdminReviewInfo>>({});
+    const visibleIds = paginatedOrders.map((order) => order.id).join(",");
+
+    useEffect(() => {
+        if (!visibleIds) return;
+        let cancelled = false;
+        fetch(`/api/admin/reviews/status?orderIds=${encodeURIComponent(visibleIds)}`)
+            .then((res) => (res.ok ? res.json() : {}))
+            .then((data: Record<string, AdminReviewInfo>) => {
+                if (!cancelled) setReviewInfo((prev) => ({ ...prev, ...data }));
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [visibleIds]);
+
     /* ---------- DOWNLOAD HANDLER ---------- */
     async function handleInvoiceClick(order: Order) {
         if (downloadingId) return;
@@ -118,6 +137,7 @@ export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
                         <TableHead>Status</TableHead>
                         <TableHead>Payment</TableHead>
                         <TableHead>Order Date</TableHead>
+                        <TableHead>Review</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -149,6 +169,10 @@ export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
 
                             <TableCell>{formatDate(order.createdAt)}</TableCell>
 
+                            <TableCell>
+                                <ReviewStatusBadge info={reviewInfo[order.id]} />
+                            </TableCell>
+
                             <TableCell className="text-right">
                                 <div className="flex flex-col gap-2 items-end">
                                     <ActionButton
@@ -170,6 +194,18 @@ export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
                                             ? "Generating…"
                                             : "Tax Invoice"}
                                     </ActionButton>
+
+                                    {/* ── REVIEW LINK ── */}
+                                    <ReviewActions
+                                        orderId={order.id}
+                                        info={reviewInfo[order.id]}
+                                        onChanged={(info) =>
+                                            setReviewInfo((prev) => ({
+                                                ...prev,
+                                                [order.id]: info,
+                                            }))
+                                        }
+                                    />
                                 </div>
                             </TableCell>
                         </TableRow>
@@ -178,7 +214,7 @@ export function DeliveredTab({ orders, onView, onDownloadInvoice }: Props) {
                     {!paginatedOrders.length && (
                         <TableRow>
                             <TableCell
-                                colSpan={7}
+                                colSpan={8}
                                 className="text-center text-muted-foreground py-6"
                             >
                                 No delivered orders found.

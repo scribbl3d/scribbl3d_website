@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import PrebuiltProductDetailClient from './_components/PrebuiltProductDetailClient';
+import { ProductReviews, RatingSummaryInline } from "@/components/reviews/ProductReviews";
+import { getPdpReviews, pdpJsonLdRating } from "@/lib/reviews/productReviews";
 import { buildBreadcrumbJsonLd, buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
@@ -87,11 +89,15 @@ export default async function PrebuiltProductPage({ params }: Props) {
         notFound();
     }
 
+    // Approved reviews: list from 2, average + JSON-LD rating from 5
+    const pdpReviews = await getPdpReviews("prebuilt", product.id);
+
     const serializedProduct = JSON.parse(JSON.stringify(product));
 
     const url = `${baseUrl}/prebuilt-products/${product.slug}`;
     const activeVariants = (product.variants || []).filter((v) => v.isActive);
     const jsonLd = buildProductJsonLd({
+        ...pdpJsonLdRating(pdpReviews),
         name: product.name,
         description: product.longDescription || product.shortDescription,
         url,
@@ -135,7 +141,18 @@ export default async function PrebuiltProductPage({ params }: Props) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
             />
-            <PrebuiltProductDetailClient product={serializedProduct} />
+            <PrebuiltProductDetailClient product={serializedProduct}
+                ratingSummary={<RatingSummaryInline key="rating-summary" summary={pdpReviews.summary} />}
+                reviewsSection={
+                    <ProductReviews
+                        key="product-reviews"
+                        family="prebuilt"
+                        productId={product.id}
+                        summary={pdpReviews.summary}
+                        initialReviews={pdpReviews.reviews}
+                    />
+                }
+            />
         </>
     );
 }

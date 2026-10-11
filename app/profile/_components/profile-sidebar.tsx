@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Package, User, Heart } from "lucide-react";
+import { LayoutDashboard, Package, User, Heart, Ticket } from "lucide-react";
 
 interface ProfileSidebarProps {
   activeTab: string;
@@ -24,6 +24,11 @@ export function ProfileSidebar({ activeTab }: ProfileSidebarProps) {
       name: "Wishlist",
       href: "/profile?tab=wishlist",
       icon: Heart,
+    },
+    {
+      name: "Coupons",
+      href: "/profile?tab=coupons",
+      icon: Ticket,
     },
     {
       name: "Account",

@@ -1,4 +1,7 @@
 import { sendEmail } from "@/lib/email/sendEmail";
+import { reviewRequestBlock } from "@/lib/email/templates/orderDelivered";
+import { reviewLinkUrl } from "@/lib/reviews/link";
+import { recordReviewEmailSent } from "@/lib/reviews/requests";
 
 export interface TrackingInfo {
   trackingNumber?: string;
@@ -51,9 +54,9 @@ export default async function sendStatusEmail(
       "We hope you enjoy your Scribbl3D creation. Thank you for choosing us for your 3D printing needs!";
     statusSection = `<div class="status-info" style="background:#e6ffe6;padding:20px;border-radius:8px;margin:20px 0;">
       <h3 style="color:#43b581;margin:0 0 10px 0;">🎉 Delivered Successfully</h3>
-      <p style="margin:5px 0;color:#2d3748;">Your order has arrived! If you love your product, we'd appreciate a review. If you need help, we're here for you.</p>
-      <a href="https://scribbl3d.com/review" style="display:inline-block;margin-top:10px;background:#6a82fb;color:#fff;padding:10px 24px;border-radius:20px;text-decoration:none;font-weight:500;">Leave a Review</a>
-    </div>`;
+      <p style="margin:5px 0;color:#2d3748;">Your order has arrived! If you need help, we're here for you.</p>
+    </div>
+    ${reviewRequestBlock(reviewLinkUrl(String(order.id)))}`;
     ctaText = "Order Details & Support";
   } else if (status === "shipped") {
     subject = "Your Order Has Been Shipped! - Scribbl3D";
@@ -187,9 +190,16 @@ export default async function sendStatusEmail(
   `;
 
   // Send via ZeptoMail
-  await sendEmail({
+  const result = await sendEmail({
     to: userEmail,
     subject,
     html,
   });
+
+  // Delivered emails carry the review link: record it for the Delivered tab
+  if (status === "delivered" && result?.ok) {
+    await recordReviewEmailSent(String(order.id)).catch((err) =>
+      console.error("[Email] Failed to record review email:", err instanceof Error ? err.message : err),
+    );
+  }
 }

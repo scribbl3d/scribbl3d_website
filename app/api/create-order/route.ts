@@ -1,12 +1,19 @@
-import { calculateExpressShipping } from "@/app/checkout/components/expressShipping";
+import { CheckoutPricingError, priceCheckout } from "@/lib/checkout/pricing";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "../auth/[...nextauth]/options";
 
+// PhonePe merchantTransactionId: letters, digits, _ and -, at most 35 characters
+const TRANSACTION_ID = /^[A-Za-z0-9_-]{8,35}$/;
+
 /* =========================
    CREATE ORDER
 ========================= */
+// Every money value (subtotal, discount, GST, shipping, total) is calculated
+// here from the database (lib/checkout/pricing.ts). The total the customer
+// saw is only compared: if it differs, the order is not created and the
+// up-to-date prices are returned so checkout can show them.
 export async function POST(req: Request) {
     try {
         /* ---------- AUTH ---------- */
@@ -21,12 +28,7 @@ export async function POST(req: Request) {
         /* ---------- REQUEST BODY ---------- */
         const {
             mode = "cart",
-            items,
-            subtotal,
-            discountAmount = 0,
             discountCode = null,
-            shippingPrice = 0,
-            tax = 0,
             totalAmount,
             shippingMode, // "Surface" | "Express"
             shippingAddress,
@@ -35,40 +37,38 @@ export async function POST(req: Request) {
             transactionId,
         } = await req.json();
 
-        /* ---------- PRICING VALIDATION ---------- */
-        if (subtotal == null || totalAmount == null) {
+        /* ---------- INPUT VALIDATION ---------- */
+        if (mode === "buynow") {
+            // Buy-now items came from the browser and cannot be priced safely; no page uses it
             return NextResponse.json(
-                { error: "Pricing data missing" },
+                { error: "Please add this item to your cart to check out." },
                 { status: 400 },
             );
         }
-        if (discountAmount < 0) {
-            return NextResponse.json(
-                { error: "Invalid discount amount" },
-                { status: 400 },
-            );
-        }
-        if (shippingPrice < 0) {
-            return NextResponse.json(
-                { error: "Invalid shipping price" },
-                { status: 400 },
-            );
-        }
-        if (tax < 0) {
-            return NextResponse.json(
-                { error: "Invalid tax amount" },
-                { status: 400 },
-            );
-        }
-
-        /* ---------- MODE NORMALIZATION ---------- */
-        const normalizedMode =
-            mode === "buynow" || mode === "cart" ? mode : "cart";
-
-        /* ---------- SHIPPING MODE VALIDATION ---------- */
         if (shippingMode !== "Surface" && shippingMode !== "Express") {
             return NextResponse.json(
                 { error: "Invalid shipping mode" },
+                { status: 400 },
+            );
+        }
+        if (
+            typeof transactionId !== "string" ||
+            !TRANSACTION_ID.test(transactionId)
+        ) {
+            return NextResponse.json(
+                { error: "Invalid transaction" },
+                { status: 400 },
+            );
+        }
+        if (!shippingAddress || typeof shippingAddress !== "object") {
+            return NextResponse.json(
+                { error: "Shipping address missing" },
+                { status: 400 },
+            );
+        }
+        if (typeof totalAmount !== "number" || !Number.isFinite(totalAmount)) {
+            return NextResponse.json(
+                { error: "Pricing data missing" },
                 { status: 400 },
             );
         }
@@ -78,38 +78,54 @@ export async function POST(req: Request) {
             where: { transactionId },
         });
         if (existingOrder) {
+            if (existingOrder.userId !== session.user.id) {
+                return NextResponse.json(
+                    { error: "Invalid transaction" },
+                    { status: 409 },
+                );
+            }
             return NextResponse.json({
                 orderId: existingOrder.id,
                 status: existingOrder.status,
             });
         }
 
-        let orderItems: any[] = [];
-
-        /* =====================================================
-           BUY NOW FLOW
-        ===================================================== */
-        if (normalizedMode === "buynow") {
-            if (!Array.isArray(items) || items.length !== 1) {
+        /* ---------- SERVER PRICING ---------- */
+        let pricing;
+        try {
+            pricing = await priceCheckout({
+                userId: session.user.id,
+                shippingMode,
+                destinationPincode: shippingAddress.pincode,
+                discountCode: discountCode ? String(discountCode) : null,
+            });
+        } catch (error) {
+            if (error instanceof CheckoutPricingError) {
                 return NextResponse.json(
-                    { error: "Buy Now must contain exactly one item" },
+                    { error: error.message, code: error.code },
                     { status: 400 },
                 );
             }
-            const item = items[0];
-            orderItems = [
+            throw error;
+        }
+
+        if (Math.abs(totalAmount - pricing.totalAmount) > 0.01) {
+            return NextResponse.json(
                 {
-                    itemType: item.itemType,
-                    name: item.name,
-                    quantity: 1,
-                    price: item.price,
-                    image: item.images?.[0] ?? null,
-                    size: item.size ?? null,
-                    color: item.color ?? null,
-                    colorHex: item.colorHex ?? null,
+                    error:
+                        pricing.shippingPrice > 0
+                            ? "Prices have been updated (shipping or discount changed). Please review the new total before paying."
+                            : "Prices have been updated. Please review the new total before paying.",
+                    code: "PRICE_CHANGED",
+                    pricing,
                 },
-            ];
-        } else {
+                { status: 409 },
+            );
+        }
+
+        let orderItems: any[] = [];
+
+        {
             /* =====================================================
                CART FLOW
             ===================================================== */
@@ -229,28 +245,17 @@ export async function POST(req: Request) {
             });
         }
 
-        /* ---------- EXPRESS SHIPPING BACKEND CHECK ---------- */
-        if (shippingMode === "Express") {
-            const expressCheck = calculateExpressShipping(orderItems);
-            if (!expressCheck.allowed) {
-                return NextResponse.json(
-                    { error: "Express shipping not allowed for this order" },
-                    { status: 400 },
-                );
-            }
-        }
-
         /* ---------- CREATE ORDER ---------- */
         const order = await prisma.order.create({
             data: {
                 userId: session.user.id,
                 items: orderItems,
-                subtotal,
-                discountAmount,
-                discountCode,
-                tax,
-                shippingPrice,
-                totalAmount,
+                subtotal: pricing.subtotal,
+                discountAmount: pricing.discountAmount,
+                discountCode: pricing.discountCode,
+                tax: pricing.tax,
+                shippingPrice: pricing.shippingPrice,
+                totalAmount: pricing.totalAmount,
                 shippingMode,
                 shippingAddress,
                 billingAddress,
@@ -264,10 +269,7 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error("[Create Order] Error:", error);
         return NextResponse.json(
-            {
-                error: "Failed to create order",
-                details: (error as Error).message,
-            },
+            { error: "Failed to create order" },
             { status: 500 },
         );
     }

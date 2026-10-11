@@ -70,20 +70,21 @@ Ratings collected from customers never reach product pages, printers and resins 
 
 | ID | Requirement |
 | --- | --- |
-| R1 | Same UI and behaviour as the existing Order Details feedback modal, presented as a page: per-item star rating, review text, and tags (existing global and item-type tags). |
+| R1 | Page in two parts. **1. Overall experience (order level, optional):** star rating, order tags (Fast delivery, Secure packaging, Great value, Responsive support) and an optional comment; one per order. **2. Products:** per-item star rating, product-type tags and optional text. The customer may submit either part or both. How order-level reviews are displayed is decided in a later stage. |
 | R2 | Review text maximum 2,000 characters. Field set to be finalised during design. |
 | R3 | No photo uploads. |
 | R4 | Already-reviewed items are shown as submitted and cannot be changed. Tags are chosen per product. |
 | R8 | Items from older orders that cannot be matched to a current product (renamed or deleted) are not shown for review. |
 | R5 | After submission: "Thank you for your review" and a button to the homepage. |
 | R6 | Expired link, ineligible order, or all items already reviewed: same "Thank you" message and homepage button. |
+| R9 | A required consent checkbox before submit: "I agree that my review may be displayed on SCRIBBL3D and used for product improvement and marketing." with a **Learn more** link to `/terms-conditions` (new tab). The submission time is stored as `consentedAt` on every review. |
 | R7 | Input validated server-side (rating 1–5, text length, item belongs to order, not already reviewed). |
 
 ### 4.4 Admin — Delivered tab
 
 | ID | Requirement |
 | --- | --- |
-| A1 | Each delivered order shows one review-status action: **Share link** (never shared) → **Share again** (shared, nothing reviewed) → **Partially reviewed** → **Reviewed** (all items reviewed). |
+| A1 | Each delivered order shows a review status badge (Not shared, Link shared, Partially reviewed, Reviewed, Link expired, Not eligible) and an action: **Share link** (never emailed or shared) → **Share again** (emailed/shared, including partially reviewed orders) → disabled **Reviewed** (order-level review and all products reviewed). No share button when the link has expired or the order is not eligible. |
 | A2 | Share link / Share again copies the link and share message, and records the share time and count. |
 | A3 | Admin can view the order's submitted reviews and share history. |
 | A4 | Buttons live on the Delivered tab only. |
@@ -115,7 +116,7 @@ Ratings collected from customers never reach product pages, printers and resins 
 | ID | Requirement |
 | --- | --- |
 | S1 | Add `aggregateRating` (and reviews) to product JSON-LD only when the 5+ threshold is met, using the same approved reviews shown on the page. |
-| S2 | Add product ratings to the Google Merchant feed. |
+| S2 | Add product ratings to Google Merchant (separate product-ratings feed). **Deferred** to a later stage, once review volume allows. |
 | S3 | Keep the existing `GoogleCustomerReviews` component. |
 | S4 | Update the `AGENTS.md` rule that currently keeps ratings out of JSON-LD. |
 
@@ -123,7 +124,7 @@ Ratings collected from customers never reach product pages, printers and resins 
 
 | ID | Requirement |
 | --- | --- |
-| C1 | One coupon **per order**, issued when the first item in that order is reviewed. |
+| C1 | One coupon **per order**, issued on the first review submission of any kind for that order (order-level or product). |
 | C2 | Issued only if that first review is submitted within **15 days of delivery**. Reviews after day 15 (and up to day 30) are accepted without a coupon. |
 | C3 | Value: **5% off the whole cart**, capped at **₹500**, no minimum order value. |
 | C4 | Single use, valid for **15 days** from issue. |
@@ -132,7 +133,7 @@ Ratings collected from customers never reach product pages, printers and resins 
 | C7 | Cancelled if the reviewed order is refunded. |
 | C8 | Coupon does not depend on the rating given. |
 | C9 | Shown in the customer's profile under **My coupons**. |
-| C10 | Thank-you email with the coupon code sent on issue; reminder email **3 days before expiry**. |
+| C10 | Thank-you email with the coupon code sent on issue (user-supplied wording, `lib/email/templates/reviewCoupon.ts`); reminder email **3 days before expiry** (cron job, last stage). |
 
 ### 4.9 Emails
 
@@ -160,6 +161,7 @@ To be detailed in the design stage. Known points from the current code:
   - `Order.deliveredAt`; `Discount.userId` (customer-locked codes, enforced at checkout).
   - `ReviewRequest` — one per order: email/share history and `couponWindowStartsAt`.
   - `ProductReview` — one per order line (`@@unique([orderId, orderItemIndex])`): product FK by family, variant text snapshot, rating, content (≤2,000), tags, reviewer name, incentivised flag, `PENDING`/`APPROVED`/`HIDDEN` status.
+  - `OrderReview` — one per order: overall rating, order tags, comment (≤2,000), reviewer name, incentivised flag, moderation status.
   - `ReviewReward` — one coupon per order, linked to its `Discount`, with reminder and cancellation timestamps.
   - Link validity, admin review state and the 1–2★ flag are computed, not stored. Pre-launch is defined by a fixed launch date (`REVIEW_LAUNCH_AT`).
   - `Review` and `OrderFeedback` are dropped only after their consumers are replaced.

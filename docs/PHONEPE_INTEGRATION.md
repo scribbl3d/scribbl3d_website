@@ -1,101 +1,84 @@
 # PhonePe Integration
 
-This guide describes the current repository implementation, not a certification that the payment flow is secure or production-ready. Read the limitations below before changing or exercising it. Use mocks or an explicitly approved test environment; local development does not automatically select sandbox endpoints.
+This guide describes the current repository implementation. Read the remaining limitations below before changing or exercising it. Use mocks or an explicitly approved test; payment initiation and status checks always use PhonePe production, and callbacks go to `NEXT_PUBLIC_APP_URL`, so a real payment cannot complete against `localhost`.
 
 For project setup and commands, see [README.md](../README.md). For cross-feature constraints, see [AGENTS.md](../AGENTS.md).
 
+## Principle
+
+The browser never decides money values. Every amount stored on an order and charged through PhonePe is calculated on the server (`lib/checkout/pricing.ts`), and a payment is only confirmed when a verified PhonePe result reports the stored total.
+
 ## Main checkout flow
 
-1. `app/checkout/components/PhonePePayment.tsx` reads checkout pricing, shipping, and customer details and generates a merchant transaction ID in the browser.
-2. It calls `POST /api/create-order`. The handler requires a customer session, supports `cart` and `buynow` modes, checks for an existing transaction ID, and creates an order with `payment_pending` status and JSON item/address snapshots.
-3. It calls `POST /api/order` with the order ID, transaction ID, amount, mobile number, and merchant-user identifier. This handler initiates the PhonePe V1 `PAY_PAGE` request and converts the submitted amount to paise using `Math.round(amount * 100)`.
-4. Before redirecting to PhonePe's returned payment URL, the browser stores `phonepe_transaction_id`, `phonepe_order_id`, `phonepe_amount`, `phonepe_name`, and `phonepe_mobile` in session storage.
-5. PhonePe's configured browser redirect returns to `/payment/status`. That page gets the transaction ID from the query string or session storage and polls `GET /api/check-status/[transactionId]`. Pending/network-error outcomes are retried, with a bounded attempt count.
-6. On reported success, the page clears the cart, resets checkout state, records the last payment information, and navigates to `/payment/success`. A success page or browser-stored amount is not proof of verified payment.
-7. Independently, PhonePe can call `POST /api/phonepe-callback`. Callback and polling handlers have different side effects; they must be considered together.
+1. `app/checkout/components/PhonePePayment.tsx` generates a merchant transaction ID and calls `POST /api/create-order` with the shipping mode, address, discount code, transaction ID and the **total the customer saw**.
+2. `/api/create-order` (customer session required) prices the order with `priceCheckout`:
+   - items from `loadCartItems` (`lib/cart/loadCartItems.ts`, the same data as `GET /api/cart`); orphaned, unknown, zero-priced or out-of-stock items are rejected;
+   - discount re-validated (active, expiry, usage limits, customer-locked coupons) and recalculated with `calculateDiscount`;
+   - GST 18% included in prices, `round(afterDiscount − afterDiscount / 1.18)`, shipping not taxed;
+   - shipping: Surface free; Express = live Delhivery quote per package (`quoteExpressPackages` + `lib/shipping/delhiveryQuote.ts`), no estimate fallback on the server;
+   - total = subtotal − discount + shipping.
 
-Order creation and payment initiation are separate operations. `/api/order` does not create the local Prisma order or generate its transaction ID.
+   If the shown total differs by more than ₹0.01, it returns `409 PRICE_CHANGED` with the server's figures; checkout updates its totals and the customer confirms again. Otherwise it creates the order (`payment_pending`) with the server values. Buy-now mode is rejected (its items came from the browser and no page uses it).
+3. The browser calls `POST /api/order` with only `{ orderId }`. The handler requires the order owner's session and a `payment_pending` order, then initiates PhonePe V1 `PAY_PAGE` with the **stored** `totalAmount` (`toPaise`, exactly once) and the **stored** transaction ID.
+4. The browser stores transaction/order details in session storage (used only for the status page and retry, never as payment proof) and redirects to PhonePe.
+5. PhonePe redirects to `/payment/status`, which polls `GET /api/check-status/[transactionId]` (owner session required).
+6. Independently, PhonePe calls `POST /api/phonepe-callback`.
+
+## Confirmation (callback and polling)
+
+Both paths call `confirmPayment` (`lib/payments/confirmPayment.ts`):
+
+- the reported amount (paise) must equal `toPaise(order.totalAmount)`; otherwise the order is **not** confirmed and admins get a `payment-review` email;
+- the order moves to `confirmed` with one atomic `updateMany` from `payment_pending`/`payment_failed`; only the caller that wins performs the side effects (discount usage, cart clearing, customer and admin emails), so they run exactly once whichever path is first;
+- already paid orders are left alone.
+
+The callback rejects requests whose `x-verify` is missing or does not equal `sha256(response + salt) + "###" + index` (`isValidCallbackChecksum`, timing-safe) with `401`, before decoding. Failure codes (`PAYMENT_ERROR`, `PAYMENT_DECLINED`, `PAYMENT_FAILED`) go through `failPayment`, which only changes `payment_pending` orders, so a late failure cannot undo a confirmed payment. A verified success for a transaction no order has (for example, one replaced by a retry) triggers a `payment-review` admin email.
+
+The status route asks PhonePe's status API (production) server-to-server and applies a success through `confirmPayment`; an amount mismatch is reported to the page as `PAYMENT_REVIEW`.
+
+## Retry
+
+`/payment/status` generates a new transaction ID, calls `POST /api/orders/retry-payment` (owner, `payment_pending`/`payment_failed` only, transaction-ID format checked), then `POST /api/order` with the order ID. The amount is the stored order total.
 
 ## Route and source map
 
-| Route / source | Current responsibility |
+| Route / source | Responsibility |
 | --- | --- |
-| `POST /api/create-order` | Session-gated local order creation, cart/buy-now item handling, shipping-mode checks, and transaction-ID reuse check |
-| `POST /api/order` | Payment payload encoding/signing, PhonePe initiation, and limited retries for upstream rate limiting |
-| `GET /api/check-status/[transactionId]` | Return success for an already confirmed/shipped order, otherwise query PhonePe; on success, confirm the local order and record discount usage |
-| `POST /api/phonepe-callback` | Parse JSON or form-encoded callback data, find the order by merchant transaction ID, and handle success/failure |
-| `POST /api/orders/retry-payment` | Require a session and order ownership, allow retries only for `payment_pending`/`payment_failed`, and replace the order's transaction ID |
-| `POST /api/update-order-status` | Separate session-gated status mutation; not an authoritative payment-verification endpoint |
-| `app/payment/status/page.tsx` | Browser polling, success handling, pending/failure/timeout UI, and retry initiation |
-| `providers/CheckoutProvider.tsx` | Checkout steps, addresses, pricing, and shipping state |
-| `providers/CartProvider.tsx` | Customer cart and discount state, including cart clearing |
+| `lib/checkout/pricing.ts` | Server pricing (`priceCheckout`, `gstIncluded`, `discountFor`) |
+| `lib/cart/loadCartItems.ts` | Cart items as the customer sees them (shared with `GET /api/cart`) |
+| `app/checkout/components/expressShipping.ts` | Express package rules (shared by browser and server) |
+| `lib/shipping/delhiveryQuote.ts` | Delhivery charge quote (server-only) |
+| `lib/payments/phonepe.ts` | Host, signing, callback checksum, paise conversion, instrument mapping |
+| `lib/payments/confirmPayment.ts` | Exactly-once confirmation and failure handling |
+| `POST /api/create-order` | Session-gated order creation with server pricing |
+| `POST /api/order` | Owner-gated PhonePe initiation from the stored order |
+| `GET /api/check-status/[transactionId]` | Owner-gated status polling |
+| `POST /api/phonepe-callback` | Signed server-to-server callback |
+| `POST /api/orders/retry-payment` | Owner-gated retry preparation |
+| `POST /api/update-order-status` | Admin-only (middleware); not used by the site |
 
-### Callback behavior
+## Configuration
 
-The callback reads the encoded `response`, calculates a SHA256 checksum, decodes the payload, and looks up the order by `data.merchantTransactionId`.
-
-For `PAYMENT_SUCCESS`, it skips orders already marked `confirmed` or `shipped`; otherwise it updates payment details and confirms the order, records discount usage if not already recorded, clears the customer's cart, and attempts customer/admin emails through `lib/email/`.
-
-For `PAYMENT_ERROR`, `PAYMENT_DECLINED`, or `PAYMENT_FAILED`, it marks the order `payment_failed`. Other codes currently receive a success acknowledgement without the same state change. Preserve the distinction between acknowledging receipt and confirming payment.
-
-Shipment creation is not part of this callback. Fulfilment is handled through the operations/internal shipping routes and Delhivery helpers.
-
-### Polling and retries
-
-The status handler can mark an order confirmed and record discount usage, but it does not send the callback's confirmation/admin emails or perform its server-side cart clearing. The browser success handler separately clears the cart.
-
-Retry UI generates a new merchant transaction ID, calls `/api/orders/retry-payment`, updates session storage, and invokes `/api/order` again for the existing order. Since the order's transaction ID is replaced, investigate delayed callbacks for earlier attempts when changing reconciliation behavior.
-
-### Other payment paths
-
-`app/api/status/route.ts`, `app/api/status/[id]/route.ts`, and `utils/payment-status.ts` contain additional status/redirect/polling logic. They are not the main `/payment/status` polling path. Some redirects target missing routes such as `/payment/failed` and `/payment/pending`; do not use those implementations as templates without checking callers and destinations.
-
-Additional UI routes include `/payment/failure`, `/payment/status/failure`, `/payment/status/success`, and `/order-confirmation`. Their existence does not make them interchangeable with the active checkout return path.
-
-## Configuration and environment selection
-
-| Variable | Consumer / purpose |
+| Variable | Purpose |
 | --- | --- |
-| `PHONEPE_MERCHANT_ID` | Merchant identifier used by initiation and status requests |
+| `PHONEPE_MERCHANT_ID` | Merchant identifier (initiation and status) |
 | `PHONEPE_SALT_KEY` | Server-only signing credential |
-| `PHONEPE_SALT_INDEX` | Callback/check-status checksum suffix |
-| `PHONEPE_ENV` | `/api/check-status/[transactionId]` selects its production URL only for the value `prod`; otherwise it selects its preproduction URL |
-| `NEXT_PUBLIC_APP_URL` | Base for `/payment/status` and `/api/phonepe-callback` URLs constructed during initiation |
-| `DATABASE_URL` | Local order persistence and reconciliation |
-| Customer auth/email configuration | Needed for session-gated checkout and email side effects; see the README |
+| `PHONEPE_KEY_INDEX` | Key (salt) index for signing payments, status checks, refunds and callback verification. Falls back to `PHONEPE_SALT_INDEX`, then `1`. **Must match the key index configured with PhonePe**, or every callback is rejected |
+| `NEXT_PUBLIC_APP_URL` | Base for `/payment/status` and `/api/phonepe-callback` |
+| `DELHIVERY_TOKEN` | Server-side Express quotes |
 
-Important inconsistencies in the current source:
+`PHONEPE_ENV` is no longer read by the active flow; initiation and status checks both use production (`PHONEPE_HOST`). Never place signing credentials in public environment variables, browser code, documentation, or logs.
 
-- `/api/order` hardcodes a production PhonePe endpoint and salt index `1`; it does not use `PHONEPE_ENV` or `PHONEPE_SALT_INDEX` to select those values.
-- The main status route uses environment-dependent URL construction and `PHONEPE_SALT_INDEX`; callback checksum calculation also uses that index.
-- The older status helpers have their own hardcoded production URLs/index values.
-- `/api/order` throws at module initialization if merchant ID or salt key is missing, which can affect build/startup as well as requests.
+## Remaining limitations
 
-Do not assume setting `PHONEPE_ENV` alone creates a consistent test environment. Confirm all participating handlers and the merchant's approved gateway configuration before live testing. Never place signing credentials in public environment variables, browser code, documentation, or logs.
-
-## Known limitations and required review
-
-These are existing behaviors to investigate, not patterns to preserve in new implementation:
-
-- **Callback authenticity:** the callback currently continues when `x-verify` is absent or mismatched. Calculating a hash without rejecting invalid requests is not signature verification.
-- **Authorization and amounts:** `/api/order` does not perform its own session/ownership check and uses submitted amounts. Local order creation also accepts submitted pricing with limited validation. Financial authority must come from server-validated order data, not browser state.
-- **Direct status mutation:** `/api/update-order-status` checks a session but currently does not check order ownership or validate allowed status transitions before accepting the supplied status.
-- **Reconciliation races:** polling can confirm an order before the callback, causing the callback's early return to skip its emails/cart cleanup. Failure callbacks also need review so stale events cannot regress a later successful state.
-- **Idempotency:** existing transaction/status/discount-usage checks do not establish atomic exactly-once processing across concurrent callbacks, polling, retries, or email sends.
-- **Sensitive logging:** several payment handlers log payloads, checksums, or provider responses. Do not expose these logs in bug reports or copy that logging pattern into new code.
-- **Legacy redirects:** additional status handlers reference missing destinations and differ from the active flow. Trace their callers before cleanup or consolidation.
-
-Documentation updates do not fix these issues. Scope implementation changes explicitly and cover them with regression tests rather than treating this guide as evidence of payment safety.
+- **Legacy status routes:** `app/api/status/route.ts`, `app/api/status/[id]/route.ts` and `utils/payment-status.ts` hardcode their own values and redirect to missing routes. They are not part of the active flow; trace callers before removing.
+- **Status API response:** the status route trusts PhonePe's TLS response without verifying a response checksum.
+- **Retry reconciliation:** a late success for a replaced transaction ID is alerted to admins, not attached to the order automatically.
+- **Express quote timing:** the browser and server quote Delhivery separately; a price change is caught by `PRICE_CHANGED`, not prevented.
+- **Logging:** payload and checksum logging was removed from the active routes; keep it that way.
 
 ## Verification checklist
 
-Mock HTTP, Prisma, authentication, and email boundaries as appropriate. Do not initiate payments, refunds, shipments, or real email delivery without explicit approval.
+Automated: `lib/__tests__/checkout-pricing.test.ts`, `lib/__tests__/payments.test.ts`, `__tests__/payment-routes.test.ts`, `__tests__/create-order-discount.test.ts`. Mock HTTP, Prisma, authentication and email; do not initiate payments, refunds, shipments or real emails without explicit approval.
 
-- Order creation: session handling, ownership, cart/buy-now mode, item/variant validity, trusted pricing, shipping rules, and transaction reuse.
-- Initiation: rupee-to-paise conversion exactly once, valid gateway response, error/rate-limit handling, and consistent environment/index selection.
-- Callback: JSON and form-encoded payloads, malformed input, absent/invalid signature, unknown transaction, pending/failure/success, replay, and late events.
-- Reconciliation: concurrent polling/callbacks, duplicate discount usage, cart cleanup, email behavior, and preventing success-to-failure regression.
-- Retry: owned pending/failed orders only, a new transaction ID, and delayed responses for earlier attempts.
-- Browser: redirect/return behavior, lost session storage, bounded polling, timeout/retry UI, and success navigation/back behavior. jsdom alone does not verify real browser navigation.
-
-Use the Jest and type-check commands in [README.md](../README.md#commands-and-verification). Existing utility/component tests are not proof of end-to-end payment coverage. Any approved gateway test needs a confirmed non-production target and an explicit plan for external side effects.
+Before release, on a deployed environment: one real low-value payment (success), one cancelled/failed payment, a retry after failure, an Express order, an order with a coupon, and confirmation that duplicate callbacks/polling send only one set of emails.

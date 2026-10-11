@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import PrinterDetailClient from './_components/PrinterDetailClient';
+import { ProductReviews, RatingSummaryInline } from "@/components/reviews/ProductReviews";
+import { getPdpReviews, pdpJsonLdRating } from "@/lib/reviews/productReviews";
 import { buildBreadcrumbJsonLd, buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
@@ -84,11 +86,15 @@ export default async function PrinterDetailPage({ params }: Props) {
     }
 
     // Serialize to plain object (removes Date instances for client boundary)
+    // Approved reviews: list from 2, average + JSON-LD rating from 5
+    const pdpReviews = await getPdpReviews("printer", printer.id);
+
     const serializedPrinter = JSON.parse(JSON.stringify(printer));
 
     // Product JSON-LD structured data
     const url = `${baseUrl}/printers/${printer.slug}`;
     const jsonLd = buildProductJsonLd({
+        ...pdpJsonLdRating(pdpReviews),
         name: printer.name,
         description: printer.description || printer.shortDescription,
         url,
@@ -121,7 +127,18 @@ export default async function PrinterDetailPage({ params }: Props) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
             />
-            <PrinterDetailClient printer={serializedPrinter} />
+            <PrinterDetailClient printer={serializedPrinter}
+                ratingSummary={<RatingSummaryInline key="rating-summary" summary={pdpReviews.summary} />}
+                reviewsSection={
+                    <ProductReviews
+                        key="product-reviews"
+                        family="printer"
+                        productId={printer.id}
+                        summary={pdpReviews.summary}
+                        initialReviews={pdpReviews.reviews}
+                    />
+                }
+            />
         </>
     );
 }

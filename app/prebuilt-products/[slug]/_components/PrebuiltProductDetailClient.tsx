@@ -14,7 +14,6 @@ import {
     Minus,
     Plus,
     ShoppingCart,
-    Star,
 } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
@@ -461,7 +460,11 @@ function SimilarProductsCarousel({
 }
 
 /* ── Main PDP ── */
-export default function PrebuiltProductDetailClient({ product }: Readonly<{ product: any }>) {
+export default function PrebuiltProductDetailClient({
+    product,
+    ratingSummary,
+    reviewsSection,
+}: Readonly<{ product: any; ratingSummary?: React.ReactNode; reviewsSection?: React.ReactNode }>) {
     const router = useRouter();
     const { data: session } = useSession();
     const { addToCart } = useCart();
@@ -633,16 +636,6 @@ export default function PrebuiltProductDetailClient({ product }: Readonly<{ prod
         originalPrice > displayPrice && originalPrice > 0
             ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
             : 0;
-    const avgRating =
-        product?.reviews?.length > 0
-            ? (
-                  product.reviews.reduce(
-                      (s: number, r: any) => s + r.rating,
-                      0,
-                  ) / product.reviews.length
-              ).toFixed(1)
-            : "0";
-
     const handleToggleWishlist = async (
         e: React.MouseEvent<HTMLButtonElement>,
     ) => {
@@ -960,36 +953,7 @@ export default function PrebuiltProductDetailClient({ product }: Readonly<{ prod
                                 {product.shortDescription}
                             </p>
 
-                            {product.reviews?.length > 0 && (
-                                <div className="flex items-center gap-2 mt-2">
-                                    <div className="flex gap-0.5">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                size={13}
-                                                className={
-                                                    i < 
-                                                    Math.round(
-                                                        Number(avgRating),
-                                                    )
-                                                        ? "fill-yellow-400 text-yellow-400"
-                                                        : "text-gray-200"
-                                                }
-                                            />
-                                        ))}
-                                    </div>
-                                    <span className="text-sm font-semibold text-gray-700">
-                                        {avgRating}
-                                    </span>
-                                    <span className="text-sm text-gray-400">
-                                        ({product.reviews.length} review
-                                        {product.reviews.length !== 1
-                                            ? "s"
-                                            : ""}
-                                        )
-                                    </span>
-                                </div>
-                            )}
+                            {ratingSummary && <div className="mt-2">{ratingSummary}</div>}
                         </div>
 
                         <div className="border-t border-b border-gray-100 py-4">
@@ -1532,75 +1496,7 @@ export default function PrebuiltProductDetailClient({ product }: Readonly<{ prod
                     </div>
                 </div>
 
-                {/* Reviews */}
-                {product.reviews?.length > 0 && (
-                    <div className="mt-10 border border-gray-200 rounded-2xl bg-white p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="flex gap-0.5">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star
-                                        key={i}
-                                        size={16}
-                                        className={
-                                            i < Math.round(Number(avgRating))
-                                                ? "fill-yellow-400 text-yellow-400"
-                                                : "text-gray-200"
-                                        }
-                                    />
-                                ))}
-                            </div>
-                            <span className="text-xl font-bold text-gray-900">
-                                {avgRating}
-                            </span>
-                            <span className="text-sm text-gray-400">
-                                ({product.reviews.length} review
-                                {product.reviews.length !== 1 ? "s" : ""})
-                            </span>
-                        </div>
-                        <div className="flex flex-col gap-5">
-                            {product.reviews
-                                .slice(0, 5)
-                                .map((review: any, idx: number) => (
-                                    <div
-                                        key={idx}
-                                        className="pb-5 border-b border-gray-100 last:border-0"
-                                    >
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <p className="font-semibold text-sm text-gray-900">
-                                                    {review.userName}
-                                                </p>
-                                                <div className="flex gap-0.5 mt-1">
-                                                    {[...Array(5)].map(
-                                                        (_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                size={11}
-                                                                className={
-                                                                    i < 
-                                                                    review.rating
-                                                                        ? "fill-yellow-400 text-yellow-400"
-                                                                        : "text-gray-200"
-                                                                }
-                                                            />
-                                                        ),
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <p className="text-xs text-gray-400">
-                                                {new Date(
-                                                    review.createdAt,
-                                                ).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                        <p className="text-sm text-gray-600 leading-relaxed">
-                                            {review.comment}
-                                        </p>
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
-                )}
+                {reviewsSection}
 
                 {similarProducts.length > 0 && (
                     <SimilarProductsCarousel

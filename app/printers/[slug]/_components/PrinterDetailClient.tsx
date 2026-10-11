@@ -14,7 +14,15 @@ import { signIn, useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-export default function PrinterDetailClient({ printer }: { printer: any }) {
+export default function PrinterDetailClient({
+    printer,
+    ratingSummary,
+    reviewsSection,
+}: {
+    printer: any;
+    ratingSummary?: React.ReactNode;
+    reviewsSection?: React.ReactNode;
+}) {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isWishlistLoading, setIsWishlistLoading] = useState(false);
     const [activeTab, setActiveTab] = useState("specifications");
@@ -298,6 +306,7 @@ export default function PrinterDetailClient({ printer }: { printer: any }) {
                             <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-10">
                                 {printer.name}
                             </h1>
+                            {ratingSummary && <div className="mb-3">{ratingSummary}</div>}
                             <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 break-words">
                                 {printer.shortDescription}
                             </p>
@@ -677,6 +686,8 @@ export default function PrinterDetailClient({ printer }: { printer: any }) {
                         )}
                     </div>
                 </div>
+
+                {reviewsSection}
 
                 {/* Similar Printers */}
                 <div className="mt-6 sm:mt-12">

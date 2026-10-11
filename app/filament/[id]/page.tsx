@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import FilamentDetailClient from './_components/FilamentDetailClient';
+import { ProductReviews, RatingSummaryInline } from "@/components/reviews/ProductReviews";
+import { getPdpReviews, pdpJsonLdRating } from "@/lib/reviews/productReviews";
 import { buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
@@ -131,11 +133,15 @@ export default async function FilamentDetailPage({ params }: Props) {
     }
 
     // Serialize to plain object (removes Date instances for client boundary)
+    // Approved reviews: list from 2, average + JSON-LD rating from 5
+    const pdpReviews = await getPdpReviews("filament", filament.id);
+
     const serializedFilament = JSON.parse(JSON.stringify(filament));
 
     // Product JSON-LD structured data (all variants, for AI engines and rich results)
     const productUrl = `${baseUrl}/filament/${filament.slug || filament.id}`;
     const productJsonLd = buildProductJsonLd({
+        ...pdpJsonLdRating(pdpReviews),
         name: filament.name,
         description: filament.longDescription || filament.shortDescription,
         url: productUrl,
@@ -213,7 +219,18 @@ export default async function FilamentDetailPage({ params }: Props) {
                 dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
             />
 
-            <FilamentDetailClient initialFilament={serializedFilament} />
+            <FilamentDetailClient initialFilament={serializedFilament}
+                ratingSummary={<RatingSummaryInline key="rating-summary" summary={pdpReviews.summary} />}
+                reviewsSection={
+                    <ProductReviews
+                        key="product-reviews"
+                        family="filament"
+                        productId={filament.id}
+                        summary={pdpReviews.summary}
+                        initialReviews={pdpReviews.reviews}
+                    />
+                }
+            />
         </>
     );
 }

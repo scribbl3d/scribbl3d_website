@@ -4,6 +4,8 @@
 // ─────────────────────────────────────────────────
 
 export { sendEmail } from "./sendEmail";
+import { recordReviewEmailSent } from "@/lib/reviews/requests";
+import { reviewCouponTemplate, type ReviewCouponEmailData } from "./templates/reviewCoupon";
 export type {
     CancelEmailData,
     OrderEmailData,
@@ -90,11 +92,18 @@ export async function sendOrderShipped(data: ShipmentEmailData) {
  * Send delivery confirmation
  */
 export async function sendOrderDelivered(data: OrderEmailData) {
-    return sendEmail({
+    const result = await sendEmail({
         to: data.customerEmail,
         subject: `Order Delivered — #${data.orderId.slice(-8).toUpperCase()}`,
         html: orderDeliveredTemplate(data),
     });
+    // The email carries the review link: record it for the Delivered tab
+    if (result?.ok) {
+        await recordReviewEmailSent(data.orderId).catch((err) =>
+            console.error("[Email] Failed to record review email:", err instanceof Error ? err.message : err),
+        );
+    }
+    return result;
 }
 
 /**
@@ -131,6 +140,7 @@ export async function sendAdminNotification({
         "small-batch-manufacturing": "New Small Batch Manufacturing Request",
         "stock-notification": "New Out-of-Stock Notification",
         "contact-form": "New Contact Form Submission",
+        "payment-review": "Payment Needs Review",
     };
 
     try {
@@ -151,4 +161,15 @@ export async function sendAdminNotification({
         console.error(`[Admin Email] sendAdminNotification THREW:`, err);
         throw err;
     }
+}
+
+/**
+ * Review thank-you + coupon email
+ */
+export async function sendReviewCouponEmail(to: string, data: ReviewCouponEmailData) {
+    return sendEmail({
+        to,
+        subject: "Thank you for your review — here’s your SCRIBBL3D coupon",
+        html: reviewCouponTemplate(data),
+    });
 }

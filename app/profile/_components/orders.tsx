@@ -59,6 +59,8 @@ function getOrderDisplayStatus(
     if (orderStatus === "cancelled") return "cancelled";
     if (orderStatus === "delivered" && shipment?.status === "delivered")
         return "delivered";
+    // Marked delivered without a Delhivery shipment (e.g. by an admin)
+    if (orderStatus === "delivered" && !shipment) return "delivered";
     if (shipment) {
         if (shipment.status === "manifested") return "order_processing";
         if (shipment.status === "dispatched") return "out_for_delivery";

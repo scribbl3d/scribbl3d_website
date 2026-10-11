@@ -45,6 +45,24 @@ export async function GET(req: Request) {
     const userId = session?.user?.id ?? null;
 
     if (userId) {
+        // Personal coupons (e.g. review rewards) are hidden from everyone else,
+        // but listed for their owner
+        const personal = await prisma.discount.findMany({
+            where: {
+                userId,
+                isActive: true,
+                OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+            },
+            include: {
+                itemTypes: true,
+                _count: {
+                    select: { usages: true },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        discounts = [...personal, ...discounts.filter((d) => !personal.some((p) => p.id === d.id))];
+
         // Check if this is the user's first order
         const completedOrderCount = await prisma.order.count({
             where: {

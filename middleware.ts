@@ -43,6 +43,8 @@ const ADMIN_METHODS_OUTSIDE_ADMIN_API: {
     // Customers subscribe with POST; listing and status changes are ops-only
     { route: /^\/api\/stock-notifications\/?$/, methods: ["GET", "PUT", "PATCH", "DELETE"] },
     { route: /^\/api\/upload\/?$/, methods: ["POST", "PUT", "PATCH", "DELETE"] },
+    // Sets any order to any status; unused by the site, admin-only
+    { route: /^\/api\/update-order-status\/?$/, methods: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
 ];
 
 function requiresAdminApiSession(request: NextRequest) {

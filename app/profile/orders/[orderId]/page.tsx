@@ -3,11 +3,13 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { db } from "@/lib/db";
 import {
     AlertCircle,
+    CheckCircle2,
     ChevronLeft,
     CreditCard,
     Landmark,
     Package,
     Smartphone,
+    Star,
     Truck,
     Wallet,
 } from "lucide-react";
@@ -23,7 +25,8 @@ import { CopyButton } from "./CopyButton";
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 import { DownloadInvoiceButton } from "./DownloadInvoiceButton";
-import { GiveFeedbackButton } from "./FeedbackModal";
+import { createReviewToken } from "@/lib/reviews/link";
+import { loadReviewContext } from "@/lib/reviews/reviewableItems";
 import { StatusBanner } from "./StatusBanner";
 
 /* ────────────────────── Types ────────────────────── */
@@ -65,6 +68,8 @@ function getOrderDisplayStatus(
     if (orderStatus === "cancelled") return "cancelled";
     if (orderStatus === "delivered" && shipmentStatus === "delivered")
         return "delivered";
+    // Marked delivered without a Delhivery shipment (e.g. by an admin)
+    if (orderStatus === "delivered" && !shipmentStatus) return "delivered";
 
     if (shipmentStatus) {
         if (shipmentStatus === "manifested") return "order_processing";
@@ -189,6 +194,11 @@ export default async function OrderDetailsPage({ params }: PageProps) {
         displayStatus !== "payment_failed" &&
         displayStatus !== "not_completed";
     const isDelivered = displayStatus === "delivered";
+
+    // Review link state (same rules as the /review page): open → Give Review,
+    // everything reviewed → Reviewed, expired/not eligible → no button
+    const reviewState = isDelivered ? (await loadReviewContext(order.id)).state : null;
+    const reviewHref = reviewState === "open" ? `/review/${createReviewToken(order.id)}` : null;
     const isCancelled = displayStatus === "cancelled";
     const isPaymentFailed = displayStatus === "payment_failed";
     const showTracking =
@@ -787,13 +797,24 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                     </>
                                 )}
 
-                                {/* Delivered → Give Feedback + Contact Support */}
+                                {/* Delivered → Give Review + Contact Support */}
                                 {isDelivered && (
                                     <>
-                                        <GiveFeedbackButton
-                                            orderId={order.id}
-                                            items={items}
-                                        />
+                                        {reviewHref && (
+                                            <Link
+                                                href={reviewHref}
+                                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
+                                            >
+                                                <Star className="w-4 h-4" aria-hidden="true" />
+                                                Give Review
+                                            </Link>
+                                        )}
+                                        {reviewState === "completed" && (
+                                            <p className="w-full flex items-center justify-center gap-2 py-2.5 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium">
+                                                <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                                                Reviewed
+                                            </p>
+                                        )}
                                         <ContactSupportButton
                                             orderId={order.id}
                                             orderStatus={statusLabel}

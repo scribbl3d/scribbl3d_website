@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getReviewModerationCounts } from "@/lib/reviews/moderation";
 
 export async function GET() {
     try {
@@ -79,6 +80,9 @@ export async function GET() {
 
         const totalOrdersNew = paymentPendingCount + paymentFailedCount + confirmedCount;
 
+        // Reviews waiting for approval, and pending 1–2★ reviews (flagged on the dashboard)
+        const reviewCounts = await getReviewModerationCounts();
+
         return NextResponse.json({
             orders: totalOrdersNew,
             'orders-payment-pending': paymentPendingCount,
@@ -88,7 +92,9 @@ export async function GET() {
             'form3d-responses': form3dCount,
             'prototyping-requests': prototypingCount,
             'small-batch-manufacturing': smallBatchCount,
-            'stock-notifications': stockNotificationCount
+            'stock-notifications': stockNotificationCount,
+            'reviews-pending': reviewCounts.pending,
+            'reviews-low-rating': reviewCounts.lowRating
         });
     } catch (error) {
         console.error('Error fetching notification counts:', error);

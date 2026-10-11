@@ -331,6 +331,7 @@ function CouponModal({
     onClose,
     coupons,
     appliedCode,
+    appliedCoupon,
     cartItems,
     onApplyCoupon,
     onCheckCode,
@@ -339,6 +340,7 @@ function CouponModal({
     onClose: () => void;
     coupons: AvailableCoupon[];
     appliedCode: string | undefined;
+    appliedCoupon?: AvailableCoupon | null;
     cartItems: CartItem[];
     onApplyCoupon: (coupon: AvailableCoupon | null) => void;
     onCheckCode: (
@@ -390,7 +392,8 @@ function CouponModal({
     const handleApply = () => {
         const selected =
             coupons.find((c) => c.code === selectedCode) ??
-            (manualCoupon?.code === selectedCode ? manualCoupon : null);
+            (manualCoupon?.code === selectedCode ? manualCoupon : null) ??
+            (appliedCoupon?.code === selectedCode ? appliedCoupon : null);
         onApplyCoupon(selected);
         onClose();
     };
@@ -499,6 +502,13 @@ function CouponModal({
                                     return true;
                                 },
                             );
+                            // The applied coupon is always listed, even a secret code
+                            if (
+                                appliedCoupon &&
+                                !applicableCoupons.some((c) => c.code === appliedCoupon.code)
+                            ) {
+                                applicableCoupons.unshift(appliedCoupon);
+                            }
                             if (applicableCoupons.length === 0) {
                                 return (
                                     <div className="flex flex-col items-center justify-center py-10 px-4">
@@ -1002,6 +1012,7 @@ export default function ShoppingCart() {
         addToCart,
         discountAmount: contextDiscountAmount,
         appliedDiscountCode,
+        appliedDiscount,
         applyDiscountCode,
         clearDiscount,
         isRecalculatingDiscount,
@@ -1069,7 +1080,7 @@ export default function ShoppingCart() {
                 if (res.ok) {
                     const data: Discount[] = await res.json();
                     const mapped: AvailableCoupon[] = data
-                        .filter((d) => d.isActive && !d.isHidden)
+                        .filter((d) => d.isActive && (!d.isHidden || !!d.userId))
                         .map((d) => ({
                             code: d.code,
                             name: d.name,
@@ -1173,6 +1184,42 @@ export default function ShoppingCart() {
             clearDiscount();
         }
     };
+
+    /* ── ?coupon=CODE (e.g. "Use in cart" from Profile → Coupons): apply once the cart has loaded ── */
+    const urlCouponHandled = useRef(false);
+    useEffect(() => {
+        if (!initialLoadDone || urlCouponHandled.current) return;
+        const code = new URLSearchParams(window.location.search).get("coupon")?.trim();
+        if (!code) return;
+        urlCouponHandled.current = true;
+        router.replace("/cart", { scroll: false });
+
+        if (appliedDiscountCode?.toUpperCase() === code.toUpperCase()) return;
+        if (localCart.length === 0) {
+            toast({
+                title: "Your cart is empty",
+                description: `Add items to your cart, then apply coupon ${code.toUpperCase()}.`,
+            });
+            return;
+        }
+        applyDiscountCode(code)
+            .then(() =>
+                toast({
+                    title: "Coupon Applied",
+                    description: `Code "${code.toUpperCase()}" applied successfully`,
+                }),
+            )
+            .catch((err) =>
+                toast({
+                    title: "Coupon not applicable",
+                    description:
+                        err instanceof Error
+                            ? err.message
+                            : "This coupon cannot be applied to your cart",
+                    variant: "destructive",
+                }),
+            );
+    }, [initialLoadDone, localCart.length, appliedDiscountCode, applyDiscountCode, router]);
 
     const handleCheckCode = async (
         code: string,
@@ -1978,6 +2025,18 @@ export default function ShoppingCart() {
                 onClose={() => setShowCouponModal(false)}
                 coupons={availableCoupons}
                 appliedCode={appliedDiscountCode}
+                appliedCoupon={
+                    appliedDiscount
+                        ? {
+                              code: appliedDiscount.code,
+                              name: appliedDiscount.name,
+                              valueLabel: buildValueLabel(appliedDiscount),
+                              description: buildDescription(appliedDiscount),
+                              expiresOn: formatExpiryDate(appliedDiscount.expiresAt),
+                              discount: appliedDiscount,
+                          }
+                        : null
+                }
                 cartItems={localCart}
                 onApplyCoupon={handleApplyCoupon}
                 onCheckCode={handleCheckCode}

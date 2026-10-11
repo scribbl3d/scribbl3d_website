@@ -13,6 +13,7 @@ jest.mock('@/app/api/auth/[...nextauth]/options', () => ({ authOptions: {} }));
 jest.mock('@/lib/admin-session', () => ({ isAdminRequest: jest.fn() }));
 jest.mock('@/lib/db', () => ({ db: { order: { findUnique: jest.fn(), update: jest.fn() } } }));
 jest.mock('@/lib/refund', () => ({ initiatePhonePeRefund: jest.fn() }));
+jest.mock('@/lib/reviews/rewards', () => ({ cancelReviewReward: jest.fn().mockResolvedValue(false) }));
 jest.mock('@/lib/email/index', () => ({ sendOrderCancelled: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('@/lib/email/mapOrderToEmailData', () => ({ mapOrderToCancelEmailData: jest.fn() }));
 
@@ -66,6 +67,7 @@ describe('Order cancel API', () => {
     const { mapOrderToCancelEmailData } = jest.requireMock('@/lib/email/mapOrderToEmailData');
     expect((await POST(request({ cancelledBy: 'admin' }), context)).status).toBe(200);
     expect(initiatePhonePeRefund).toHaveBeenCalledTimes(1);
+    expect(jest.requireMock('@/lib/reviews/rewards').cancelReviewReward).toHaveBeenCalledWith('order_1');
     expect(mapOrderToCancelEmailData).toHaveBeenCalledWith(expect.anything(), 'customer', undefined);
   });
 

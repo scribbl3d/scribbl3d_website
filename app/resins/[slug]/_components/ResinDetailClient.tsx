@@ -58,7 +58,11 @@ function getWeightButtonClass(disabled: boolean, selected: boolean) {
 }
 
 /* ── Main PDP ── */
-export default function ResinDetailClient({ resin }: Readonly<{ resin: any }>) {
+export default function ResinDetailClient({
+    resin,
+    ratingSummary,
+    reviewsSection,
+}: Readonly<{ resin: any; ratingSummary?: React.ReactNode; reviewsSection?: React.ReactNode }>) {
     const { addToCart } = useCart();
     const [activeTab, setActiveTab] = useState("description");
     const { data: session } = useSession();
@@ -391,6 +395,7 @@ export default function ResinDetailClient({ resin }: Readonly<{ resin: any }>) {
                             <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-10">
                                 {resin.name}
                             </h1>
+                            {ratingSummary && <div className="mb-3">{ratingSummary}</div>}
                             <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 break-words">
                                 {resin.shortDescription}
                             </p>
@@ -803,6 +808,8 @@ export default function ResinDetailClient({ resin }: Readonly<{ resin: any }>) {
                         )}
                     </div>
                 </div>
+
+                {reviewsSection}
 
                 {/* Similar Resins */}
                 <div className="mt-6 sm:mt-12">

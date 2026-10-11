@@ -24,7 +24,7 @@ export default function PhonePePayment({
     mode,
 }: PhonePePaymentProps) {
     const [isLoading, setIsLoading] = useState(false);
-    const { state } = useCheckout();
+    const { state, setPricing, setShippingOption } = useCheckout();
 
     const handlePayment = async () => {
         try {
@@ -76,15 +76,8 @@ export default function PhonePePayment({
                 throw new Error("Failed to create order");
             }
 
-            // Step 2: Initiate PhonePe payment
-            const response = await axios.post("/api/order", {
-                name,
-                amount,
-                mobile,
-                transactionId,
-                orderId,
-                MUID: `MUID${Date.now()}${Math.random().toString(36).slice(2, 8)}`,
-            });
+            // Step 2: Initiate PhonePe payment (amount comes from the stored order)
+            const response = await axios.post("/api/order", { orderId });
 
             if (response.data?.data?.instrumentResponse?.redirectInfo?.url) {
                 // Store transaction details for status page & retry
@@ -101,11 +94,35 @@ export default function PhonePePayment({
                 throw new Error("Invalid PhonePe response");
             }
         } catch (error: any) {
+            const data = error.response?.data;
+
+            // Server prices differ from what was shown: show the server's figures
+            // so the Pay button updates, and let the customer confirm again.
+            if (data?.code === "PRICE_CHANGED" && data.pricing) {
+                const p = data.pricing;
+                setPricing({
+                    subtotal: p.subtotal,
+                    discountAmount: p.discountAmount,
+                    appliedDiscountCode: p.discountCode ?? undefined,
+                    tax: p.tax,
+                });
+                if (state.selectedShipping) {
+                    setShippingOption({ ...state.selectedShipping, price: p.shippingPrice });
+                }
+                toast({
+                    title: "Prices updated",
+                    description: `${data.error} New total: ${formatPrice(p.totalAmount)}.`,
+                    variant: "destructive",
+                });
+                setIsLoading(false);
+                return;
+            }
+
             console.error("[PhonePe Payment] Error:", error);
             toast({
                 title: "Payment Error",
                 description:
-                    error.response?.data?.details ||
+                    data?.error ||
                     error.message ||
                     "Payment failed. Please try again.",
                 variant: "destructive",

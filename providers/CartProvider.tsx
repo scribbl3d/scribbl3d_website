@@ -54,6 +54,7 @@ type CartContextType = {
 
     discountAmount: number;
     appliedDiscountCode?: string;
+    appliedDiscount: Discount | null;
     isRecalculatingDiscount: boolean;
 
     /* ACTIONS */
@@ -365,6 +366,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
                 cart,
                 discountAmount,
                 appliedDiscountCode,
+                appliedDiscount,
                 isRecalculatingDiscount,
                 applyDiscountCode,
                 clearDiscount,

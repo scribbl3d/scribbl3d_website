@@ -100,6 +100,7 @@ describe('management routes outside /api/admin', () => {
     ['PATCH', '/api/stock-notifications'],
     ['DELETE', '/api/stock-notifications?id=abc'],
     ['POST', '/api/upload'],
+    ['POST', '/api/update-order-status'],
   ])('rejects %s %s without an admin session', async (method, path) => {
     expect((await middleware(req(path, { method }))).status).toBe(401);
   });

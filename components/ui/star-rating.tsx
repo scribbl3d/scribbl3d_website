@@ -6,7 +6,7 @@ import { useState } from "react";
 interface StarRatingProps {
     rating: number;
     onChange?: (rating: number) => void;
-    size?: "sm" | "md" | "lg";
+    size?: "sm" | "md" | "lg" | "xl";
     readonly?: boolean;
     className?: string;
 }
@@ -15,6 +15,7 @@ const sizeClasses = {
     sm: "w-4 h-4",
     md: "w-6 h-6",
     lg: "w-8 h-8",
+    xl: "w-9 h-9 sm:w-11 sm:h-11",
 };
 
 export function StarRating({
@@ -42,6 +43,8 @@ export function StarRating({
                     onMouseLeave={() => !readonly && setHovered(0)}
                     onClick={() => handleClick(star)}
                     disabled={readonly}
+                    aria-label={`${star} star${star > 1 ? "s" : ""}`}
+                    aria-pressed={!readonly ? star <= rating : undefined}
                     className={`p-0.5 transition-transform ${!readonly && "hover:scale-110"} ${readonly ? "cursor-default" : "cursor-pointer"}`}
                 >
                     <Star

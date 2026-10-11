@@ -5,6 +5,7 @@ import { sendOrderCancelled } from "@/lib/email/index";
 import { mapOrderToCancelEmailData } from "@/lib/email/mapOrderToEmailData";
 import { canCustomerCancelOrder, pickDisplayShipment } from "@/lib/orders/cancellation";
 import { initiatePhonePeRefund } from "@/lib/refund";
+import { cancelReviewReward } from "@/lib/reviews/rewards";
 import crypto from "crypto";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
@@ -109,6 +110,11 @@ export async function POST(req: NextRequest, context: any) {
         });
 
         console.log("✅ [CANCEL] Order updated in DB");
+
+        // Refunded order: its review coupon (if any) is cancelled (C7)
+        await cancelReviewReward(order.id).catch((err) =>
+            console.error("[CANCEL] Review coupon cancel failed:", err instanceof Error ? err.message : err),
+        );
 
         // Send cancellation email (fire-and-forget)
         if (order.user?.email) {

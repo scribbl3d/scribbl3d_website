@@ -13,7 +13,8 @@ export type AdminNotificationType =
     | "prototyping-request"
     | "small-batch-manufacturing"
     | "stock-notification"
-    | "contact-form";
+    | "contact-form"
+    | "payment-review";
 
 interface AdminNotificationData {
     type: AdminNotificationType;
@@ -24,6 +25,7 @@ interface AdminNotificationData {
 
 const TYPE_CONFIG: Record<AdminNotificationType, { title: string; badge: string; badgeColor: "green" | "blue" | "red" | "yellow" | "gray" }> = {
     "order-confirmed": { title: "New Order Confirmed", badge: "ORDER", badgeColor: "green" },
+    "payment-review": { title: "Payment Needs Review", badge: "PAYMENT", badgeColor: "red" },
     "personalise-response": { title: "New Personalise Form Response", badge: "PERSONALISE", badgeColor: "blue" },
     "form3d-response": { title: "New 3D Printing Request", badge: "3D PRINTING", badgeColor: "blue" },
     "prototyping-request": { title: "New Prototyping Request", badge: "PROTOTYPING", badgeColor: "yellow" },

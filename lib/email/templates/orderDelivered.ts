@@ -1,12 +1,41 @@
 import {
-    button,
     divider,
     emailLayout,
     heading,
     paragraph,
     statusBadge,
 } from "./layout";
+import { reviewLinkUrl } from "@/lib/reviews/link";
 import type { OrderEmailData } from "./types";
+
+/** "How was your experience?" block: each star opens the review page with that rating selected */
+export function reviewRequestBlock(reviewUrl: string): string {
+    const stars = [1, 2, 3, 4, 5]
+        .map(
+            (n) =>
+                `<a href="${reviewUrl}?rating=${n}" target="_blank" title="Rate ${n} star${n > 1 ? "s" : ""}" style="display:inline-block;padding:0 4px;font-size:34px;line-height:40px;color:#fbbf24;text-decoration:none;">&#9733;</a>`,
+        )
+        .join("");
+
+    return `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 24px;background-color:#f5f7ff;border:1px solid #e0e7ff;border-radius:12px;">
+        <tr>
+            <td align="center" style="padding:24px 20px;">
+                <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#18181b;">How was your experience?</p>
+                <div style="margin:0 0 12px;">${stars}</div>
+                <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#3f3f46;">Share your honest feedback with us. As a thank-you for your review, we&rsquo;ll send you a coupon for your next SCRIBBL3D purchase.</p>
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:16px auto 8px;">
+                    <tr>
+                        <td style="background-color:#4f46e5;border-radius:8px;">
+                            <a href="${reviewUrl}" target="_blank" style="display:inline-block;padding:12px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">Review your order</a>
+                        </td>
+                    </tr>
+                </table>
+                <p style="margin:0;font-size:12px;color:#71717a;">It only takes a few minutes.</p>
+            </td>
+        </tr>
+    </table>`;
+}
 
 export function orderDeliveredTemplate(data: OrderEmailData): string {
     const { orderId, customerName } = data;
@@ -22,9 +51,7 @@ export function orderDeliveredTemplate(data: OrderEmailData): string {
             ${statusBadge("Delivered", "green")}
         </div>
 
-        ${paragraph("If you have a moment, we would truly appreciate your feedback. Your review helps us improve and assists other customers in making informed decisions.")}
-
-        ${button("Leave a Review", `${process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com"}/profile/orders/${orderId}`)}
+        ${reviewRequestBlock(reviewLinkUrl(orderId))}
 
         ${divider()}
 

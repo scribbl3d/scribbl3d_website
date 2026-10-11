@@ -24,9 +24,11 @@ const FINISH_BADGE: Record<string, string> = {
 
 interface FilamentDetailClientProps {
     initialFilament: any;
+    ratingSummary?: React.ReactNode;
+    reviewsSection?: React.ReactNode;
 }
 
-export default function FilamentDetailClient({ initialFilament }: FilamentDetailClientProps) {
+export default function FilamentDetailClient({ initialFilament, ratingSummary, reviewsSection }: FilamentDetailClientProps) {
     const { data: session } = useSession();
     const { addToCart } = useCart();
 
@@ -301,6 +303,7 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                             </div>
 
                             <h1 className="text-lg sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3 pr-16 sm:pr-20 leading-tight">{f.name}</h1>
+                            {ratingSummary && <div className="mb-3">{ratingSummary}</div>}
                             
                             <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                                 <span className={`px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold rounded-full ${FINISH_BADGE[f.finishType] ?? "bg-green-100 text-green-700"}`}>{f.finishType}</span>
@@ -562,6 +565,8 @@ export default function FilamentDetailClient({ initialFilament }: FilamentDetail
                         )}
                     </div>
                 </div>
+
+                {reviewsSection}
 
                 {/* Similar Filaments - Same Material */}
                 <SimilarFilamentsCarousel currentFilamentId={f.id} material={f.material} />

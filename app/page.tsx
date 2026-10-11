@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+    getCustomerOrderReviewTestimonials,
+    mergeHomepageTestimonials,
+} from "@/lib/reviews/homepageReviews";
 import LandingContent from "./landingpage/components/LandingContent";
 
 export const revalidate = 0; // Disable caching for this page
@@ -14,6 +18,7 @@ async function getLandingData() {
         communityImages,
         testimonials,
         bestSellers,
+        customerReviewTestimonials,
     ] = await Promise.all([
         prisma.heroBanner.findMany({
             where: { isActive: true },
@@ -179,6 +184,12 @@ async function getLandingData() {
                 isHero: true,
             },
         }),
+
+        // Approved overall-experience reviews (shown before the managed testimonials)
+        getCustomerOrderReviewTestimonials().catch((error) => {
+            console.error("[Homepage] Customer reviews failed:", error instanceof Error ? error.message : error);
+            return [];
+        }),
     ]);
 
     // Build new arrivals — 1 from each type
@@ -257,7 +268,9 @@ async function getLandingData() {
         newArrivals: JSON.parse(JSON.stringify(newArrivals)),
         blogs: JSON.parse(JSON.stringify(blogs)),
         communityImages: JSON.parse(JSON.stringify(communityImages)),
-        testimonials: JSON.parse(JSON.stringify(testimonials)),
+        testimonials: JSON.parse(
+            JSON.stringify(mergeHomepageTestimonials(customerReviewTestimonials, testimonials)),
+        ),
         bestSellers: JSON.parse(JSON.stringify(bestSellers)),
     };
 }

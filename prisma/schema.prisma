@@ -27,6 +27,7 @@ model User {
   wishlist         Wishlist?
   orderFeedback    OrderFeedback[]   // ← ADD THIS
   productReviews   ProductReview[]
+  orderReviews     OrderReview[]
   discounts        Discount[]
 }
 model Account {
@@ -501,6 +502,7 @@ model ProductReview {
   tags              String[]
   reviewerName      String // full name at submission
   isIncentivised    Boolean        @default(false)
+  consentedAt       DateTime? // display/marketing consent given at submission
   status            ReviewStatus   @default(PENDING)
   moderatedAt       DateTime?
   createdAt         DateTime       @default(now())
@@ -519,6 +521,29 @@ model ProductReview {
   @@index([filamentId, status, createdAt])
   @@index([resinId, status, createdAt])
   @@index([prebuiltProductId, status, createdAt])
+  @@index([status, rating])
+}
+
+// One overall (order-level) review per order: experience rating, order tags, comment
+model OrderReview {
+  id             String       @id @default(cuid())
+  orderId        String       @unique
+  userId         String
+  rating         Int // 1-5
+  content        String?      @db.VarChar(2000)
+  tags           String[]
+  reviewerName   String // full name at submission
+  isIncentivised Boolean      @default(false)
+  consentedAt    DateTime? // display/marketing consent given at submission
+  status         ReviewStatus @default(PENDING)
+  moderatedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@index([userId])
   @@index([status, rating])
 }
 
@@ -578,6 +603,7 @@ model Order {
   deliveredAt       DateTime?         // set once on first transition to delivered
   reviewRequest     ReviewRequest?
   reviews           ProductReview[]
+  orderReview       OrderReview?
 
   invoice           Invoice?
 

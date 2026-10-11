@@ -122,6 +122,18 @@ export default function AdminPage() {
                         Manage Announcements
                     </Button>
                 </Link>
+                <Link href="/ops/control/reviews" className="block">
+                    <Button variant="outline" className="w-full h-24 text-lg relative flex-col gap-1">
+                        Reviews
+                        {(notificationCounts['reviews-low-rating'] || 0) > 0 && (
+                            <span className="text-xs font-medium text-red-600">
+                                {notificationCounts['reviews-low-rating']} low rating
+                                {notificationCounts['reviews-low-rating'] === 1 ? "" : "s"} to review
+                            </span>
+                        )}
+                        <NotificationBadge count={notificationCounts['reviews-pending'] || 0} />
+                    </Button>
+                </Link>
                 <Link href="/ops/control/discounts" className="block">
                     <Button variant="outline" className="w-full h-24 text-lg">
                         Discounts

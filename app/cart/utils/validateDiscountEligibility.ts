@@ -21,6 +21,16 @@ export async function validateDiscountEligibility(
         return { eligible: false, reason: "This coupon has expired" };
     }
 
+    // Customer-specific coupons (e.g. review rewards) only work for their owner
+    if (discount.userId && discount.userId !== userId) {
+        return {
+            eligible: false,
+            reason: userId
+                ? "This coupon is not valid for your account"
+                : "Please log in to use this coupon",
+        };
+    }
+
     // If no user is logged in but the coupon has user-level restrictions, block it
     if (
         !userId &&

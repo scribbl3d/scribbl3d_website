@@ -1,9 +1,10 @@
 import crypto from "crypto";
+import { phonepeSaltIndex } from "@/lib/payments/phonepe";
 
 const PHONEPE_BASE_URL = "https://mercury-t2.phonepe.com"; // PROD
 const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID!;
 const SALT_KEY = process.env.PHONEPE_SALT_KEY!;
-const SALT_INDEX = process.env.PHONEPE_SALT_INDEX!;
+const SALT_INDEX = phonepeSaltIndex();
 
 interface RefundParams {
     refundTransactionId: string; // NEW refund txn id

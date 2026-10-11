@@ -18,6 +18,7 @@ export type Discount = {
     isActive: boolean;
     firstOrderOnly: boolean;
     maxUsesPerUser: number | null;
+    userId?: string | null; // customer-locked coupon (e.g. review reward)
     itemTypes: DiscountItemType[];
     createdAt: string;
     updatedAt: string;

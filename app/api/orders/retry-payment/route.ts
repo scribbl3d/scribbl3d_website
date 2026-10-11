@@ -21,6 +21,13 @@ export async function POST(req: Request) {
                 { status: 400 },
             );
         }
+        // PhonePe merchantTransactionId: letters, digits, _ and -, at most 35 characters
+        if (typeof newTransactionId !== "string" || !/^[A-Za-z0-9_-]{8,35}$/.test(newTransactionId)) {
+            return NextResponse.json(
+                { error: "Invalid transaction" },
+                { status: 400 },
+            );
+        }
 
         // Find the order and verify ownership
         const order = await prisma.order.findUnique({

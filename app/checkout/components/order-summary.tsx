@@ -112,8 +112,11 @@ export default function OrderSummary() {
 
     const shippingCost = state.selectedShipping?.price ?? 0;
 
+    // GST (18%) is included in prices; worked out after the discount and rounded,
+    // the same figure the order stores (lib/checkout/pricing.ts gstIncluded)
     const gstRate = 0.18;
-    const gstAmount = (subtotal * gstRate) / (1 + gstRate);
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
+    const gstAmount = Math.round(taxableAmount - taxableAmount / (1 + gstRate));
 
     const total = subtotal + shippingCost - discountAmount;
 

@@ -36,16 +36,17 @@ function getBoxForSlab(slabQty: number) {
     return BOX_DIMENSIONS[10];
 }
 
-/* ---------- resolve weight for resin ---------- */
-function resolveResinWeight(size: string | null | undefined): number {
+/* ---------- resolve unit weight (kg) from a size label ---------- */
+// Resin sizes look like "1000g"; filament sizes like "1.75mm - 1kg".
+// Uses the last "<number>kg" / "<number>g" in the label; defaults to 1 kg.
+export function resolveUnitWeightKg(size: string | null | undefined): number {
     if (!size) return 1;
-    if (size.includes("g")) {
-        return Number(size.replace("g", "")) / 1000;
-    }
-    if (size.includes("kg")) {
-        return Number(size.replace("kg", ""));
-    }
-    return 1;
+    const matches = Array.from(size.matchAll(/(\d+(?:\.\d+)?)\s*(kg|g)\b/gi));
+    const last = matches[matches.length - 1];
+    if (!last) return 1;
+    const value = Number(last[1]);
+    if (!Number.isFinite(value) || value <= 0) return 1;
+    return last[2].toLowerCase() === "kg" ? value : value / 1000;
 }
 
 /* ---------- Types for shipping calculation ---------- */
@@ -129,10 +130,12 @@ export function prepareExpressShippingItems(
             }
 
             case "resin":
+            case "filament":
             case "product": {
+                // Resin/filament weight comes from the size label (resin "1000g", filament spool "1kg")
                 const slabQty = getSlabbedQuantity(item.quantity);
                 const box = getBoxForSlab(slabQty);
-                const unitWeight = resolveResinWeight(item.size);
+                const unitWeight = resolveUnitWeightKg(item.size);
                 const totalItemWeight = unitWeight * item.quantity;
 
                 totalWeightKg += totalItemWeight;
@@ -154,7 +157,7 @@ export function prepareExpressShippingItems(
             allowed: false,
             items: [],
             totalWeightKg,
-            reason: "Express shipping not allowed for orders above 10kg",
+            reason: `Express shipping not allowed for orders above ${MAX_EXPRESS_WEIGHT}kg`,
         };
     }
 
@@ -163,6 +166,57 @@ export function prepareExpressShippingItems(
         items,
         totalWeightKg,
     };
+}
+
+/* ---------- Delhivery charge per package ---------- */
+// Browser: calls /api/internal/calculate-shipping. Server: passes a quoter
+// that calls Delhivery directly (lib/shipping/delhiveryQuote.ts).
+export type ChargeQuoter = (
+    item: ShippingItem,
+    originPincode: string,
+    destinationPincode: string,
+) => Promise<number>;
+
+const fetchChargeQuoter: ChargeQuoter = async (item, originPincode, destinationPincode) => {
+    const response = await fetch("/api/internal/calculate-shipping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            shippingMode: "Express",
+            weight: item.weight, // in grams
+            length: item.length,
+            breadth: item.breadth,
+            height: item.height,
+            originPincode,
+            destinationPincode,
+            paymentType: "Pre-paid",
+        }),
+    });
+    const data = await response.json();
+    if (!data.ok) {
+        throw new Error(data.error || "Failed to calculate shipping");
+    }
+    return data.charge?.total_amount || data.charge?.charge || 0;
+};
+
+export { ORIGIN_PINCODE };
+
+/** Live Express price: sum of Delhivery charges for each package, rounded to the rupee */
+export async function quoteExpressPackages(
+    cart: CartItem[],
+    destinationPincode: string,
+    quote: ChargeQuoter,
+    originPincode: string = ORIGIN_PINCODE,
+): Promise<{ allowed: boolean; price: number; totalWeightKg: number; reason?: string }> {
+    const prepared = prepareExpressShippingItems(cart);
+    if (!prepared.allowed) {
+        return { allowed: false, price: 0, totalWeightKg: prepared.totalWeightKg, reason: prepared.reason };
+    }
+    let totalPrice = 0;
+    for (const item of prepared.items) {
+        totalPrice += await quote(item, originPincode, destinationPincode);
+    }
+    return { allowed: true, price: Math.round(totalPrice), totalWeightKg: prepared.totalWeightKg };
 }
 
 /* ---------- Calculate total shipping by calling Delhivery API ---------- */
@@ -176,45 +230,10 @@ export async function calculateExpressShippingPrice(
     totalWeightKg: number;
     reason?: string;
 }> {
-    const prepared = prepareExpressShippingItems(cart);
-
-    if (!prepared.allowed) {
-        return {
-            allowed: false,
-            price: 0,
-            totalWeightKg: prepared.totalWeightKg,
-            reason: prepared.reason,
-        };
-    }
-
     try {
-        let totalPrice = 0;
-
-        for (const item of prepared.items) {
-            const response = await fetch("/api/internal/calculate-shipping", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    shippingMode: "Express",
-                    weight: item.weight, // in grams
-                    length: item.length,
-                    breadth: item.breadth,
-                    height: item.height,
-                    originPincode,
-                    destinationPincode,
-                    paymentType: "Pre-paid",
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!data.ok) {
-                throw new Error(data.error || "Failed to calculate shipping");
-            }
-
-            const charge = data.charge?.total_amount || data.charge?.charge || 0;
-            totalPrice += charge;
-        }
+        const quoted = await quoteExpressPackages(cart, destinationPincode, fetchChargeQuoter, originPincode);
+        if (!quoted.allowed) return quoted;
+        const totalPrice = quoted.price;
 
         // If total price is 0, something went wrong - use estimate instead
         if (totalPrice === 0) {
@@ -227,11 +246,7 @@ export async function calculateExpressShippingPrice(
             };
         }
 
-        return {
-            allowed: true,
-            price: Math.round(totalPrice),
-            totalWeightKg: prepared.totalWeightKg,
-        };
+        return quoted;
     } catch (error) {
         // Fallback to estimate on error
         const estimate = estimateExpressShipping(cart);

@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import ResinDetailClient from './_components/ResinDetailClient';
+import { ProductReviews, RatingSummaryInline } from "@/components/reviews/ProductReviews";
+import { getPdpReviews, pdpJsonLdRating } from "@/lib/reviews/productReviews";
 import { buildBreadcrumbJsonLd, buildProductJsonLd, jsonLdString, truncateAtWord } from '@/lib/metadata';
 
 const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || 'https://www.scribbl3d.com').replace(/\/+$/, '');
@@ -94,10 +96,14 @@ export default async function ResinDetailPage({ params }: Props) {
         notFound();
     }
 
+    // Approved reviews: list from 2, average + JSON-LD rating from 5
+    const pdpReviews = await getPdpReviews("resin", resin.id);
+
     const serializedResin = JSON.parse(JSON.stringify(resin));
 
     const url = `${baseUrl}/resins/${resin.slug}`;
     const jsonLd = buildProductJsonLd({
+        ...pdpJsonLdRating(pdpReviews),
         name: resin.name,
         description: resin.description || resin.shortDescription,
         url,
@@ -141,7 +147,18 @@ export default async function ResinDetailPage({ params }: Props) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: jsonLdString(breadcrumbJsonLd) }}
             />
-            <ResinDetailClient resin={serializedResin} />
+            <ResinDetailClient resin={serializedResin}
+                ratingSummary={<RatingSummaryInline key="rating-summary" summary={pdpReviews.summary} />}
+                reviewsSection={
+                    <ProductReviews
+                        key="product-reviews"
+                        family="resin"
+                        productId={resin.id}
+                        summary={pdpReviews.summary}
+                        initialReviews={pdpReviews.reviews}
+                    />
+                }
+            />
         </>
     );
 }

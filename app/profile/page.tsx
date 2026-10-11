@@ -16,6 +16,8 @@ import { Overview } from "./_components/overview";
 import { PersonalInfo } from "./_components/personal-info";
 import { ProfileSidebar } from "./_components/profile-sidebar";
 import Wishlist from "./_components/wishlist";
+import MyCoupons from "./_components/my-coupons";
+import { getCustomerCoupons } from "@/lib/reviews/customerCoupons";
 
 /* ─────────────────────────────────────────────────────────
    TYPES
@@ -157,6 +159,9 @@ export default async function ProfilePage({ searchParams }: PageProps) {
     const resolvedSearchParams = await searchParams;
     const activeTab = resolvedSearchParams.tab || "overview";
 
+    /* ---------- COUPONS (only loaded on the Coupons tab) ---------- */
+    const coupons = activeTab === "coupons" ? await getCustomerCoupons(session.user.id) : [];
+
     /* ---------- TRANSFORM WISHLIST ---------- */
     const transformedWishlist = (wishlist?.items || []).map((item) => {
         if (item.prebuiltProduct) {
@@ -190,6 +195,8 @@ export default async function ProfilePage({ searchParams }: PageProps) {
                 return <Orders orders={orders as any} />;
             case "wishlist":
                 return <Wishlist />;
+            case "coupons":
+                return <MyCoupons coupons={coupons} />;
             case "account":
                 return <PersonalInfo user={user} />;
             default:

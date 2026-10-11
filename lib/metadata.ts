@@ -304,6 +304,8 @@ export interface ProductJsonLdInput {
   variesBy?: ('color' | 'size')[];
   properties?: { name: string; value: string | null | undefined }[];
   rating?: { average: number | null | undefined; count: number };
+  /** schema.org Review objects; only emitted together with aggregateRating */
+  reviews?: Record<string, unknown>[];
 }
 
 function merchantReturnPolicy(kind: ReturnPolicyKind) {
@@ -385,6 +387,7 @@ export function buildProductJsonLd(input: ProductJsonLdInput) {
           bestRating: 5,
           worstRating: 1,
         },
+        ...(input.reviews && input.reviews.length > 0 && { review: input.reviews }),
       }
     : {};
 
