@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const ITEM_TYPES = ["product", "prebuilt", "printer", "resin"];
+const ITEM_TYPES = ["prebuilt", "printer", "resin", "filament"];
 
 export default function EditDiscountPage() {
     const router = useRouter();

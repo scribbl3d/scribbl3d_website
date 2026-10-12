@@ -709,6 +709,7 @@ model DiscountUsage {
   usedAt     DateTime @default(now())
  
   @@index([discountId, userId])               // fast lookup for validation
+  @@unique([orderId, discountId])              // one redemption per order and coupon
 }
  
 // Existing models stay the same
@@ -737,6 +738,7 @@ enum ItemType {
   prebuilt
   printer
   resin
+  filament
 }
 
 model Shipment {

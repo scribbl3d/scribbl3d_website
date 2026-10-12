@@ -7,6 +7,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { extractDeliveredAt } from "@/lib/reviews/deliveredAt";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 /**
  * Statuses that indicate the order is in transit (past manifested)
@@ -29,6 +30,9 @@ function isPreTransit(status: string): boolean {
 }
 
 export async function POST() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         // 1. Get all active shipped shipments with user info
         const shipments = await prisma.shipment.findMany({

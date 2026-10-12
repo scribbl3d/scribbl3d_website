@@ -11,6 +11,8 @@ import { cancelOrderShipments } from '@/lib/shipment/cancelShipments';
 jest.mock('axios', () => ({ post: jest.fn() }));
 jest.mock('@/lib/db', () => ({ db: { shipment: { update: jest.fn() }, order: { findMany: jest.fn(), update: jest.fn(), updateMany: jest.fn() } } }));
 jest.mock('@/lib/refundStatus', () => ({ ...jest.requireActual('@/lib/refundStatus'), checkPhonePeRefundStatus: jest.fn() }));
+// Handlers check the admin session themselves; tests run as a signed-in admin
+jest.mock('@/lib/admin-guard', () => ({ requireAdmin: jest.fn().mockResolvedValue(null) }));
 jest.mock('next/server', () => ({ NextResponse: { json: (data: unknown) => ({ status: 200, json: async () => data }) } }));
 
 const SALT = 'super-secret-salt';

@@ -1,24 +1,13 @@
-import { internalRequestHeaders } from "@/lib/internal-auth";
 import { prisma } from "@/lib/prisma";
 import { shouldSyncShipment } from "@/lib/shipment/shouldSync";
+import { triggerShipmentSync } from "@/lib/shipment/triggerSync";
 import { NextResponse } from "next/server";
-
-/**
- * Fire-and-forget background sync
- * NEVER await this
- */
-function triggerShipmentSync(orderId: string) {
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/internal/sync-shipment`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...internalRequestHeaders(),
-        },
-        body: JSON.stringify({ orderId }),
-    }).catch(() => {});
-}
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function GET() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const orders = await prisma.order.findMany({
             orderBy: { id: "desc" },

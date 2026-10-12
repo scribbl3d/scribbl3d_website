@@ -1,7 +1,7 @@
 export type DiscountItemType = {
     id: string;
     discountId: string;
-    itemType: "product" | "prebuilt" | "printer" | "resin";
+    itemType: "product" | "prebuilt" | "printer" | "resin" | "filament";
 };
 
 export type Discount = {

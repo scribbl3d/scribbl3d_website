@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const testimonial = await prisma.customerTestimonial.findUnique({
@@ -22,6 +26,9 @@ export async function PUT(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const body = await req.json();
@@ -52,6 +59,9 @@ export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         await prisma.customerTestimonial.delete({ where: { id } });

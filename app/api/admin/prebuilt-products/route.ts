@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,9 @@ const parsePrice = (val: unknown): number => {
    GET – List all prebuilt products (Search + Sort + Pagination)
    ============================================================================ */
 export async function GET(request: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const searchParams = request.nextUrl.searchParams;
 
@@ -131,6 +135,9 @@ export async function GET(request: NextRequest) {
    POST – Create product
    ============================================================================ */
 export async function POST(request: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await request.formData();
 
@@ -270,6 +277,9 @@ export async function POST(request: NextRequest) {
    DELETE – Delete product by ID
    ============================================================================ */
 export async function DELETE(request: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

@@ -2,11 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { deleteMultipleFromCloudinary } from "@/lib/cloudinary-utils";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function GET(
     req: Request,
     props: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const params = await props.params;
 
     try {
@@ -42,6 +46,9 @@ export async function PUT(
     req: Request,
     props: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const params = await props.params;
 
     try {
@@ -335,6 +342,9 @@ export async function DELETE(
     req: Request,
     props: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const params = await props.params;
 
     try {

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,9 @@ export const dynamic = "force-dynamic";
    GET – List printers (Search + Sort + Pagination)
    ============================================================================ */
 export async function GET(request: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const searchParams = request.nextUrl.searchParams;
 
@@ -100,6 +104,9 @@ export async function GET(request: NextRequest) {
    POST – Create printer
    ============================================================================ */
 export async function POST(request: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await request.formData();
 

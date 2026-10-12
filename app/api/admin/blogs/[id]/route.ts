@@ -3,6 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { deleteFromCloudinary, deleteMultipleFromCloudinary } from "@/lib/cloudinary-utils";
+import { requireAdmin } from "@/lib/admin-guard";
 
 // Configure Cloudinary
 
@@ -40,6 +41,9 @@ export async function GET(
     _request: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const id = (await params).id;
 
     if (!isAuthenticated())
@@ -65,6 +69,9 @@ export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const id = (await params).id;
     if (!isAuthenticated())
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -159,6 +166,9 @@ export async function DELETE(
     _request: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const id = (await params).id;
     if (!isAuthenticated())
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

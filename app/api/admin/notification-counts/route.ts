@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getReviewModerationCounts } from "@/lib/reviews/moderation";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function GET() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const viewTrackers = await prisma.adminViewTracker.findMany();
         

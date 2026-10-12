@@ -8,6 +8,7 @@ import {
     checkRequired, isRateLimited, isValidDesignFile,
 } from "@/lib/validation";
 
+import { getClientIdentifier } from "@/lib/api-helpers";
 /* ───────────── Cloudinary Config ───────────── */
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
         const formData = await req.formData();
 
         // Rate limit by IP
-        const ip = req.headers.get("x-forwarded-for") || "unknown";
+        const ip = getClientIdentifier(req);
         if (isRateLimited(`prototyping:${ip}`, 5, 60_000)) {
             return NextResponse.json({ success: false, error: "Too many requests. Please try again later." }, { status: 429 });
         }

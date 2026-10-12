@@ -1,7 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function GET(req: Request) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { searchParams } = new URL(req.url);
     const pickupLocation = searchParams.get("pickup_location");
 

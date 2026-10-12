@@ -2,6 +2,7 @@ import cloudinary from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/admin-guard";
 
 const carouselItemSchema = z.object({
     type: z.enum(["image", "video"]),
@@ -10,6 +11,9 @@ const carouselItemSchema = z.object({
 });
 
 export async function PUT(request: Request, { params }) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = params;
 
@@ -91,6 +95,9 @@ export async function PUT(request: Request, { params }) {
 }
 
 export async function DELETE(_: Request, { params }) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     await prisma.carouselItem.delete({
         where: { id: params.id },
     });

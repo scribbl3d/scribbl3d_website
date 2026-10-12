@@ -6,7 +6,7 @@ it('verifies signed admin sessions and rejects unsigned, tampered, expired, non-
     import { SignJWT } from 'jose';
     import adminSession from './lib/admin-session.ts';
     const { createAdminSession, verifyAdminSession, isAdminRequest, isSameOrigin } = adminSession;
-    const secret = process.env.JWT_SECRET;
+    const secret = process.env.ADMIN_SESSION_SECRET;
     const key = new TextEncoder().encode(secret);
     const token = await createAdminSession('admin@example.test');
     assert.deepEqual(await verifyAdminSession(token), { email: 'admin@example.test', role: 'admin' });
@@ -29,13 +29,19 @@ it('verifies signed admin sessions and rejects unsigned, tampered, expired, non-
     assert.equal(isSameOrigin(request(null)), true);
     const proxied = { headers: { get: (name) => (name === 'origin' ? 'https://www.scribbl3d.com' : name === 'x-forwarded-host' ? 'www.scribbl3d.com' : name === 'host' ? '127.0.0.1:3000' : null) } };
     assert.equal(isSameOrigin(proxied), true);
-    delete process.env.JWT_SECRET;
+    // Without ADMIN_SESSION_SECRET: key derived from NEXTAUTH_SECRET, never the raw secret
+    delete process.env.ADMIN_SESSION_SECRET;
     process.env.NEXTAUTH_SECRET = secret;
     assert.ok(await verifyAdminSession(await createAdminSession('admin@example.test')));
+    const rawKey = await new SignJWT({ email: 'admin@example.test', role: 'admin' }).setProtectedHeader({ alg: 'HS256' }).setIssuer('scribbl3d-admin').setAudience('scribbl3d-operations').setIssuedAt().setExpirationTime('1h').sign(key);
+    assert.equal(await verifyAdminSession(rawKey), null);
+    process.env.ADMIN_SESSION_SECRET = 'too-short';
+    await assert.rejects(createAdminSession('admin@example.test'), /not configured/);
+    delete process.env.ADMIN_SESSION_SECRET;
     delete process.env.NEXTAUTH_SECRET;
     await assert.rejects(createAdminSession('admin@example.test'), /not configured/);
     assert.equal(await verifyAdminSession(token), null);
     console.log('Admin session verification passed');
-  `], { cwd: process.cwd(), encoding: 'utf8', env: { ...process.env, JWT_SECRET: 'test-only-admin-session-signing-key-32-characters', NEXTAUTH_SECRET: '' } });
+  `], { cwd: process.cwd(), encoding: 'utf8', env: { ...process.env, ADMIN_SESSION_SECRET: 'test-only-admin-session-signing-key-32-characters', JWT_SECRET: '', NEXTAUTH_SECRET: '' } });
   expect(output).toContain('Admin session verification passed');
 }, 15000);

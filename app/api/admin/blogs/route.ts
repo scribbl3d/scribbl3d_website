@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/admin-guard";
 
 // Configure Cloudinary (Make sure these exist in your .env file)
 cloudinary.config({
@@ -37,6 +38,9 @@ const blogSchema = z.object({
 });
 
 export async function GET() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const blogs = await prisma.blog.findMany({
             orderBy: { createdAt: "desc" },
@@ -52,6 +56,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await request.formData();
 

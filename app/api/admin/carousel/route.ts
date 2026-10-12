@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { requireAdmin } from "@/lib/admin-guard";
 
 const carouselItemSchema = z.object({
     type: z.enum(["image", "video"]),
@@ -9,6 +10,9 @@ const carouselItemSchema = z.object({
 });
 
 export async function GET() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const items = await prisma.carouselItem.findMany({
             orderBy: { createdAt: "asc" },
@@ -24,6 +28,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await request.formData();
 

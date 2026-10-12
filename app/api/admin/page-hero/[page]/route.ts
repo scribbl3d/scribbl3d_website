@@ -2,6 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin-guard";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -20,6 +21,9 @@ export async function GET(
     _req: Request,
     { params }: RouteContext
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { page } = await params;
 
     try {
@@ -42,6 +46,9 @@ export async function PUT(
     req: Request,
     { params }: RouteContext
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { page } = await params;
 
     try {
@@ -125,6 +132,9 @@ export async function DELETE(
     _req: Request,
     { params }: RouteContext
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { page } = await params;
 
     try {

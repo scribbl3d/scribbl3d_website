@@ -4,6 +4,7 @@ export const runtime = "nodejs";
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 /**
  * Generate label for single waybill or all waybills in MPS shipment
@@ -14,6 +15,9 @@ import { NextResponse } from "next/server";
  * - all: If "true" with orderId, generates combined PDF for all packages
  */
 export async function GET(req: Request) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { searchParams } = new URL(req.url);
     const waybill = searchParams.get("waybill");
     const orderId = searchParams.get("orderId");

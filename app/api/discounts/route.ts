@@ -16,6 +16,8 @@ export async function GET(req: Request) {
                 _count: {
                     select: { usages: true },
                 },
+                reviewReward: { select: { orderId: true, cancelledAt: true } },
+                user: { select: { name: true, email: true } },
             },
             orderBy: { createdAt: "desc" },
         });

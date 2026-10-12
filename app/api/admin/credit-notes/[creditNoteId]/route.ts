@@ -6,6 +6,7 @@ import autoTable from "jspdf-autotable";
 import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
+import { requireAdmin } from "@/lib/admin-guard";
 
 /* ───────────────── Helpers ───────────────── */
 
@@ -154,6 +155,9 @@ export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ creditNoteId: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     // ← await params first (Next.js 15 requirement)
     const { creditNoteId } = await params;
 

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 /* ───────── Helpers ───────── */
 
@@ -38,6 +39,9 @@ async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
 /* ───────── ROUTE ───────── */
 
 export async function POST(req: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { orderId, invoiceId, amount, reason } = await req.json();
 

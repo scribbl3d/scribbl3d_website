@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendAdminNotification } from "@/lib/email/index";
 import { isRateLimited } from "@/lib/validation";
 
+import { getClientIdentifier } from "@/lib/api-helpers";
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for") || "unknown";
+    const ip = getClientIdentifier(request);
     if (isRateLimited(`contact:${ip}`, 3, 60_000)) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },

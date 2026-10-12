@@ -7,6 +7,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { z } from "zod";
 
+import { clientIpFrom } from "@/lib/api-helpers";
 import { normaliseEmail } from "@/lib/auth/registrationToken";
 import { checkLoginAttempts, recordFailedLogin, resetLoginAttempts } from "@/lib/login-rate-limit";
 import { prisma } from "@/lib/prisma";
@@ -17,9 +18,10 @@ const dummyPasswordHash = () => (dummyHash ??= bcryptjs.hashSync(crypto.randomBy
 
 /** Client IP from the request NextAuth passes to authorize() */
 function clientIp(req: { headers?: Record<string, any> } | undefined): string {
-    const forwarded = req?.headers?.["x-forwarded-for"];
-    const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-    return String(value || req?.headers?.["x-real-ip"] || "unknown").split(",")[0].trim();
+    return clientIpFrom((name) => {
+        const value = req?.headers?.[name];
+        return Array.isArray(value) ? value.join(",") : value;
+    });
 }
 
 const loginSchema = z.object({

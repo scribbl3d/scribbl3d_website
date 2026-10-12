@@ -100,6 +100,18 @@ export async function DELETE(
 ) {
     const { id } = await context.params;
 
+    // Review-reward coupons belong to a customer's reward record; deactivate them instead
+    const reward = await prisma.reviewReward.findUnique({
+        where: { discountId: id },
+        select: { id: true },
+    });
+    if (reward) {
+        return NextResponse.json(
+            { error: "Review reward coupons cannot be deleted. Mark them inactive instead." },
+            { status: 409 },
+        );
+    }
+
     await prisma.discount.delete({
         where: { id },
     });

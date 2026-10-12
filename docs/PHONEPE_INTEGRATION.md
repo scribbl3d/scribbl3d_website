@@ -72,7 +72,7 @@ The status route asks PhonePe's status API (production) server-to-server and app
 
 ## Remaining limitations
 
-- **Legacy status routes:** `app/api/status/route.ts` and `app/api/status/[id]/route.ts` now return 410; they and the unused `utils/payment-status.ts` can be deleted.
+- **Legacy status routes:** `app/api/status/*` and `utils/payment-status.ts` have been deleted.
 - **Status API response:** the status route trusts PhonePe's TLS response without verifying a response checksum.
 - **Retry reconciliation:** `retry-payment` asks PhonePe about the previous transaction first: a success is confirmed (no second payment), a pending one blocks the retry, and an unreachable status check returns 503. A success arriving after a retry has replaced the ID is still only alerted to admins.
 - **Coupon limits:** per-user and first-order limits are re-checked when payment is confirmed; a violation (e.g. two unpaid orders using the same coupon) is confirmed anyway and reported to admins as a payment review.

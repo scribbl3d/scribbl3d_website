@@ -3,6 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { deleteFromCloudinary, deleteMultipleFromCloudinary } from "@/lib/cloudinary-utils";
+import { requireAdmin } from "@/lib/admin-guard";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -33,6 +34,9 @@ export async function GET(
     _req: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
 
@@ -75,6 +79,9 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { id } = await params;
     const formData = await req.formData();
@@ -481,6 +488,9 @@ export async function DELETE(
     _req: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
 

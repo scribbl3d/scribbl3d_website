@@ -1,11 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 /* =========================
    GET – Fetch hero images
    ========================= */
 export async function GET() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const heroImages = await prisma.heroImage.findMany({
             orderBy: { createdAt: "desc" },
@@ -25,6 +29,9 @@ export async function GET() {
    POST – Upload hero image
    ========================= */
 export async function POST(request: Request) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await request.formData();
 

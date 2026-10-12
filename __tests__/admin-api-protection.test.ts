@@ -143,9 +143,10 @@ describe('canCustomerCancelOrder', () => {
 });
 
 describe('internal request token', () => {
-  const OLD = process.env.NEXTAUTH_SECRET;
-  beforeAll(() => { process.env.NEXTAUTH_SECRET = 'test-secret'; });
-  afterAll(() => { process.env.NEXTAUTH_SECRET = OLD; });
+  const SECRET = 'test-internal-api-secret-32-characters-long';
+  const OLD = process.env.INTERNAL_API_SECRET;
+  beforeAll(() => { process.env.INTERNAL_API_SECRET = SECRET; });
+  afterAll(() => { process.env.INTERNAL_API_SECRET = OLD; });
 
   it('accepts the derived token and rejects missing or wrong tokens', () => {
     const ok = new Request(`${BASE}/api/internal/sync-shipment`, { headers: internalRequestHeaders() });
@@ -156,6 +157,76 @@ describe('internal request token', () => {
   });
 
   it('never sends the raw secret', () => {
-    expect(Object.values(internalRequestHeaders())).not.toContain('test-secret');
+    expect(Object.values(internalRequestHeaders())).not.toContain(SECRET);
+  });
+
+  it('falls back to NEXTAUTH_SECRET when INTERNAL_API_SECRET is unset', () => {
+    const OLD_NEXTAUTH = process.env.NEXTAUTH_SECRET;
+    process.env.INTERNAL_API_SECRET = '';
+    process.env.NEXTAUTH_SECRET = 'nextauth-only-secret';
+    try {
+      const ok = new Request(BASE, { headers: internalRequestHeaders() });
+      expect(isInternalRequest(ok)).toBe(true);
+      expect(Object.values(internalRequestHeaders())).not.toContain('nextauth-only-secret');
+      process.env.NEXTAUTH_SECRET = '';
+      expect(() => internalRequestHeaders()).toThrow(/not configured/);
+    } finally {
+      process.env.INTERNAL_API_SECRET = SECRET;
+      process.env.NEXTAUTH_SECRET = OLD_NEXTAUTH;
+    }
+  });
+});
+
+describe('admin and internal route handlers check access themselves (not only middleware)', () => {
+  // Public by design or retired; every other handler must call a guard
+  const EXEMPT = ['app/api/admin/login/route.ts', 'app/api/admin/logout/route.ts', 'app/api/internal/cancel-shipment/route.ts'];
+  const GUARD = /requireAdmin\(\)|isAdminRequest\(|verifyAdminSession\(|isInternalRequest\(/;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require('fs') as typeof import('fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require('path') as typeof import('path');
+  const routes = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      return entry.isDirectory() ? routes(full) : entry.name === 'route.ts' ? [full] : [];
+    });
+
+  const files = [...routes('app/api/admin'), ...routes('app/api/internal')].filter((f) => !EXEMPT.includes(f));
+
+  it.each(files)('%s', (file) => {
+    const source = fs.readFileSync(file, 'utf8');
+    const handlers = source.split(/^export async function (?:GET|POST|PUT|PATCH|DELETE)\b/m).slice(1);
+    expect(handlers.length).toBeGreaterThan(0);
+    for (const body of handlers) {
+      expect(body).toMatch(GUARD);
+    }
+  });
+});
+
+describe('client IP for rate limiting', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { clientIpFrom } = require('@/lib/api-helpers') as typeof import('@/lib/api-helpers');
+  const headers = (h: Record<string, string>) => (name: string) => h[name];
+  const env = { hops: process.env.TRUSTED_PROXY_HOPS, header: process.env.CLIENT_IP_HEADER };
+  afterEach(() => {
+    process.env.TRUSTED_PROXY_HOPS = env.hops;
+    process.env.CLIENT_IP_HEADER = env.header;
+    if (env.hops === undefined) delete process.env.TRUSTED_PROXY_HOPS;
+    if (env.header === undefined) delete process.env.CLIENT_IP_HEADER;
+  });
+
+  it('ignores client-supplied x-forwarded-for entries left of the trusted proxy', () => {
+    delete process.env.TRUSTED_PROXY_HOPS;
+    expect(clientIpFrom(headers({ 'x-forwarded-for': '6.6.6.6, 1.2.3.4' }))).toBe('1.2.3.4');
+    expect(clientIpFrom(headers({ 'x-forwarded-for': '1.2.3.4' }))).toBe('1.2.3.4');
+    process.env.TRUSTED_PROXY_HOPS = '2';
+    expect(clientIpFrom(headers({ 'x-forwarded-for': '6.6.6.6, 1.2.3.4, 10.0.0.1' }))).toBe('1.2.3.4');
+  });
+
+  it('does not trust x-real-ip or user-agent unless configured', () => {
+    delete process.env.TRUSTED_PROXY_HOPS;
+    expect(clientIpFrom(headers({ 'x-real-ip': '6.6.6.6', 'user-agent': 'x' }))).toBe('unknown');
+    process.env.CLIENT_IP_HEADER = 'X-Real-IP';
+    expect(clientIpFrom(headers({ 'x-real-ip': '1.2.3.4', 'x-forwarded-for': '6.6.6.6' }))).toBe('1.2.3.4');
   });
 });

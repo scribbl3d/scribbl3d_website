@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import cloudinary from "@/lib/cloudinary";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function GET(req: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { searchParams } = new URL(req.url);
         const searchField = searchParams.get("searchField") || "name";
@@ -61,6 +65,9 @@ export async function GET(req: NextRequest) {
 
 // CREATE new filament
 export async function POST(req: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await req.formData();
 

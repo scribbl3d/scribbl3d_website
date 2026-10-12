@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -35,6 +36,9 @@ async function uploadToCloudinary(file: File): Promise<string | null> {
 }
 
 export async function GET() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const items = await prisma.bestSeller.findMany({
             orderBy: { sortOrder: "asc" },
@@ -47,6 +51,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const formData = await req.formData();
         const file = formData.get("file") as File | null;

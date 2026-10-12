@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function POST(req: Request) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const body = await req.json();
 

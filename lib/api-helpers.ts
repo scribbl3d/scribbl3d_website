@@ -3,24 +3,40 @@ import { ZodSchema, ZodError } from 'zod';
 import { rateLimit, createRateLimitResponse, getRateLimitHeaders } from './rate-limit';
 
 /**
+ * Client IP for rate limiting. Only entries added by our own reverse proxy are
+ * trusted: the left part of x-forwarded-for is whatever the client sent and
+ * can change on every request, which would reset every limit.
+ *
+ * - CLIENT_IP_HEADER: read the IP from this one header instead, only when the
+ *   proxy always overwrites it (e.g. "x-real-ip" with nginx proxy_set_header).
+ * - TRUSTED_PROXY_HOPS (default 1): reverse proxies in front of the app that
+ *   append to x-forwarded-for; the client is that many entries from the right.
+ *
+ * The app must sit behind a proxy that sets these headers; Next.js route
+ * handlers cannot see the socket address.
+ */
+export function clientIpFrom(get: (name: string) => string | null | undefined): string {
+  const header = process.env.CLIENT_IP_HEADER?.trim().toLowerCase();
+  if (header) {
+    return get(header)?.split(',')[0].trim() || 'unknown';
+  }
+
+  const hops = Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? '1', 10);
+  const chain = (get('x-forwarded-for') || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!Number.isInteger(hops) || hops < 1 || chain.length === 0) {
+    return 'unknown';
+  }
+  return chain[Math.max(0, chain.length - hops)];
+}
+
+/**
  * Get client identifier for rate limiting
- * Uses IP address or fallback to a header
  */
 export function getClientIdentifier(req: Pick<Request, 'headers'>): string {
-  // Try to get real IP from headers (Vercel, Cloudflare, etc.)
-  const forwarded = req.headers.get('x-forwarded-for');
-  const realIp = req.headers.get('x-real-ip');
-  
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  
-  if (realIp) {
-    return realIp;
-  }
-  
-  // Fallback to a combination of headers
-  return req.headers.get('user-agent') || 'unknown';
+  return clientIpFrom((name) => req.headers.get(name));
 }
 
 /**

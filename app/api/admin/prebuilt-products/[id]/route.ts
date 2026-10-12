@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
 import { deleteFromCloudinary } from "@/lib/cloudinary-utils";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,9 @@ export async function GET(
     _req: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
 
@@ -95,6 +99,9 @@ export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const formData = await request.formData();
@@ -344,6 +351,9 @@ export async function DELETE(
     _req: Request,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
 

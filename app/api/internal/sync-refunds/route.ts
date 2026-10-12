@@ -2,12 +2,16 @@
 import { db } from "@/lib/db";
 import { checkPhonePeRefundStatus } from "@/lib/refundStatus";
 import { NextResponse } from "next/server";
+import { requireAdmin } from "@/lib/admin-guard";
 
 const FAILED_CODES = ["PAYMENT_ERROR", "PAYMENT_DECLINED", "PAYMENT_FAILED", "TRANSACTION_NOT_FOUND"];
 // A refund PhonePe doesn't know yet may still be in flight
 const NOT_FOUND_GRACE_MS = 10 * 60 * 1000;
 
 export async function POST() {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const refunds = await db.order.findMany({
         where: {
             refundStatus: { in: ["requested", "initiated", "pending"] },

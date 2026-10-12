@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendAdminNotification } from "@/lib/email/index";
 import { sanitizeWithLimit, sanitizeOptional, isRateLimited } from "@/lib/validation";
 
+import { getClientIdentifier } from "@/lib/api-helpers";
 export const dynamic = "force-dynamic";
 
 interface ProductLookup {
@@ -21,7 +22,7 @@ interface ProductLookup {
 export async function POST(request: NextRequest) {
     try {
         // Rate limit by IP
-        const ip = request.headers.get("x-forwarded-for") || "unknown";
+        const ip = getClientIdentifier(request);
         if (isRateLimited(`stock:${ip}`, 10, 60_000)) {
             return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
         }

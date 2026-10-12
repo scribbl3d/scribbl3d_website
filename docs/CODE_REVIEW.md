@@ -167,7 +167,7 @@
   - Issue: Ownership-only check; allocates a permanent GST invoice number and prints "Received ₹total".
   - Fix: Only paid statuses (`confirmed`/`processing`/`shipped`/`delivered`/cancelled-after-payment); else 409.
 
-- [x] **CR-26 · Legacy unauthenticated `/api/status` routes poll PhonePe for ~25 min per request** _(fixed: routes return 410; files can be deleted)_
+- [x] **CR-26 · Legacy unauthenticated `/api/status` routes poll PhonePe for ~25 min per request** _(fixed: routes and `utils/payment-status.ts` deleted)_
   - Where: `app/api/status/route.ts`, `app/api/status/[id]/route.ts:35-55`, `utils/payment-status.ts`
   - Issue: No callers; anonymous requests tie up workers, risk PhonePe rate limits, log raw payloads, look up any transaction.
   - Fix: Delete both routes and `utils/payment-status.ts` if unused.
@@ -223,7 +223,7 @@
   - Where: `app/api/admin/login/route.ts:22-29`, `lib/login-rate-limit.ts`
   - Fix: Key on email + IP in a shared store; exponential backoff instead of a hard lockout.
 
-- [ ] **CR-38 · Shared rate limiter mixes counters across endpoints and windows last 2× too long** _(partial: per-route keys and window fixed; still in-memory per instance)_
+- [ ] **CR-38 · Shared rate limiter mixes counters across endpoints and windows last 2× too long** _(partial: per-route keys, window and spoofable `x-forwarded-for` fixed (`clientIpFrom`, `TRUSTED_PROXY_HOPS`); still in-memory per instance)_
   - Where: `lib/rate-limit.ts:27-60`, `lib/api-helpers.ts:75-82`
   - Issue: Keyed by IP only (coupon tries can block password reset); `resetTime < now - windowMs`; in-memory per instance; trusts `x-forwarded-for`.
   - Fix: Namespace keys per route, compare `resetTime < now`, shared store in production.
@@ -313,11 +313,11 @@
 
 ### Payments, cart, orders
 
-- [ ] **CR-58 · Discount usage write failure is swallowed; no unique constraint on `DiscountUsage`** _(partial: usage written in the confirmation transaction; `@@unique([orderId, discountId])` needs an approved migration)_ — `lib/payments/confirmPayment.ts:84-98`. Fix: write inside the status-transition transaction; `@@unique([orderId, discountId])` (approved migration).
+- [ ] **CR-58 · Discount usage write failure is swallowed; no unique constraint on `DiscountUsage`** _(partial: usage written in the confirmation transaction; `@@unique([orderId, discountId])` added in schema — **apply with `prisma db push`**)_ — `lib/payments/confirmPayment.ts:84-98`. Fix: write inside the status-transition transaction; `@@unique([orderId, discountId])` (approved migration).
 - [x] **CR-59 · Confirmation clears the whole live cart, including items added later** — `lib/payments/confirmPayment.ts:101-106`. Fix: delete only snapshotted cart items.
 - [x] **CR-60 · Coupon lookup not rate-limited; returns full record incl. hidden codes** — `app/api/discounts/apply/route.ts:10-54`. Fix: `RateLimits.COUPON`, return minimal fields.
-- [ ] **CR-61 · Item-type coupons can never apply to filaments (`ItemType` enum lacks `filament`)** *(business decision)* — `prisma/schema.prisma:735-740`, `lib/checkout/pricing.ts:75-80`.
-- [ ] **CR-62 · Dead/broken checkout paths** _(partial: cart debug retired, duplicate POST/GET removed from `cart/[id]`, buy-now prebuilt no longer ₹0, ops tracking link repointed; unused `CheckoutButton.tsx` and `app/order/[orderId]/tracking` page still need deleting)_ — `components/CheckoutButton.tsx:25` (nonexistent `/api/initiate-payment`), `app/order/[orderId]/tracking/page.tsx:36` (nonexistent API), `/api/buynow` returns `price: 0` for prebuilt, `app/api/cart/debug/route.ts` ("TEMPORARY"), duplicate GET + `legacyDeleteAllCart` in `app/api/cart/[id]/route.ts`. Fix: remove or repoint.
+- [ ] **CR-61 · Item-type coupons can never apply to filaments (`ItemType` enum lacks `filament`)** _(approved: `filament` added to enum + admin editor — **apply with `prisma db push`**)_ — `prisma/schema.prisma:735-740`, `lib/checkout/pricing.ts:75-80`.
+- [x] **CR-62 · Dead/broken checkout paths** _(fixed: cart debug retired, duplicate POST/GET removed, buy-now prebuilt no longer ₹0, `CheckoutButton.tsx` and `app/order/[orderId]/tracking` deleted)_ — `components/CheckoutButton.tsx:25` (nonexistent `/api/initiate-payment`), `app/order/[orderId]/tracking/page.tsx:36` (nonexistent API), `/api/buynow` returns `price: 0` for prebuilt, `app/api/cart/debug/route.ts` ("TEMPORARY"), duplicate GET + `legacyDeleteAllCart` in `app/api/cart/[id]/route.ts`. Fix: remove or repoint.
 - [x] **CR-63 · Discount spinner can stay stuck after a failed cart request** — `providers/CartProvider.tsx:300-327`. Fix: reset flag on non-OK response.
 
 ### Fulfilment, refunds, documents
@@ -325,15 +325,15 @@
 - [ ] **CR-64 · Printer weight unit guessed from value (≤ 1000 treated as kg)** — `app/checkout/components/expressShipping.ts:81-85`; feed always labels weight `g` (`google-merchant-feed/route.ts`). Fix: confirm stored unit (admin form stores grams) and convert consistently.
 - [ ] **CR-65 · Prebuilt products always ship as 750 g, ignoring stored weight** — `expressShipping.ts:4,118`.
 - [ ] **CR-66 · Invoice/credit-note numbering edge cases** — FY computed in UTC not IST, global counter (confirm per-FY reset), P2002 race → 500, helpers duplicated in 3 files. `app/api/admin/credit-notes/route.ts:7-36`, `lib/invoice/generateInvoicePdf.ts:98-115`.
-- [ ] **CR-67 · Refund amount converted by hand instead of `toPaise`; ignores prior credits** _(partial: uses `toPaise`; prior credit notes not subtracted (no partial-refund flow exists))_ — `cancel/route.ts:95`.
+- [x] **CR-67 · Refund amount converted by hand instead of `toPaise`; ignores prior credits** _(fixed: uses `toPaise`; prior credits intentionally not subtracted while no partial-refund flow exists)_ — `cancel/route.ts:95`.
 - [x] **CR-68 · Next.js 15 route `params` read synchronously** — `app/api/admin/orders/[orderId]/cancel/route.ts:13-14`, `app/api/admin/orders/[orderId]/route.ts:23,78`. Fix: `await params`.
 
 ### Auth & config
 
-- [ ] **CR-69 · Most admin APIs rely only on middleware regex for auth** — 34 of 41 `app/api/admin/**` files plus `internal/*`. Fix: in-handler `isAdminRequest(req)` guard or shared wrapper (defence in depth).
+- [x] **CR-69 · Most admin APIs rely only on middleware regex for auth** _(fixed: `requireAdmin()` in every handler; test enforces it)_ — 34 of 41 `app/api/admin/**` files plus `internal/*`. Fix: in-handler `isAdminRequest(req)` guard or shared wrapper (defence in depth).
 - [x] **CR-70 · `withApiProtection({ requireAuth: true })` is a no-op placeholder** _(fixed: option removed)_ — `lib/api-helpers.ts:126-133`. Fix: implement or remove the option.
 - [x] **CR-71 · Hardcoded fallback JWT secret in legacy session module** — `lib/session.ts:5-7`. Fix: fail closed or delete the legacy module and stub actions in `app/actions.ts`.
-- [ ] **CR-72 · One secret reused for admin JWT and internal token; no revocation** — `lib/admin-session.ts:8`, `lib/internal-auth.ts:12-14`. Fix: dedicated secrets; consider session version for admin tokens.
+- [ ] **CR-72 · One secret reused for admin JWT and internal token; no revocation** _(partial: admin key derived separately from `NEXTAUTH_SECRET`, optional dedicated `ADMIN_SESSION_SECRET` / `INTERNAL_API_SECRET`; revocation deferred)_ — `lib/admin-session.ts:8`, `lib/internal-auth.ts:12-14`. Fix: dedicated secrets; consider session version for admin tokens.
 - [x] **CR-73 · CORS allows credentialed requests from `localhost:3000` in production** — `middleware.ts:87-106`. Fix: only when `NODE_ENV === "development"`.
 
 ### Catalogue, SEO

@@ -2,14 +2,15 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 /**
  * Authentication for server-to-server calls to /api/internal routes
- * (e.g. the fire-and-forget shipment sync). The token is derived from
- * NEXTAUTH_SECRET so the secret itself is never sent over the wire.
+ * (e.g. the fire-and-forget shipment sync). The token is an HMAC (with its
+ * own label) of INTERNAL_API_SECRET, or NEXTAUTH_SECRET when that is unset,
+ * so the secret itself is never sent over the wire.
  */
 
 const HEADER = "x-internal-token";
 
 function internalToken(): string {
-    const secret = process.env.NEXTAUTH_SECRET;
+    const secret = process.env.INTERNAL_API_SECRET || process.env.NEXTAUTH_SECRET;
     if (!secret) throw new Error("Internal API auth is not configured");
     return createHmac("sha256", secret).update("scribbl3d-internal-api").digest("hex");
 }

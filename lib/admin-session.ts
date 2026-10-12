@@ -4,10 +4,21 @@ import type { NextRequest } from "next/server";
 const issuer = "scribbl3d-admin";
 const audience = "scribbl3d-operations";
 
-function signingKey() {
-  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET;
-  if (!secret) throw new Error("Admin session signing is not configured");
-  return new TextEncoder().encode(secret);
+const encoder = new TextEncoder();
+
+// ADMIN_SESSION_SECRET when set; otherwise a key derived from NEXTAUTH_SECRET
+// (HMAC with a fixed label), so admin tokens never use the raw customer-auth
+// secret. Web Crypto, because middleware runs on the Edge runtime.
+async function signingKey(): Promise<Uint8Array> {
+  const dedicated = process.env.ADMIN_SESSION_SECRET;
+  if (dedicated) {
+    if (dedicated.length < 32) throw new Error("Admin session signing is not configured");
+    return encoder.encode(dedicated);
+  }
+  const base = process.env.NEXTAUTH_SECRET;
+  if (!base) throw new Error("Admin session signing is not configured");
+  const hmac = await crypto.subtle.importKey("raw", encoder.encode(base), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", hmac, encoder.encode("scribbl3d-admin-session")));
 }
 
 export async function createAdminSession(email: string) {
@@ -18,13 +29,13 @@ export async function createAdminSession(email: string) {
     .setAudience(audience)
     .setIssuedAt()
     .setExpirationTime("1h")
-    .sign(signingKey());
+    .sign(await signingKey());
 }
 
 export async function verifyAdminSession(token?: string) {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, signingKey(), {
+    const { payload } = await jwtVerify(token, await signingKey(), {
       algorithms: ["HS256"], issuer, audience, maxTokenAge: "1h",
     });
     if (payload.role !== "admin" || typeof payload.email !== "string" || !payload.email || !payload.exp) return null;
@@ -34,7 +45,7 @@ export async function verifyAdminSession(token?: string) {
   }
 }
 
-export function isSameOrigin(request: Request) {
+export function isSameOrigin(request: Pick<Request, "headers">) {
   const origin = request.headers.get("origin");
   if (!origin) return true;
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host");

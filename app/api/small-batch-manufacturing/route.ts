@@ -8,6 +8,7 @@ import {
     checkRequired, isRateLimited, isValidDesignFile,
 } from "@/lib/validation";
 
+import { getClientIdentifier } from "@/lib/api-helpers";
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
         const formData = await request.formData();
 
         // Rate limit by IP
-        const ip = request.headers.get("x-forwarded-for") || "unknown";
+        const ip = getClientIdentifier(request);
         if (isRateLimited(`smallbatch:${ip}`, 5, 60_000)) {
             return NextResponse.json({ success: false, error: "Too many requests. Please try again later." }, { status: 429 });
         }

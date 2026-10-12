@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary } from "cloudinary";
 import { NextRequest, NextResponse } from "next/server";
 import { deleteFromCloudinary } from "@/lib/cloudinary-utils";
+import { requireAdmin } from "@/lib/admin-guard";
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -42,6 +43,9 @@ export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const banner = await prisma.heroBanner.findUnique({ where: { id } });
@@ -60,6 +64,9 @@ export async function PUT(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const formData = await req.formData();
@@ -136,6 +143,9 @@ export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const banner = await prisma.heroBanner.findUnique({

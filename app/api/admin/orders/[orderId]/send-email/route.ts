@@ -1,11 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import sendStatusEmail from "./sendStatusEmail";
+import { requireAdmin } from "@/lib/admin-guard";
 
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ orderId: string }> }
 ) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   try {
     const { orderId } = await context.params;
     const { status, trackingInfo } = await req.json();

@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import cloudinary from "@/lib/cloudinary";
+import { requireAdmin } from "@/lib/admin-guard";
 
 // GET single filament by ID
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
 
@@ -59,6 +63,9 @@ export async function PUT(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
         const formData = await req.formData();
@@ -288,6 +295,9 @@ export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     try {
         const { id } = await params;
 
