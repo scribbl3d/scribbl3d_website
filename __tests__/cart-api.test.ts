@@ -103,3 +103,10 @@ describe('loadCartItems', () => {
     expect((await loadCartItems('u1'))[0]).toEqual(expect.objectContaining({ inStock: false, variantId: 'v1' }));
   });
 });
+
+describe('loadCartItems with deleted products', () => {
+  it('marks a line whose product was deleted (relation set to null) unavailable', async () => {
+    p.cart.findFirst.mockResolvedValue({ items: [{ id: 'ci1', quantity: 1, printerId: null, printer: null }] });
+    expect((await loadCartItems('u1'))[0]).toEqual(expect.objectContaining({ itemType: 'unknown', price: 0, inStock: false }));
+  });
+});

@@ -366,7 +366,7 @@ export async function loadCartItems(
             items.push({
                 id: item.id,
                 itemType: "unknown",
-                name: "Unknown item",
+                name: "Product no longer available",
                 price: 0,
                 quantity: item.quantity,
                 images: [],
@@ -388,5 +388,11 @@ export async function loadCartItems(
         }
     }
 
-    return items;
+    // Deleted products (FK set to null), missing variants and load errors can
+    // never be bought; flag them so the cart shows them as unavailable.
+    return items.map((item) =>
+        item._orphaned || item._error || item.itemType === "unknown"
+            ? { ...item, inStock: false }
+            : item,
+    );
 }

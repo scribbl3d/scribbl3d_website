@@ -1156,6 +1156,8 @@ export default function ShoppingCart() {
 
     /* ── Safe price calculations ── */
     const subtotal = safeSubtotal(localCart);
+    // Server refuses these at payment (priceCheckout); stop them here too.
+    const hasUnavailableItems = localCart.some((item) => item.inStock === false);
     const couponDiscount = safeNum(contextDiscountAmount);
     const afterDiscount = Math.max(0, subtotal - couponDiscount);
     const gstAmount = Math.round(afterDiscount - afterDiscount / 1.18);
@@ -1292,6 +1294,14 @@ export default function ShoppingCart() {
     };
 
     const handleCheckout = async () => {
+        if (hasUnavailableItems) {
+            toast({
+                title: "Some items are out of stock",
+                description: "Remove out-of-stock items to continue to checkout.",
+                variant: "destructive",
+            });
+            return;
+        }
         setPricing({
             subtotal,
             discountAmount: couponDiscount,
@@ -1626,6 +1636,14 @@ export default function ShoppingCart() {
 
                 <div className="grid lg:grid-cols-12 gap-6">
                     <div className="lg:col-span-8 space-y-3">
+                        {hasUnavailableItems && (
+                            <p
+                                role="alert"
+                                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+                            >
+                                Some items in your cart are out of stock. Remove them to continue to checkout.
+                            </p>
+                        )}
                         {localCart.map((item) => (
                             <CartItemCard
                                 key={item.id}
@@ -1758,7 +1776,7 @@ export default function ShoppingCart() {
                                 </div>
                                 <Button
                                     onClick={handleCheckout}
-                                    disabled={isRecalculatingDiscount}
+                                    disabled={isRecalculatingDiscount || hasUnavailableItems}
                                     className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                 >
                                     {isRecalculatingDiscount ? (
@@ -1910,7 +1928,7 @@ export default function ShoppingCart() {
                             </div>
                             <Button
                                 onClick={handleCheckout}
-                                disabled={isRecalculatingDiscount}
+                                disabled={isRecalculatingDiscount || hasUnavailableItems}
                                 className="w-full h-14 rounded-2xl bg-gray-900 text-white text-base font-semibold hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {isRecalculatingDiscount ? (
@@ -2008,7 +2026,7 @@ export default function ShoppingCart() {
                     </div>
                     <Button
                         onClick={handleCheckout}
-                        disabled={isRecalculatingDiscount}
+                        disabled={isRecalculatingDiscount || hasUnavailableItems}
                         className="h-12 px-8 rounded-2xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                         {isRecalculatingDiscount ? (
