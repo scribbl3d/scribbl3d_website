@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import fs from "fs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { generateInvoiceNumber, isUniqueViolation } from "@/lib/invoice/numbering";
 import path from "path";
 
 /* ────────────────────── Helpers ────────────────────── */
@@ -93,27 +94,6 @@ function loadImageAsBase64(filePath: string): string | null {
     }
 }
 
-/* ─────────── Invoice Number Helpers ─────────── */
-
-function getFinancialYear() {
-    const now = new Date();
-    const year =
-        now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-    return `${year}-${String(year + 1).slice(-2)}`;
-}
-
-async function generateInvoiceNumber(tx: any) {
-    const fy = getFinancialYear();
-
-    const counter = await tx.documentCounter.upsert({
-        where: { key: "invoice" },
-        update: { lastNo: { increment: 1 } },
-        create: { key: "invoice", lastNo: 1 },
-    });
-
-    return `SCR/${fy}/${String(counter.lastNo).padStart(6, "0")}`;
-}
-
 /* ────────────────────── Colors ────────────────────── */
 
 const BLUE: [number, number, number] = [2, 136, 177];
@@ -146,18 +126,25 @@ export async function generateInvoicePdfBuffer(
     });
 
     if (!invoice) {
-        invoice = await db.$transaction(async (tx) => {
-            const invoiceNumber = await generateInvoiceNumber(tx);
-            return tx.invoice.create({
-                data: {
-                    orderId: order.id,
-                    invoiceNumber,
-                    subtotal: order.subtotal || 0,
-                    tax: order.tax || 0,
-                    total: order.totalAmount,
-                },
+        try {
+            invoice = await db.$transaction(async (tx) => {
+                const invoiceNumber = await generateInvoiceNumber(tx);
+                return tx.invoice.create({
+                    data: {
+                        orderId: order.id,
+                        invoiceNumber,
+                        subtotal: order.subtotal || 0,
+                        tax: order.tax || 0,
+                        total: order.totalAmount,
+                    },
+                });
             });
-        });
+        } catch (err) {
+            // A concurrent request created this order's invoice first.
+            if (!isUniqueViolation(err)) throw err;
+            invoice = await db.invoice.findUnique({ where: { orderId: order.id } });
+            if (!invoice) throw err;
+        }
     }
 
     const invoiceNo = invoice.invoiceNumber;

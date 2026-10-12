@@ -2,126 +2,122 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
-
-/* ───────── Helpers ───────── */
-
-function getFinancialYear() {
-    const now = new Date();
-    const year =
-        now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-    return `${year}-${String(year + 1).slice(-2)}`;
-}
-
-async function generateCreditNoteNumber(tx: Prisma.TransactionClient) {
-    const fy = getFinancialYear();
-
-    const counter = await tx.documentCounter.upsert({
-        where: { key: "credit_note" },
-        update: { lastNo: { increment: 1 } },
-        create: { key: "credit_note", lastNo: 1 },
-    });
-
-    return `CN/SCR/${fy}/${String(counter.lastNo).padStart(6, "0")}`;
-}
-
-async function generateInvoiceNumber(tx: Prisma.TransactionClient) {
-    const fy = getFinancialYear();
-
-    const counter = await tx.documentCounter.upsert({
-        where: { key: "invoice" },
-        update: { lastNo: { increment: 1 } },
-        create: { key: "invoice", lastNo: 1 },
-    });
-
-    return `SCR/${fy}/${String(counter.lastNo).padStart(6, "0")}`;
-}
+import {
+    generateCreditNoteNumber,
+    generateInvoiceNumber,
+    isUniqueViolation,
+} from "@/lib/invoice/numbering";
 
 /* ───────── ROUTE ───────── */
+
+class CreditNoteError extends Error {
+    constructor(
+        message: string,
+        public status: number,
+    ) {
+        super(message);
+    }
+}
 
 export async function POST(req: NextRequest) {
     const denied = await requireAdmin();
     if (denied) return denied;
 
     try {
-        const { orderId, invoiceId, amount, reason } = await req.json();
+        // The amount is never taken from the client: it is the invoice total.
+        const { orderId, invoiceId, reason } = await req.json();
 
-        if (!amount || amount <= 0) {
-            return NextResponse.json(
-                { error: "Invalid credit note amount" },
-                { status: 400 },
-            );
-        }
+        const run = () =>
+            db.$transaction(async (tx) => {
+                let invoice: Prisma.InvoiceGetPayload<{}> | null = null;
 
-        const creditNote = await db.$transaction(async (tx) => {
-            let invoice: Prisma.InvoiceGetPayload<{}> | null = null;
-
-            // 1️⃣ If invoiceId is provided, try that first
-            if (invoiceId) {
-                invoice = await tx.invoice.findUnique({
-                    where: { id: invoiceId },
-                });
-            }
-
-            // 2️⃣ If still not found, try finding by orderId (CRITICAL FIX)
-            if (!invoice && orderId) {
-                invoice = await tx.invoice.findUnique({
-                    where: { orderId },
-                });
-            }
-
-            // 3️⃣ If invoice STILL does not exist → create it
-            if (!invoice) {
-                if (!orderId) {
-                    throw new Error("orderId is required to create invoice");
+                if (invoiceId) {
+                    invoice = await tx.invoice.findUnique({
+                        where: { id: invoiceId },
+                    });
+                }
+                if (!invoice && orderId) {
+                    invoice = await tx.invoice.findUnique({
+                        where: { orderId },
+                    });
                 }
 
                 const order = await tx.order.findUnique({
-                    where: { id: orderId },
+                    where: { id: invoice?.orderId ?? orderId ?? "" },
                 });
+                if (!order) throw new CreditNoteError("Order not found", 404);
 
-                if (!order) {
-                    throw new Error("Order not found");
+                // Credit notes only follow a cancelled / refunded order.
+                if (order.status !== "cancelled" && !order.refundId) {
+                    throw new CreditNoteError(
+                        "A credit note can only be issued for a cancelled or refunded order",
+                        409,
+                    );
                 }
 
-                const invoiceNumber = await generateInvoiceNumber(tx);
+                if (!invoice) {
+                    invoice = await tx.invoice.create({
+                        data: {
+                            orderId: order.id,
+                            invoiceNumber: await generateInvoiceNumber(tx),
+                            subtotal: order.subtotal || 0,
+                            tax: order.tax || 0,
+                            total: order.totalAmount,
+                        },
+                    });
+                }
 
-                invoice = await tx.invoice.create({
+                // One full credit note per invoice: repeat calls return it.
+                const existing = await tx.creditNote.findFirst({
+                    where: { invoiceId: invoice.id },
+                    orderBy: { issuedAt: "asc" },
+                });
+                if (existing) return existing;
+
+                if (!(invoice.total > 0)) {
+                    throw new CreditNoteError("Nothing to credit", 409);
+                }
+
+                const cn = await tx.creditNote.create({
                     data: {
-                        orderId: order.id,
-                        invoiceNumber,
-                        subtotal: order.subtotal || 0,
-                        tax: order.tax || 0,
-                        total: order.totalAmount,
+                        creditNoteNumber: await generateCreditNoteNumber(tx),
+                        invoiceId: invoice.id,
+                        amount: invoice.total,
+                        reason:
+                            typeof reason === "string" && reason.trim()
+                                ? reason.trim().slice(0, 500)
+                                : "Order cancelled / refund issued",
                     },
                 });
-            }
 
-            // 4️⃣ Create Credit Note
-            const creditNoteNumber = await generateCreditNoteNumber(tx);
+                await tx.invoice.update({
+                    where: { id: invoice.id },
+                    data: { status: "adjusted" },
+                });
 
-            const cn = await tx.creditNote.create({
-                data: {
-                    creditNoteNumber,
-                    invoiceId: invoice.id,
-                    amount,
-                    reason,
-                },
+                return cn;
             });
 
-            // 5️⃣ Mark invoice as adjusted
-            await tx.invoice.update({
-                where: { id: invoice.id },
-                data: { status: "adjusted" },
-            });
-
-            return cn;
-        });
+        let creditNote;
+        try {
+            creditNote = await run();
+        } catch (err) {
+            // A concurrent request created the invoice first: retry once.
+            if (!isUniqueViolation(err)) throw err;
+            creditNote = await run();
+        }
 
         return NextResponse.json(creditNote);
-    } catch (err: any) {
+    } catch (err) {
+        if (err instanceof CreditNoteError) {
+            return NextResponse.json(
+                { error: err.message },
+                { status: err.status },
+            );
+        }
         console.error("Credit note creation error:", err);
         return NextResponse.json(
-            { error: err.message || "Failed to create credit note" },
+            { error: "Failed to create credit note" },
             { status: 500 },
         );
     }

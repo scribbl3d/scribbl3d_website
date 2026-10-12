@@ -107,7 +107,7 @@
   - Issue: Iterates MPS child rows (3 packages → 3 "shipped" emails), no lock, no `take`, no `lastSyncedAt`; will time out over history.
   - Fix: `isMaster: true` + active statuses, shared lock, pagination, email only on master transition (sent flag).
 
-- [ ] **CR-15 · Credit-note download broken for admins and creates notes as a side effect**
+- [x] **CR-15 · Credit-note download broken for admins and creates notes as a side effect** _(fixed: admin-session auth only; GET is read-only, 404 if no credit note)_
   - Where: `app/api/admin/credit-notes/[creditNoteId]/route.ts:160-247`
   - Issue: Requires admin session *and* that the customer session owns the order → admins get 401. GET falls back to creating a credit note (consumes counter, full amount) without checking cancellation.
   - Fix: Admin-session auth only; make GET read-only (404 if none).
@@ -174,7 +174,7 @@
 
 ### Fulfilment, refunds, documents
 
-- [ ] **CR-27 · Credit-note creation trusts client amount; unlimited notes per invoice**
+- [x] **CR-27 · Credit-note creation trusts client amount; unlimited notes per invoice** _(fixed: amount = invoice total server-side, cancelled/refunded orders only, one note per invoice, idempotent)_
   - Where: `app/api/admin/credit-notes/route.ts:42-111`
   - Fix: Derive amount server-side (≤ invoice total − prior credits), require cancelled/refunded order, reject duplicates.
 
@@ -324,7 +324,7 @@
 
 - [ ] **CR-64 · Printer weight unit guessed from value (≤ 1000 treated as kg)** — `app/checkout/components/expressShipping.ts:81-85`; feed always labels weight `g` (`google-merchant-feed/route.ts`). Fix: confirm stored unit (admin form stores grams) and convert consistently.
 - [ ] **CR-65 · Prebuilt products always ship as 750 g, ignoring stored weight** — `expressShipping.ts:4,118`.
-- [ ] **CR-66 · Invoice/credit-note numbering edge cases** — FY computed in UTC not IST, global counter (confirm per-FY reset), P2002 race → 500, helpers duplicated in 3 files. `app/api/admin/credit-notes/route.ts:7-36`, `lib/invoice/generateInvoicePdf.ts:98-115`.
+- [ ] **CR-66 · Invoice/credit-note numbering edge cases** _(partial: IST financial year, shared `lib/invoice/numbering.ts`, P2002 race handled; per-FY counter reset still needs business confirmation)_ — FY computed in UTC not IST, global counter (confirm per-FY reset), P2002 race → 500, helpers duplicated in 3 files. `app/api/admin/credit-notes/route.ts:7-36`, `lib/invoice/generateInvoicePdf.ts:98-115`.
 - [x] **CR-67 · Refund amount converted by hand instead of `toPaise`; ignores prior credits** _(fixed: uses `toPaise`; prior credits intentionally not subtracted while no partial-refund flow exists)_ — `cancel/route.ts:95`.
 - [x] **CR-68 · Next.js 15 route `params` read synchronously** — `app/api/admin/orders/[orderId]/cancel/route.ts:13-14`, `app/api/admin/orders/[orderId]/route.ts:23,78`. Fix: `await params`.
 

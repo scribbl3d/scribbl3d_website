@@ -1,9 +1,7 @@
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { db } from "@/lib/db";
 import fs from "fs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getServerSession } from "next-auth/next";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { requireAdmin } from "@/lib/admin-guard";
@@ -104,13 +102,6 @@ function formatDate(date: Date): string {
     return `${dd}-${mm}-${yyyy}`;
 }
 
-function getFinancialYear(): string {
-    const now = new Date();
-    const year =
-        now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-    return `${year}-${String(year + 1).slice(-2)}`;
-}
-
 /* ───────────────── Constants ───────────────── */
 
 const STATE_CODES: Record<string, string> = {
@@ -161,11 +152,6 @@ export async function GET(
     // ← await params first (Next.js 15 requirement)
     const { creditNoteId } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     try {
         /* ── Step 1: Resolve creditNote / invoice / order ── */
 
@@ -187,68 +173,28 @@ export async function GET(
             });
         }
 
-        let invoice: any;
-        let order: any;
-
-        if (existingCreditNote) {
-            invoice = existingCreditNote.invoice;
-            order = invoice.order;
-        } else {
+        // Read-only: never create a credit note as a side effect of a download.
+        if (!existingCreditNote) {
             const foundInvoice = await db.invoice.findFirst({
                 where: { orderId: creditNoteId },
-                include: { order: { include: { user: true } } },
+                include: {
+                    creditNotes: true,
+                    order: { include: { user: true } },
+                },
             });
-            if (!foundInvoice) {
+            const found = foundInvoice?.creditNotes[0];
+            if (!foundInvoice || !found) {
                 return NextResponse.json(
-                    { error: "Not found" },
+                    { error: "Credit note not found" },
                     { status: 404 },
                 );
             }
-            invoice = foundInvoice;
-            order = foundInvoice.order;
+            existingCreditNote = { ...found, invoice: foundInvoice };
         }
 
-        // Auth check
-        if (order.userId !== session.user.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 },
-            );
-        }
-
-        /* ── Step 2: Idempotent credit note upsert ── */
-
-        let creditNote = await db.creditNote.findFirst({
-            where: { invoiceId: invoice.id },
-        });
-
-        if (!creditNote) {
-            creditNote = await db.$transaction(async (tx) => {
-                const existing = await tx.creditNote.findFirst({
-                    where: { invoiceId: invoice.id },
-                });
-                if (existing) return existing;
-
-                const fy = getFinancialYear();
-                const counter = await tx.documentCounter.upsert({
-                    where: { key: "credit_note" },
-                    update: { lastNo: { increment: 1 } },
-                    create: { key: "credit_note", lastNo: 1 },
-                });
-
-                const creditNoteNumber = `CN/SCR/${fy}/${String(counter.lastNo).padStart(6, "0")}`;
-
-                return tx.creditNote.create({
-                    data: {
-                        invoiceId: invoice.id,
-                        creditNoteNumber,
-                        amount: order.totalAmount,
-                        reason: "Order cancelled / refund issued",
-                        issuedAt: order.refundCompletedAt ?? new Date(),
-                    },
-                });
-            });
-        }
+        const creditNote = existingCreditNote;
+        const invoice: any = existingCreditNote.invoice;
+        const order: any = invoice.order;
 
         const creditNoteNumber = creditNote.creditNoteNumber;
         const creditNoteDate = order.refundCompletedAt
