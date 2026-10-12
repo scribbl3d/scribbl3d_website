@@ -1,5 +1,7 @@
 "use client";
 
+import { salePriceError } from "@/lib/admin/priceValidation";
+import { PriceError } from "@/components/admin/PriceError";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -357,6 +359,11 @@ export default function PrebuiltProductForm({
     const handleSubmit = () => {
         if (!validate()) {
             window.scrollTo({ top: 0, behavior: "smooth" });
+            return;
+        }
+        const badVariant = variants.findIndex((v) => salePriceError(v.priceDisplay, v.originalPriceDisplay));
+        if (badVariant !== -1) {
+            alert(`Variant ${badVariant + 1}: ${salePriceError(variants[badVariant].priceDisplay, variants[badVariant].originalPriceDisplay)}`);
             return;
         }
 
@@ -853,6 +860,10 @@ export default function PrebuiltProductForm({
                                                     e.currentTarget.blur()
                                                 }
                                                 placeholder="e.g. 699"
+                                                className={salePriceError(v.priceDisplay, v.originalPriceDisplay) ? "border-red-500" : undefined}
+                                            />
+                                            <PriceError
+                                                message={salePriceError(v.priceDisplay, v.originalPriceDisplay)}
                                             />
                                         </div>
 

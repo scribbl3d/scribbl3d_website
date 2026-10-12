@@ -1,5 +1,7 @@
 "use client";
 
+import { salePriceError } from "@/lib/admin/priceValidation";
+import { PriceError } from "@/components/admin/PriceError";
 import { ArrowLeft, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -261,6 +263,11 @@ export default function EditFilamentPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const badVariant = variants.findIndex((v) => salePriceError(v.price, v.originalPrice));
+        if (badVariant !== -1) {
+            alert(`Variant ${badVariant + 1}: ${salePriceError(variants[badVariant].price, variants[badVariant].originalPrice)}`);
+            return;
+        }
         setLoading(true);
 
         try {
@@ -632,8 +639,9 @@ export default function EditFilamentPage() {
                                             type="number"
                                             value={variant.originalPrice || ""}
                                             onChange={(e) => updateVariant(i, "originalPrice", e.target.value)}
-                                            className="w-full border rounded-lg px-3 py-2"
+                                            className={`w-full border rounded-lg px-3 py-2 ${salePriceError(variant.price, variant.originalPrice) ? "border-red-500" : ""}`}
                                         />
+                                        <PriceError message={salePriceError(variant.price, variant.originalPrice)} />
                                     </div>
                                     <div className="flex items-end gap-2">
                                         <div className="flex items-center gap-2">

@@ -1,5 +1,7 @@
 "use client";
 
+import { salePriceError } from "@/lib/admin/priceValidation";
+import { PriceError } from "@/components/admin/PriceError";
 import {
     ArrowLeft,
     Cpu,
@@ -266,6 +268,12 @@ export default function PrinterFormPage() {
 
         if (!formData.shortDescription.trim() || !formData.description.trim()) {
             alert("Both Short Description and Full Description are required.");
+            return;
+        }
+
+        const priceError = salePriceError(formData.price, formData.originalPrice);
+        if (priceError) {
+            alert(priceError);
             return;
         }
 
@@ -1533,8 +1541,11 @@ export default function PrinterFormPage() {
                                             onWheel={(e) =>
                                                 e.currentTarget.blur()
                                             }
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-500"
+                                            className={`w-full px-3 py-2 border rounded-lg text-gray-500 ${salePriceError(formData.price, formData.originalPrice) ? "border-red-500" : "border-gray-300"}`}
                                             placeholder="0"
+                                        />
+                                        <PriceError
+                                            message={salePriceError(formData.price, formData.originalPrice)}
                                         />
                                     </div>
                                 </div>

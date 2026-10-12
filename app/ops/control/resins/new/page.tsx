@@ -1,5 +1,6 @@
 "use client";
 
+import { salePriceError } from "@/lib/admin/priceValidation";
 import {
     ArrowLeft,
     ImageIcon,
@@ -350,6 +351,13 @@ export default function ResinFormPage() {
         try {
             if (!formData.slug) {
                 alert("Slug is required");
+                setLoading(false);
+                return;
+            }
+
+            const badWeight = formData.weights.findIndex((w) => salePriceError(w.price, w.originalPrice));
+            if (badWeight !== -1) {
+                alert(`Weight ${badWeight + 1}: ${salePriceError(formData.weights[badWeight].price, formData.weights[badWeight].originalPrice)}`);
                 setLoading(false);
                 return;
             }
@@ -757,7 +765,7 @@ export default function ResinFormPage() {
                         {formData.weights.map((w, i) => {
                             const price = parseFloat(w.price) || 0;
                             const mrp = parseFloat(w.originalPrice || "0") || 0;
-                            const isInvalid = mrp > 0 && price >= mrp;
+                            const isInvalid = salePriceError(w.price, w.originalPrice) !== null;
                             const discount =
                                 mrp > 0 && price < mrp
                                     ? Math.round(((mrp - price) / mrp) * 100)
