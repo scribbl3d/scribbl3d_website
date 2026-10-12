@@ -7,18 +7,20 @@ import { sendAdminNotification, sendOrderConfirmation } from '@/lib/email/index'
 import { confirmPayment, failPayment } from '@/lib/payments/confirmPayment';
 import { isValidCallbackChecksum, paymentDetailsFrom, signRequest, toPaise } from '@/lib/payments/phonepe';
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    order: { findFirst: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
+jest.mock('@/lib/prisma', () => {
+  const prisma: any = {
+    order: { findFirst: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn(), count: jest.fn() },
     discount: { findFirst: jest.fn() },
-    discountUsage: { findFirst: jest.fn() },
+    discountUsage: { findFirst: jest.fn(), count: jest.fn(), create: jest.fn() },
     cart: { findFirst: jest.fn() },
     cartItem: { deleteMany: jest.fn() },
-  },
-}));
+  };
+  // Interactive transaction runs against the same mocks
+  prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
+  return { prisma };
+});
 jest.mock('@/lib/email/index', () => ({ sendAdminNotification: jest.fn(), sendOrderConfirmation: jest.fn() }));
 jest.mock('@/lib/email/mapOrderToEmailData', () => ({ mapOrderToEmailData: jest.fn(() => ({})) }));
-jest.mock('@/app/cart/utils/validateDiscountEligibility', () => ({ recordDiscountUsage: jest.fn() }));
 
 const p = prisma as any;
 const SALT = 'test-salt';
@@ -26,7 +28,7 @@ const SALT = 'test-salt';
 beforeEach(() => {
   process.env.PHONEPE_SALT_KEY = SALT;
   process.env.PHONEPE_SALT_INDEX = '1';
-  Object.values(p).forEach((m: any) => Object.values(m).forEach((fn: any) => fn.mockReset()));
+  Object.values(p).forEach((m: any) => Object.values(m).forEach((fn: any) => fn.mockReset?.()));
   jest.mocked(sendAdminNotification).mockReset().mockResolvedValue({ ok: true } as any);
   jest.mocked(sendOrderConfirmation).mockReset().mockResolvedValue({ ok: true } as any);
 });
@@ -78,7 +80,7 @@ describe('PhonePe helpers', () => {
 });
 
 describe('confirmPayment', () => {
-  const order = (overrides: Record<string, unknown> = {}) => ({ id: 'order_1', status: 'payment_pending', totalAmount: 21500, ...overrides });
+  const order = (overrides: Record<string, unknown> = {}) => ({ id: 'order_1', userId: 'u1', discountCode: null, status: 'payment_pending', totalAmount: 21500, ...overrides });
 
   beforeEach(() => {
     p.order.findUnique.mockResolvedValue({ id: 'order_1', userId: 'u1', discountCode: null, user: { email: 'a@x.com' }, items: [], shippingAddress: null });
@@ -96,6 +98,47 @@ describe('confirmPayment', () => {
     expect(p.cartItem.deleteMany).toHaveBeenCalledWith({ where: { cartId: 'cart_1' } });
     expect(sendOrderConfirmation).toHaveBeenCalledTimes(1);
     expect(sendAdminNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'order-confirmed' }));
+  });
+
+  it('clears only the cart rows the order was created from', async () => {
+    p.order.findFirst.mockResolvedValue(order());
+    p.order.updateMany.mockResolvedValue({ count: 1 });
+    p.order.findUnique.mockResolvedValue({ id: 'order_1', userId: 'u1', user: null, items: [{ cartItemId: 'ci1' }, { cartItemId: 'ci2' }], shippingAddress: null });
+    await confirmPayment('TXN1', 2150000, {}, 'callback');
+    expect(p.cartItem.deleteMany).toHaveBeenCalledWith({ where: { cartId: 'cart_1', id: { in: ['ci1', 'ci2'] } } });
+  });
+
+  it('records the coupon redemption in the confirmation transaction', async () => {
+    p.order.findFirst.mockResolvedValue(order({ discountCode: 'SAVE5' }));
+    p.order.updateMany.mockResolvedValue({ count: 1 });
+    p.discount.findFirst.mockResolvedValue({ id: 'd1', maxUsesPerUser: 1, firstOrderOnly: false });
+    p.discountUsage.findFirst.mockResolvedValue(null);
+    p.discountUsage.count.mockResolvedValue(0);
+    expect(await confirmPayment('TXN1', 2150000, {}, 'callback')).toBe('confirmed');
+    expect(p.$transaction).toHaveBeenCalled();
+    expect(p.discountUsage.create).toHaveBeenCalledWith({ data: { discountId: 'd1', userId: 'u1', orderId: 'order_1' } });
+    expect(sendAdminNotification).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'payment-review' }));
+  });
+
+  it('confirms but flags a coupon used beyond its limit by parallel unpaid orders', async () => {
+    p.order.findFirst.mockResolvedValue(order({ discountCode: 'SAVE5' }));
+    p.order.updateMany.mockResolvedValue({ count: 1 });
+    p.discount.findFirst.mockResolvedValue({ id: 'd1', maxUsesPerUser: 1, firstOrderOnly: false });
+    p.discountUsage.findFirst.mockResolvedValue(null);
+    p.discountUsage.count.mockResolvedValue(1); // already redeemed by another order
+    expect(await confirmPayment('TXN1', 2150000, {}, 'callback')).toBe('confirmed');
+    expect(sendAdminNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'payment-review' }));
+  });
+
+  it('flags a first-order coupon on a later order', async () => {
+    p.order.findFirst.mockResolvedValue(order({ discountCode: 'WELCOME' }));
+    p.order.updateMany.mockResolvedValue({ count: 1 });
+    p.discount.findFirst.mockResolvedValue({ id: 'd2', maxUsesPerUser: null, firstOrderOnly: true });
+    p.discountUsage.findFirst.mockResolvedValue(null);
+    p.order.count.mockResolvedValue(1);
+    await confirmPayment('TXN1', 2150000, {}, 'callback');
+    expect(p.order.count).toHaveBeenCalledWith({ where: expect.objectContaining({ userId: 'u1', id: { not: 'order_1' } }) });
+    expect(sendAdminNotification).toHaveBeenCalledWith(expect.objectContaining({ type: 'payment-review' }));
   });
 
   it('refuses an amount that does not match the order total and alerts admins', async () => {

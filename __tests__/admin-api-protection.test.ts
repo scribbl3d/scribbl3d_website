@@ -36,6 +36,7 @@ describe('admin API middleware gate', () => {
     '/api/admin/landingPage/hero-banners/1',
     '/api/admin/orders/abc/send-email',
     '/api/internal/create-shipment',
+    '/api/internal/cancel-shipment', // retired; cancel goes through the order cancel route
     '/api/internal/sync-shipments',
     '/api/internal/sync-refunds',
     '/api/internal/generate-label',
@@ -64,7 +65,6 @@ describe('admin API middleware gate', () => {
     '/api/admin/login',
     '/api/admin/logout',
     '/api/admin/orders/abc/cancel',
-    '/api/internal/cancel-shipment',
     '/api/internal/calculate-shipping',
     '/api/internal/sync-shipment',
   ])('leaves self-checked route %s to its own handler', async (path) => {

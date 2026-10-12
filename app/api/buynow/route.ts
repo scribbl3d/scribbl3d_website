@@ -1,8 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
-    console.log("🔥 BUY NOW ROUTE HIT");
-
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type");
     const productId = searchParams.get("productId");
@@ -20,19 +18,11 @@ export async function GET(req: Request) {
     } | null = null;
 
     if (type === "prebuiltproduct") {
-        const prebuilt = await prisma.prebuiltProducts.findUnique({
-            where: { id: productId },
-        });
-        if (!prebuilt)
-            return Response.json({ error: "Not found" }, { status: 404 });
-
-        item = {
-            id: prebuilt.id,
-            name: prebuilt.name,
-            price: 0,
-            quantity: 1,
-            images: [],
-        };
+        // Prebuilt prices depend on the chosen variant; never show a ₹0 price
+        return Response.json(
+            { error: "Please choose options and add this item to your cart." },
+            { status: 400 },
+        );
     } else if (type === "printer") {
         const printer = await prisma.printer.findUnique({
             where: { id: productId },

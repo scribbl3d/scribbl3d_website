@@ -16,9 +16,10 @@ const store: RateLimitStore = {};
 
 /**
  * In-memory rate limiter (for development/small scale)
- * For production, use Redis-based rate limiting with @upstash/ratelimit
+ * Counters live per server instance; for production, use a shared store
+ * (e.g. Redis-based rate limiting with @upstash/ratelimit).
  * 
- * @param identifier - Unique identifier (IP, user ID, email)
+ * @param identifier - Unique identifier, namespaced per endpoint (e.g. "send-otp:<ip>")
  * @param limit - Maximum requests allowed in window
  * @param windowMs - Time window in milliseconds
  */
@@ -28,19 +29,18 @@ export async function rateLimit(
   windowMs: number = 60000
 ): Promise<RateLimitResult> {
   const now = Date.now();
-  const windowStart = now - windowMs;
 
   // Clean up expired entries periodically
   if (Math.random() < 0.01) {
     Object.keys(store).forEach(key => {
-      if (store[key].resetTime < windowStart) {
+      if (store[key].resetTime <= now) {
         delete store[key];
       }
     });
   }
 
-  // Initialize or reset if window expired
-  if (!store[identifier] || store[identifier].resetTime < windowStart) {
+  // Initialize or reset once the window has ended (resetTime is the window end)
+  if (!store[identifier] || store[identifier].resetTime <= now) {
     store[identifier] = { count: 1, resetTime: now + windowMs };
     return { 
       success: true, 

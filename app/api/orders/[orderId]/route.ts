@@ -1,55 +1,50 @@
-import { NextRequest, NextResponse } from "next/server";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getServerSession } from "next-auth/next";
+import { NextRequest, NextResponse } from "next/server";
 
+// Order summary for the payment success page. Only the signed-in owner can
+// read it, and only the fields that page needs are returned.
 export async function GET(
-    request: NextRequest,
+    _request: NextRequest,
     { params }: { params: Promise<{ orderId: string }> }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const { orderId } = await params;
 
-        // Fetch order with user details
         const order = await prisma.order.findUnique({
-            where: {
-                id: orderId,
-            },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
+            where: { id: orderId },
+            select: {
+                id: true,
+                userId: true,
+                status: true,
+                totalAmount: true,
+                createdAt: true,
+                user: { select: { email: true } },
             },
         });
 
-        if (!order) {
+        if (!order || order.userId !== session.user.id) {
             return NextResponse.json(
                 { error: "Order not found" },
                 { status: 404 }
             );
         }
 
-        // Optional: Verify session if user is logged in
-        const session = await getSession();
-        if (session?.email && order.user.email !== session.email) {
-            // If logged in but trying to access someone else's order
-            return NextResponse.json(
-                { error: "Unauthorized - Order does not belong to you" },
-                { status: 403 }
-            );
-        }
-
-        // Allow access if:
-        // 1. User is logged in and owns the order
-        // 2. User is not logged in but has the correct order ID (for payment success page)
-        // Order ID is unique and acts as authentication token
-
-        return NextResponse.json(order);
+        return NextResponse.json({
+            id: order.id,
+            status: order.status,
+            totalAmount: order.totalAmount,
+            createdAt: order.createdAt,
+            user: order.user,
+        });
     } catch (error) {
-        console.error("[API] Error fetching order:", error);
+        console.error("[API] Error fetching order:", error instanceof Error ? error.message : error);
         return NextResponse.json(
             { error: "Failed to fetch order" },
             { status: 500 }

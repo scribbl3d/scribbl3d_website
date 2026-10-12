@@ -12,7 +12,7 @@ jest.mock('@/lib/email/sendEmail', () => ({ sendEmail: jest.fn() }));
 jest.mock('@/app/api/admin/orders/[orderId]/send-email/sendStatusEmail', () => jest.fn());
 
 const orderId = 'order_1';
-const context = { params: { orderId } };
+const context = { params: Promise.resolve({ orderId }) };
 const request = (body: unknown = { status: 'delivered' }) => ({ json: jest.fn().mockResolvedValue(body) }) as unknown as NextRequest;
 
 beforeEach(() => {

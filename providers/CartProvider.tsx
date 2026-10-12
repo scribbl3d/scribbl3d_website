@@ -303,6 +303,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         const res = await fetch(`/api/cart/${id}`, { method: "DELETE" });
         if (res.ok) {
             setCart((prev) => prev.filter((i) => i.id !== id));
+        } else if (appliedDiscount) {
+            // Cart unchanged, so the recalculation effect won't run
+            setIsRecalculatingDiscount(false);
         }
     };
 
@@ -323,6 +326,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
             setCart((prev) =>
                 prev.map((i) => (i.id === id ? { ...i, quantity } : i)),
             );
+        } else if (appliedDiscount) {
+            setIsRecalculatingDiscount(false);
         }
     };
 

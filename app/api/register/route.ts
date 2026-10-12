@@ -2,6 +2,7 @@ import bcryptjs from "bcryptjs";
 import { NextResponse } from "next/server";
 import * as z from "zod";
 
+import { normaliseEmail, verifyRegistrationToken } from "@/lib/auth/registrationToken";
 import { prisma } from "@/lib/prisma";
 
 const registerSchema = z.object({
@@ -13,12 +14,12 @@ const registerSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        const { firstName, lastName, email, password } = await req.json();
+        const { firstName, lastName, email: rawEmail, password, registrationToken } = await req.json();
 
         const result = registerSchema.safeParse({
             firstName,
             lastName,
-            email,
+            email: rawEmail,
             password,
         });
 
@@ -29,9 +30,20 @@ export async function POST(req: Request) {
             );
         }
 
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
-            where: { email },
+        const email = normaliseEmail(result.data.email);
+
+        // The email must have passed OTP verification on the server
+        if (!verifyRegistrationToken(registrationToken, email)) {
+            return NextResponse.json(
+                { error: "Please verify your email again before signing up." },
+                { status: 403 },
+            );
+        }
+
+        // Check if user already exists (any letter case)
+        const existingUser = await prisma.user.findFirst({
+            where: { email: { equals: email, mode: "insensitive" } },
+            select: { id: true },
         });
 
         if (existingUser) {
@@ -49,6 +61,7 @@ export async function POST(req: Request) {
                 name: `${firstName} ${lastName}`,
                 email,
                 password: hashedPassword,
+                emailVerified: new Date(),
             },
         });
 
@@ -64,7 +77,7 @@ export async function POST(req: Request) {
             { status: 201 },
         );
     } catch (error) {
-        console.error("Registration error:", error);
+        console.error("Registration error:", error instanceof Error ? error.message : error);
         return NextResponse.json(
             { error: "An error occurred during registration" },
             { status: 500 },

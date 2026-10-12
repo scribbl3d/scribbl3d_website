@@ -1,7 +1,7 @@
-import { recordDiscountUsage } from "@/app/cart/utils/validateDiscountEligibility";
 import { sendAdminNotification, sendOrderConfirmation } from "@/lib/email/index";
 import { mapOrderToEmailData } from "@/lib/email/mapOrderToEmailData";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { toPaise } from "./phonepe";
 
 /**
@@ -33,7 +33,7 @@ export async function confirmPayment(
 ): Promise<ConfirmResult> {
     const order = await prisma.order.findFirst({
         where: { transactionId },
-        select: { id: true, status: true, totalAmount: true },
+        select: { id: true, status: true, totalAmount: true, userId: true, discountCode: true },
     });
     if (!order) return "not_found";
     if (PAID_STATUSES.includes(order.status)) return "already_confirmed";
@@ -55,15 +55,84 @@ export async function confirmPayment(
         return "amount_mismatch";
     }
 
-    // Atomic transition: only one caller can move the order to confirmed
-    const updated = await prisma.order.updateMany({
-        where: { id: order.id, status: { in: CONFIRMABLE_STATUSES } },
-        data: { status: "confirmed", ...details },
+    // Atomic transition: only one caller can move the order to confirmed, and
+    // the discount redemption is recorded in the same transaction
+    const result = await prisma.$transaction(async (tx) => {
+        const updated = await tx.order.updateMany({
+            where: { id: order.id, status: { in: CONFIRMABLE_STATUSES } },
+            data: { status: "confirmed", ...details },
+        });
+        if (updated.count === 0) return null;
+        return { couponIssue: await redeemDiscount(tx, order) };
     });
-    if (updated.count === 0) return "already_confirmed";
+    if (!result) return "already_confirmed";
+
+    if (result.couponIssue) {
+        // The customer has paid, so the order stands; ops decide what to do
+        await sendAdminNotification({
+            type: "payment-review",
+            details: {
+                "Order ID": `#${order.id.slice(-8).toUpperCase()}`,
+                "Transaction ID": transactionId,
+                Coupon: order.discountCode || "—",
+                Issue: result.couponIssue,
+            },
+        }).catch((err) => console.error("[Payment] Coupon review notification failed:", err?.message || err));
+    }
 
     await afterConfirmation(order.id, source);
     return "confirmed";
+}
+
+/**
+ * Records the coupon redemption for a confirmed order and re-checks the
+ * per-user limits (several unpaid orders could have used the same coupon).
+ * Returns a description of any limit that was exceeded.
+ */
+async function redeemDiscount(
+    tx: Prisma.TransactionClient,
+    order: { id: string; userId: string; discountCode: string | null },
+): Promise<string | null> {
+    if (!order.discountCode || !order.userId) return null;
+
+    const discount = await tx.discount.findFirst({
+        where: { code: order.discountCode.toUpperCase() },
+        select: { id: true, maxUsesPerUser: true, firstOrderOnly: true },
+    });
+    if (!discount) return null;
+
+    const existing = await tx.discountUsage.findFirst({
+        where: { orderId: order.id, discountId: discount.id, userId: order.userId },
+        select: { id: true },
+    });
+    if (existing) return null;
+
+    let issue: string | null = null;
+    if (discount.maxUsesPerUser != null) {
+        const used = await tx.discountUsage.count({
+            where: { discountId: discount.id, userId: order.userId },
+        });
+        if (used >= discount.maxUsesPerUser) {
+            issue = `Coupon used beyond its per-customer limit (${discount.maxUsesPerUser}).`;
+        }
+    }
+    if (!issue && discount.firstOrderOnly) {
+        const otherPaidOrders = await tx.order.count({
+            where: {
+                userId: order.userId,
+                id: { not: order.id },
+                status: { in: [...PAID_STATUSES, "completed"] },
+            },
+        });
+        if (otherPaidOrders > 0) {
+            issue = "First-order coupon used on a customer's later order.";
+        }
+    }
+
+    await tx.discountUsage.create({
+        data: { discountId: discount.id, userId: order.userId, orderId: order.id },
+    });
+    return issue;
 }
 
 /** Failure notice: only an unpaid order can become failed (never a confirmed one) */
@@ -80,27 +149,17 @@ async function afterConfirmation(orderId: string, source: string) {
     if (!order) return;
     console.log(`[Payment] Order confirmed via ${source}:`, order.id);
 
-    // Record discount usage only after confirmed payment
-    if (order.discountCode && order.userId) {
-        try {
-            const discount = await prisma.discount.findFirst({
-                where: { code: order.discountCode.toUpperCase() },
-            });
-            if (discount) {
-                const existingUsage = await prisma.discountUsage.findFirst({
-                    where: { orderId: order.id, discountId: discount.id, userId: order.userId },
-                });
-                if (!existingUsage) await recordDiscountUsage(discount.id, order.userId, order.id);
-            }
-        } catch (err) {
-            console.error("[Payment] Failed to record discount usage:", err instanceof Error ? err.message : err);
-        }
-    }
-
-    // Clear the customer's cart
+    // Clear only the cart rows this order was created from (items added
+    // afterwards stay); older snapshots without row IDs clear the whole cart
     try {
+        const snapshot = Array.isArray(order.items) ? (order.items as any[]) : [];
+        const cartItemIds = snapshot.map((item) => item?.cartItemId).filter((id): id is string => typeof id === "string");
         const cart = await prisma.cart.findFirst({ where: { userId: order.userId } });
-        if (cart) await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+        if (cart) {
+            await prisma.cartItem.deleteMany({
+                where: cartItemIds.length > 0 ? { cartId: cart.id, id: { in: cartItemIds } } : { cartId: cart.id },
+            });
+        }
     } catch (err) {
         console.error("[Payment] Failed to clear cart:", err instanceof Error ? err.message : err);
     }

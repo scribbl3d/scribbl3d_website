@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 
+const MAX_QUANTITY = 99;
+
 // Force dynamic rendering and no caching for cart data
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,10 +35,20 @@ export async function POST(req: Request) {
             resinWeightId,
             filamentId,
             filamentVariantId,
-            quantity = 1,
+            quantity: rawQuantity = 1,
         } = body;
 
-        if (!prebuiltProductId && !printerId && !resinId && !filamentId) {
+        const quantity = Number(rawQuantity);
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {
+            return NextResponse.json(
+                { error: `Quantity must be a whole number from 1 to ${MAX_QUANTITY}` },
+                { status: 400 },
+            );
+        }
+
+        // Exactly one product family per cart line
+        const families = [prebuiltProductId, printerId, resinId, filamentId].filter(Boolean);
+        if (families.length !== 1) {
             return NextResponse.json(
                 { error: "Invalid cart item" },
                 { status: 400 },
@@ -56,11 +68,40 @@ export async function POST(req: Request) {
                     prebuildProductId: prebuiltProductId,
                     isActive: true,
                 },
-                select: { id: true },
+                select: {
+                    id: true,
+                    inStock: true,
+                    prebuiltProduct: { select: { inStock: true } },
+                },
             });
             if (!variant) {
                 return NextResponse.json(
                     { error: "Invalid or inactive prebuilt variant" },
+                    { status: 400 },
+                );
+            }
+            if (!variant.inStock || !variant.prebuiltProduct.inStock) {
+                return NextResponse.json(
+                    { error: "This product is out of stock" },
+                    { status: 400 },
+                );
+            }
+        }
+
+        if (printerId) {
+            const printer = await prisma.printer.findUnique({
+                where: { id: printerId },
+                select: { inStock: true },
+            });
+            if (!printer) {
+                return NextResponse.json(
+                    { error: "Invalid printer" },
+                    { status: 400 },
+                );
+            }
+            if (!printer.inStock) {
+                return NextResponse.json(
+                    { error: "This printer is out of stock" },
                     { status: 400 },
                 );
             }
@@ -73,13 +114,30 @@ export async function POST(req: Request) {
                     { status: 400 },
                 );
             }
-            const weightExists = await prisma.resinWeight.findUnique({
-                where: { id: resinWeightId },
-                select: { id: true },
-            });
-            if (!weightExists) {
+            // Weight and colour must both belong to this resin
+            const [resin, weight, colour] = await Promise.all([
+                prisma.resin.findUnique({
+                    where: { id: resinId },
+                    select: { inStock: true },
+                }),
+                prisma.resinWeight.findFirst({
+                    where: { id: resinWeightId, resinId },
+                    select: { inStock: true },
+                }),
+                prisma.resinColour.findFirst({
+                    where: { id: resinColourId, resinId },
+                    select: { inStock: true },
+                }),
+            ]);
+            if (!resin || !weight || !colour) {
                 return NextResponse.json(
-                    { error: "Invalid resin weight" },
+                    { error: "Invalid resin weight or colour" },
+                    { status: 400 },
+                );
+            }
+            if (!resin.inStock || !weight.inStock || !colour.inStock) {
+                return NextResponse.json(
+                    { error: "This resin option is out of stock" },
                     { status: 400 },
                 );
             }
@@ -97,7 +155,11 @@ export async function POST(req: Request) {
                     id: filamentVariantId,
                     filamentId: filamentId,
                 },
-                select: { id: true, inStock: true },
+                select: {
+                    id: true,
+                    inStock: true,
+                    filament: { select: { inStock: true } },
+                },
             });
             if (!variant) {
                 return NextResponse.json(
@@ -105,7 +167,7 @@ export async function POST(req: Request) {
                     { status: 400 },
                 );
             }
-            if (!variant.inStock) {
+            if (!variant.inStock || !variant.filament.inStock) {
                 return NextResponse.json(
                     { error: "Filament variant out of stock" },
                     { status: 400 },
@@ -143,7 +205,9 @@ export async function POST(req: Request) {
         if (existingItem) {
             await prisma.cartItem.update({
                 where: { id: existingItem.id },
-                data: { quantity: existingItem.quantity + quantity },
+                data: {
+                    quantity: Math.min(existingItem.quantity + quantity, MAX_QUANTITY),
+                },
             });
         } else {
             await prisma.cartItem.create({

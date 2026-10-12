@@ -3,15 +3,27 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
 import { validateDiscountEligibility } from "@/app/cart/utils/validateDiscountEligibility";
+import { applyRateLimit } from "@/lib/api-helpers";
+import { RateLimits, createRateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+    // Slow down coupon-code guessing
+    const rateLimitResult = await applyRateLimit(
+        req,
+        RateLimits.COUPON.limit,
+        RateLimits.COUPON.windowMs,
+    );
+    if (!rateLimitResult.success) {
+        return createRateLimitResponse(rateLimitResult, "Too many coupon attempts. Please try again later.");
+    }
+
     const { searchParams } = new URL(req.url);
-    const code = searchParams.get("code");
+    const code = searchParams.get("code")?.trim();
 
-    if (!code) {
+    if (!code || code.length > 50) {
         return NextResponse.json(
             { message: "Discount code required" },
             { status: 400 },
@@ -24,8 +36,20 @@ export async function GET(req: Request) {
             isActive: true,
             OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
         },
-        include: {
-            itemTypes: true,
+        // Only what the cart needs to show and calculate the discount
+        select: {
+            id: true,
+            name: true,
+            code: true,
+            scope: true,
+            valueType: true,
+            value: true,
+            minOrderValue: true,
+            maxDiscount: true,
+            expiresAt: true,
+            isActive: true,
+            isHidden: true,
+            itemTypes: { select: { itemType: true } },
         },
     });
 

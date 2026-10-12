@@ -65,15 +65,17 @@ The status route asks PhonePe's status API (production) server-to-server and app
 | `PHONEPE_SALT_KEY` | Server-only signing credential |
 | `PHONEPE_KEY_INDEX` | Key (salt) index for signing payments, status checks, refunds and callback verification. Falls back to `PHONEPE_SALT_INDEX`, then `1`. **Must match the key index configured with PhonePe**, or every callback is rejected |
 | `NEXT_PUBLIC_APP_URL` | Base for `/payment/status` and `/api/phonepe-callback` |
+| `PHONEPE_REFUND_URL` | Host for refunds and refund status (`lib/payments/phonepe.ts` `phonepeRefundHost`). Required outside production; production defaults to the PhonePe production refund host. Replaces the old `PHONEPE_URL` |
 | `DELHIVERY_TOKEN` | Server-side Express quotes |
 
 `PHONEPE_ENV` is no longer read by the active flow; initiation and status checks both use production (`PHONEPE_HOST`). Never place signing credentials in public environment variables, browser code, documentation, or logs.
 
 ## Remaining limitations
 
-- **Legacy status routes:** `app/api/status/route.ts`, `app/api/status/[id]/route.ts` and `utils/payment-status.ts` hardcode their own values and redirect to missing routes. They are not part of the active flow; trace callers before removing.
+- **Legacy status routes:** `app/api/status/route.ts` and `app/api/status/[id]/route.ts` now return 410; they and the unused `utils/payment-status.ts` can be deleted.
 - **Status API response:** the status route trusts PhonePe's TLS response without verifying a response checksum.
-- **Retry reconciliation:** a late success for a replaced transaction ID is alerted to admins, not attached to the order automatically.
+- **Retry reconciliation:** `retry-payment` asks PhonePe about the previous transaction first: a success is confirmed (no second payment), a pending one blocks the retry, and an unreachable status check returns 503. A success arriving after a retry has replaced the ID is still only alerted to admins.
+- **Coupon limits:** per-user and first-order limits are re-checked when payment is confirmed; a violation (e.g. two unpaid orders using the same coupon) is confirmed anyway and reported to admins as a payment review.
 - **Express quote timing:** the browser and server quote Delhivery separately; a price change is caught by `PRICE_CHANGED`, not prevented.
 - **Logging:** payload and checksum logging was removed from the active routes; keep it that way.
 

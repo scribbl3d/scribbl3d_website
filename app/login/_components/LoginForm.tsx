@@ -41,33 +41,30 @@ function getLoginErrorMessage(errorCode: string | undefined): string {
         return `Too many failed login attempts. Please try again in ${minutes} minutes.`;
     }
 
-    // NextAuth passes the Error message through result.error
-    // Our authorize function throws specific error codes
+    // NextAuth passes the Error message through result.error. The server
+    // deliberately uses one code for every bad email/password combination.
     switch (errorCode) {
-        case "NO_ACCOUNT":
-            return "No account found with this email. Please sign up first.";
-        case "GOOGLE_ACCOUNT":
-            return "This account uses Google sign-in. Please click 'Sign in with Google' below.";
-        case "WRONG_PASSWORD":
-            return "Incorrect password. Please try again or reset your password.";
+        case "INVALID_CREDENTIALS":
+        case "CredentialsSignin":
+            return INVALID_CREDENTIALS_MESSAGE;
         case "INVALID_INPUT":
             return "Please enter a valid email and password.";
-        case "CredentialsSignin":
-            // Fallback for generic NextAuth error
-            return "Invalid email or password";
         default:
-            // Check if it contains our custom messages (some NextAuth versions pass the full message)
             if (errorCode.includes("TOO_MANY_ATTEMPTS"))
                 return "Too many failed login attempts. Please try again later.";
-            if (errorCode.includes("Google"))
-                return "This account uses Google sign-in. Please click 'Sign in with Google' below.";
-            if (
-                errorCode.includes("No account") ||
-                errorCode.includes("NO_ACCOUNT")
-            )
-                return "No account found with this email. Please sign up first.";
-            return "Invalid email or password";
+            return INVALID_CREDENTIALS_MESSAGE;
     }
+}
+
+const INVALID_CREDENTIALS_MESSAGE =
+    "Invalid email or password. If you signed up with Google, use 'Sign in with Google' below.";
+
+/** Only same-site paths are allowed after login (no open redirect) */
+function safeCallbackUrl(value: string | null | undefined): string {
+    if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+        return "/profile";
+    }
+    return value;
 }
 
 export default function LoginForm() {
@@ -77,7 +74,7 @@ export default function LoginForm() {
     const [isGoogleError, setIsGoogleError] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams?.get("callbackUrl") || "/profile";
+    const callbackUrl = safeCallbackUrl(searchParams?.get("callbackUrl"));
     const [isRedirecting, setIsRedirecting] = useState(false);
     const { status } = useSession();
 
@@ -103,7 +100,7 @@ export default function LoginForm() {
                     });
                     break;
                 case "CredentialsSignin":
-                    setError("Invalid email or password");
+                    setError(INVALID_CREDENTIALS_MESSAGE);
                     break;
                 default:
                     setError("An error occurred. Please try again.");
@@ -133,14 +130,6 @@ export default function LoginForm() {
             if (result?.error) {
                 const message = getLoginErrorMessage(result.error);
                 setError(message);
-
-                // Highlight the Google button if they should use Google
-                if (
-                    result.error === "GOOGLE_ACCOUNT" ||
-                    result.error.includes("Google")
-                ) {
-                    setIsGoogleError(true);
-                }
             } else if (result?.ok) {
                 setIsRedirecting(true);
                 router.push(callbackUrl);

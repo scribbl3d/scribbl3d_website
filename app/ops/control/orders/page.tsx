@@ -356,6 +356,7 @@ export default function OrdersPage() {
                                 orders={orders.filter(filters.cancelled)}
                                 onView={setActiveOrder}
                                 onDownloadInvoice={handleDownloadInvoice}
+                                onRefundRetried={fetchOrders}
                             />
                         </TabsContent>
                     </div>
@@ -425,18 +426,22 @@ export default function OrdersPage() {
                             onClick={async () => {
                                 if (!cancelOrder) return;
 
-                                await fetch(
+                                const res = await fetch(
                                     `/api/admin/orders/${cancelOrder.id}/cancel`,
                                     {
                                         method: "POST",
                                         headers: {
                                             "Content-Type": "application/json",
                                         },
-                                        body: JSON.stringify({
-                                            cancelledBy: "admin",
-                                        }),
+                                        body: JSON.stringify({}),
                                     },
                                 );
+                                const data = await res.json().catch(() => ({}));
+                                if (!res.ok) {
+                                    alert(data.error || "Failed to cancel order");
+                                } else if (data.refundStatus === "failed") {
+                                    alert("Order cancelled, but PhonePe rejected the refund. Retry it from the Cancelled tab.");
+                                }
 
                                 setShowCancelDialog(false);
                                 setCancelOrder(null);

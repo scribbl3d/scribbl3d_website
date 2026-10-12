@@ -109,13 +109,25 @@ function isUnavailable(item: CartResponseItem) {
     );
 }
 
-export async function priceCheckout(input: {
+type PriceCheckoutInput = {
     userId: string;
     shippingMode: ShippingMode;
     destinationPincode: string | null | undefined;
     discountCode: string | null | undefined;
     quoter?: ChargeQuoter; // tests
-}): Promise<CheckoutPricing> {
+};
+
+/** Cart items exactly as priced (quantity normalised) */
+export type PricedCartItem = CartResponseItem & { quantity: number };
+
+export async function priceCheckout(input: PriceCheckoutInput): Promise<CheckoutPricing> {
+    return (await priceCheckoutWithItems(input)).pricing;
+}
+
+/** Pricing plus the items it was calculated from, so the order snapshot matches the charge */
+export async function priceCheckoutWithItems(
+    input: PriceCheckoutInput,
+): Promise<{ pricing: CheckoutPricing; items: PricedCartItem[] }> {
     const items = await loadCartItems(input.userId);
     if (items.length === 0) {
         throw new CheckoutPricingError("Your cart is empty.", "CART_EMPTY");
@@ -129,7 +141,7 @@ export async function priceCheckout(input: {
         );
     }
 
-    const priced = items.map((item) => ({ ...item, quantity: Math.max(1, Math.round(Number(item.quantity) || 0)) }));
+    const priced: PricedCartItem[] = items.map((item) => ({ ...item, quantity: Math.max(1, Math.round(Number(item.quantity) || 0)) }));
     const subtotal = round2(priced.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0));
 
     let discountAmount = 0;
@@ -177,11 +189,14 @@ export async function priceCheckout(input: {
     }
 
     return {
-        subtotal,
-        discountAmount,
-        discountCode,
-        tax: gstIncluded(subtotal - discountAmount),
-        shippingPrice,
-        totalAmount: round2(subtotal - discountAmount + shippingPrice),
+        pricing: {
+            subtotal,
+            discountAmount,
+            discountCode,
+            tax: gstIncluded(subtotal - discountAmount),
+            shippingPrice,
+            totalAmount: round2(subtotal - discountAmount + shippingPrice),
+        },
+        items: priced,
     };
 }

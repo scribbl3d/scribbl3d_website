@@ -44,15 +44,11 @@ export async function POST(req: NextRequest) {
       });
 
       if (user.password.startsWith("google_")) {
+        // Tell the account owner by email only; the response stays the same
         if (user.email) {
           await sendGoogleUserNotification(user.email);
         }
-        return NextResponse.json({
-          message: "Google account detected",
-          isGoogleUser: true,
-        });
-      }
-
+      } else {
       const resetToken = crypto.randomBytes(32).toString("hex");
       const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
@@ -67,16 +63,16 @@ export async function POST(req: NextRequest) {
       if (user.email) {
         await sendPasswordResetEmail(user.email, resetToken);
       }
+      }
     }
 
     // Always return a success response to prevent email enumeration
     return NextResponse.json({
       message:
         "If an account exists with that email, a password reset link has been sent.",
-      isGoogleUser: false,
     });
   } catch (error) {
-    console.error("Error in forgot password:", error);
+    console.error("Error in forgot password:", error instanceof Error ? error.message : error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Invalid input", details: error.errors },

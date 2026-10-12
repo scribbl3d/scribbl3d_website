@@ -14,6 +14,8 @@ import { NextRequest, NextResponse } from "next/server";
  * Derive order status from shipment + order
  */
 function deriveOrderStatus(order: any, shipment: any) {
+    // Cancelled/refunded orders are final; tracking never revives them
+    if (isTerminalOrder(order)) return order.status;
     if (!order.transactionId) return "payment_pending";
     if (!shipment?.waybill) return "confirmed";
 
@@ -24,6 +26,10 @@ function deriveOrderStatus(order: any, shipment: any) {
     if (delivered) return "delivered";
 
     return "shipped";
+}
+
+function isTerminalOrder(order: any) {
+    return order.status === "cancelled" || !!order.refundId;
 }
 
 /**
@@ -215,7 +221,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Record the delivery time once (used by the review system)
-        if (newOrderStatus === "delivered") {
+        if (newOrderStatus === "delivered" && !isTerminalOrder(shipment.order)) {
             await prisma.order.updateMany({
                 where: { id: shipment.order.id, deliveredAt: null },
                 data: {
@@ -227,7 +233,9 @@ export async function POST(req: NextRequest) {
         /**
          * 5️⃣ Send emails on status transitions
          */
-        const userEmail = shipment.order.user?.email;
+        const userEmail = isTerminalOrder(shipment.order)
+            ? null
+            : shipment.order.user?.email;
 
         // Shipped email: when status transitions FROM pre-transit TO in-transit
         if (

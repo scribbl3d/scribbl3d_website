@@ -18,7 +18,6 @@ export function CustomPrismaAdapter(): Adapter {
     return {
         ...PrismaAdapter(prisma),
         createUser: async (data: CreateUserData): Promise<AdapterUser> => {
-            console.log("Creating user with data:", data);
             try {
                 // Generate a secure placeholder password for new users
                 const placeholderPassword = `google_${crypto
@@ -35,7 +34,6 @@ export function CustomPrismaAdapter(): Adapter {
                         password: hashedPassword,
                     },
                 });
-                console.log("User created successfully:", user);
                 return {
                     id: user.id,
                     name: user.name,
@@ -44,12 +42,12 @@ export function CustomPrismaAdapter(): Adapter {
                     image: user.image,
                 };
             } catch (error) {
-                console.error("Error creating user:", error);
+                console.error("Error creating user:", error instanceof Error ? error.message : error);
                 throw error;
             }
         },
+        // Never log account data: it contains OAuth access/ID tokens
         linkAccount: async (data: AdapterAccount): Promise<AdapterAccount> => {
-            console.log("Linking account:", data);
             try {
                 const account = await prisma.account.create({
                     data: {
@@ -64,10 +62,9 @@ export function CustomPrismaAdapter(): Adapter {
                         session_state: data.session_state ?? null,
                     },
                 });
-                console.log("Account linked successfully:", account);
                 return account as AdapterAccount; // Cast to AdapterAccount to ensure type compatibility
             } catch (error) {
-                console.error("Error linking account:", error);
+                console.error("Error linking account:", error instanceof Error ? error.message : error);
                 throw error;
             }
         },
@@ -97,7 +94,7 @@ export function CustomPrismaAdapter(): Adapter {
                 }
                 return null;
             } catch (error) {
-                console.error("Error getting user by account:", error);
+                console.error("Error getting user by account:", error instanceof Error ? error.message : error);
                 throw error;
             }
         },

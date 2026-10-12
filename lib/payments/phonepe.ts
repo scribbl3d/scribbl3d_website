@@ -8,6 +8,20 @@ import { createHash, timingSafeEqual } from "crypto";
 
 export const PHONEPE_HOST = "https://api.phonepe.com/apis/hermes";
 
+const PHONEPE_REFUND_PRODUCTION_HOST = "https://mercury-t2.phonepe.com";
+
+/**
+ * Host for refunds and refund status (v3 credit API). PHONEPE_REFUND_URL
+ * overrides it; outside production it must be set explicitly so local and
+ * preview cancellations never send real refunds.
+ */
+export function phonepeRefundHost(): string {
+    const configured = process.env.PHONEPE_REFUND_URL?.trim();
+    if (configured) return configured.replace(/\/+$/, "");
+    if (process.env.NODE_ENV === "production") return PHONEPE_REFUND_PRODUCTION_HOST;
+    throw new Error("PHONEPE_REFUND_URL is not configured; refunds are disabled outside production");
+}
+
 export const phonepeSaltIndex = () => process.env.PHONEPE_KEY_INDEX || process.env.PHONEPE_SALT_INDEX || "1";
 
 function saltKey(): string {

@@ -6,7 +6,7 @@ import { rateLimit, createRateLimitResponse, getRateLimitHeaders } from './rate-
  * Get client identifier for rate limiting
  * Uses IP address or fallback to a header
  */
-export function getClientIdentifier(req: NextRequest): string {
+export function getClientIdentifier(req: Pick<Request, 'headers'>): string {
   // Try to get real IP from headers (Vercel, Cloudflare, etc.)
   const forwarded = req.headers.get('x-forwarded-for');
   const realIp = req.headers.get('x-real-ip');
@@ -70,14 +70,16 @@ export async function validateRequest<T>(
 
 /**
  * Apply rate limiting to a request
- * Returns rate limit result
+ * Returns rate limit result. Counters are kept per endpoint, so (for example)
+ * coupon attempts never use up the password-reset allowance.
  */
 export async function applyRateLimit(
   req: NextRequest,
   limit: number,
   windowMs: number
 ) {
-  const identifier = getClientIdentifier(req);
+  const route = new URL(req.url).pathname;
+  const identifier = `${route}:${getClientIdentifier(req)}`;
   return await rateLimit(identifier, limit, windowMs);
 }
 
@@ -101,7 +103,7 @@ export function withApiProtection<T>(
   options: {
     schema: ZodSchema<T>;
     rateLimit: { limit: number; windowMs: number };
-    requireAuth?: boolean;
+    // No auth option: check the session in the handler (getServerSession)
   }
 ) {
   return async (req: NextRequest) => {
@@ -123,19 +125,10 @@ export function withApiProtection<T>(
         return validation.error;
       }
 
-      // 3. Check authentication if required
-      if (options.requireAuth) {
-        // Add your auth check here
-        // const session = await getServerSession();
-        // if (!session) {
-        //   return new Response('Unauthorized', { status: 401 });
-        // }
-      }
-
-      // 4. Call handler with validated data
+      // 3. Call handler with validated data
       const response = await handler(req, validation.data);
 
-      // 5. Add rate limit headers to successful responses
+      // 4. Add rate limit headers to successful responses
       const headers = new Headers(response.headers);
       Object.entries(getRateLimitHeaders(rateLimitResult)).forEach(([key, value]) => {
         headers.set(key, value);

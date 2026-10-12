@@ -1,10 +1,6 @@
-import crypto from "crypto";
-import { phonepeSaltIndex } from "@/lib/payments/phonepe";
+import { phonepeRefundHost, signRequest } from "@/lib/payments/phonepe";
 
-const PHONEPE_BASE_URL = "https://mercury-t2.phonepe.com"; // PROD
-const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID!;
-const SALT_KEY = process.env.PHONEPE_SALT_KEY!;
-const SALT_INDEX = phonepeSaltIndex();
+const REFUND_PATH = "/v3/credit/backToSource";
 
 interface RefundParams {
     refundTransactionId: string; // NEW refund txn id
@@ -13,31 +9,40 @@ interface RefundParams {
     orderId: string;
 }
 
+/** PhonePe answered and refused the refund (safe to retry with a new ID) */
+export class PhonePeRefundRejectedError extends Error {}
+
+/** Why a refund cannot be sent right now (missing configuration), or null */
+export function refundConfigError(): string | null {
+    if (!process.env.PHONEPE_MERCHANT_ID || !process.env.PHONEPE_SALT_KEY) {
+        return "Missing PhonePe credentials in environment variables";
+    }
+    try {
+        phonepeRefundHost();
+        return null;
+    } catch (err) {
+        return err instanceof Error ? err.message : "PhonePe refunds are not configured";
+    }
+}
+
+// Never log the payload, signature or salt: only IDs and status codes.
 export async function initiatePhonePeRefund({
     refundTransactionId,
     providerReferenceId,
     amount,
     orderId,
 }: RefundParams) {
-    console.log("=================================================");
-    console.log(" [REFUND] NEW REFUND FUNCTION LOADED (v3 CREDIT)");
-    console.log(
-        " [REFUND] Endpoint:",
-        `${PHONEPE_BASE_URL}/v3/credit/backToSource`,
-    );
-    console.log("🧩 [REFUND] Inputs:", {
-        refundTransactionId,
-        providerReferenceId,
-        amount,
-        orderId,
-    });
-
     if (!providerReferenceId) {
-        throw new Error(" providerReferenceId (OMO id) is required");
+        throw new Error("providerReferenceId (OMO id) is required");
     }
+    const merchantId = process.env.PHONEPE_MERCHANT_ID;
+    if (!merchantId) {
+        throw new Error("Missing PhonePe credentials in environment variables");
+    }
+    const host = phonepeRefundHost();
 
     const payload = {
-        merchantId: MERCHANT_ID,
+        merchantId,
         transactionId: refundTransactionId, // refund txn id
         providerReferenceId, // OMO id
         amount,
@@ -45,46 +50,35 @@ export async function initiatePhonePeRefund({
         message: "Refund for cancelled order",
     };
 
-    console.log(" [REFUND] FINAL PAYLOAD (before base64):", payload);
-
     const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString(
         "base64",
     );
 
-    console.log(" [REFUND] Base64 Payload:", payloadBase64);
-
-    const stringToSign = payloadBase64 + "/v3/credit/backToSource" + SALT_KEY;
-
-    const checksum =
-        crypto.createHash("sha256").update(stringToSign).digest("hex") +
-        "###" +
-        SALT_INDEX;
-
-    console.log(" [REFUND] StringToSign:", stringToSign);
-    console.log(" [REFUND] X-VERIFY:", checksum);
-
-    const res = await fetch(`${PHONEPE_BASE_URL}/v3/credit/backToSource`, {
+    const res = await fetch(`${host}${REFUND_PATH}`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-VERIFY": checksum,
+            "X-VERIFY": signRequest(payloadBase64, REFUND_PATH),
         },
         body: JSON.stringify({
             request: payloadBase64,
         }),
+        signal: AbortSignal.timeout(15000),
     });
-
-    console.log(" [REFUND] HTTP STATUS:", res.status);
 
     const data = await res.json();
 
-    console.log(" [REFUND] PHONEPE RESPONSE (RAW):");
-    console.log(JSON.stringify(data, null, 2));
-    console.log("=================================================");
+    console.log("[REFUND] PhonePe response:", {
+        orderId,
+        refundTransactionId,
+        httpStatus: res.status,
+        success: data?.success,
+        code: data?.code,
+    });
 
     if (!data.success) {
-        throw new Error(
-            data.message || data.payResponseCode || "PhonePe refund failed",
+        throw new PhonePeRefundRejectedError(
+            data.message || data.code || "PhonePe refund failed",
         );
     }
 

@@ -1,4 +1,8 @@
-import { CheckoutPricingError, priceCheckout } from "@/lib/checkout/pricing";
+import {
+    CheckoutPricingError,
+    priceCheckoutWithItems,
+    type PricedCartItem,
+} from "@/lib/checkout/pricing";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -6,6 +10,29 @@ import { authOptions } from "../auth/[...nextauth]/options";
 
 // PhonePe merchantTransactionId: letters, digits, _ and -, at most 35 characters
 const TRANSACTION_ID = /^[A-Za-z0-9_-]{8,35}$/;
+
+/** Order snapshot line, built from the exact items that were priced */
+function snapshotItem(item: PricedCartItem) {
+    const base = {
+        itemType: item.itemType,
+        productId: item.sourceId,
+        cartItemId: item.id, // lets payment confirmation clear only these cart rows
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.images?.[0] ?? null,
+    };
+    switch (item.itemType) {
+        case "resin":
+            return { ...base, variantId: item.variantId ?? null, colourId: item.colourId ?? null, size: item.size ?? null, color: item.color ?? null };
+        case "prebuilt":
+            return { ...base, variantId: item.variantId ?? null, color: item.color ?? null, colorHex: item.colorHex ?? null, size: item.size ?? null };
+        case "filament":
+            return { ...base, variantId: item.variantId ?? null, size: item.size ?? null, color: item.color ?? null };
+        default:
+            return base;
+    }
+}
 
 /* =========================
    CREATE ORDER
@@ -92,13 +119,14 @@ export async function POST(req: Request) {
 
         /* ---------- SERVER PRICING ---------- */
         let pricing;
+        let pricedItems: PricedCartItem[];
         try {
-            pricing = await priceCheckout({
+            ({ pricing, items: pricedItems } = await priceCheckoutWithItems({
                 userId: session.user.id,
                 shippingMode,
                 destinationPincode: shippingAddress.pincode,
                 discountCode: discountCode ? String(discountCode) : null,
-            });
+            }));
         } catch (error) {
             if (error instanceof CheckoutPricingError) {
                 return NextResponse.json(
@@ -123,127 +151,8 @@ export async function POST(req: Request) {
             );
         }
 
-        let orderItems: any[] = [];
-
-        {
-            /* =====================================================
-               CART FLOW
-            ===================================================== */
-            const cart: any = await prisma.cart.findFirst({
-                where: { userId: session.user.id },
-                include: {
-                    items: {
-                        include: {
-                            /* ── Filament ── */
-                            filament: true,
-                            filamentVariant: true,
-
-                            /* ── Printer ── */
-                            printer: {
-                                include: {
-                                    images: { orderBy: { sortOrder: "asc" } },
-                                },
-                            },
-
-                            /* ── Prebuilt ── */
-                            prebuiltProduct: {
-                                include: {
-                                    images: {
-                                        where: { isMain: true },
-                                        take: 1,
-                                    },
-                                },
-                            },
-                            prebuiltVariant: true,
-
-                            /* ── Resin ── */
-                            resin: true,
-                            resinWeight: true,
-                            resinColour: {
-                                include: {
-                                    images: { orderBy: { sortOrder: "asc" } },
-                                },
-                            },
-                        },
-                    },
-                },
-            });
-
-            if (!cart || cart.items.length === 0) {
-                return NextResponse.json(
-                    { error: "Cart is empty" },
-                    { status: 400 },
-                );
-            }
-
-            orderItems = cart.items.map((item) => {
-                /* ── Resin ── */
-                if (item.resin) {
-                    return {
-                        itemType: "resin",
-                        productId: item.resin.id,
-                        variantId: item.resinWeightId ?? null,
-                        colourId: item.resinColourId ?? null,
-                        name: item.resin.name,
-                        quantity: item.quantity,
-                        price: item.resinWeight?.price ?? 0,
-                        image: item.resinColour?.images?.[0]?.url ?? null,
-                        size: item.resinWeight
-                            ? `${item.resinWeight.weightInGrams}g`
-                            : null,
-                        color: item.resinColour?.name ?? null,
-                    };
-                }
-
-                /* ── Printer ── */
-                if (item.printer) {
-                    return {
-                        itemType: "printer",
-                        productId: item.printer.id,
-                        name: item.printer.name,
-                        quantity: item.quantity,
-                        price: item.printer.price,
-                        image: item.printer.images?.[0]?.url ?? null,
-                    };
-                }
-
-                /* ── Prebuilt ── */
-                if (item.prebuiltProduct) {
-                    return {
-                        itemType: "prebuilt",
-                        productId: item.prebuiltProduct.id,
-                        variantId: item.prebuiltVariantId ?? null,
-                        name: item.prebuiltProduct.name,
-                        quantity: item.quantity,
-                        price: item.prebuiltVariant?.price ?? 0,
-                        color: item.prebuiltVariant?.colorName ?? null,
-                        colorHex: item.prebuiltVariant?.colorHex ?? null,
-                        size: item.prebuiltVariant?.sizeName ?? null,
-                        image: item.prebuiltProduct.images?.[0]?.url ?? null,
-                    };
-                }
-
-                /* ── Filament ── */
-                if (item.filament) {
-                    return {
-                        itemType: "filament",
-                        productId: item.filament.id,
-                        variantId: item.filamentVariantId ?? null,
-                        name: item.filament.name,
-                        quantity: item.quantity,
-                        price: item.filamentVariant?.price ?? 0,
-                        size: item.filamentVariant
-                            ? `${item.filamentVariant.diameter} - ${item.filamentVariant.spoolWeight}`
-                            : null,
-                        color: item.filament.colorName ?? null,
-                        image: item.filament.images?.[0] ?? null,
-                    };
-                }
-
-                /* ── Fallback ── */
-                throw new Error(`Invalid cart item ${item.id}`);
-            });
-        }
+        // Same rows and quantities that were priced and will be charged
+        const orderItems = pricedItems.map(snapshotItem);
 
         /* ---------- CREATE ORDER ---------- */
         const order = await prisma.order.create({

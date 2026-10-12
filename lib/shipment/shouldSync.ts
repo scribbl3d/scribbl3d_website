@@ -1,6 +1,6 @@
 export function shouldSyncShipment(shipment: any) {
     if (!shipment?.waybill) return false;
-    if (shipment.status === "delivered") return false;
+    if (shipment.status === "delivered" || shipment.status === "cancelled") return false;
     if (shipment.syncing) return false;
 
     if (!shipment.lastSyncedAt) return true;

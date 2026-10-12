@@ -33,8 +33,10 @@ export async function POST() {
         // 1. Get all active shipped shipments with user info
         const shipments = await prisma.shipment.findMany({
             where: {
-                status: { not: "delivered" },
+                status: { notIn: ["delivered", "cancelled"] },
                 waybill: { not: null },
+                // Cancelled/refunded orders are final; never revive them
+                order: { status: { not: "cancelled" }, refundId: null },
             },
             include: {
                 order: {

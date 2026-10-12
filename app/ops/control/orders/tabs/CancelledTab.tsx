@@ -27,6 +27,7 @@ interface Props {
     orders: Order[];
     onView(order: Order): void;
     onDownloadInvoice(order: Order): Promise<void>; // ← new
+    onRefundRetried?(): void;
 }
 
 /* =========================================================
@@ -36,7 +37,9 @@ function getRefundStatusColor(status?: string) {
     switch (status) {
         case "success":
             return "bg-green-500";
+        case "requested":
         case "initiated":
+        case "pending":
             return "bg-yellow-500";
         case "failed":
             return "bg-red-500";
@@ -45,7 +48,7 @@ function getRefundStatusColor(status?: string) {
     }
 }
 
-export function CancelledTab({ orders, onView, onDownloadInvoice }: Props) {
+export function CancelledTab({ orders, onView, onDownloadInvoice, onRefundRetried }: Props) {
     /* ---------- SEARCH ---------- */
     const [search, setSearch] = useState("");
     const [filterBy, setFilterBy] = useState<
@@ -59,6 +62,9 @@ export function CancelledTab({ orders, onView, onDownloadInvoice }: Props) {
     const [generatingId, setGeneratingId] = useState<string | null>(null);
     const [downloadingCNId, setDownloadingCNId] = useState<string | null>(null);
     const [downloadingInvId, setDownloadingInvId] = useState<string | null>(
+        null,
+    );
+    const [retryingRefundId, setRetryingRefundId] = useState<string | null>(
         null,
     );
 
@@ -160,6 +166,31 @@ export function CancelledTab({ orders, onView, onDownloadInvoice }: Props) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    /* ---------- RETRY A REJECTED REFUND ---------- */
+    async function handleRetryRefund(order: Order) {
+        if (retryingRefundId) return;
+        if (!confirm("Send the refund to PhonePe again?")) return;
+        setRetryingRefundId(order.id);
+        try {
+            const res = await fetch(`/api/admin/orders/${order.id}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({}),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to retry refund");
+            if (data.refundStatus === "failed") {
+                alert("PhonePe rejected the refund again. Please check the payment in the PhonePe dashboard.");
+            }
+            onRefundRetried?.();
+        } catch (err) {
+            console.error(err);
+            alert(err instanceof Error ? err.message : "Failed to retry refund");
+        } finally {
+            setRetryingRefundId(null);
+        }
     }
 
     /* ---------- DOWNLOAD INVOICE ---------- */
@@ -274,6 +305,21 @@ export function CancelledTab({ orders, onView, onDownloadInvoice }: Props) {
                                                 ? "Generating…"
                                                 : "Tax Invoice"}
                                         </ActionButton>
+
+                                        {order.refundStatus === "failed" && (
+                                            <ActionButton
+                                                variant="destructive"
+                                                className="w-full justify-center"
+                                                disabled={retryingRefundId === order.id || anyBusy}
+                                                onClick={() =>
+                                                    handleRetryRefund(order)
+                                                }
+                                            >
+                                                {retryingRefundId === order.id
+                                                    ? "Retrying…"
+                                                    : "Retry Refund"}
+                                            </ActionButton>
+                                        )}
 
                                         {/* Credit Note — only when refund exists */}
                                         {order.refundStatus &&

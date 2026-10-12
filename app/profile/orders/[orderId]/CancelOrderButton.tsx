@@ -6,13 +6,9 @@ import { useState } from "react";
 
 interface CancelOrderButtonProps {
     orderId: string;
-    hasShipment: boolean;
 }
 
-export function CancelOrderButton({
-    orderId,
-    hasShipment,
-}: CancelOrderButtonProps) {
+export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
     const [showModal, setShowModal] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -22,29 +18,13 @@ export function CancelOrderButton({
         setCancelling(true);
         setError(null);
         try {
-            // Step 1: Cancel Delhivery shipment if it exists
-            if (hasShipment) {
-                const shipmentRes = await fetch(
-                    `/api/internal/cancel-shipment`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ orderId }),
-                    },
-                );
-                if (!shipmentRes.ok) {
-                    const data = await shipmentRes.json();
-                    throw new Error(data.error || "Failed to cancel shipment");
-                }
-            }
-
-            // Step 2: Initiate refund via existing admin cancel API
+            // The server checks eligibility, cancels the shipment and refunds in one step
             const refundRes = await fetch(
                 `/api/admin/orders/${orderId}/cancel`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ cancelledBy: "customer" }),
+                    body: JSON.stringify({}),
                 },
             );
             const refundData = await refundRes.json();

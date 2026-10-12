@@ -745,7 +745,6 @@ export default async function OrderDetailsPage({ params }: PageProps) {
                                     <>
                                         <CancelOrderButton
                                             orderId={order.id}
-                                            hasShipment={!!shipment}
                                         />
                                         <ContactSupportButton
                                             orderId={order.id}

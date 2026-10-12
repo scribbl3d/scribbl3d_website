@@ -1,37 +1,31 @@
 // lib/refundStatus.ts
-import crypto from "crypto";
-import { phonepeSaltIndex } from "@/lib/payments/phonepe";
-
-const PHONEPE_BASE_URL = process.env.PHONEPE_URL!;
-const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID!;
-const SALT_KEY = process.env.PHONEPE_SALT_KEY!;
-const SALT_INDEX = phonepeSaltIndex();
+import { phonepeRefundHost, signRequest } from "@/lib/payments/phonepe";
 
 export async function checkPhonePeRefundStatus(refundId: string) {
-    console.log("🔍 [REFUND-STATUS] Checking refund status");
-    console.log("➡️ refundTransactionId:", refundId);
+    const merchantId = process.env.PHONEPE_MERCHANT_ID;
+    if (!merchantId) {
+        throw new Error("Missing PhonePe credentials in environment variables");
+    }
 
-    const path = `/v3/transaction/${MERCHANT_ID}/${refundId}/status`;
-    const stringToSign = path + SALT_KEY;
+    const path = `/v3/transaction/${merchantId}/${refundId}/status`;
 
-    const checksum =
-        crypto.createHash("sha256").update(stringToSign).digest("hex") +
-        "###" +
-        SALT_INDEX;
-
-    console.log("🔐 [REFUND-STATUS] X-VERIFY:", checksum);
-
-    const res = await fetch(`${PHONEPE_BASE_URL}${path}`, {
+    const res = await fetch(`${phonepeRefundHost()}${path}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "X-VERIFY": checksum,
+            "X-VERIFY": signRequest("", path),
         },
+        signal: AbortSignal.timeout(15000),
     });
 
     const data = await res.json();
 
-    console.log("📦 [REFUND-STATUS] PhonePe Response:", data);
+    console.log("[REFUND-STATUS] PhonePe response:", {
+        refundId,
+        httpStatus: res.status,
+        success: data?.success,
+        code: data?.code,
+    });
 
     return data;
 }

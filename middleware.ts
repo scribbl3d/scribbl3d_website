@@ -12,7 +12,6 @@ const SELF_CHECKED_API_ROUTES = [
     /^\/api\/admin\/login\/?$/,
     /^\/api\/admin\/logout\/?$/,
     /^\/api\/admin\/orders\/[^/]+\/cancel\/?$/, // admin or owning customer
-    /^\/api\/internal\/cancel-shipment\/?$/, // owning customer
     /^\/api\/internal\/calculate-shipping\/?$/, // signed-in customer or admin
     /^\/api\/internal\/sync-shipment\/?$/, // internal token or admin
 ];
@@ -85,9 +84,9 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
 
     const allowedOrigins = [
-        "http://localhost:3000",
         "https://scribbl3d.com",
         "https://scribbl3d-website.vercel.app",
+        ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
     ];
 
     if (allowedOrigins.includes(origin)) {

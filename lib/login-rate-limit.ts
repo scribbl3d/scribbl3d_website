@@ -1,46 +1,50 @@
 interface LoginAttempt {
   count: number;
-  resetTime: number;
+  lockouts: number;
+  lockedUntil: number;
   lastAttempt: number;
 }
 
+// In-memory per server instance; use a shared store (e.g. Redis) to make
+// limits hold across instances.
 const loginAttempts: Map<string, LoginAttempt> = new Map();
 
 const MAX_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-const ATTEMPT_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const ATTEMPT_WINDOW_MS = 5 * 60 * 1000; // failures older than this are forgotten
+const BASE_LOCK_MS = 5 * 60 * 1000; // first lock: 5 minutes, then doubling
+const MAX_LOCK_MS = 60 * 60 * 1000; // never more than an hour
+const FORGET_AFTER_MS = 24 * 60 * 60 * 1000; // backoff history resets after a quiet day
 
-export function checkLoginAttempts(email: string): {
+/**
+ * Keys should combine the account and the client (e.g. `admin:<email>:<ip>`)
+ * so one person cannot lock everyone else out of an account.
+ */
+export function checkLoginAttempts(key: string): {
   allowed: boolean;
   remainingAttempts?: number;
   lockoutTimeRemaining?: number;
 } {
   const now = Date.now();
-  const attempt = loginAttempts.get(email);
+  const attempt = loginAttempts.get(key);
 
   if (!attempt) {
     return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
   }
 
-  // Check if lockout period has expired
-  if (attempt.count >= MAX_ATTEMPTS) {
-    const lockoutRemaining = attempt.resetTime - now;
-    if (lockoutRemaining > 0) {
-      return {
-        allowed: false,
-        lockoutTimeRemaining: Math.ceil(lockoutRemaining / 1000 / 60), // minutes
-      };
-    } else {
-      // Reset after lockout
-      loginAttempts.delete(email);
-      return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
-    }
+  if (attempt.lockedUntil > now) {
+    return {
+      allowed: false,
+      lockoutTimeRemaining: Math.ceil((attempt.lockedUntil - now) / 1000 / 60), // minutes
+    };
   }
 
-  // Check if attempt window has expired
-  if (now - attempt.lastAttempt > ATTEMPT_WINDOW_MS) {
-    loginAttempts.delete(email);
+  if (now - attempt.lastAttempt > FORGET_AFTER_MS) {
+    loginAttempts.delete(key);
     return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
+  }
+
+  if (now - attempt.lastAttempt > ATTEMPT_WINDOW_MS) {
+    attempt.count = 0;
   }
 
   return {
@@ -49,26 +53,24 @@ export function checkLoginAttempts(email: string): {
   };
 }
 
-export function recordFailedLogin(email: string): void {
+export function recordFailedLogin(key: string): void {
   const now = Date.now();
-  const attempt = loginAttempts.get(email);
+  const attempt = loginAttempts.get(key) ?? { count: 0, lockouts: 0, lockedUntil: 0, lastAttempt: now };
 
-  if (!attempt) {
-    loginAttempts.set(email, {
-      count: 1,
-      resetTime: now + LOCK_DURATION_MS,
-      lastAttempt: now,
-    });
-  } else {
-    attempt.count += 1;
-    attempt.lastAttempt = now;
-    if (attempt.count >= MAX_ATTEMPTS) {
-      attempt.resetTime = now + LOCK_DURATION_MS;
-    }
-    loginAttempts.set(email, attempt);
+  if (now - attempt.lastAttempt > ATTEMPT_WINDOW_MS) attempt.count = 0;
+  attempt.count += 1;
+  attempt.lastAttempt = now;
+
+  if (attempt.count >= MAX_ATTEMPTS) {
+    // Exponential backoff instead of a fixed long lockout
+    attempt.lockedUntil = now + Math.min(BASE_LOCK_MS * 2 ** attempt.lockouts, MAX_LOCK_MS);
+    attempt.lockouts += 1;
+    attempt.count = 0;
   }
+
+  loginAttempts.set(key, attempt);
 }
 
-export function resetLoginAttempts(email: string): void {
-  loginAttempts.delete(email);
+export function resetLoginAttempts(key: string): void {
+  loginAttempts.delete(key);
 }

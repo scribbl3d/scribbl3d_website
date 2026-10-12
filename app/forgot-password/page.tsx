@@ -25,7 +25,6 @@ type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleUser, setIsGoogleUser] = useState(false);
   const {
     register,
     handleSubmit,
@@ -46,20 +45,12 @@ export default function ForgotPassword() {
       const result = await response.json();
 
       if (response.ok) {
-        if (result.isGoogleUser) {
-          setIsGoogleUser(true);
-          toast({
-            title: "Google Account Detected",
-            description:
-              "Please use the 'Sign in with Google' option on the login page.",
-          });
-        } else {
-          toast({
-            title: "Reset Email Sent",
-            description:
-              "If an account exists with this email, you will receive password reset instructions.",
-          });
-        }
+        // Same answer for every email (Google-account owners are told by email)
+        toast({
+          title: "Check Your Email",
+          description:
+            "If an account exists with this email, you will receive instructions shortly.",
+        });
       } else {
         throw new Error(result.error || "Failed to send reset email");
       }
@@ -88,19 +79,6 @@ export default function ForgotPassword() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isGoogleUser ? (
-            <div className="text-center">
-              <p className="mb-4">
-                This email is associated with a Google account.
-              </p>
-              <p className="mb-4">
-                Please use the Sign in with Google option on the login page.
-              </p>
-              <Button asChild variant="default" className="w-full">
-                <Link href="/login">Back to Login</Link>
-              </Button>
-            </div>
-          ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Input
@@ -118,7 +96,6 @@ export default function ForgotPassword() {
                 {isLoading ? "Sending..." : "Send Reset Link"}
               </Button>
             </form>
-          )}
         </CardContent>
         <CardFooter className="flex justify-center">
           <Button variant="link" className="text-sm" asChild>

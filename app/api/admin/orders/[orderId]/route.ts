@@ -20,13 +20,13 @@ async function sendShippingEmail(order: any, trackingInfo: any) {
 /* =========================================================
    PATCH → UPDATE ORDER
    ========================================================= */
-export async function PATCH(req: NextRequest, context: any) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ orderId: string }> }) {
     if (!(await isAdminRequest(req))) {
         return NextResponse.json({ error: "Admin sign-in required" }, { status: 401 });
     }
 
     try {
-        const { orderId } = context.params;
+        const { orderId } = await context.params;
         const { status, trackingInfo, notifyCustomer } = await req.json();
 
         const updatedOrder = await prisma.order.update({
@@ -75,13 +75,13 @@ export async function PATCH(req: NextRequest, context: any) {
 /* =========================================================
    DELETE → PAYMENT PENDING & FAILED ONLY
    ========================================================= */
-export async function DELETE(req: NextRequest, context: any) {
+export async function DELETE(req: NextRequest, context: { params: Promise<{ orderId: string }> }) {
     if (!(await isAdminRequest(req))) {
         return NextResponse.json({ error: "Admin sign-in required" }, { status: 401 });
     }
 
     try {
-        const { orderId } = context.params;
+        const { orderId } = await context.params;
 
         const order = await prisma.order.findUnique({
             where: { id: orderId },

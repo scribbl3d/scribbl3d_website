@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { serialize } from "cookie";
 import { z } from "zod";
+import { getClientIdentifier } from "@/lib/api-helpers";
 import { authenticateAdmin } from "@/lib/auth";
 import { createAdminSession, isSameOrigin } from "@/lib/admin-session";
 import { checkLoginAttempts, recordFailedLogin, resetLoginAttempts } from "@/lib/login-rate-limit";
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid email and password" }, { status: 400 });
   }
   const { email, password } = parsed.data;
-  const rateLimitKey = `admin:${email.toLowerCase()}`;
+  // Per email + client, so nobody can lock the admin out from elsewhere
+  const rateLimitKey = `admin:${email.toLowerCase()}:${getClientIdentifier(request)}`;
   if (!checkLoginAttempts(rateLimitKey).allowed) {
     return NextResponse.json({ error: "Too many sign-in attempts. Please try again later." }, { status: 429 });
   }

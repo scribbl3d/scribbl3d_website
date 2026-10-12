@@ -9,7 +9,8 @@ jest.mock('@/lib/admin-session', () => ({ createAdminSession: jest.fn(), isSameO
 jest.mock('@/lib/login-rate-limit', () => ({ checkLoginAttempts: jest.fn(), recordFailedLogin: jest.fn(), resetLoginAttempts: jest.fn() }));
 
 const body = { email: 'admin@example.test', password: 'test-only-password' };
-const request = (data: unknown = body) => ({ json: jest.fn().mockResolvedValue(data) }) as unknown as Request;
+const request = (data: unknown = body, ip = '203.0.113.7') =>
+  ({ json: jest.fn().mockResolvedValue(data), headers: new Headers({ 'x-forwarded-for': ip }) }) as unknown as Request;
 
 beforeEach(() => {
   jest.mocked(isSameOrigin).mockReturnValue(true);
@@ -31,7 +32,7 @@ describe('Admin login', () => {
     expect(headers['Set-Cookie']).toContain('HttpOnly');
     expect(headers['Set-Cookie']).toContain('SameSite=Strict');
     expect(headers['Set-Cookie']).toContain('Max-Age=3600');
-    expect(resetLoginAttempts).toHaveBeenCalledWith('admin:admin@example.test');
+    expect(resetLoginAttempts).toHaveBeenCalledWith('admin:admin@example.test:203.0.113.7');
   });
 
   it('rejects cross-origin login before checking credentials', async () => {
@@ -48,8 +49,15 @@ describe('Admin login', () => {
   it('rejects bad credentials and records the failed attempt', async () => {
     jest.mocked(authenticateAdmin).mockResolvedValue(null);
     expect((await POST(request())).status).toBe(401);
-    expect(recordFailedLogin).toHaveBeenCalledWith('admin:admin@example.test');
+    expect(recordFailedLogin).toHaveBeenCalledWith('admin:admin@example.test:203.0.113.7');
     expect(createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it('limits attempts per email and client, so others cannot lock the admin out', async () => {
+    jest.mocked(authenticateAdmin).mockResolvedValue(null);
+    await POST(request(body, '198.51.100.1'));
+    expect(recordFailedLogin).toHaveBeenLastCalledWith('admin:admin@example.test:198.51.100.1');
+    expect(checkLoginAttempts).toHaveBeenLastCalledWith('admin:admin@example.test:198.51.100.1');
   });
 
   it('enforces the login attempt limit before authenticating', async () => {

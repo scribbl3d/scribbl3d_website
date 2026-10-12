@@ -47,7 +47,8 @@ interface PageProps {
 export default async function ProfilePage({ searchParams }: PageProps) {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user) {
+    // Without an ID, `where: { userId }` would match every customer's orders
+    if (!session?.user?.id) {
         redirect("/login");
     }
 
@@ -78,22 +79,6 @@ export default async function ProfilePage({ searchParams }: PageProps) {
             },
         },
     });
-
-    console.log(
-        "[PROFILE] Orders fetched:",
-        ordersFromDb.map((o) => {
-            const masterShipment =
-                o.shipments?.find((s) => s.isMaster) || o.shipments?.[0];
-            return {
-                id: o.id,
-                hasShipment: o.shipments?.length > 0,
-                shipmentCount: o.shipments?.length || 0,
-                syncing: masterShipment?.syncing,
-                lastSyncedAt: masterShipment?.lastSyncedAt,
-                status: masterShipment?.status,
-            };
-        }),
-    );
 
     for (const order of ordersFromDb) {
         const masterShipment =

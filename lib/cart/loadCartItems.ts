@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 /**
  * Cart items as the customer sees them (prices, sizes, weights, stock).
  * Shared by GET /api/cart and server-side checkout pricing so both use
- * exactly the same data. Moved unchanged from app/api/cart/route.ts.
+ * exactly the same data. A variant that belongs to a different product is
+ * treated as orphaned; inactive or out-of-stock rows get inStock: false.
  */
 
 /* =========================
@@ -12,6 +13,8 @@ import { prisma } from "@/lib/prisma";
 export type CartResponseItem = {
     id: string;
     sourceId?: string;
+    variantId?: string | null;
+    colourId?: string | null;
     itemType: string;
     name: string;
     slug?: string | null;
@@ -161,7 +164,16 @@ export async function loadCartItems(
                     }
                 }
 
-                const missingVariant = !resinWeight || !resinColour;
+                // A weight/colour from another resin must never price this one
+                const missingVariant =
+                    !resinWeight ||
+                    !resinColour ||
+                    resinWeight.resinId !== resin.id ||
+                    resinColour.resinId !== resin.id;
+                const resinInStock =
+                    resin.inStock !== false &&
+                    resinWeight?.inStock !== false &&
+                    resinColour?.inStock !== false;
 
                 const colourImages =
                     resinColour?.images?.map((i: any) => i.url) ?? [];
@@ -176,6 +188,8 @@ export async function loadCartItems(
                 items.push({
                     id: item.id,
                     sourceId: resin.id,
+                    variantId: item.resinWeightId ?? null,
+                    colourId: item.resinColourId ?? null,
                     itemType: "resin",
                     name: resin.name,
                     slug: (resin as any).slug ?? null,
@@ -185,6 +199,7 @@ export async function loadCartItems(
                     size: resinWeight ? `${resinWeight.weightInGrams}g` : null,
                     color: resinColour?.name ?? null,
                     colorHex: resinColour?.hexCode ?? null,
+                    inStock: !missingVariant && resinInStock,
                     _orphaned: missingVariant,
                 });
                 continue;
@@ -220,7 +235,9 @@ export async function loadCartItems(
                     }
                 }
 
-                const missingVariant = !filamentVariant;
+                const missingVariant =
+                    !filamentVariant ||
+                    filamentVariant.filamentId !== filament.id;
                 const isFilamentOutOfStock = filament.inStock === false;
                 const isVariantOutOfStock = filamentVariant
                     ? filamentVariant.inStock === false
@@ -238,6 +255,7 @@ export async function loadCartItems(
                 items.push({
                     id: item.id,
                     sourceId: filament.id,
+                    variantId: item.filamentVariantId ?? null,
                     itemType: "filament",
                     name: filament.name,
                     slug: (filament as any).slug ?? null,
@@ -290,6 +308,7 @@ export async function loadCartItems(
                     machineDimensionLength: machineDims.length,
                     machineDimensionWidth: machineDims.width,
                     machineDimensionHeight: machineDims.height,
+                    inStock: printer.inStock !== false,
                 });
                 continue;
             }
@@ -312,11 +331,18 @@ export async function loadCartItems(
                     continue;
                 }
 
-                const missingVariant = !prebuiltVariant;
+                const missingVariant =
+                    !prebuiltVariant ||
+                    prebuiltVariant.prebuildProductId !== prebuiltProduct.id;
+                const prebuiltInStock =
+                    prebuiltProduct.inStock !== false &&
+                    prebuiltVariant?.isActive !== false &&
+                    prebuiltVariant?.inStock !== false;
 
                 items.push({
                     id: item.id,
                     sourceId: prebuiltProduct.id,
+                    variantId: item.prebuiltVariantId ?? null,
                     itemType: "prebuilt",
                     name: prebuiltProduct.name,
                     slug: (prebuiltProduct as any).slug ?? null,
@@ -330,6 +356,7 @@ export async function loadCartItems(
                     colorHex: prebuiltVariant?.colorHex ?? null,
                     size: prebuiltVariant?.sizeName ?? null,
                     customization: item.customization ?? null,
+                    inStock: !missingVariant && prebuiltInStock,
                     _orphaned: missingVariant,
                 });
                 continue;

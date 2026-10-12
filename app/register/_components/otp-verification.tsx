@@ -10,12 +10,12 @@ import {
 } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Copy, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 
 interface OTPVerificationProps {
   email: string;
-  onVerified: () => void;
-  resendOTP: () => void;
+  onVerified: (registrationToken: string) => void;
+  resendOTP: () => Promise<void>;
 }
 
 export default function OTPVerification({
@@ -56,8 +56,8 @@ export default function OTPVerification({
 
       if (response.status === 429) {
         setError("Too many attempts. Please try again later.");
-      } else if (result.success) {
-        onVerified();
+      } else if (result.success && result.registrationToken) {
+        onVerified(result.registrationToken);
       } else {
         setError(result.error || "Invalid OTP");
       }
@@ -78,11 +78,15 @@ export default function OTPVerification({
     setIsResending(true);
     try {
       await resendOTP();
-      toast.success("New OTP sent successfully");
+      toast({ title: "New OTP sent successfully" });
       setResendCooldown(30);
     } catch (err) {
       console.error("Failed to resend OTP:", err);
-      toast.error("Failed to resend OTP");
+      toast({
+        title: "Failed to resend OTP",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
     } finally {
       setIsResending(false);
     }
@@ -91,10 +95,10 @@ export default function OTPVerification({
   const handleCopyOTP = async () => {
     try {
       await navigator.clipboard.writeText(otp);
-      toast.success("OTP copied to clipboard");
+      toast({ title: "OTP copied to clipboard" });
     } catch (err) {
       console.error("Failed to copy OTP:", err);
-      toast.error("Failed to copy OTP");
+      toast({ title: "Failed to copy OTP", variant: "destructive" });
     }
   };
 

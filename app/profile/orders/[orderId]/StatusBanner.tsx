@@ -98,11 +98,15 @@ interface StatusBannerProps {
     refundStatus?: string | null;
 }
 
+const REFUND_INITIATED_BADGE = {
+    label: "Refund Initiated",
+    className: "border-orange-300 text-orange-700 bg-orange-50",
+};
+
 const REFUND_BADGE: Record<string, { label: string; className: string }> = {
-    initiated: {
-        label: "Refund Initiated",
-        className: "border-orange-300 text-orange-700 bg-orange-50",
-    },
+    requested: REFUND_INITIATED_BADGE,
+    initiated: REFUND_INITIATED_BADGE,
+    pending: REFUND_INITIATED_BADGE,
     success: {
         label: "Refund Completed",
         className: "border-green-300 text-green-700 bg-green-50",

@@ -13,10 +13,10 @@ export default function PaymentStatus() {
     const router = useRouter();
     const searchParams = useSearchParams()!;
     const { resetCheckout } = useCheckout();
-    const { clearCart } = useCart();
+    const { fetchCart } = useCart();
 
     const [status, setStatus] = useState<
-        "checking" | "pending" | "success" | "failed" | "timeout"
+        "checking" | "pending" | "success" | "failed" | "timeout" | "review"
     >("checking");
     const [retryCount, setRetryCount] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -120,6 +120,12 @@ export default function PaymentStatus() {
 
                 if (success && code === "PAYMENT_SUCCESS") {
                     handleSuccess();
+                } else if (code === "PAYMENT_REVIEW") {
+                    // Money was received but needs a manual check: never offer a retry
+                    hasCompletedRef.current = true;
+                    isCheckingRef.current = false;
+                    setStatus("review");
+                    setErrorMessage(message || null);
                 } else if (code === "PAYMENT_PENDING") {
                     handlePending(attempt);
                 } else {
@@ -158,9 +164,9 @@ export default function PaymentStatus() {
             if (orderId) sessionStorage.setItem("last_payment_order_id", orderId);
             if (amount) sessionStorage.setItem("last_payment_amount", amount);
 
-            // Clear cart and reset checkout
+            // The server already removed the paid items; refresh the cart and reset checkout
             try {
-                await clearCart();
+                await fetchCart();
                 resetCheckout();
             } catch (e) {
                 console.error("[PaymentStatus] Error clearing cart:", e);
@@ -290,6 +296,10 @@ export default function PaymentStatus() {
             }
         } catch (error: any) {
             console.error("[PaymentStatus] Retry error:", error);
+            if (error.response?.data?.code === "ALREADY_PAID") {
+                router.replace(getOrdersRoute(orderId));
+                return;
+            }
             toast({
                 title: "Retry Failed",
                 description:
@@ -390,6 +400,39 @@ export default function PaymentStatus() {
                                     "Retry Payment"
                                 )}
                             </Button>
+                            <Button
+                                onClick={handleGoToOrders}
+                                variant="outline"
+                                className="w-full"
+                            >
+                                View Orders
+                            </Button>
+                            <Button
+                                onClick={handleContactSupport}
+                                variant="ghost"
+                                className="w-full flex items-center justify-center gap-2"
+                            >
+                                <MessageCircle className="h-4 w-4" />
+                                Contact Support
+                            </Button>
+                        </div>
+                    </>
+                )}
+
+                {/* Under Review State (payment received, no retry) */}
+                {status === "review" && (
+                    <>
+                        <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                            <AlertCircle className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <h2 className="text-xl font-semibold mb-2 text-amber-600">
+                            Payment Under Review
+                        </h2>
+                        <p className="text-gray-500 mb-6">
+                            {errorMessage ||
+                                "We received a payment for this order and our team is reviewing it. We'll contact you shortly."}
+                        </p>
+                        <div className="space-y-3">
                             <Button
                                 onClick={handleGoToOrders}
                                 variant="outline"

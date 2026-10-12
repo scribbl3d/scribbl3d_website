@@ -62,22 +62,7 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const emailCheckResponse = await fetch("/api/check-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: data.email }),
-      });
-
-      const emailCheckResult = await emailCheckResponse.json();
-
-      if (emailCheckResult.exists) {
-        setError("This email is already registered. Please sign in instead.");
-        setIsLoading(false);
-        return;
-      }
-
+      // Whether the email is registered is only revealed after OTP verification
       const response = await fetch("/api/send-otp", {
         method: "POST",
         headers: {
@@ -102,34 +87,26 @@ export default function RegisterPage() {
     }
   };
 
+  // Throws on failure so the OTP screen can show it (and not start the cooldown)
   const resendOTP = async () => {
     if (!registrationData) return;
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/send-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: registrationData.email }),
-      });
+    const response = await fetch("/api/send-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: registrationData.email }),
+    });
 
-      const result = await response.json();
+    const result = await response.json().catch(() => ({}));
 
-      if (!result.success) {
-        setError(result.error || "Failed to resend OTP");
-      }
-    } catch (error) {
-      console.error("An unexpected error happened:", error);
-      setError("An unexpected error occurred");
-    } finally {
-      setIsLoading(false);
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Failed to resend OTP");
     }
   };
 
-  const onOTPVerified = async () => {
+  const onOTPVerified = async (registrationToken: string) => {
     if (!registrationData) {
       setError("Registration data is missing");
       return;
@@ -139,7 +116,7 @@ export default function RegisterPage() {
       const response = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registrationData),
+        body: JSON.stringify({ ...registrationData, registrationToken }),
       });
 
       const responseData = await response.json();

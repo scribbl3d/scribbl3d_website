@@ -124,12 +124,16 @@ export default function AdminShipmentsPage() {
                                     >
                                         Mark Delivered
                                     </button>
-                                    <a
-                                        href={`/order/${s.orderId}/tracking`}
-                                        className="px-3 py-1 bg-blue-600 text-white rounded"
-                                    >
-                                        View Tracking
-                                    </a>
+                                    {s.waybill && (
+                                        <a
+                                            href={`https://www.delhivery.com/track/package/${encodeURIComponent(s.waybill)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-1 bg-blue-600 text-white rounded"
+                                        >
+                                            View Tracking
+                                        </a>
+                                    )}
                                 </td>
                             </tr>
                         ))}
