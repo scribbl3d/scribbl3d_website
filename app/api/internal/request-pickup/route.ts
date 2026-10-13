@@ -3,6 +3,25 @@ import axios from "axios";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-guard";
 
+// Delhivery error bodies vary: { error: { message } }, { error: "..." },
+// { message: "..." }, or field-keyed like { prepaid: "Client wallet balance..." }.
+function delhiveryErrorMessage(data: unknown): string | undefined {
+    if (!data) return undefined;
+    if (typeof data === "string") return data;
+    if (typeof data !== "object") return undefined;
+    const d = data as Record<string, any>;
+    const direct =
+        d.error?.message ??
+        (typeof d.error === "string" ? d.error : undefined) ??
+        d.message ??
+        d.rmk;
+    if (typeof direct === "string" && direct) return direct;
+    const fields = Object.values(d).filter(
+        (v): v is string => typeof v === "string" && v.length > 0,
+    );
+    return fields.length ? fields.join(" ") : undefined;
+}
+
 export async function POST(req: Request) {
     const denied = await requireAdmin();
     if (denied) return denied;
@@ -132,14 +151,18 @@ export async function POST(req: Request) {
     } catch (err: any) {
         console.error("Pickup request error:", err?.response?.data || err);
 
+        const upstreamStatus = err?.response?.status;
         return NextResponse.json(
             {
                 ok: false,
                 error:
-                    err?.response?.data?.error?.message ||
+                    delhiveryErrorMessage(err?.response?.data) ||
                     "Delhivery pickup request failed",
             },
-            { status: 500 },
+            {
+                status:
+                    upstreamStatus >= 400 && upstreamStatus < 500 ? 400 : 500,
+            },
         );
     }
 }
