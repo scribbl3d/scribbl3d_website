@@ -11,7 +11,7 @@ jest.mock('next/server', () => ({
 jest.mock('@/lib/reviews/productReviews', () => ({ getProductReviewSummary: jest.fn(), getProductReviewPage: jest.fn() }));
 
 const req = (query: string) => ({ nextUrl: new URL(`http://x/api/product-reviews${query}`) }) as unknown as NextRequest;
-const summary = (count: number) => ({ count, average: null, breakdown: null, showList: count >= 2, showAverage: count >= 5 });
+const summary = (count: number) => ({ count, average: null, breakdown: null, showList: count >= 2, showAverage: count >= 3 });
 
 beforeEach(() => {
   jest.mocked(getProductReviewSummary).mockReset().mockResolvedValue(summary(7));

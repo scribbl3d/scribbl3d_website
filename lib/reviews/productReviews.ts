@@ -8,7 +8,8 @@ import { prisma } from "@/lib/prisma";
  */
 
 export const REVIEW_LIST_MIN = 2; // review section shown from 2 approved reviews
-export const REVIEW_AVERAGE_MIN = 5; // average, count and breakdown from 5
+export const REVIEW_AVERAGE_MIN = 3; // average, count and breakdown shown on the PDP from 3
+export const REVIEW_JSONLD_MIN = 5; // aggregateRating/review JSON-LD only from 5
 export const PDP_REVIEWS_PAGE_SIZE = 5;
 
 export type ProductFamily = "printer" | "filament" | "resin" | "prebuilt";
@@ -127,9 +128,9 @@ export function reviewsJsonLd(reviews: PublicReview[]) {
     }));
 }
 
-/** buildProductJsonLd fields: rating + visible reviews, only once the average is shown (S1) */
+/** buildProductJsonLd fields: rating + visible reviews, only from REVIEW_JSONLD_MIN approved reviews (S1) */
 export function pdpJsonLdRating(pdp: { summary: ProductReviewSummary; reviews: PublicReview[] }) {
     const { summary, reviews } = pdp;
-    if (!summary.showAverage || summary.average === null) return {};
+    if (!summary.showAverage || summary.average === null || summary.count < REVIEW_JSONLD_MIN) return {};
     return { rating: { average: summary.average, count: summary.count }, reviews: reviewsJsonLd(reviews) };
 }

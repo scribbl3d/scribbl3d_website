@@ -3,10 +3,10 @@ import { ProductReviews, RatingSummaryInline } from '@/components/reviews/Produc
 
 const summary = (count: number, average: number | null = null) => ({
   count,
-  average: count >= 5 ? average : null,
-  breakdown: count >= 5 ? { 1: 0, 2: 1, 3: 0, 4: 2, 5: count - 3 } : null,
+  average: count >= 3 ? average : null,
+  breakdown: count >= 3 ? { 1: 0, 2: 1, 3: 0, 4: 2, 5: count - 3 } : null,
   showList: count >= 2,
-  showAverage: count >= 5,
+  showAverage: count >= 3,
 });
 
 const review = (i: number, overrides: Record<string, unknown> = {}) => ({
@@ -24,16 +24,17 @@ describe('ProductReviews', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('colours rating chips green, amber or red', () => {
-    render(<ProductReviews family="printer" productId="p1" summary={summary(3)} initialReviews={[review(1, { rating: 5 }), review(2, { rating: 3 }), review(3, { rating: 1 })]} />);
+  it('colours rating chips green, indigo, amber or red', () => {
+    render(<ProductReviews family="printer" productId="p1" summary={summary(4)} initialReviews={[review(1, { rating: 5 }), review(4, { rating: 4 }), review(2, { rating: 3 }), review(3, { rating: 1 })]} />);
     expect(screen.getByRole('img', { name: '5 out of 5 stars' }).className).toContain('bg-emerald-600');
+    expect(screen.getByRole('img', { name: '4 out of 5 stars' }).className).toContain('bg-[#4f46e5]');
     expect(screen.getByRole('img', { name: '3 out of 5 stars' }).className).toContain('bg-amber-500');
     expect(screen.getByRole('img', { name: '1 out of 5 stars' }).className).toContain('bg-red-500');
     expect(screen.getByText('Excellent')).toBeInTheDocument();
     expect(screen.getByText('Poor')).toBeInTheDocument();
   });
 
-  it('shows the list without an average for 2–4 reviews', () => {
+  it('shows the list without an average for 2 reviews', () => {
     render(<ProductReviews family="printer" productId="p1" summary={summary(2)} initialReviews={[review(1), review(2)]} />);
     expect(screen.getByRole('heading', { name: 'Customer reviews' })).toBeInTheDocument();
     expect(screen.getByText('2 verified buyers')).toBeInTheDocument();
@@ -43,11 +44,13 @@ describe('ProductReviews', () => {
     expect(screen.getByText('Review text 1')).toBeInTheDocument();
   });
 
-  it('shows the average, count and breakdown from 5 reviews', () => {
+  it('shows the average, count and breakdown from 3 reviews', () => {
     render(<ProductReviews family="printer" productId="p1" summary={summary(6, 4.3)} initialReviews={[1, 2, 3, 4, 5].map((i) => review(i))} />);
     expect(screen.getAllByRole('img', { name: '4.3 out of 5 stars' }).length).toBeGreaterThan(0);
-    expect(screen.getByText('6 ratings · Based on 6 reviews')).toBeInTheDocument();
+    expect(screen.getByText('4.3')).toBeInTheDocument();
+    expect(screen.getByText('Based on 6 reviews')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: '3 5-star reviews' })).toBeInTheDocument();
+    expect(screen.getByText('3 (50%)')).toBeInTheDocument();
   });
 
   it('does not show an incentivised label on the product page', () => {
@@ -79,8 +82,8 @@ describe('ProductReviews', () => {
 });
 
 describe('RatingSummaryInline', () => {
-  it('appears only from 5 reviews and links to the section', () => {
-    const { container, rerender } = render(<RatingSummaryInline summary={summary(4)} />);
+  it('appears only from 3 reviews and links to the section', () => {
+    const { container, rerender } = render(<RatingSummaryInline summary={summary(2)} />);
     expect(container).toBeEmptyDOMElement();
     rerender(<RatingSummaryInline summary={summary(12, 4.6)} />);
     expect(screen.getByRole('link')).toHaveAttribute('href', '#reviews');

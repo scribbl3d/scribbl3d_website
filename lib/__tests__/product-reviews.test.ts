@@ -30,12 +30,17 @@ describe('summarize thresholds (P4)', () => {
     expect(summarize([{ rating: 5, count: 1 }])).toEqual({ count: 1, average: null, breakdown: null, showList: false, showAverage: false });
   });
 
-  it('shows the list but no average for 2–4 reviews', () => {
-    const s = summarize([{ rating: 5, count: 2 }, { rating: 1, count: 2 }]);
-    expect(s).toEqual(expect.objectContaining({ count: 4, showList: true, showAverage: false, average: null, breakdown: null }));
+  it('shows the list but no average for 2 reviews', () => {
+    const s = summarize([{ rating: 5, count: 1 }, { rating: 1, count: 1 }]);
+    expect(s).toEqual(expect.objectContaining({ count: 2, showList: true, showAverage: false, average: null, breakdown: null }));
   });
 
-  it('shows the average and breakdown from 5 reviews', () => {
+  it('shows the average and breakdown from 3 reviews', () => {
+    const s = summarize([{ rating: 5, count: 2 }, { rating: 1, count: 1 }]);
+    expect(s).toEqual(expect.objectContaining({ count: 3, showAverage: true, average: 3.7 }));
+  });
+
+  it('shows the average and breakdown for 6 reviews', () => {
     const s = summarize([{ rating: 5, count: 3 }, { rating: 4, count: 1 }, { rating: 2, count: 2 }]);
     expect(s.showAverage).toBe(true);
     expect(s.average).toBe(3.8); // (15 + 4 + 4) / 6 = 3.83
@@ -101,7 +106,7 @@ describe('JSON-LD (S1)', () => {
     ]);
   });
 
-  it('adds rating and reviews only once the average is shown', () => {
+  it('adds rating and reviews only from 5 reviews, even when the average is shown', () => {
     const few = { summary: summarize([{ rating: 5, count: 4 }]), reviews: [review] };
     expect(pdpJsonLdRating(few)).toEqual({});
     expect(buildProductJsonLd({ ...base, ...pdpJsonLdRating(few) })).not.toHaveProperty('aggregateRating');
