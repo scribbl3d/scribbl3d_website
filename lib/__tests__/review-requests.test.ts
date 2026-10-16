@@ -102,14 +102,21 @@ describe('recordReviewEmailSent', () => {
 
 describe('review link in messages', () => {
   it('builds the WhatsApp message in the supplied wording', () => {
-    const message = buildReviewShareMessage('Asha Rao', 'clorder12345678');
-    const lines = message.split('\n');
-    expect(lines[0]).toBe('Hi Asha,');
-    expect(lines[1]).toBe('How was your SCRIBBL3D experience?');
-    expect(lines[2]).toBe('We’d love to hear your feedback. Leave a review and get a discount coupon for your next purchase.');
-    expect(lines[3]).toMatch(/^👉 https:\/\/www\.scribbl3d\.com\/review\/clorder12345678\.[A-Za-z0-9_-]+$/);
-    expect(lines[4]).toBe('It only takes a minute. Thank you for choosing SCRIBBL3D!');
-    expect(buildReviewShareMessage(null, 'clorder12345678')).toMatch(/^Hi there,/);
+    const message = buildReviewShareMessage('Asha Rao', 'https://www.scribbl3d.com/r/Ab3xK9Qz');
+    expect(message.split('\n')).toEqual([
+      'Hi Asha,',
+      '',
+      '*How was your SCRIBBL3D experience?* ⭐',
+      '',
+      'We’d love to hear your feedback. Leave a review and get a *discount coupon* for your next purchase. 🎁',
+      '',
+      '👉 https://www.scribbl3d.com/r/Ab3xK9Qz',
+      '',
+      '_It only takes a minute._',
+      'Thank you for choosing *SCRIBBL3D*!',
+    ]);
+    expect(buildReviewShareMessage(null, 'https://www.scribbl3d.com/r/Ab3xK9Qz')).toMatch(/^Hi there,/);
+    expect(buildReviewShareMessage('*Asha_* Rao', 'https://www.scribbl3d.com/r/Ab3xK9Qz')).toMatch(/^Hi Asha,/);
   });
 
   it('puts the review link (not the profile page) in the delivered email', () => {

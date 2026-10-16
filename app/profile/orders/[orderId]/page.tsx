@@ -26,6 +26,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 import { DownloadInvoiceButton } from "./DownloadInvoiceButton";
 import { createReviewToken } from "@/lib/reviews/link";
+import { ensureReviewShortCode } from "@/lib/reviews/shortLink";
 import { loadReviewContext } from "@/lib/reviews/reviewableItems";
 import { StatusBanner } from "./StatusBanner";
 
@@ -198,7 +199,13 @@ export default async function OrderDetailsPage({ params }: PageProps) {
     // Review link state (same rules as the /review page): open → Give Review,
     // everything reviewed → Reviewed, expired/not eligible → no button
     const reviewState = isDelivered ? (await loadReviewContext(order.id)).state : null;
-    const reviewHref = reviewState === "open" ? `/review/${createReviewToken(order.id)}` : null;
+    // Short /r/ link, same one admin shares; long signed link if it can't be created
+    const reviewHref =
+        reviewState === "open"
+            ? await ensureReviewShortCode(order.id)
+                  .then((code) => `/r/${code}`)
+                  .catch(() => `/review/${createReviewToken(order.id)}`)
+            : null;
     const isCancelled = displayStatus === "cancelled";
     const isPaymentFailed = displayStatus === "payment_failed";
     const showTracking =

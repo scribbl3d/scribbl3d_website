@@ -30,9 +30,12 @@ export function createReviewToken(orderId: string): string {
     return `${orderId}.${sign(orderId)}`;
 }
 
+export function siteBaseUrl(): string {
+    return (process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com").replace(/\/$/, "");
+}
+
 export function reviewLinkUrl(orderId: string): string {
-    const base = (process.env.NEXT_PUBLIC_APP_URL || "https://www.scribbl3d.com").replace(/\/$/, "");
-    return `${base}/review/${createReviewToken(orderId)}`;
+    return `${siteBaseUrl()}/review/${createReviewToken(orderId)}`;
 }
 
 /** Returns the order ID for a valid token, otherwise null */

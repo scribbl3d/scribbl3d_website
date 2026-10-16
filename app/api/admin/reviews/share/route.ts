@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdminRequest } from "@/lib/admin-session";
 import { prisma } from "@/lib/prisma";
-import { reviewLinkUrl } from "@/lib/reviews/link";
+import { reviewShortUrl } from "@/lib/reviews/shortLink";
 import { buildReviewShareMessage, getAdminReviewInfo, recordReviewShare } from "@/lib/reviews/requests";
 
 const bodySchema = z.object({ orderId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) });
@@ -41,9 +41,11 @@ export async function POST(request: NextRequest) {
             | null;
         const name = address?.fullName || address?.name || order.user?.name;
 
+        const url = await reviewShortUrl(orderId);
+
         return NextResponse.json({
-            url: reviewLinkUrl(orderId),
-            message: buildReviewShareMessage(name, orderId),
+            url,
+            message: buildReviewShareMessage(name, url),
             info: await getAdminReviewInfo(orderId),
         });
     } catch (error) {

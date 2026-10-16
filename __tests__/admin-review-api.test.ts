@@ -19,6 +19,9 @@ jest.mock('@/lib/reviews/requests', () => ({
   getAdminReviewInfo: jest.fn(),
   recordReviewShare: jest.fn(),
 }));
+jest.mock('@/lib/reviews/shortLink', () => ({
+  reviewShortUrl: jest.fn(async () => 'https://www.scribbl3d.com/r/Ab3xK9Qz'),
+}));
 
 const info = (overrides: Record<string, unknown> = {}) => ({
   status: 'not_shared', canShare: true, emailSentAt: null, firstSharedAt: null, lastSharedAt: null, shareCount: 0, ...overrides,
@@ -73,7 +76,7 @@ describe('admin review APIs', () => {
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(recordReviewShare).toHaveBeenCalledWith('order_1', delivered);
-    expect(body.url).toMatch(/\/review\/order_1\./);
+    expect(body.url).toBe('https://www.scribbl3d.com/r/Ab3xK9Qz');
     expect(body.message).toContain('Hi Asha,');
     expect(body.message).toContain(body.url);
     expect(body.info.status).toBe('shared');

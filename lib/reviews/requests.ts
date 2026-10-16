@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { isPreLaunchOrder, reviewLinkUrl } from "./link";
+import { isPreLaunchOrder } from "./link";
 import { loadReviewContext } from "./reviewableItems";
 
 /**
@@ -89,14 +89,24 @@ export async function recordReviewEmailSent(orderId: string, now = new Date()) {
     });
 }
 
-/** WhatsApp/share message (wording supplied by the user) */
-export function buildReviewShareMessage(customerName: string | null | undefined, orderId: string): string {
-    const firstName = customerName?.trim().split(/\s+/)[0] || "there";
+/**
+ * WhatsApp/share message (wording supplied by the user), with WhatsApp
+ * formatting: *bold*, _italic_. The link stays unformatted so it remains tappable.
+ */
+export function buildReviewShareMessage(customerName: string | null | undefined, reviewUrl: string): string {
+    // Formatting characters in a name would break the message's formatting
+    const firstName = customerName?.replace(/[*_~`]/g, "").trim().split(/\s+/)[0] || "there";
+    // Blank lines between sections keep it readable in a chat bubble
     return [
         `Hi ${firstName},`,
-        "How was your SCRIBBL3D experience?",
-        "We’d love to hear your feedback. Leave a review and get a discount coupon for your next purchase.",
-        `👉 ${reviewLinkUrl(orderId)}`,
-        "It only takes a minute. Thank you for choosing SCRIBBL3D!",
+        "",
+        "*How was your SCRIBBL3D experience?* ⭐",
+        "",
+        "We’d love to hear your feedback. Leave a review and get a *discount coupon* for your next purchase. 🎁",
+        "",
+        `👉 ${reviewUrl}`,
+        "",
+        "_It only takes a minute._",
+        "Thank you for choosing *SCRIBBL3D*!",
     ].join("\n");
 }

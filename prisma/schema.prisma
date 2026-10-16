@@ -479,6 +479,7 @@ model ReviewRequest {
   lastSharedAt         DateTime?
   shareCount           Int       @default(0)
   couponWindowStartsAt DateTime? // delivery date, or first share for pre-launch orders
+  shortCode            String?   @unique // /r/<shortCode> redirects to the signed review link
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
